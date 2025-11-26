@@ -1,0 +1,23 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - read own data only, writes handled by Cloud Functions
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Only Cloud Functions can write
+    }
+
+    // Jobs collection - read own jobs only, all writes via Cloud Functions
+    match /jobs/{jobId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create, update, delete: if false; // Only Cloud Functions can write
+    }
+
+    // Transactions collection - read own transactions only
+    match /transactions/{txId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if false; // Only Cloud Functions can write
+    }
+  }
+}
