@@ -19,7 +19,7 @@ export default function HomePage() {
   const { generate, generating, error: generateError } = useGenerateModel();
 
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-  const [quality, setQuality] = useState<QualityLevel>('medium');
+  const [quality, setQuality] = useState<QualityLevel>('standard');
   const [showNoCreditsModal, setShowNoCreditsModal] = useState(false);
 
   const handleUploadComplete = useCallback((imageUrl: string) => {

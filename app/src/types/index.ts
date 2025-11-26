@@ -1,34 +1,39 @@
 /**
  * Shared TypeScript types for Dream Forge frontend
+ *
+ * Optimized for 3D printing workflow:
+ * - Quality levels aligned with printing use cases
+ * - STL as default output format
  */
 
-// Quality settings
-export type QualityLevel = 'low' | 'medium' | 'high';
+// Print-oriented quality settings
+export type QualityLevel = 'draft' | 'standard' | 'fine';
 export type OutputFormat = 'glb' | 'obj' | 'fbx' | 'stl';
 
+// 3D Printing optimized quality options
 export const QUALITY_OPTIONS: Record<QualityLevel, {
   label: string;
   description: string;
   time: string;
   faces: string;
 }> = {
-  low: {
-    label: 'Quick',
-    description: 'Fast generation, basic detail',
+  draft: {
+    label: '草稿',
+    description: '快速預覽，適合測試列印',
     time: '~1 min',
-    faces: '80K faces',
+    faces: '50K faces',
   },
-  medium: {
-    label: 'Balanced',
-    description: 'Good quality, reasonable time',
+  standard: {
+    label: '標準',
+    description: '適合 FDM 列印',
+    time: '~2 min',
+    faces: '150K faces',
+  },
+  fine: {
+    label: '精細',
+    description: '適合 SLA 高品質列印',
     time: '~3 min',
-    faces: '180K faces',
-  },
-  high: {
-    label: 'Premium',
-    description: 'Maximum detail and quality',
-    time: '~5 min',
-    faces: '500K faces',
+    faces: '300K faces',
   },
 };
 

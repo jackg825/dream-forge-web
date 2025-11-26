@@ -1,31 +1,52 @@
-import { type GenerateOptions, type RodinStatusResponse, type OutputFormat } from './types';
+import { type GenerateOptions, type OutputFormat } from './types';
 /**
  * Rodin Gen-2 API Client
  *
  * Handles communication with the Hyper3D Rodin API for 3D model generation.
+ * Updated to match official API documentation:
+ * - https://developer.hyper3d.ai/api-specification/rodin-generation-gen2
  */
 export declare class RodinClient {
-    private client;
+    private apiKey;
     constructor(apiKey: string);
     /**
      * Start a 3D model generation task
      *
-     * @param imageUrl - URL of the input image
+     * API requires multipart/form-data with image as binary file upload.
+     * See: https://developer.hyper3d.ai/api-specification/rodin-generation-gen2
+     *
+     * @param imageBuffer - Image data as Buffer (downloaded from Storage)
      * @param options - Generation options (quality, format, etc.)
      * @returns Task ID and subscription key for status polling
      */
-    generateModel(imageUrl: string, options: GenerateOptions): Promise<{
+    generateModel(imageBuffer: Buffer, options: GenerateOptions): Promise<{
         taskId: string;
         subscriptionKey: string;
     }>;
     /**
      * Check the status of a generation task
      *
-     * @param taskId - The task UUID
+     * See: https://developer.hyper3d.ai/api-specification/check-status
+     *
      * @param subscriptionKey - The subscription key for this task
-     * @returns Current status and result URL if complete
+     * @returns Current status and job UUID
      */
-    checkStatus(taskId: string, subscriptionKey: string): Promise<RodinStatusResponse>;
+    checkStatus(subscriptionKey: string): Promise<{
+        status: string;
+        jobUuid: string;
+    }>;
+    /**
+     * Get download URLs for a completed task
+     *
+     * See: https://developer.hyper3d.ai/api-specification/download-results
+     *
+     * @param taskUuid - The task UUID (from generateModel response)
+     * @returns List of downloadable files with URLs and names
+     */
+    getDownloadUrls(taskUuid: string): Promise<Array<{
+        url: string;
+        name: string;
+    }>>;
     /**
      * Download a completed model
      *

@@ -1,57 +1,85 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as functions from 'firebase-functions';
+import FormData from 'form-data';
 import {
   type GenerateOptions,
-  type RodinGenerateRequest,
   type RodinGenerateResponse,
   type RodinStatusResponse,
+  type RodinDownloadResponse,
   type OutputFormat,
+  type PrintQuality,
+  PRINT_QUALITY_FACE_COUNTS,
   QUALITY_FACE_COUNTS,
 } from './types';
 
-const RODIN_API_BASE = 'https://hyperhuman.deemos.com/api/v2';
+// Correct API base URL per official documentation
+const RODIN_API_BASE = 'https://api.hyper3d.com/api/v2';
 
 /**
  * Rodin Gen-2 API Client
  *
  * Handles communication with the Hyper3D Rodin API for 3D model generation.
+ * Updated to match official API documentation:
+ * - https://developer.hyper3d.ai/api-specification/rodin-generation-gen2
  */
 export class RodinClient {
-  private client: AxiosInstance;
+  private apiKey: string;
 
   constructor(apiKey: string) {
-    this.client = axios.create({
-      baseURL: RODIN_API_BASE,
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      timeout: 30000, // 30 second timeout
-    });
+    this.apiKey = apiKey;
   }
 
   /**
    * Start a 3D model generation task
    *
-   * @param imageUrl - URL of the input image
+   * API requires multipart/form-data with image as binary file upload.
+   * See: https://developer.hyper3d.ai/api-specification/rodin-generation-gen2
+   *
+   * @param imageBuffer - Image data as Buffer (downloaded from Storage)
    * @param options - Generation options (quality, format, etc.)
    * @returns Task ID and subscription key for status polling
    */
   async generateModel(
-    imageUrl: string,
+    imageBuffer: Buffer,
     options: GenerateOptions
   ): Promise<{ taskId: string; subscriptionKey: string }> {
-    const request: RodinGenerateRequest = {
-      images: [imageUrl],
-      tier: options.tier,
-      material: 'PBR',
-      geometry_file_format: options.format,
-      quality_override: QUALITY_FACE_COUNTS[options.quality],
-      prompt: options.prompt,
-    };
-
     try {
-      const response = await this.client.post<RodinGenerateResponse>('/rodin', request);
+      // Build multipart form data as required by Rodin API
+      const form = new FormData();
+      form.append('images', imageBuffer, {
+        filename: 'input.png',
+        contentType: 'image/png',
+      });
+      form.append('tier', options.tier);
+      form.append('material', 'PBR');
+
+      // 3D Printing optimizations:
+      // - mesh_mode: 'Raw' produces triangle meshes (required by slicers)
+      // - geometry_file_format: 'stl' is the standard 3D printing format
+      form.append('mesh_mode', options.meshMode || 'Raw');
+      form.append('geometry_file_format', options.format || 'stl');
+
+      // Get face count from print quality or legacy quality mapping
+      const faceCount = PRINT_QUALITY_FACE_COUNTS[options.quality as PrintQuality]
+        || QUALITY_FACE_COUNTS[options.quality as keyof typeof QUALITY_FACE_COUNTS]
+        || 150000;
+      form.append('quality_override', String(faceCount));
+
+      if (options.prompt) {
+        form.append('prompt', options.prompt);
+      }
+
+      const response = await axios.post<RodinGenerateResponse>(
+        `${RODIN_API_BASE}/rodin`,
+        form,
+        {
+          headers: {
+            ...form.getHeaders(),
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          timeout: 30000,
+        }
+      );
 
       if (!response.data.uuid || !response.data.jobs?.subscription_key) {
         throw new Error('Invalid response from Rodin API');
@@ -69,36 +97,91 @@ export class RodinClient {
       };
     } catch (error) {
       this.handleError(error, 'generateModel');
-      throw error; // TypeScript needs this
+      throw error;
     }
   }
 
   /**
    * Check the status of a generation task
    *
-   * @param taskId - The task UUID
+   * See: https://developer.hyper3d.ai/api-specification/check-status
+   *
    * @param subscriptionKey - The subscription key for this task
-   * @returns Current status and result URL if complete
+   * @returns Current status and job UUID
    */
   async checkStatus(
-    taskId: string,
     subscriptionKey: string
-  ): Promise<RodinStatusResponse> {
+  ): Promise<{ status: string; jobUuid: string }> {
     try {
-      const response = await this.client.post<RodinStatusResponse>(
-        '/status',
-        { subscription_key: subscriptionKey }
+      const response = await axios.post<RodinStatusResponse>(
+        `${RODIN_API_BASE}/status`,
+        { subscription_key: subscriptionKey },
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        }
       );
 
+      // API returns jobs array, we need the first job's status
+      const job = response.data.jobs?.[0];
+      if (!job) {
+        throw new Error('Invalid status response: no jobs found');
+      }
+
       functions.logger.info('Rodin status check', {
-        taskId,
-        status: response.data.status,
-        progress: response.data.progress,
+        status: job.status,
+        jobUuid: job.uuid,
       });
 
-      return response.data;
+      return {
+        status: job.status,
+        jobUuid: job.uuid,
+      };
     } catch (error) {
       this.handleError(error, 'checkStatus');
+      throw error;
+    }
+  }
+
+  /**
+   * Get download URLs for a completed task
+   *
+   * See: https://developer.hyper3d.ai/api-specification/download-results
+   *
+   * @param taskUuid - The task UUID (from generateModel response)
+   * @returns List of downloadable files with URLs and names
+   */
+  async getDownloadUrls(
+    taskUuid: string
+  ): Promise<Array<{ url: string; name: string }>> {
+    try {
+      const response = await axios.post<RodinDownloadResponse>(
+        `${RODIN_API_BASE}/download`,
+        { task_uuid: taskUuid },
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 30000,
+        }
+      );
+
+      if (!response.data.list || response.data.list.length === 0) {
+        throw new Error('No download URLs in response');
+      }
+
+      functions.logger.info('Rodin download URLs retrieved', {
+        taskUuid,
+        fileCount: response.data.list.length,
+      });
+
+      return response.data.list;
+    } catch (error) {
+      this.handleError(error, 'getDownloadUrls');
       throw error;
     }
   }

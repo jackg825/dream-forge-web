@@ -1,16 +1,17 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import axios from 'axios';
 import { createRodinClient } from '../rodin/client';
 import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
-import type { JobDocument, QualityLevel, OutputFormat } from '../rodin/types';
+import type { JobDocument, QualityLevel, OutputFormat, PrintQuality, MeshMode } from '../rodin/types';
 
 const db = admin.firestore();
 const storage = admin.storage();
 
 interface GenerateModelData {
   imageUrl: string;
-  quality: QualityLevel;
-  format?: OutputFormat;
+  quality: PrintQuality | QualityLevel;  // Support both new and legacy quality levels
+  format?: OutputFormat;  // Optional, defaults to 'stl' for 3D printing
 }
 
 interface CheckJobStatusData {
@@ -48,7 +49,8 @@ export const generateModel = functions
     }
 
     const userId = context.auth.uid;
-    const { imageUrl, quality = 'medium', format = 'glb' } = data;
+    // Default to 'standard' quality and 'stl' format for 3D printing optimization
+    const { imageUrl, quality = 'standard', format = 'stl' } = data;
 
     // Validate input
     if (!imageUrl) {
@@ -58,10 +60,12 @@ export const generateModel = functions
       );
     }
 
-    if (!['low', 'medium', 'high'].includes(quality)) {
+    // Support both new print-oriented and legacy quality levels
+    const validQualities = ['draft', 'standard', 'fine', 'low', 'medium', 'high'];
+    if (!validQualities.includes(quality)) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Invalid quality level'
+        'Invalid quality level. Use: draft, standard, fine (or legacy: low, medium, high)'
       );
     }
 
@@ -108,13 +112,28 @@ export const generateModel = functions
 
     await jobRef.set(jobDoc);
 
-    // 5. Call Rodin API
+    // 5. Download image from Storage and call Rodin API
     try {
+      // Download image from Firebase Storage URL
+      // Rodin API requires multipart/form-data with image as binary
+      const imageResponse = await axios.get(imageUrl, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      });
+      const imageBuffer = Buffer.from(imageResponse.data);
+
+      functions.logger.info('Image downloaded for Rodin', {
+        size: imageBuffer.length,
+        jobId,
+      });
+
       const rodinClient = createRodinClient();
-      const { taskId, subscriptionKey } = await rodinClient.generateModel(imageUrl, {
+      // 3D Printing optimized: use Raw mesh mode + STL format
+      const { taskId, subscriptionKey } = await rodinClient.generateModel(imageBuffer, {
         tier: 'Gen-2',
-        quality: quality as QualityLevel,
-        format: format as OutputFormat,
+        quality: quality as PrintQuality | QualityLevel,
+        format: 'stl' as OutputFormat,  // Fixed to STL for 3D printing
+        meshMode: 'Raw' as MeshMode,    // Triangle mesh for slicers
       });
 
       // 6. Update job with Rodin task ID
@@ -221,18 +240,32 @@ export const checkJobStatus = functions
       };
     }
 
-    // 2. Poll Rodin status
+    // 2. Poll Rodin status (API changed: only needs subscriptionKey)
     const rodinClient = createRodinClient();
-    const rodinStatus = await rodinClient.checkStatus(
-      job.rodinTaskId,
-      job.rodinSubscriptionKey
-    );
+    const rodinStatus = await rodinClient.checkStatus(job.rodinSubscriptionKey);
 
-    // 3. Handle completion
-    if (rodinStatus.status === 'Done' && rodinStatus.result?.model_url) {
+    functions.logger.info('Rodin status polled', {
+      jobId,
+      status: rodinStatus.status,
+    });
+
+    // 3. Handle completion (status is 'Done' per API docs)
+    if (rodinStatus.status === 'Done') {
       try {
+        // Get download URLs from separate endpoint (API requires this)
+        const downloadList = await rodinClient.getDownloadUrls(job.rodinTaskId);
+
+        // Find the model file with the requested format
+        const modelFile = downloadList.find((file) =>
+          file.name.endsWith(`.${job.settings.format}`)
+        );
+
+        if (!modelFile) {
+          throw new Error(`No ${job.settings.format} file in download list`);
+        }
+
         // Download model from Rodin
-        const modelBuffer = await rodinClient.downloadModel(rodinStatus.result.model_url);
+        const modelBuffer = await rodinClient.downloadModel(modelFile.url);
 
         // Upload to Firebase Storage
         const bucket = storage.bucket();
@@ -292,27 +325,26 @@ export const checkJobStatus = functions
     if (rodinStatus.status === 'Failed') {
       await jobRef.update({
         status: 'failed',
-        error: rodinStatus.error || 'Generation failed',
+        error: 'Generation failed',
       });
 
       // Refund credit
       await refundCredits(userId, 1, jobId);
 
-      functions.logger.warn('Job failed', {
-        jobId,
-        error: rodinStatus.error,
-      });
+      functions.logger.warn('Job failed', { jobId });
 
       return {
         status: 'failed',
-        error: rodinStatus.error || 'Generation failed',
+        error: 'Generation failed',
       };
     }
 
-    // 5. Still processing
+    // 5. Still processing (status is 'Waiting' or 'Generating')
+    // Map Rodin statuses to our internal status
+    const mappedStatus = rodinStatus.status === 'Waiting' ? 'pending' : 'processing';
+
     return {
-      status: job.status,
-      progress: rodinStatus.progress,
+      status: mappedStatus,
     };
   });
 

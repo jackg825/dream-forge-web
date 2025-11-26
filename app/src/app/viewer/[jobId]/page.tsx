@@ -131,11 +131,11 @@ function ViewerContent() {
                     className="w-12 h-12 rounded object-cover"
                   />
                   <span>
-                    {job.settings.quality === 'high'
-                      ? 'High quality generation may take up to 5 minutes'
-                      : job.settings.quality === 'medium'
-                      ? 'Processing typically takes 2-3 minutes'
-                      : 'Quick generation usually completes in about 1 minute'}
+                    {job.settings.quality === 'fine'
+                      ? '精細品質生成約需 3 分鐘'
+                      : job.settings.quality === 'standard'
+                      ? '標準品質生成約需 2 分鐘'
+                      : '草稿品質生成約需 1 分鐘'}
                   </span>
                 </div>
               </div>

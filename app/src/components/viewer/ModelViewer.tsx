@@ -1,9 +1,10 @@
 'use client';
 
-import { Suspense, useRef, useEffect } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, useGLTF, Environment, Center } from '@react-three/drei';
+import { Suspense, useRef, useEffect, useState } from 'react';
+import { Canvas, useThree, useLoader } from '@react-three/fiber';
+import { OrbitControls, Environment, Center } from '@react-three/drei';
 import * as THREE from 'three';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 
 interface ModelViewerProps {
   modelUrl: string;
@@ -11,32 +12,43 @@ interface ModelViewerProps {
 }
 
 /**
- * Inner component that renders the 3D model
+ * Inner component that renders the STL model
+ * STL files don't contain materials, so we apply a default material
  */
-function Model({ url }: { url: string }) {
-  const { scene } = useGLTF(url);
-  const modelRef = useRef<THREE.Group>(null);
+function STLModel({ url }: { url: string }) {
+  const geometry = useLoader(STLLoader, url);
+  const meshRef = useRef<THREE.Mesh>(null);
 
   useEffect(() => {
     // Center and scale the model
-    if (modelRef.current) {
-      const box = new THREE.Box3().setFromObject(modelRef.current);
-      const size = box.getSize(new THREE.Vector3());
+    if (meshRef.current && geometry) {
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox!;
+      const size = new THREE.Vector3();
+      box.getSize(size);
       const maxDim = Math.max(size.x, size.y, size.z);
       const scale = 2 / maxDim; // Fit model to ~2 units
 
-      modelRef.current.scale.setScalar(scale);
+      meshRef.current.scale.setScalar(scale);
 
       // Center the model
-      const center = box.getCenter(new THREE.Vector3());
-      modelRef.current.position.sub(center.multiplyScalar(scale));
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      meshRef.current.position.copy(center.multiplyScalar(-scale));
     }
-  }, [scene]);
+  }, [geometry]);
 
+  // Default material for STL (no textures)
+  // Using a neutral gray with slight metallic look for 3D printing preview
   return (
-    <group ref={modelRef}>
-      <primitive object={scene.clone()} />
-    </group>
+    <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
+      <meshStandardMaterial
+        color="#808080"
+        metalness={0.2}
+        roughness={0.6}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
   );
 }
 
@@ -99,10 +111,10 @@ export function ModelViewer({ modelUrl, backgroundColor = '#f3f4f6' }: ModelView
         {/* Environment for reflections (optional) */}
         <Environment preset="studio" />
 
-        {/* Model */}
+        {/* STL Model */}
         <Suspense fallback={<LoadingSpinner />}>
           <Center>
-            <Model url={modelUrl} />
+            <STLModel url={modelUrl} />
           </Center>
         </Suspense>
 
@@ -126,7 +138,5 @@ export function ModelViewer({ modelUrl, backgroundColor = '#f3f4f6' }: ModelView
   );
 }
 
-// Preload function for better UX
-ModelViewer.preload = (url: string) => {
-  useGLTF.preload(url);
-};
+// Note: STLLoader doesn't have a preload function like useGLTF
+// The model will load when the component mounts
