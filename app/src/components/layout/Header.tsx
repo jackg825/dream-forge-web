@@ -35,6 +35,14 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="flex items-center gap-6">
+            {/* Preview Tool - Always visible */}
+            <Link
+              href="/preview"
+              className="text-sm text-gray-600 hover:text-gray-900"
+            >
+              預覽工具
+            </Link>
+
             {loading ? (
               <div className="animate-pulse w-24 h-8 bg-gray-200 rounded-md" />
             ) : user ? (
