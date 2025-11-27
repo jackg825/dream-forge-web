@@ -204,7 +204,7 @@ function JobListItem({ job }: { job: Job }) {
   return (
     <li>
       <Link
-        href={`/viewer/${job.id}`}
+        href={`/viewer?id=${job.id}`}
         className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
       >
         {/* Thumbnail */}

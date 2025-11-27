@@ -41,7 +41,7 @@ export default function HomePage() {
 
     const jobId = await generate(uploadedImageUrl, quality);
     if (jobId) {
-      router.push(`/viewer/${jobId}`);
+      router.push(`/viewer?id=${jobId}`);
     }
   };
 

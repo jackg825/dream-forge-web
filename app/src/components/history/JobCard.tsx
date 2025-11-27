@@ -92,7 +92,7 @@ export function JobCard({ job }: JobCardProps) {
         {/* Actions */}
         <div className="flex gap-2">
           <Link
-            href={`/viewer/${job.id}`}
+            href={`/viewer?id=${job.id}`}
             className={`
               flex-1 text-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors
               ${job.status === 'completed'

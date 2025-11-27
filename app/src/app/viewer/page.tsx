@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -23,20 +23,36 @@ const ModelViewer = dynamic(
   }
 );
 
-function ViewerContent() {
-  const params = useParams();
+function ViewerContentInner() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const jobId = params.jobId as string;
+  const jobId = searchParams.get('id');
 
-  const { job, loading: jobLoading, error: jobError } = useJob(jobId);
+  const { job, loading: jobLoading, error: jobError } = useJob(jobId || '');
   const [backgroundColor, setBackgroundColor] = useState('#f3f4f6');
 
   // Poll for status if job is processing
   const shouldPoll = job?.status === 'pending' || job?.status === 'processing';
-  const { status: polledStatus } = useJobStatusPolling(jobId, shouldPoll);
+  const { status: polledStatus } = useJobStatusPolling(jobId || '', shouldPoll);
 
   // Get the effective progress
   const progress = polledStatus?.progress;
+
+  // Redirect if no jobId
+  useEffect(() => {
+    if (!jobId) {
+      router.replace('/dashboard');
+    }
+  }, [jobId, router]);
+
+  // No jobId state
+  if (!jobId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <LoadingSpinner message="Redirecting..." />
+      </div>
+    );
+  }
 
   // Loading state
   if (jobLoading) {
@@ -248,6 +264,20 @@ function StatusBadge({ status }: { status: string }) {
     >
       {labels[status as keyof typeof labels] || status}
     </span>
+  );
+}
+
+function ViewerContent() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <LoadingSpinner message="Loading..." />
+        </div>
+      }
+    >
+      <ViewerContentInner />
+    </Suspense>
   );
 }
 
