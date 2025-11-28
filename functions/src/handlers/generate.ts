@@ -1,17 +1,41 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createRodinClient } from '../rodin/client';
+import { createGeminiClient } from '../gemini/client';
 import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
-import type { JobDocument, QualityLevel, OutputFormat, PrintQuality, MeshMode } from '../rodin/types';
+import type {
+  JobDocument,
+  JobSettings,
+  QualityLevel,
+  OutputFormat,
+  PrintQuality,
+  MeshMode,
+  ViewAngle,
+  PrinterType,
+  InputMode,
+  TextureResolution,
+} from '../rodin/types';
 
 const db = admin.firestore();
 const storage = admin.storage();
 
+// Credit costs based on input mode
+const creditCosts: Record<InputMode, number> = {
+  single: 1,
+  multi: 1,
+  'ai-generated': 2,
+};
+
 interface GenerateModelData {
   imageUrl: string;
-  quality: PrintQuality | QualityLevel;  // Support both new and legacy quality levels
-  format?: OutputFormat;  // Optional, defaults to 'stl' for 3D printing
+  imageUrls?: string[];           // All images for multi-view
+  viewAngles?: ViewAngle[];       // Corresponding angles
+  quality: PrintQuality | QualityLevel;
+  printerType?: PrinterType;      // Determines material
+  inputMode?: InputMode;          // single | multi | ai-generated
+  generateAngles?: ViewAngle[];   // Angles to generate via Gemini
+  format?: OutputFormat;
 }
 
 interface CheckJobStatusData {
@@ -21,25 +45,29 @@ interface CheckJobStatusData {
 /**
  * Cloud Function: generateModel
  *
- * Starts a new 3D model generation job.
+ * Starts a new 3D model generation job with support for:
+ * - Single image mode (1 credit)
+ * - Multi-image upload mode (1 credit)
+ * - AI-generated views mode using Gemini (2 credits)
  *
  * Steps:
  * 1. Verify authentication
- * 2. Check user has sufficient credits
- * 3. Deduct 1 credit
+ * 2. Calculate credit cost based on input mode
+ * 3. Deduct credits
  * 4. Create job document
- * 5. Call Rodin API to start generation
- * 6. Update job with Rodin task ID
- * 7. Return job ID to client
+ * 5. Prepare images (download uploaded or generate via Gemini)
+ * 6. Call Rodin API with multi-image support
+ * 7. Update job with Rodin task ID
+ * 8. Return job ID to client
  */
 export const generateModel = functions
   .region('asia-east1')
   .runWith({
-    timeoutSeconds: 60,
-    memory: '512MB',
-    secrets: ['RODIN_API_KEY'],
+    timeoutSeconds: 120,  // Increased for Gemini + Rodin
+    memory: '1GB',        // Increased for image processing
+    secrets: ['RODIN_API_KEY', 'GEMINI_API_KEY'],
   })
-  .https.onCall(async (data: GenerateModelData, context) => {
+  .https.onCall(async (data: GenerateModelData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
     if (!context.auth) {
       throw new functions.https.HttpsError(
@@ -49,8 +77,15 @@ export const generateModel = functions
     }
 
     const userId = context.auth.uid;
-    // Default to 'standard' quality and 'stl' format for 3D printing optimization
-    const { imageUrl, quality = 'standard', format = 'stl' } = data;
+    const {
+      imageUrl,
+      imageUrls,
+      viewAngles,
+      quality = 'standard',
+      printerType = 'fdm',
+      inputMode = 'single',
+      generateAngles,
+    } = data;
 
     // Validate input
     if (!imageUrl) {
@@ -60,21 +95,42 @@ export const generateModel = functions
       );
     }
 
-    // Support both new print-oriented and legacy quality levels
+    // Validate quality
     const validQualities = ['draft', 'standard', 'fine', 'low', 'medium', 'high'];
     if (!validQualities.includes(quality)) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Invalid quality level. Use: draft, standard, fine (or legacy: low, medium, high)'
+        'Invalid quality level. Use: draft, standard, fine'
       );
     }
 
-    // 2 & 3. Check credits and deduct
+    // Validate printer type
+    const validPrinterTypes: PrinterType[] = ['fdm', 'sla', 'resin'];
+    if (!validPrinterTypes.includes(printerType)) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Invalid printer type. Use: fdm, sla, resin'
+      );
+    }
+
+    // Validate input mode
+    const validInputModes: InputMode[] = ['single', 'multi', 'ai-generated'];
+    if (!validInputModes.includes(inputMode)) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Invalid input mode. Use: single, multi, ai-generated'
+      );
+    }
+
+    // 2. Calculate credit cost based on input mode
+    const creditCost = creditCosts[inputMode];
+
+    // 3. Check credits and deduct
     const jobRef = db.collection('jobs').doc();
     const jobId = jobRef.id;
 
     try {
-      await deductCredits(userId, 1, jobId);
+      await deductCredits(userId, creditCost, jobId);
     } catch (error) {
       if (
         error instanceof functions.https.HttpsError &&
@@ -82,7 +138,7 @@ export const generateModel = functions
       ) {
         throw new functions.https.HttpsError(
           'resource-exhausted',
-          'You have no credits remaining. Each generation costs 1 credit.'
+          `You need ${creditCost} credit(s) for this generation mode.`
         );
       }
       throw error;
@@ -90,21 +146,29 @@ export const generateModel = functions
 
     // 4. Create job document
     const now = admin.firestore.FieldValue.serverTimestamp();
+    const jobSettings: JobSettings = {
+      tier: 'Gen-2',
+      quality: quality as QualityLevel,
+      format: 'stl' as OutputFormat,
+      printerType,
+      inputMode,
+      imageCount: 1, // Will be updated after image processing
+    };
+
     const jobDoc: Omit<JobDocument, 'createdAt' | 'completedAt'> & {
       createdAt: FirebaseFirestore.FieldValue;
       completedAt: null;
     } = {
       userId,
+      jobType: 'model',
       status: 'pending',
       inputImageUrl: imageUrl,
+      inputImageUrls: [imageUrl],
+      viewAngles: ['front'],
       outputModelUrl: null,
       rodinTaskId: '',
       rodinSubscriptionKey: '',
-      settings: {
-        tier: 'Gen-2',
-        quality: quality as QualityLevel,
-        format: format as OutputFormat,
-      },
+      settings: jobSettings,
       error: null,
       createdAt: now,
       completedAt: null,
@@ -112,33 +176,99 @@ export const generateModel = functions
 
     await jobRef.set(jobDoc);
 
-    // 5. Download image from Storage and call Rodin API
+    // 5. Prepare images based on input mode
     try {
-      // Download image from Firebase Storage URL
-      // Rodin API requires multipart/form-data with image as binary
-      const imageResponse = await axios.get(imageUrl, {
+      const imageBuffers: Buffer[] = [];
+      const finalViewAngles: ViewAngle[] = ['front'];
+
+      // Download primary image
+      const primaryResponse = await axios.get(imageUrl, {
         responseType: 'arraybuffer',
         timeout: 30000,
       });
-      const imageBuffer = Buffer.from(imageResponse.data);
+      const primaryBuffer = Buffer.from(primaryResponse.data);
+      imageBuffers.push(primaryBuffer);
 
-      functions.logger.info('Image downloaded for Rodin', {
-        size: imageBuffer.length,
+      functions.logger.info('Primary image downloaded', {
+        size: primaryBuffer.length,
         jobId,
+        inputMode,
       });
 
-      const rodinClient = createRodinClient();
-      // 3D Printing optimized: use Raw mesh mode + STL format
-      const { taskId, subscriptionKey } = await rodinClient.generateModel(imageBuffer, {
-        tier: 'Gen-2',
-        quality: quality as PrintQuality | QualityLevel,
-        format: 'stl' as OutputFormat,  // Fixed to STL for 3D printing
-        meshMode: 'Raw' as MeshMode,    // Triangle mesh for slicers
-      });
+      // Handle AI-generated views
+      if (inputMode === 'ai-generated' && generateAngles && generateAngles.length > 0) {
+        functions.logger.info('Generating AI views', {
+          angles: generateAngles,
+          jobId,
+        });
 
-      // 6. Update job with Rodin task ID
+        const geminiClient = createGeminiClient();
+        const base64 = primaryBuffer.toString('base64');
+
+        const generatedViews = await geminiClient.generateViews(
+          base64,
+          'image/png',
+          generateAngles
+        );
+
+        // Add generated images to buffers
+        for (const view of generatedViews) {
+          const buffer = Buffer.from(view.imageBase64, 'base64');
+          imageBuffers.push(buffer);
+          finalViewAngles.push(view.angle);
+
+          functions.logger.info('AI view generated', {
+            angle: view.angle,
+            size: buffer.length,
+            jobId,
+          });
+        }
+      }
+      // Handle multi-upload mode
+      else if (inputMode === 'multi' && imageUrls && imageUrls.length > 1) {
+        // Download additional user-uploaded images (skip first as it's already downloaded)
+        for (let i = 1; i < imageUrls.length; i++) {
+          const response = await axios.get(imageUrls[i], {
+            responseType: 'arraybuffer',
+            timeout: 30000,
+          });
+          const buffer = Buffer.from(response.data);
+          imageBuffers.push(buffer);
+          finalViewAngles.push(viewAngles?.[i] || 'front');
+        }
+
+        functions.logger.info('Multi-upload images downloaded', {
+          count: imageBuffers.length,
+          jobId,
+        });
+      }
+
+      // Update job with final image count
       await jobRef.update({
-        rodinTaskId: taskId,
+        inputImageUrls: inputMode === 'multi' ? imageUrls : [imageUrl],
+        viewAngles: finalViewAngles,
+        'settings.imageCount': imageBuffers.length,
+      });
+
+      // 6. Call Rodin API with multi-image support
+      const rodinClient = createRodinClient();
+      const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateModelMulti(
+        imageBuffers,
+        {
+          tier: 'Gen-2',
+          quality: quality as PrintQuality | QualityLevel,
+          format: 'stl' as OutputFormat,
+          meshMode: 'Raw' as MeshMode,
+          printerType,
+          conditionMode: imageBuffers.length > 1 ? 'concat' : undefined,
+        }
+      );
+
+      // 7. Update job with all Rodin IDs for flexibility
+      await jobRef.update({
+        rodinTaskId: taskUuid,           // Legacy field for backwards compat
+        rodinTaskUuid: taskUuid,         // Main UUID (required for download API)
+        rodinJobUuids: jobUuids,         // Individual job UUIDs
         rodinSubscriptionKey: subscriptionKey,
         status: 'processing',
       });
@@ -146,21 +276,29 @@ export const generateModel = functions
       functions.logger.info('Generation started', {
         jobId,
         userId,
-        taskId,
+        taskUuid,
+        jobUuids,
         quality,
+        printerType,
+        inputMode,
+        imageCount: imageBuffers.length,
       });
 
-      // 7. Return job ID
+      // 8. Return job ID
       return { jobId, status: 'processing' };
     } catch (error) {
       // Rollback: Refund credits and mark job as failed
-      await refundCredits(userId, 1, jobId);
+      await refundCredits(userId, creditCost, jobId);
       await jobRef.update({
         status: 'failed',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      functions.logger.error('Generation failed', { jobId, error });
+      functions.logger.error('Generation failed', {
+        jobId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        inputMode,
+      });
 
       throw error;
     }
@@ -185,7 +323,7 @@ export const checkJobStatus = functions
     memory: '1GB',
     secrets: ['RODIN_API_KEY'],
   })
-  .https.onCall(async (data: CheckJobStatusData, context) => {
+  .https.onCall(async (data: CheckJobStatusData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
     if (!context.auth) {
       throw new functions.https.HttpsError(
@@ -247,13 +385,22 @@ export const checkJobStatus = functions
     functions.logger.info('Rodin status polled', {
       jobId,
       status: rodinStatus.status,
+      jobUuid: rodinStatus.jobUuid,
     });
 
     // 3. Handle completion (status is 'Done' per API docs)
     if (rodinStatus.status === 'Done') {
       try {
-        // Get download URLs from separate endpoint (API requires this)
-        const downloadList = await rodinClient.getDownloadUrls(job.rodinTaskId);
+        // Get download URLs using the main task UUID
+        // Use rodinTaskUuid (new field) with fallback to rodinTaskId (legacy field)
+        const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
+        functions.logger.info('Attempting download', {
+          jobId,
+          rodinTaskUuid: job.rodinTaskUuid,
+          rodinTaskId: job.rodinTaskId,
+          usingUuid: downloadTaskUuid,
+        });
+        const downloadList = await rodinClient.getDownloadUrls(downloadTaskUuid);
 
         // Find the model file with the requested format
         const modelFile = downloadList.find((file) =>
@@ -301,22 +448,26 @@ export const checkJobStatus = functions
           outputModelUrl: signedUrl,
         };
       } catch (error) {
+        // Preserve actual error message for debugging
+        const errorMessage = error instanceof Error ? error.message : 'Failed to process model';
+
         functions.logger.error('Failed to process completed model', {
           jobId,
-          error,
+          error: errorMessage,
         });
 
         await jobRef.update({
           status: 'failed',
-          error: 'Failed to process model',
+          error: errorMessage,
         });
 
-        // Refund credit
-        await refundCredits(userId, 1, jobId);
+        // Refund credits based on input mode
+        const refundAmount = creditCosts[job.settings.inputMode] || 1;
+        await refundCredits(userId, refundAmount, jobId);
 
         return {
           status: 'failed',
-          error: 'Failed to process model',
+          error: errorMessage,
         };
       }
     }
@@ -328,8 +479,9 @@ export const checkJobStatus = functions
         error: 'Generation failed',
       });
 
-      // Refund credit
-      await refundCredits(userId, 1, jobId);
+      // Refund credits based on input mode
+      const refundAmount = creditCosts[job.settings.inputMode] || 1;
+      await refundCredits(userId, refundAmount, jobId);
 
       functions.logger.warn('Job failed', { jobId });
 
@@ -365,3 +517,232 @@ function getContentType(format: OutputFormat): string {
       return 'application/octet-stream';
   }
 }
+
+// Texture generation cost (per Rodin API: 0.5 credits)
+const TEXTURE_CREDIT_COST = 0.5;
+
+interface GenerateTextureData {
+  sourceJobId: string;          // Job ID of the model to apply texture to
+  imageUrl: string;             // Reference image for texture style
+  resolution?: TextureResolution;
+  format?: OutputFormat;
+  prompt?: string;
+}
+
+/**
+ * Cloud Function: generateTexture
+ *
+ * Generates PBR textures for an existing 3D model.
+ *
+ * Workflow:
+ * 1. User generates a model (generateModel)
+ * 2. User previews the model
+ * 3. User uploads a reference image and calls generateTexture
+ * 4. Rodin applies textures based on the reference image
+ *
+ * Steps:
+ * 1. Verify authentication and job ownership
+ * 2. Validate source job exists and is completed
+ * 3. Deduct 0.5 credits
+ * 4. Download the existing model from Storage
+ * 5. Download the reference image
+ * 6. Call Rodin texture API
+ * 7. Create texture job document
+ * 8. Return job ID for status polling
+ */
+export const generateTexture = functions
+  .region('asia-east1')
+  .runWith({
+    timeoutSeconds: 120,
+    memory: '1GB',
+    secrets: ['RODIN_API_KEY'],
+  })
+  .https.onCall(async (data: GenerateTextureData, context: functions.https.CallableContext) => {
+    // 1. Verify authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'You must be logged in to generate textures'
+      );
+    }
+
+    const userId = context.auth.uid;
+    const {
+      sourceJobId,
+      imageUrl,
+      resolution = 'Basic',
+      format = 'glb',
+      prompt,
+    } = data;
+
+    // Validate input
+    if (!sourceJobId) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Source job ID is required'
+      );
+    }
+
+    if (!imageUrl) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Reference image URL is required'
+      );
+    }
+
+    // 2. Validate source job
+    const sourceJobRef = db.collection('jobs').doc(sourceJobId);
+    const sourceJobDoc = await sourceJobRef.get();
+
+    if (!sourceJobDoc.exists) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        'Source model job not found'
+      );
+    }
+
+    const sourceJob = sourceJobDoc.data() as JobDocument;
+
+    // Verify ownership
+    if (sourceJob.userId !== userId) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'You do not have access to this model'
+      );
+    }
+
+    // Verify source job is completed
+    if (sourceJob.status !== 'completed' || !sourceJob.outputModelUrl) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Source model must be completed before generating textures'
+      );
+    }
+
+    // 3. Create texture job document first
+    const jobRef = db.collection('jobs').doc();
+    const jobId = jobRef.id;
+
+    // Deduct credits (0.5 for texture generation)
+    try {
+      await deductCredits(userId, TEXTURE_CREDIT_COST, jobId);
+    } catch (error) {
+      if (
+        error instanceof functions.https.HttpsError &&
+        error.code === 'resource-exhausted'
+      ) {
+        throw new functions.https.HttpsError(
+          'resource-exhausted',
+          `You need ${TEXTURE_CREDIT_COST} credit(s) for texture generation.`
+        );
+      }
+      throw error;
+    }
+
+    // 4. Create job document
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    const jobSettings: JobSettings = {
+      tier: 'Gen-2',
+      quality: sourceJob.settings.quality,
+      format: format as OutputFormat,
+      printerType: sourceJob.settings.printerType,
+      inputMode: 'single',
+      imageCount: 1,
+    };
+
+    const jobDoc: Omit<JobDocument, 'createdAt' | 'completedAt'> & {
+      createdAt: FirebaseFirestore.FieldValue;
+      completedAt: null;
+    } = {
+      userId,
+      jobType: 'texture',
+      status: 'pending',
+      inputImageUrl: imageUrl,
+      outputModelUrl: null,
+      rodinTaskId: '',
+      rodinSubscriptionKey: '',
+      settings: jobSettings,
+      error: null,
+      createdAt: now,
+      completedAt: null,
+      sourceJobId,
+      textureResolution: resolution,
+    };
+
+    await jobRef.set(jobDoc);
+
+    try {
+      // 5. Download the existing model from Storage
+      functions.logger.info('Downloading source model', {
+        jobId,
+        sourceJobId,
+        modelUrl: sourceJob.outputModelUrl,
+      });
+
+      const modelResponse = await axios.get(sourceJob.outputModelUrl, {
+        responseType: 'arraybuffer',
+        timeout: 60000,
+      });
+      const modelBuffer = Buffer.from(modelResponse.data);
+
+      // 6. Download the reference image
+      functions.logger.info('Downloading reference image', {
+        jobId,
+        imageUrl,
+      });
+
+      const imageResponse = await axios.get(imageUrl, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      });
+      const imageBuffer = Buffer.from(imageResponse.data);
+
+      // 7. Call Rodin texture API
+      const rodinClient = createRodinClient();
+      const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateTexture(
+        imageBuffer,
+        modelBuffer,
+        {
+          format,
+          material: 'PBR',
+          resolution,
+          prompt,
+        }
+      );
+
+      // 8. Update job with Rodin task IDs
+      await jobRef.update({
+        rodinTaskId: taskUuid,
+        rodinTaskUuid: taskUuid,
+        rodinJobUuids: jobUuids,
+        rodinSubscriptionKey: subscriptionKey,
+        status: 'processing',
+      });
+
+      functions.logger.info('Texture generation started', {
+        jobId,
+        userId,
+        sourceJobId,
+        taskUuid,
+        resolution,
+        format,
+      });
+
+      return { jobId, status: 'processing' };
+    } catch (error) {
+      // Rollback: Refund credits and mark job as failed
+      await refundCredits(userId, TEXTURE_CREDIT_COST, jobId);
+      await jobRef.update({
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      functions.logger.error('Texture generation failed', {
+        jobId,
+        sourceJobId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      throw error;
+    }
+  });

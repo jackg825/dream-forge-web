@@ -100,17 +100,173 @@ class RodinClient {
                 throw new Error('Invalid response from Rodin API');
             }
             functions.logger.info('Rodin generation started', {
-                taskId: response.data.uuid,
+                taskUuid: response.data.uuid,
+                jobUuids: response.data.jobs.uuids,
                 quality: options.quality,
                 format: options.format,
             });
+            // Return all UUIDs for flexible usage:
+            // - taskUuid: Main task UUID (required for download API)
+            // - jobUuids: Individual job UUIDs (for potential future use)
             return {
-                taskId: response.data.uuid,
+                taskUuid: response.data.uuid,
+                jobUuids: response.data.jobs.uuids || [],
                 subscriptionKey: response.data.jobs.subscription_key,
             };
         }
         catch (error) {
             this.handleError(error, 'generateModel');
+            throw error;
+        }
+    }
+    /**
+     * Start a 3D model generation task with multiple images
+     *
+     * Uses Rodin's multi-view mode (condition_mode: 'concat') for better
+     * 3D reconstruction from multiple angles.
+     *
+     * @param imageBuffers - Array of image data buffers (up to 5 images)
+     * @param options - Generation options including printer type for material selection
+     * @returns Task ID and subscription key for status polling
+     */
+    async generateModelMulti(imageBuffers, options) {
+        try {
+            const form = new form_data_1.default();
+            // Append each image - Rodin accepts up to 5 images
+            imageBuffers.forEach((buffer, index) => {
+                form.append('images', buffer, {
+                    filename: `input_${index}.png`,
+                    contentType: 'image/png',
+                });
+            });
+            form.append('tier', options.tier);
+            // Determine material from printer type
+            const material = options.printerType
+                ? types_1.PRINTER_MATERIAL_MAP[options.printerType]
+                : 'PBR';
+            form.append('material', material);
+            // Enable concat mode for multi-view processing
+            if (imageBuffers.length > 1 || options.conditionMode === 'concat') {
+                form.append('condition_mode', 'concat');
+            }
+            // 3D Printing optimizations
+            form.append('mesh_mode', options.meshMode || 'Raw');
+            form.append('geometry_file_format', options.format || 'stl');
+            // Get face count from quality setting
+            const faceCount = types_1.PRINT_QUALITY_FACE_COUNTS[options.quality]
+                || types_1.QUALITY_FACE_COUNTS[options.quality]
+                || 150000;
+            form.append('quality_override', String(faceCount));
+            if (options.prompt) {
+                form.append('prompt', options.prompt);
+            }
+            functions.logger.info('Starting multi-image generation', {
+                imageCount: imageBuffers.length,
+                material,
+                quality: options.quality,
+                format: options.format,
+                conditionMode: imageBuffers.length > 1 ? 'concat' : 'single',
+            });
+            const response = await axios_1.default.post(`${RODIN_API_BASE}/rodin`, form, {
+                headers: {
+                    ...form.getHeaders(),
+                    Authorization: `Bearer ${this.apiKey}`,
+                },
+                timeout: 30000,
+            });
+            if (!response.data.uuid || !response.data.jobs?.subscription_key) {
+                throw new Error('Invalid response from Rodin API');
+            }
+            functions.logger.info('Multi-image generation started', {
+                taskUuid: response.data.uuid,
+                jobUuids: response.data.jobs.uuids,
+                imageCount: imageBuffers.length,
+            });
+            // Return all UUIDs for flexible usage:
+            // - taskUuid: Main task UUID (required for download API)
+            // - jobUuids: Individual job UUIDs (for potential future use)
+            return {
+                taskUuid: response.data.uuid,
+                jobUuids: response.data.jobs.uuids || [],
+                subscriptionKey: response.data.jobs.subscription_key,
+            };
+        }
+        catch (error) {
+            this.handleError(error, 'generateModelMulti');
+            throw error;
+        }
+    }
+    /**
+     * Generate texture for an existing 3D model
+     *
+     * Uses the texture-only endpoint to add PBR textures to a model.
+     * See: https://developer.hyper3d.ai/api-specification/generate-texture
+     *
+     * @param imageBuffer - Reference image for texture style
+     * @param modelBuffer - Existing 3D model file (max 10MB)
+     * @param options - Texture generation options
+     * @returns Task UUID and subscription key for status polling
+     */
+    async generateTexture(imageBuffer, modelBuffer, options = {}) {
+        try {
+            const form = new form_data_1.default();
+            // Reference image for texture style
+            form.append('image', imageBuffer, {
+                filename: 'reference.png',
+                contentType: 'image/png',
+            });
+            // Model file to apply texture to
+            form.append('model', modelBuffer, {
+                filename: `model.${options.format || 'glb'}`,
+                contentType: 'application/octet-stream',
+            });
+            // Optional parameters
+            if (options.format) {
+                form.append('geometry_file_format', options.format);
+            }
+            if (options.material) {
+                form.append('material', options.material);
+            }
+            if (options.resolution) {
+                form.append('resolution', options.resolution);
+            }
+            if (options.prompt) {
+                form.append('prompt', options.prompt);
+            }
+            if (options.seed !== undefined) {
+                form.append('seed', String(options.seed));
+            }
+            if (options.referenceScale !== undefined) {
+                form.append('reference_scale', String(options.referenceScale));
+            }
+            functions.logger.info('Starting texture generation', {
+                format: options.format || 'glb',
+                material: options.material || 'PBR',
+                resolution: options.resolution || 'Basic',
+                modelSize: modelBuffer.length,
+            });
+            const response = await axios_1.default.post(`${RODIN_API_BASE}/rodin_texture_only`, form, {
+                headers: {
+                    ...form.getHeaders(),
+                    Authorization: `Bearer ${this.apiKey}`,
+                },
+                timeout: 30000,
+            });
+            if (!response.data.uuid || !response.data.jobs?.subscription_key) {
+                throw new Error('Invalid response from Rodin Texture API');
+            }
+            functions.logger.info('Texture generation started', {
+                taskUuid: response.data.uuid,
+                jobUuids: response.data.jobs.uuids,
+            });
+            return {
+                taskUuid: response.data.uuid,
+                jobUuids: response.data.jobs.uuids || [],
+                subscriptionKey: response.data.jobs.subscription_key,
+            };
+        }
+        catch (error) {
+            this.handleError(error, 'generateTexture');
             throw error;
         }
     }
@@ -160,6 +316,7 @@ class RodinClient {
      */
     async getDownloadUrls(taskUuid) {
         try {
+            functions.logger.info('Fetching download URLs', { taskUuid });
             const response = await axios_1.default.post(`${RODIN_API_BASE}/download`, { task_uuid: taskUuid }, {
                 headers: {
                     Authorization: `Bearer ${this.apiKey}`,
@@ -167,12 +324,24 @@ class RodinClient {
                 },
                 timeout: 30000,
             });
-            if (!response.data.list || response.data.list.length === 0) {
-                throw new Error('No download URLs in response');
+            const responseData = response.data;
+            functions.logger.info('Download API raw response', {
+                taskUuid,
+                httpStatus: response.status,
+                fullResponseData: JSON.stringify(response.data),
+                hasError: !!responseData.error,
+                errorValue: responseData.error,
+                hasList: !!responseData.list,
+                listLength: responseData.list?.length ?? 0,
+                listContents: responseData.list?.map((f) => f.name) ?? [],
+            });
+            if (!responseData.list || responseData.list.length === 0) {
+                throw new Error(`No download URLs in response. API error: ${responseData.error || 'none'}`);
             }
             functions.logger.info('Rodin download URLs retrieved', {
                 taskUuid,
                 fileCount: response.data.list.length,
+                files: response.data.list.map((f) => f.name),
             });
             return response.data.list;
         }
@@ -204,10 +373,35 @@ class RodinClient {
         }
     }
     /**
+     * Check remaining Rodin API credits
+     *
+     * See: https://developer.hyper3d.ai/api-specification/check_balance
+     *
+     * @returns Current credit balance
+     */
+    async checkBalance() {
+        try {
+            const response = await axios_1.default.get(`${RODIN_API_BASE}/check_balance`, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                },
+                timeout: 10000,
+            });
+            functions.logger.info('Rodin balance checked', {
+                balance: response.data.balance,
+            });
+            return response.data.balance;
+        }
+        catch (error) {
+            this.handleError(error, 'checkBalance');
+            throw error;
+        }
+    }
+    /**
      * Get supported output formats
      */
     static getSupportedFormats() {
-        return ['glb', 'obj', 'fbx', 'stl'];
+        return ['glb', 'obj', 'fbx', 'stl', 'usdz'];
     }
     /**
      * Handle and log API errors
@@ -233,8 +427,15 @@ class RodinClient {
             }
             throw new functions.https.HttpsError('internal', `Rodin API error: ${axiosError.message}`);
         }
-        functions.logger.error(`Unknown error in ${operation}`, { error });
-        throw new functions.https.HttpsError('internal', 'An unexpected error occurred');
+        // Log the full error for debugging
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        functions.logger.error(`Unknown error in ${operation}`, {
+            error: errorMessage,
+            stack: errorStack,
+            type: typeof error,
+        });
+        throw new functions.https.HttpsError('internal', `Unexpected error in ${operation}: ${errorMessage}`);
     }
 }
 exports.RodinClient = RodinClient;

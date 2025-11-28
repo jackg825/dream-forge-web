@@ -1,4 +1,4 @@
-import { type GenerateOptions, type OutputFormat } from './types';
+import { type GenerateOptions, type GenerateTextureOptions, type OutputFormat } from './types';
 /**
  * Rodin Gen-2 API Client
  *
@@ -20,7 +20,39 @@ export declare class RodinClient {
      * @returns Task ID and subscription key for status polling
      */
     generateModel(imageBuffer: Buffer, options: GenerateOptions): Promise<{
-        taskId: string;
+        taskUuid: string;
+        jobUuids: string[];
+        subscriptionKey: string;
+    }>;
+    /**
+     * Start a 3D model generation task with multiple images
+     *
+     * Uses Rodin's multi-view mode (condition_mode: 'concat') for better
+     * 3D reconstruction from multiple angles.
+     *
+     * @param imageBuffers - Array of image data buffers (up to 5 images)
+     * @param options - Generation options including printer type for material selection
+     * @returns Task ID and subscription key for status polling
+     */
+    generateModelMulti(imageBuffers: Buffer[], options: GenerateOptions): Promise<{
+        taskUuid: string;
+        jobUuids: string[];
+        subscriptionKey: string;
+    }>;
+    /**
+     * Generate texture for an existing 3D model
+     *
+     * Uses the texture-only endpoint to add PBR textures to a model.
+     * See: https://developer.hyper3d.ai/api-specification/generate-texture
+     *
+     * @param imageBuffer - Reference image for texture style
+     * @param modelBuffer - Existing 3D model file (max 10MB)
+     * @param options - Texture generation options
+     * @returns Task UUID and subscription key for status polling
+     */
+    generateTexture(imageBuffer: Buffer, modelBuffer: Buffer, options?: GenerateTextureOptions): Promise<{
+        taskUuid: string;
+        jobUuids: string[];
         subscriptionKey: string;
     }>;
     /**
@@ -54,6 +86,14 @@ export declare class RodinClient {
      * @returns Model data as a Buffer
      */
     downloadModel(modelUrl: string): Promise<Buffer>;
+    /**
+     * Check remaining Rodin API credits
+     *
+     * See: https://developer.hyper3d.ai/api-specification/check_balance
+     *
+     * @returns Current credit balance
+     */
+    checkBalance(): Promise<number>;
     /**
      * Get supported output formats
      */
