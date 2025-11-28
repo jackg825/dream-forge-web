@@ -53,3 +53,13 @@ export declare const checkJobStatus: functions.HttpsFunction & functions.Runnabl
  * 8. Return job ID for status polling
  */
 export declare const generateTexture: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: retryFailedJob
+ *
+ * Retries a failed job by re-attempting the download process.
+ * Only works for jobs that failed during the download phase
+ * (i.e., have a valid rodinTaskUuid but failed to get download URLs).
+ *
+ * @param jobId - The ID of the failed job to retry
+ */
+export declare const retryFailedJob: functions.HttpsFunction & functions.Runnable<any>;

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -43,4 +43,12 @@ Object.defineProperty(exports, "onUserCreate", { enumerable: true, get: function
 var generate_1 = require("./handlers/generate");
 Object.defineProperty(exports, "generateModel", { enumerable: true, get: function () { return generate_1.generateModel; } });
 Object.defineProperty(exports, "checkJobStatus", { enumerable: true, get: function () { return generate_1.checkJobStatus; } });
+Object.defineProperty(exports, "generateTexture", { enumerable: true, get: function () { return generate_1.generateTexture; } });
+Object.defineProperty(exports, "retryFailedJob", { enumerable: true, get: function () { return generate_1.retryFailedJob; } });
+var admin_1 = require("./handlers/admin");
+Object.defineProperty(exports, "addCredits", { enumerable: true, get: function () { return admin_1.addCredits; } });
+Object.defineProperty(exports, "setUnlimitedCredits", { enumerable: true, get: function () { return admin_1.setUnlimitedCredits; } });
+Object.defineProperty(exports, "checkRodinBalance", { enumerable: true, get: function () { return admin_1.checkRodinBalance; } });
+Object.defineProperty(exports, "getAdminStats", { enumerable: true, get: function () { return admin_1.getAdminStats; } });
+Object.defineProperty(exports, "listUsers", { enumerable: true, get: function () { return admin_1.listUsers; } });
 //# sourceMappingURL=index.js.map

@@ -8,7 +8,19 @@
  * - format: 'stl' as the standard 3D printing format
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QUALITY_FACE_COUNTS = exports.PRINT_QUALITY_FACE_COUNTS = void 0;
+exports.QUALITY_FACE_COUNTS = exports.PRINT_QUALITY_FACE_COUNTS = exports.CREDIT_COSTS = exports.PRINTER_MATERIAL_MAP = void 0;
+// Printer type to material mapping
+exports.PRINTER_MATERIAL_MAP = {
+    fdm: 'Shaded', // Mono prints don't need PBR textures
+    sla: 'PBR', // SLA supports full-color printing
+    resin: 'PBR', // Resin printers support color
+};
+// Credit costs based on input mode
+exports.CREDIT_COSTS = {
+    single: 1,
+    multi: 1,
+    'ai-generated': 2, // Extra cost for Gemini API usage
+};
 // Raw mode face counts optimized for 3D printing
 // Raw mode range: 500 - 1,000,000 faces
 exports.PRINT_QUALITY_FACE_COUNTS = {

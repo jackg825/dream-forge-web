@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateTexture = exports.checkJobStatus = exports.generateModel = void 0;
+exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -577,6 +577,117 @@ exports.generateTexture = functions
             error: error instanceof Error ? error.message : 'Unknown error',
         });
         throw error;
+    }
+});
+/**
+ * Cloud Function: retryFailedJob
+ *
+ * Retries a failed job by re-attempting the download process.
+ * Only works for jobs that failed during the download phase
+ * (i.e., have a valid rodinTaskUuid but failed to get download URLs).
+ *
+ * @param jobId - The ID of the failed job to retry
+ */
+exports.retryFailedJob = functions
+    .region('asia-east1')
+    .runWith({
+    timeoutSeconds: 540,
+    memory: '1GB',
+    secrets: ['RODIN_API_KEY'],
+})
+    .https.onCall(async (data, context) => {
+    // 1. Verify authentication
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in');
+    }
+    const userId = context.auth.uid;
+    const { jobId } = data;
+    if (!jobId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Job ID is required');
+    }
+    // Get job document
+    const jobRef = db.collection('jobs').doc(jobId);
+    const jobDoc = await jobRef.get();
+    if (!jobDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Job not found');
+    }
+    const job = jobDoc.data();
+    // Verify ownership
+    if (job.userId !== userId) {
+        throw new functions.https.HttpsError('permission-denied', 'You do not have access to this job');
+    }
+    // Only retry failed jobs
+    if (job.status !== 'failed') {
+        throw new functions.https.HttpsError('failed-precondition', `Job is not in failed state (current: ${job.status})`);
+    }
+    // Need rodinTaskUuid to retry
+    const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
+    if (!downloadTaskUuid) {
+        throw new functions.https.HttpsError('failed-precondition', 'Job has no Rodin task UUID - cannot retry');
+    }
+    functions.logger.info('Retrying failed job', {
+        jobId,
+        downloadTaskUuid,
+        previousError: job.error,
+    });
+    // Reset job status to processing
+    await jobRef.update({
+        status: 'processing',
+        error: null,
+    });
+    try {
+        const rodinClient = (0, client_1.createRodinClient)();
+        // Try to get download URLs (with retry logic)
+        const downloadList = await rodinClient.getDownloadUrls(downloadTaskUuid);
+        // Find the model file
+        const modelFile = downloadList.find((file) => file.name.endsWith(`.${job.settings.format}`));
+        if (!modelFile) {
+            throw new Error(`No ${job.settings.format} file in download list`);
+        }
+        // Download model from Rodin
+        const modelBuffer = await rodinClient.downloadModel(modelFile.url);
+        // Upload to Firebase Storage
+        const bucket = storage.bucket();
+        const modelPath = `models/${userId}/${jobId}.${job.settings.format}`;
+        const file = bucket.file(modelPath);
+        await file.save(modelBuffer, {
+            metadata: {
+                contentType: getContentType(job.settings.format),
+            },
+        });
+        // Generate signed URL
+        const [signedUrl] = await file.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        });
+        // Update job as completed
+        await jobRef.update({
+            status: 'completed',
+            outputModelUrl: signedUrl,
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        // Increment generation count
+        await (0, credits_1.incrementGenerationCount)(userId);
+        functions.logger.info('Retry successful', { jobId, modelPath });
+        return {
+            status: 'completed',
+            outputModelUrl: signedUrl,
+        };
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Retry failed';
+        functions.logger.error('Retry failed', {
+            jobId,
+            error: errorMessage,
+        });
+        await jobRef.update({
+            status: 'failed',
+            error: errorMessage,
+        });
+        return {
+            status: 'failed',
+            error: errorMessage,
+        };
     }
 });
 //# sourceMappingURL=generate.js.map
