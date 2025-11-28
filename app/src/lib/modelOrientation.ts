@@ -13,17 +13,15 @@ export interface OrientationResult {
 
 /**
  * Apply Z-up to Y-up coordinate conversion and face the camera
- * Step 1: Rotates the object -90 degrees around the X-axis (Z-up → Y-up)
- * Step 2: Rotates 180 degrees around Y-axis so model faces camera (-Z direction)
+ * Rodin models: Z-up (head), -Y forward (face)
+ * Three.js: Y-up (head), -Z forward (face toward camera)
+ *
+ * Rotation: X-axis +90° to convert coordinate system
  */
 export function applyZUpToYUpRotation(object: THREE.Object3D): void {
-  // Z-up to Y-up
-  const rotationX = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+  // Rotate +90° around X-axis: Z-up → Y-up, -Y forward → -Z forward (faces camera)
+  const rotationX = new THREE.Matrix4().makeRotationX(Math.PI / 2);
   object.applyMatrix4(rotationX);
-
-  // Rotate 180° around Y so model faces camera (-Z direction)
-  const rotationY = new THREE.Matrix4().makeRotationY(Math.PI);
-  object.applyMatrix4(rotationY);
 }
 
 /**
@@ -135,10 +133,8 @@ export function orientGeometry(
   applyZToYRotation: boolean = true
 ): void {
   if (applyZToYRotation) {
-    // Z-up to Y-up
-    geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-    // Rotate 180° around Y so model faces camera (-Z direction)
-    geometry.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI));
+    // Rotate +90° around X-axis: Z-up → Y-up, -Y forward → -Z forward (faces camera)
+    geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2));
   }
 
   // Recompute normals after rotation
