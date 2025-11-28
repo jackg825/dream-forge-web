@@ -33,8 +33,10 @@ function ViewerContentInner() {
   const [backgroundColor, setBackgroundColor] = useState('#f3f4f6');
   const [viewMode, setViewMode] = useState<ViewMode>('clay');
 
-  // Check if GLB/textures are available for textured mode
+  // Check if GLB is available for textured mode
+  // GLB can come from: 1) outputModelUrl (Firebase Storage) or 2) downloadFiles (Rodin API)
   const hasTextures = Boolean(
+    job?.outputModelUrl?.includes('.glb') ||
     job?.downloadFiles?.some((f) => f.name.endsWith('.glb') || f.name.endsWith('.gltf'))
   );
 

@@ -76,11 +76,12 @@ class RodinClient {
             });
             form.append('tier', options.tier);
             form.append('material', 'PBR');
-            // 3D Printing optimizations:
+            // 3D model generation:
             // - mesh_mode: 'Raw' produces triangle meshes (required by slicers)
-            // - geometry_file_format: 'stl' is the standard 3D printing format
+            // - geometry_file_format: 'glb' for preview with PBR materials
+            //   (STL can be converted client-side for 3D printing)
             form.append('mesh_mode', options.meshMode || 'Raw');
-            form.append('geometry_file_format', options.format || 'stl');
+            form.append('geometry_file_format', options.format || 'glb');
             // Get face count from print quality or legacy quality mapping
             const faceCount = types_1.PRINT_QUALITY_FACE_COUNTS[options.quality]
                 || types_1.QUALITY_FACE_COUNTS[options.quality]
