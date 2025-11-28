@@ -35,7 +35,7 @@ function ViewerContentInner() {
   // Viewer state
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
   const [viewMode, setViewMode] = useState<ViewMode>('clay');
-  const [showGrid, setShowGrid] = useState(false);
+  const [showGrid, setShowGrid] = useState(true); // Grid enabled by default
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);

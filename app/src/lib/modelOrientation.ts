@@ -12,16 +12,13 @@ export interface OrientationResult {
 }
 
 /**
- * Apply Z-up to Y-up coordinate conversion and face the camera
- * Rodin models: Z-up (head), -Y forward (face)
- * Three.js: Y-up (head), -Z forward (face toward camera)
- *
- * Rotation: X-axis +90° to convert coordinate system
+ * Apply default orientation for Rodin GLB models
+ * Rodin GLB models are already correctly oriented (Y-up, -Z forward)
+ * We just add a slight Y rotation (30°) for a nicer 3/4 view angle
  */
 export function applyZUpToYUpRotation(object: THREE.Object3D): void {
-  // Rotate +90° around X-axis: Z-up → Y-up, -Y forward → -Z forward (faces camera)
-  const rotationX = new THREE.Matrix4().makeRotationX(Math.PI / 2);
-  object.applyMatrix4(rotationX);
+  // Rodin GLB models are already Y-up, just add 30° Y rotation for nice 3/4 view
+  object.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI / 6)); // 30°
 }
 
 /**
@@ -127,14 +124,15 @@ export function orientModel(
 /**
  * Orient a BufferGeometry (for STL models)
  * Note: This modifies the geometry directly
+ * Uses same rotation as applyZUpToYUpRotation for consistency
  */
 export function orientGeometry(
   geometry: THREE.BufferGeometry,
   applyZToYRotation: boolean = true
 ): void {
   if (applyZToYRotation) {
-    // Rotate +90° around X-axis: Z-up → Y-up, -Y forward → -Z forward (faces camera)
-    geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(Math.PI / 2));
+    // Rodin models are already Y-up, just add 30° Y rotation for nice 3/4 view
+    geometry.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI / 6)); // 30°
   }
 
   // Recompute normals after rotation
