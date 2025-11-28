@@ -208,12 +208,14 @@ exports.generateModel = functions
         // 6. Update status to generating-model before calling Rodin API
         await jobRef.update({ status: 'generating-model' });
         // Call Rodin API with multi-image support
+        // Use GLB format for preview with PBR materials (matching job.settings.format)
+        // Use Raw mesh mode to support higher poly counts (up to 1M vs Quad's 200K limit)
         const rodinClient = (0, client_1.createRodinClient)();
         const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateModelMulti(imageBuffers, {
             tier: 'Gen-2',
             quality: quality,
-            format: 'stl',
-            meshMode: 'Raw',
+            format: 'glb', // GLB for preview with textures
+            meshMode: 'Raw', // Raw mode supports higher poly counts
             printerType,
             conditionMode: imageBuffers.length > 1 ? 'concat' : undefined,
         });
@@ -315,19 +317,27 @@ exports.checkJobStatus = functions
     });
     // 3. Handle completion (status is 'Done' per API docs)
     if (rodinStatus.status === 'Done') {
-        try {
-            // Update status to downloading-model
+        // Update status to downloading-model
+        if (job.status !== 'downloading-model') {
             await jobRef.update({ status: 'downloading-model' });
-            // Get download URLs using the main task UUID
-            // Use rodinTaskUuid (new field) with fallback to rodinTaskId (legacy field)
-            const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
-            functions.logger.info('Attempting download', {
-                jobId,
-                rodinTaskUuid: job.rodinTaskUuid,
-                rodinTaskId: job.rodinTaskId,
-                usingUuid: downloadTaskUuid,
-            });
-            const downloadList = await rodinClient.getDownloadUrls(downloadTaskUuid);
+        }
+        // Get download URLs using the main task UUID
+        // Use rodinTaskUuid (new field) with fallback to rodinTaskId (legacy field)
+        const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
+        // Track download retry attempts (frontend polls every ~5 seconds)
+        const downloadRetryCount = (job.downloadRetryCount || 0) + 1;
+        const maxDownloadRetries = 60; // ~5 minutes with 5 second polling
+        functions.logger.info('Attempting download', {
+            jobId,
+            rodinTaskUuid: job.rodinTaskUuid,
+            rodinTaskId: job.rodinTaskId,
+            usingUuid: downloadTaskUuid,
+            downloadRetryCount,
+            maxDownloadRetries,
+        });
+        try {
+            // Try to get download URLs (only 1 attempt per poll, no internal retry)
+            const downloadList = await rodinClient.getDownloadUrls(downloadTaskUuid, 1, 0);
             // Find the model file with the requested format
             const modelFile = downloadList.find((file) => file.name.endsWith(`.${job.settings.format}`));
             if (!modelFile) {
@@ -373,15 +383,34 @@ exports.checkJobStatus = functions
             };
         }
         catch (error) {
-            // Preserve actual error message for debugging
             const errorMessage = error instanceof Error ? error.message : 'Failed to process model';
+            const isDownloadNotReady = errorMessage.includes('No download URLs') ||
+                errorMessage.includes('empty');
+            // If download URLs not ready yet, keep polling (don't fail)
+            if (isDownloadNotReady && downloadRetryCount < maxDownloadRetries) {
+                await jobRef.update({ downloadRetryCount });
+                functions.logger.info('Download URLs not ready, will retry on next poll', {
+                    jobId,
+                    downloadRetryCount,
+                    maxDownloadRetries,
+                    error: errorMessage,
+                });
+                return {
+                    status: 'downloading-model',
+                };
+            }
+            // Either non-recoverable error or max retries exceeded
             functions.logger.error('Failed to process completed model', {
                 jobId,
                 error: errorMessage,
+                downloadRetryCount,
+                isDownloadNotReady,
             });
             await jobRef.update({
                 status: 'failed',
-                error: errorMessage,
+                error: isDownloadNotReady
+                    ? `Download URLs not available after ${downloadRetryCount} attempts (~${Math.round(downloadRetryCount * 5 / 60)} minutes)`
+                    : errorMessage,
             });
             // Refund credits based on input mode
             const refundAmount = creditCosts[job.settings.inputMode] || 1;

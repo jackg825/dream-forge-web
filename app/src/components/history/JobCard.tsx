@@ -4,66 +4,62 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Job } from '@/types';
 import { useRetryJob } from '@/hooks/useJobs';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Clock,
+  CheckCircle2,
+  XCircle,
+  Loader2,
+  Download,
+  Eye,
+  RefreshCw,
+} from 'lucide-react';
 
 interface JobCardProps {
   job: Job;
 }
 
-// Status styles - all intermediate statuses shown as blue (processing)
-const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  pending: {
-    bg: 'bg-yellow-100',
-    text: 'text-yellow-800',
-    label: '排隊中',
-  },
-  'generating-views': {
-    bg: 'bg-blue-100',
-    text: 'text-blue-800',
-    label: '生成視角',
-  },
-  'generating-model': {
-    bg: 'bg-blue-100',
-    text: 'text-blue-800',
-    label: '生成模型',
-  },
-  'downloading-model': {
-    bg: 'bg-blue-100',
-    text: 'text-blue-800',
-    label: '下載中',
-  },
-  'uploading-storage': {
-    bg: 'bg-blue-100',
-    text: 'text-blue-800',
-    label: '準備連結',
-  },
-  completed: {
-    bg: 'bg-green-100',
-    text: 'text-green-800',
-    label: '完成',
-  },
-  failed: {
-    bg: 'bg-red-100',
-    text: 'text-red-800',
-    label: '失敗',
-  },
+const getStatusConfig = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return {
+        icon: CheckCircle2,
+        className: 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30',
+        label: 'Completed',
+      };
+    case 'failed':
+      return {
+        icon: XCircle,
+        className: 'bg-destructive/10 text-destructive border-destructive/30',
+        label: 'Failed',
+      };
+    case 'pending':
+      return {
+        icon: Clock,
+        className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/30',
+        label: 'Pending',
+      };
+    default:
+      return {
+        icon: Loader2,
+        className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30',
+        label: 'Processing',
+      };
+  }
 };
 
-// Default style for unknown statuses
-const DEFAULT_STATUS_STYLE = {
-  bg: 'bg-gray-100',
-  text: 'text-gray-800',
-  label: '處理中',
-};
-
-/**
- * Card component for displaying a generation job
- */
 export function JobCard({ job }: JobCardProps) {
-  const status = STATUS_STYLES[job.status] || DEFAULT_STATUS_STYLE;
+  const statusConfig = getStatusConfig(job.status);
+  const StatusIcon = statusConfig.icon;
+  const isProcessing = !['completed', 'failed', 'pending'].includes(job.status);
+
   const { retry, retrying } = useRetryJob();
   const [retryError, setRetryError] = useState<string | null>(null);
 
-  const handleRetry = async () => {
+  const handleRetry = async (e: React.MouseEvent) => {
+    e.preventDefault();
     setRetryError(null);
     const result = await retry(job.id);
     if (!result) {
@@ -79,16 +75,16 @@ export function JobCard({ job }: JobCardProps) {
     const days = Math.floor(diff / 86400000);
 
     if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-    if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    if (days < 7) return `${days} day${days !== 1 ? 's' : ''} ago`;
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString();
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       {/* Image */}
-      <div className="relative aspect-square bg-gray-100">
+      <div className="relative aspect-square bg-muted">
         <img
           src={job.inputImageUrl}
           alt="Input image"
@@ -96,119 +92,87 @@ export function JobCard({ job }: JobCardProps) {
         />
 
         {/* Status badge */}
-        <span
-          className={`absolute top-2 right-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.text}`}
-        >
-          {status.label}
-        </span>
+        <Badge variant="outline" className={`absolute top-2 right-2 ${statusConfig.className}`}>
+          <StatusIcon className={`mr-1 h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`} />
+          {statusConfig.label}
+        </Badge>
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <CardContent className="p-4">
         {/* Settings */}
-        <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
           <span className="capitalize">{job.settings.quality}</span>
-          <span className="text-gray-300">•</span>
+          <span className="text-muted-foreground/50">•</span>
           <span className="uppercase">{job.settings.format}</span>
         </div>
 
         {/* Timestamp */}
-        <p className="text-xs text-gray-500 mb-3">
+        <p className="text-xs text-muted-foreground mb-3">
           {formatDate(job.createdAt)}
         </p>
 
         {/* Error message if failed */}
         {job.status === 'failed' && job.error && (
-          <p className="text-xs text-red-600 mb-3 truncate" title={job.error}>
+          <p className="text-xs text-destructive mb-3 truncate" title={job.error}>
             {job.error}
           </p>
         )}
 
         {/* Retry error message */}
         {retryError && (
-          <p className="text-xs text-red-600 mb-3">{retryError}</p>
+          <p className="text-xs text-destructive mb-3">{retryError}</p>
         )}
 
         {/* Actions */}
         <div className="flex gap-2">
           {/* Retry button for failed jobs */}
           {job.status === 'failed' && (
-            <button
+            <Button
               onClick={handleRetry}
               disabled={retrying}
-              className={`
-                flex-1 text-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors
-                ${retrying
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-orange-500 text-white hover:bg-orange-600'
-                }
-              `}
+              variant="outline"
+              size="sm"
+              className="flex-1"
             >
               {retrying ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
+                <>
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                   Retrying...
-                </span>
+                </>
               ) : (
-                'Retry'
+                <>
+                  <RefreshCw className="mr-1 h-3 w-3" />
+                  Retry
+                </>
               )}
-            </button>
+            </Button>
           )}
 
-          <Link
-            href={`/viewer?id=${job.id}`}
-            className={`
-              flex-1 text-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors
-              ${job.status === 'completed'
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : job.status === 'failed'
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }
-            `}
-          >
-            {job.status === 'completed' ? 'View Model' : 'View Details'}
-          </Link>
+          <Button asChild variant={job.status === 'completed' ? 'default' : 'secondary'} size="sm" className="flex-1">
+            <Link href={`/viewer?id=${job.id}`}>
+              <Eye className="mr-1 h-3 w-3" />
+              {job.status === 'completed' ? 'View' : 'Details'}
+            </Link>
+          </Button>
 
           {job.status === 'completed' && job.outputModelUrl && (
-            <a
-              href={job.outputModelUrl}
-              download={`model_${job.id}.${job.settings.format}`}
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
-              onClick={(e) => e.stopPropagation()}
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <a
+                href={job.outputModelUrl}
+                download={`model_${job.id}.${job.settings.format}`}
+                onClick={(e) => e.stopPropagation()}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                />
-              </svg>
-            </a>
+                <Download className="h-3 w-3" />
+              </a>
+            </Button>
           )}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

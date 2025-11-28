@@ -9,6 +9,17 @@ import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Loader2,
+  RefreshCw,
+} from 'lucide-react';
 import { JOB_STATUS_MESSAGES, type JobStatus, type ViewMode } from '@/types';
 import type { ModelViewerRef } from '@/components/viewer/ModelViewer';
 
@@ -35,7 +46,7 @@ function ViewerContentInner() {
   // Viewer state
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
   const [viewMode, setViewMode] = useState<ViewMode>('clay');
-  const [showGrid, setShowGrid] = useState(true); // Grid enabled by default
+  const [showGrid, setShowGrid] = useState(true);
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -108,7 +119,7 @@ function ViewerContentInner() {
   // No jobId state
   if (!jobId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <LoadingSpinner message="Redirecting..." />
       </div>
     );
@@ -117,7 +128,7 @@ function ViewerContentInner() {
   // Loading state
   if (jobLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <LoadingSpinner message="Loading job..." />
       </div>
     );
@@ -126,48 +137,40 @@ function ViewerContentInner() {
   // Error state
   if (jobError || !job) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Job Not Found</h1>
-          <p className="text-gray-600 mb-4">
-            {jobError || 'The requested job could not be found.'}
-          </p>
-          <Link
-            href="/dashboard"
-            className="text-indigo-600 hover:text-indigo-700"
-          >
-            Back to Dashboard
-          </Link>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-6 text-center">
+            <XCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+            <h1 className="text-xl font-bold mb-2">Job Not Found</h1>
+            <p className="text-muted-foreground mb-6">
+              {jobError || 'The requested job could not be found.'}
+            </p>
+            <Button asChild>
+              <Link href="/dashboard">Back to Dashboard</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <header className="bg-gray-900/80 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+    <div className="min-h-screen bg-gray-950">
+      {/* Header - Dark themed for viewer */}
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-gray-900/80 backdrop-blur-lg">
+        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link
-                href="/dashboard"
-                className="text-white/60 hover:text-white transition-colors"
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                className="text-white/60 hover:text-white hover:bg-white/10"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </Link>
+                <Link href="/dashboard">
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </Button>
               <div>
                 <h1 className="text-lg font-medium text-white">
                   3D Model Viewer
@@ -185,55 +188,45 @@ function ViewerContentInner() {
       </header>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Processing state */}
         {isProcessing && currentStatus && (
-          <div className="bg-gray-800/50 backdrop-blur rounded-2xl border border-white/10 p-8">
-            <div className="text-center">
-              <ProgressSteps currentStatus={currentStatus} />
+          <Card className="bg-gray-900/50 border-white/10">
+            <CardContent className="py-8">
+              <div className="text-center">
+                <ProgressSteps currentStatus={currentStatus} />
 
-              <LoadingSpinner
-                message={JOB_STATUS_MESSAGES[currentStatus] || '處理中...'}
-              />
+                <LoadingSpinner
+                  message={JOB_STATUS_MESSAGES[currentStatus] || 'Processing...'}
+                />
 
-              <div className="mt-6 max-w-md mx-auto">
-                <div className="flex items-center gap-3 text-sm text-white/50">
-                  <img
-                    src={job.inputImageUrl}
-                    alt="Input"
-                    className="w-12 h-12 rounded-lg object-cover ring-1 ring-white/10"
-                  />
-                  <span className="font-mono text-xs">
-                    {job.settings.quality === 'fine'
-                      ? '精細品質生成約需 3 分鐘'
-                      : job.settings.quality === 'standard'
-                      ? '標準品質生成約需 2 分鐘'
-                      : '草稿品質生成約需 1 分鐘'}
-                  </span>
+                <div className="mt-6 max-w-md mx-auto">
+                  <div className="flex items-center justify-center gap-3 text-sm text-white/50">
+                    <img
+                      src={job.inputImageUrl}
+                      alt="Input"
+                      className="w-12 h-12 rounded-lg object-cover ring-1 ring-white/10"
+                    />
+                    <span className="font-mono text-xs">
+                      {job.settings.quality === 'fine'
+                        ? 'Fine quality ~3 minutes'
+                        : job.settings.quality === 'standard'
+                        ? 'Standard quality ~2 minutes'
+                        : 'Draft quality ~1 minute'}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Failed state */}
         {job.status === 'failed' && (
-          <div className="bg-gray-800/50 backdrop-blur rounded-2xl border border-red-500/30 p-8">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+          <Card className="bg-gray-900/50 border-destructive/30">
+            <CardContent className="py-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
+                <XCircle className="h-8 w-8 text-destructive" />
               </div>
               <h2 className="text-xl font-semibold text-white mb-2">
                 Generation Failed
@@ -244,24 +237,24 @@ function ViewerContentInner() {
               <p className="text-sm text-white/40 mb-4">
                 Your credit has been refunded automatically.
               </p>
-              <Link
-                href="/"
-                className="inline-flex items-center justify-center px-5 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-medium"
-              >
-                Try Again
-              </Link>
-            </div>
-          </div>
+              <Button asChild>
+                <Link href="/" className="gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Try Again
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
         {/* Completed state with viewer */}
         {job.status === 'completed' && job.outputModelUrl && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Viewer - takes more space now */}
+            {/* Viewer */}
             <div className="lg:col-span-3">
               <div
                 ref={viewerContainerRef}
-                className="relative bg-gray-800 rounded-2xl overflow-hidden border border-white/10"
+                className="relative bg-gray-900 rounded-2xl overflow-hidden border border-white/10"
                 style={{ height: isFullscreen ? '100vh' : '600px' }}
               >
                 <ModelViewer
@@ -307,14 +300,16 @@ function ViewerContentInner() {
               />
 
               {/* Input image */}
-              <div className="bg-gray-800/50 backdrop-blur rounded-xl border border-white/10 p-4">
-                <h3 className="font-medium text-white/90 mb-3 text-sm">Source Image</h3>
-                <img
-                  src={job.inputImageUrl}
-                  alt="Source"
-                  className="w-full rounded-lg ring-1 ring-white/10"
-                />
-              </div>
+              <Card className="bg-gray-900/50 border-white/10">
+                <CardContent className="pt-4">
+                  <h3 className="font-medium text-white/90 mb-3 text-sm">Source Image</h3>
+                  <img
+                    src={job.inputImageUrl}
+                    alt="Source"
+                    className="w-full rounded-lg ring-1 ring-white/10"
+                  />
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
@@ -325,11 +320,11 @@ function ViewerContentInner() {
 
 // Progress steps component
 const PROGRESS_STEPS: { status: JobStatus; label: string }[] = [
-  { status: 'pending', label: '排隊' },
-  { status: 'generating-views', label: '視角' },
-  { status: 'generating-model', label: '模型' },
-  { status: 'downloading-model', label: '下載' },
-  { status: 'uploading-storage', label: '完成' },
+  { status: 'pending', label: 'Queue' },
+  { status: 'generating-views', label: 'Views' },
+  { status: 'generating-model', label: 'Model' },
+  { status: 'downloading-model', label: 'Download' },
+  { status: 'uploading-storage', label: 'Done' },
 ];
 
 function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
@@ -348,20 +343,14 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono transition-colors ${
                   isActive
-                    ? 'bg-indigo-500 text-white ring-4 ring-indigo-500/30'
+                    ? 'bg-primary text-primary-foreground ring-4 ring-primary/30'
                     : isCompleted
                     ? 'bg-green-500 text-white'
                     : 'bg-gray-700 text-gray-400'
                 }`}
               >
                 {isCompleted ? (
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  <CheckCircle2 className="h-4 w-4" />
                 ) : (
                   index + 1
                 )}
@@ -389,7 +378,7 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
             <div
               key={step.status}
               className={`text-xs text-center font-mono whitespace-nowrap ${
-                isActive ? 'text-indigo-400 font-medium' : 'text-gray-500'
+                isActive ? 'text-primary font-medium' : 'text-gray-500'
               }`}
               style={{ width: '48px' }}
             >
@@ -403,34 +392,44 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending: 'bg-yellow-500/20 text-yellow-300 ring-yellow-500/30',
-    'generating-views': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
-    'generating-model': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
-    'downloading-model': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
-    'uploading-storage': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
-    completed: 'bg-green-500/20 text-green-300 ring-green-500/30',
-    failed: 'bg-red-500/20 text-red-300 ring-red-500/30',
+  const getConfig = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return {
+          icon: CheckCircle2,
+          className: 'bg-green-500/20 text-green-300 border-green-500/30',
+          label: 'Completed',
+        };
+      case 'failed':
+        return {
+          icon: XCircle,
+          className: 'bg-red-500/20 text-red-300 border-red-500/30',
+          label: 'Failed',
+        };
+      case 'pending':
+        return {
+          icon: Clock,
+          className: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+          label: 'Pending',
+        };
+      default:
+        return {
+          icon: Loader2,
+          className: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+          label: 'Processing',
+        };
+    }
   };
 
-  const labels: Record<string, string> = {
-    pending: '排隊中',
-    'generating-views': '生成視角',
-    'generating-model': '生成模型',
-    'downloading-model': '下載中',
-    'uploading-storage': '準備連結',
-    completed: '完成',
-    failed: '失敗',
-  };
+  const config = getConfig(status);
+  const Icon = config.icon;
+  const isProcessing = !['completed', 'failed', 'pending'].includes(status);
 
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono ring-1 ${
-        styles[status] || styles.pending
-      }`}
-    >
-      {labels[status] || status}
-    </span>
+    <Badge variant="outline" className={config.className}>
+      <Icon className={`mr-1 h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`} />
+      {config.label}
+    </Badge>
   );
 }
 
@@ -438,7 +437,7 @@ function ViewerContent() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="min-h-screen flex items-center justify-center bg-gray-950">
           <LoadingSpinner message="Loading..." />
         </div>
       }

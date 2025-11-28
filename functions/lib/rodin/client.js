@@ -166,16 +166,44 @@ class RodinClient {
                 material,
                 quality: options.quality,
                 format: options.format,
+                meshMode: options.meshMode,
                 conditionMode: imageBuffers.length > 1 ? 'concat' : 'single',
+                apiUrl: `${RODIN_API_BASE}/rodin`,
             });
-            const response = await axios_1.default.post(`${RODIN_API_BASE}/rodin`, form, {
-                headers: {
-                    ...form.getHeaders(),
-                    Authorization: `Bearer ${this.apiKey}`,
-                },
-                timeout: 30000,
+            let response;
+            try {
+                response = await axios_1.default.post(`${RODIN_API_BASE}/rodin`, form, {
+                    headers: {
+                        ...form.getHeaders(),
+                        Authorization: `Bearer ${this.apiKey}`,
+                    },
+                    timeout: 30000,
+                });
+            }
+            catch (axiosErr) {
+                // Log the actual axios error with response details
+                if (axios_1.default.isAxiosError(axiosErr)) {
+                    functions.logger.error('Axios error calling Rodin API', {
+                        status: axiosErr.response?.status,
+                        statusText: axiosErr.response?.statusText,
+                        responseData: JSON.stringify(axiosErr.response?.data),
+                        message: axiosErr.message,
+                    });
+                }
+                throw axiosErr;
+            }
+            // Log full response for debugging
+            functions.logger.info('Rodin API raw response', {
+                status: response.status,
+                data: JSON.stringify(response.data),
+                hasUuid: !!response.data.uuid,
+                hasJobs: !!response.data.jobs,
+                hasSubscriptionKey: !!response.data.jobs?.subscription_key,
             });
             if (!response.data.uuid || !response.data.jobs?.subscription_key) {
+                functions.logger.error('Invalid Rodin API response structure', {
+                    responseData: JSON.stringify(response.data),
+                });
                 throw new Error('Invalid response from Rodin API');
             }
             functions.logger.info('Multi-image generation started', {

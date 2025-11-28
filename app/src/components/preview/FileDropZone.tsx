@@ -2,6 +2,9 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { isSupported3DFormat } from '@/lib/modelAnalysis';
+import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Box, Upload } from 'lucide-react';
 
 interface FileDropZoneProps {
   onFileSelect: (file: File) => void;
@@ -20,7 +23,7 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
       setError(null);
 
       if (!isSupported3DFormat(file.name)) {
-        setError('不支援的檔案格式。請上傳 STL、OBJ、GLB 或 GLTF 檔案。');
+        setError('Unsupported file format. Please upload STL, OBJ, GLB, or GLTF files.');
         return;
       }
 
@@ -76,73 +79,52 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
   }, [disabled]);
 
   return (
-    <div
+    <Card
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onClick={handleClick}
-      className={`
-        relative rounded-lg border-2 border-dashed p-8 text-center cursor-pointer
-        transition-colors duration-200
-        ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50'}
-        ${error ? 'border-red-300 bg-red-50' : ''}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-      `}
+      className={cn(
+        'cursor-pointer transition-colors duration-200',
+        isDragging && 'border-primary bg-primary/5',
+        error && 'border-destructive bg-destructive/5',
+        disabled && 'opacity-50 cursor-not-allowed'
+      )}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={ACCEPTED_EXTENSIONS}
-        onChange={handleFileInput}
-        className="hidden"
-        disabled={disabled}
-      />
+      <CardContent className="flex flex-col items-center justify-center p-8">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={ACCEPTED_EXTENSIONS}
+          onChange={handleFileInput}
+          className="hidden"
+          disabled={disabled}
+        />
 
-      <div className="flex flex-col items-center">
         {/* 3D Model Icon */}
         <div
-          className={`
-            w-16 h-16 rounded-full flex items-center justify-center mb-4
-            ${isDragging ? 'bg-indigo-100' : 'bg-gray-100'}
-          `}
+          className={cn(
+            'w-16 h-16 rounded-full flex items-center justify-center mb-4',
+            isDragging ? 'bg-primary/10' : 'bg-muted'
+          )}
         >
-          <svg
-            className={`w-8 h-8 ${isDragging ? 'text-indigo-600' : 'text-gray-400'}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {/* 3D Cube Icon */}
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M3.27 6.96L12 12.01l8.73-5.05"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M12 22.08V12"
-            />
-          </svg>
+          <Box
+            className={cn(
+              'h-8 w-8',
+              isDragging ? 'text-primary' : 'text-muted-foreground'
+            )}
+          />
         </div>
 
-        <p className="text-gray-600">
-          <span className="text-indigo-600 font-medium">點擊上傳</span> 或拖放檔案
+        <p className="text-foreground">
+          <span className="text-primary font-medium">Click to upload</span> or drag and drop
         </p>
-        <p className="mt-1 text-sm text-gray-500">
-          支援 STL、OBJ、GLB、GLTF（最大 100MB）
+        <p className="mt-1 text-sm text-muted-foreground">
+          Supports STL, OBJ, GLB, GLTF (max 100MB)
         </p>
 
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      </div>
-    </div>
+        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+      </CardContent>
+    </Card>
   );
 }

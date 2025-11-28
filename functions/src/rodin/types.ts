@@ -189,6 +189,8 @@ export interface JobDocument {
   // Texture generation fields
   sourceJobId?: string;           // For texture jobs: reference to original model job
   textureResolution?: TextureResolution;
+  // Download retry tracking
+  downloadRetryCount?: number;    // Tracks download API retry attempts
 }
 
 export type TransactionType = 'consume' | 'purchase' | 'bonus';

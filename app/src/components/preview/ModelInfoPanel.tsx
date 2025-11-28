@@ -1,6 +1,8 @@
 'use client';
 
 import { type ModelInfo, formatFileSize, formatNumber, formatDimension } from '@/lib/modelAnalysis';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 interface ModelInfoPanelProps {
   info: ModelInfo | null;
@@ -10,58 +12,68 @@ interface ModelInfoPanelProps {
 export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium text-gray-900 mb-3">模型資訊</h3>
-        <div className="animate-pulse space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-4 bg-gray-200 rounded w-3/4" />
-          ))}
-        </div>
-      </div>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Model Info</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="animate-pulse space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-4 bg-muted rounded w-3/4" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!info) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <h3 className="font-medium text-gray-900 mb-3">模型資訊</h3>
-        <p className="text-sm text-gray-500">上傳模型後顯示資訊</p>
-      </div>
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Model Info</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Upload a model to view info</p>
+        </CardContent>
+      </Card>
     );
   }
 
   const infoItems = [
-    { label: '檔案名稱', value: info.fileName },
-    { label: '檔案大小', value: formatFileSize(info.fileSize) },
-    { label: '頂點數', value: formatNumber(info.vertexCount) },
-    { label: '面數', value: formatNumber(info.faceCount) },
+    { label: 'File Name', value: info.fileName },
+    { label: 'File Size', value: formatFileSize(info.fileSize) },
+    { label: 'Vertices', value: formatNumber(info.vertexCount) },
+    { label: 'Faces', value: formatNumber(info.faceCount) },
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <h3 className="font-medium text-gray-900 mb-3">模型資訊</h3>
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">Model Info</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="space-y-2">
+          {infoItems.map((item) => (
+            <div key={item.label} className="flex justify-between text-sm">
+              <dt className="text-muted-foreground">{item.label}</dt>
+              <dd className="font-medium truncate ml-2 max-w-[60%] text-right">
+                {item.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
 
-      <dl className="space-y-2">
-        {infoItems.map((item) => (
-          <div key={item.label} className="flex justify-between text-sm">
-            <dt className="text-gray-500">{item.label}</dt>
-            <dd className="text-gray-900 font-medium truncate ml-2 max-w-[60%] text-right">
-              {item.value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-
-      {/* Dimensions Section */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">尺寸</h4>
+        {/* Dimensions Section */}
+        <Separator className="my-4" />
+        <h4 className="text-sm font-medium mb-2">Dimensions</h4>
         <div className="grid grid-cols-3 gap-2">
-          <DimensionCard label="X (寬)" value={info.boundingBox.width} color="text-red-600" />
-          <DimensionCard label="Y (高)" value={info.boundingBox.height} color="text-green-600" />
-          <DimensionCard label="Z (深)" value={info.boundingBox.depth} color="text-blue-600" />
+          <DimensionCard label="X (Width)" value={info.boundingBox.width} color="text-red-500" />
+          <DimensionCard label="Y (Height)" value={info.boundingBox.height} color="text-green-500" />
+          <DimensionCard label="Z (Depth)" value={info.boundingBox.depth} color="text-blue-500" />
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -75,9 +87,9 @@ function DimensionCard({
   color: string;
 }) {
   return (
-    <div className="bg-gray-50 rounded p-2 text-center">
+    <div className="bg-muted rounded p-2 text-center">
       <div className={`text-xs ${color} font-medium`}>{label}</div>
-      <div className="text-sm text-gray-900 mt-0.5">
+      <div className="text-sm mt-0.5">
         {formatDimension(value)}
       </div>
     </div>

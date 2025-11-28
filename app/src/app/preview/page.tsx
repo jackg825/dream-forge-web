@@ -3,11 +3,16 @@
 import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { Header } from '@/components/layout/Header';
 import { FileDropZone } from '@/components/preview/FileDropZone';
 import { ModelInfoPanel } from '@/components/preview/ModelInfoPanel';
 import { ClippingPlaneControls, type ClippingAxis } from '@/components/preview/ClippingPlaneControls';
 import { PreviewControls } from '@/components/preview/PreviewControls';
 import { useModelLoader } from '@/hooks/useModelLoader';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { AlertCircle, Loader2, Sparkles, RefreshCw } from 'lucide-react';
 
 // Dynamic import for PreviewViewer to avoid SSR issues with Three.js
 const PreviewViewer = dynamic(
@@ -15,10 +20,10 @@ const PreviewViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[500px] bg-gray-100 rounded-lg flex items-center justify-center">
+      <div className="w-full h-[500px] bg-muted rounded-lg flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          <p className="mt-2 text-sm text-gray-500">載入檢視器...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">Loading viewer...</p>
         </div>
       </div>
     ),
@@ -59,47 +64,26 @@ export default function PreviewPage() {
   const isLoading = state === 'loading';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="text-gray-500 hover:text-gray-700">
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </Link>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">
-                  3D 模型預覽工具
-                </h1>
-                <p className="text-sm text-gray-500">
-                  上傳 STL、OBJ、GLB、GLTF 檔案進行預覽
-                </p>
-              </div>
-            </div>
-
-            {/* Badge */}
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              免費工具
-            </span>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      <Header />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">3D Model Preview Tool</h1>
+              <Badge variant="secondary" className="gap-1">
+                Free
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">
+              Upload STL, OBJ, GLB, or GLTF files to preview
+            </p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Viewer Area */}
           <div className="lg:col-span-3 space-y-4">
@@ -110,50 +94,40 @@ export default function PreviewPage() {
 
             {/* Loading State */}
             {isLoading && (
-              <div className="bg-white rounded-lg shadow-sm p-8">
-                <div className="flex flex-col items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-                  <p className="mt-4 text-gray-600">正在載入模型...</p>
-                </div>
-              </div>
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center h-64 py-8">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                  <p className="text-muted-foreground">Loading model...</p>
+                </CardContent>
+              </Card>
             )}
 
             {/* Error State */}
             {state === 'error' && error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <svg
-                    className="w-5 h-5 text-red-500 mt-0.5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div>
-                    <h3 className="text-sm font-medium text-red-800">
-                      載入失敗
+              <Card className="border-destructive/50 bg-destructive/5">
+                <CardContent className="flex items-start gap-3 py-4">
+                  <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-destructive">
+                      Failed to load model
                     </h3>
-                    <p className="mt-1 text-sm text-red-700">{error}</p>
-                    <button
+                    <p className="mt-1 text-sm text-destructive/80">{error}</p>
+                    <Button
+                      variant="link"
                       onClick={handleReset}
-                      className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+                      className="h-auto p-0 mt-2 text-destructive hover:text-destructive/80"
                     >
-                      重新選擇檔案
-                    </button>
+                      <RefreshCw className="h-3 w-3 mr-1" />
+                      Try another file
+                    </Button>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )}
 
             {/* 3D Viewer */}
             {hasModel && (
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <Card className="overflow-hidden">
                 <div className="h-[500px]">
                   <PreviewViewer
                     geometry={model.geometry}
@@ -167,7 +141,7 @@ export default function PreviewPage() {
                     autoOrient={true}
                   />
                 </div>
-              </div>
+              </Card>
             )}
 
             {/* Viewer Controls */}
@@ -183,12 +157,14 @@ export default function PreviewPage() {
             {/* Upload another file hint */}
             {hasModel && (
               <div className="text-center">
-                <button
+                <Button
+                  variant="link"
                   onClick={() => document.getElementById('hidden-file-input')?.click()}
-                  className="text-sm text-indigo-600 hover:text-indigo-700"
+                  className="gap-1"
                 >
-                  上傳其他檔案
-                </button>
+                  <RefreshCw className="h-3 w-3" />
+                  Upload another file
+                </Button>
                 <input
                   id="hidden-file-input"
                   type="file"
@@ -223,29 +199,35 @@ export default function PreviewPage() {
             />
 
             {/* Tips */}
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="font-medium text-blue-900 mb-2">使用提示</h3>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• 滑鼠左鍵拖曳：旋轉視角</li>
-                <li>• 滾輪：縮放</li>
-                <li>• Shift + 左鍵拖曳：平移</li>
-                <li>• 切面功能可查看內部結構</li>
-              </ul>
-            </div>
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Tips</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Left-click drag: Rotate view</li>
+                  <li>• Scroll: Zoom</li>
+                  <li>• Shift + drag: Pan</li>
+                  <li>• Use clipping plane to view cross-sections</li>
+                </ul>
+              </CardContent>
+            </Card>
 
             {/* CTA to main app */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-4 text-white">
-              <h3 className="font-medium mb-2">需要生成 3D 模型？</h3>
-              <p className="text-sm text-indigo-100 mb-3">
-                使用 AI 從照片自動生成 3D 列印模型
-              </p>
-              <Link
-                href="/"
-                className="inline-block px-4 py-2 bg-white text-indigo-600 rounded-md text-sm font-medium hover:bg-indigo-50 transition-colors"
-              >
-                開始生成
-              </Link>
-            </div>
+            <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0">
+              <CardContent className="pt-6">
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Need to generate 3D models?
+                </h3>
+                <p className="text-sm text-indigo-100 mb-4">
+                  Use AI to automatically generate 3D printable models from photos
+                </p>
+                <Button asChild variant="secondary">
+                  <Link href="/">Start Generating</Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>

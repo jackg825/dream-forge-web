@@ -1,4 +1,5 @@
-import * as functions from 'firebase-functions';
+import * as functionsV1 from 'firebase-functions/v1';
+import { logger } from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 import type { UserDocument, TransactionDocument } from '../rodin/types';
 
@@ -7,11 +8,13 @@ import type { UserDocument, TransactionDocument } from '../rodin/types';
  *
  * Triggered when a new user signs up via Firebase Auth.
  * Creates a user document in Firestore with 3 initial credits.
+ *
+ * Note: Using v1 auth trigger as v2 identity triggers have different behavior.
  */
-export const onUserCreate = functions
+export const onUserCreate = functionsV1
   .region('asia-east1')
   .auth.user()
-  .onCreate(async (user) => {
+  .onCreate(async (userRecord: functionsV1.auth.UserRecord) => {
     const db = admin.firestore();
     const now = admin.firestore.FieldValue.serverTimestamp();
 
@@ -19,12 +22,13 @@ export const onUserCreate = functions
       createdAt: FirebaseFirestore.FieldValue;
       updatedAt: FirebaseFirestore.FieldValue;
     } = {
-      uid: user.uid,
-      email: user.email || '',
-      displayName: user.displayName || 'User',
-      photoURL: user.photoURL || null,
+      uid: userRecord.uid,
+      email: userRecord.email || '',
+      displayName: userRecord.displayName || 'User',
+      photoURL: userRecord.photoURL || null,
       credits: 3, // Initial free credits
       totalGenerated: 0,
+      role: 'user', // Default role, set to 'admin' in Firestore to grant admin access
       createdAt: now,
       updatedAt: now,
     };
@@ -32,7 +36,7 @@ export const onUserCreate = functions
     const transactionDoc: Omit<TransactionDocument, 'createdAt'> & {
       createdAt: FirebaseFirestore.FieldValue;
     } = {
-      userId: user.uid,
+      userId: userRecord.uid,
       type: 'bonus',
       amount: 3,
       jobId: null,
@@ -43,7 +47,7 @@ export const onUserCreate = functions
     const batch = db.batch();
 
     // Create user document
-    const userRef = db.collection('users').doc(user.uid);
+    const userRef = db.collection('users').doc(userRecord.uid);
     batch.set(userRef, userDoc);
 
     // Create transaction record for initial credits
@@ -52,8 +56,8 @@ export const onUserCreate = functions
 
     await batch.commit();
 
-    functions.logger.info('Created user document and initial credits', {
-      uid: user.uid,
-      email: user.email,
+    logger.info('Created user document and initial credits', {
+      uid: userRecord.uid,
+      email: userRecord.email,
     });
   });

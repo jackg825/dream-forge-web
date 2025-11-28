@@ -71,6 +71,7 @@ export function useAuth(): UseAuthReturn {
             photoURL: data.photoURL,
             credits: data.credits,
             totalGenerated: data.totalGenerated,
+            role: data.role || 'user',
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate() || new Date(),
           });
@@ -84,6 +85,7 @@ export function useAuth(): UseAuthReturn {
             photoURL: firebaseUser.photoURL,
             credits: 0, // Will be updated when doc is created
             totalGenerated: 0,
+            role: 'user',
             createdAt: new Date(),
             updatedAt: new Date(),
           });

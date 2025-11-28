@@ -114,6 +114,7 @@ export interface JobDocument {
     completedAt: FirebaseFirestore.Timestamp | null;
     sourceJobId?: string;
     textureResolution?: TextureResolution;
+    downloadRetryCount?: number;
 }
 export type TransactionType = 'consume' | 'purchase' | 'bonus';
 export interface TransactionDocument {
