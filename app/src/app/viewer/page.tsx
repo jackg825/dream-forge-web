@@ -6,10 +6,12 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ViewerControls } from '@/components/viewer/ViewerControls';
+import { RotationControls } from '@/components/viewer/RotationControls';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
 import { JOB_STATUS_MESSAGES, type JobStatus, type ViewMode } from '@/types';
+import type { ModelRotation } from '@/lib/modelOrientation';
 
 // Dynamic import for ModelViewer to avoid SSR issues with Three.js
 const ModelViewer = dynamic(
@@ -32,6 +34,7 @@ function ViewerContentInner() {
   const { job, loading: jobLoading, error: jobError } = useJob(jobId || '');
   const [backgroundColor, setBackgroundColor] = useState('#f3f4f6');
   const [viewMode, setViewMode] = useState<ViewMode>('clay');
+  const [modelRotation, setModelRotation] = useState<ModelRotation>({ x: 0, y: 0, z: 0 });
 
   // Check if GLB is available for textured mode
   // GLB can come from: 1) outputModelUrl (Firebase Storage) or 2) downloadFiles (Rodin API)
@@ -232,6 +235,8 @@ function ViewerContentInner() {
                     downloadFiles={job.downloadFiles}
                     viewMode={viewMode}
                     backgroundColor={backgroundColor}
+                    rotation={modelRotation}
+                    autoOrient={true}
                   />
                 </div>
               </div>
@@ -252,6 +257,13 @@ function ViewerContentInner() {
                 downloadFiles={job.downloadFiles}
                 jobId={job.id}
                 currentFormat={job.settings.format}
+              />
+
+              {/* Rotation Controls */}
+              <RotationControls
+                rotation={modelRotation}
+                onRotationChange={setModelRotation}
+                onReset={() => setModelRotation({ x: 0, y: 0, z: 0 })}
               />
 
               {/* Input image */}

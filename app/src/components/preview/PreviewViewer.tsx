@@ -2,9 +2,15 @@
 
 import { Suspense, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Center, Grid } from '@react-three/drei';
+import { OrbitControls, Environment, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ClippingAxis } from './ClippingPlaneControls';
+import {
+  orientGeometry,
+  applyZUpToYUpRotation,
+  alignToGroundPlane,
+  type ModelRotation,
+} from '@/lib/modelOrientation';
 
 interface PreviewViewerProps {
   geometry: THREE.BufferGeometry | null;
@@ -15,7 +21,12 @@ interface PreviewViewerProps {
   clippingPosition?: number; // 0-100
   clippingInverted?: boolean;
   boundingBox?: { width: number; height: number; depth: number };
+  rotation?: ModelRotation;   // User rotation override (degrees)
+  autoOrient?: boolean;       // Apply Z-up to Y-up conversion (default: true)
 }
+
+// Re-export ModelRotation for convenience
+export type { ModelRotation };
 
 // Plane normals for each axis
 const PLANE_NORMALS: Record<ClippingAxis, THREE.Vector3> = {
@@ -46,18 +57,37 @@ function ClippingSetup({ enabled }: { enabled: boolean }) {
 function GeometryModel({
   geometry,
   clippingPlane,
+  autoOrient = true,
+  rotation,
 }: {
   geometry: THREE.BufferGeometry;
   clippingPlane: THREE.Plane | null;
+  autoOrient?: boolean;
+  rotation?: ModelRotation;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
 
+  // Clone and orient geometry
+  const orientedGeometry = useMemo(() => {
+    const cloned = geometry.clone();
+    if (autoOrient) {
+      orientGeometry(cloned, true);
+    } else {
+      cloned.computeBoundingBox();
+    }
+    return cloned;
+  }, [geometry, autoOrient]);
+
   useEffect(() => {
     // Center and scale the model
-    if (meshRef.current && geometry) {
-      geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
+    if (meshRef.current && orientedGeometry) {
+      // Reset transforms
+      meshRef.current.position.set(0, 0, 0);
+      meshRef.current.rotation.set(0, 0, 0);
+      meshRef.current.scale.set(1, 1, 1);
+
+      const box = orientedGeometry.boundingBox!;
       const size = new THREE.Vector3();
       box.getSize(size);
       const maxDim = Math.max(size.x, size.y, size.z);
@@ -68,8 +98,21 @@ function GeometryModel({
       const center = new THREE.Vector3();
       box.getCenter(center);
       meshRef.current.position.copy(center.multiplyScalar(-scale));
+
+      // Update matrix after scale/center
+      meshRef.current.updateMatrixWorld(true);
+
+      // Align to ground plane
+      alignToGroundPlane(meshRef.current, -1.2);
+
+      // Apply user rotation (additive)
+      if (rotation) {
+        meshRef.current.rotation.x += THREE.MathUtils.degToRad(rotation.x);
+        meshRef.current.rotation.y += THREE.MathUtils.degToRad(rotation.y);
+        meshRef.current.rotation.z += THREE.MathUtils.degToRad(rotation.z);
+      }
     }
-  }, [geometry]);
+  }, [orientedGeometry, rotation]);
 
   useEffect(() => {
     if (materialRef.current) {
@@ -79,7 +122,7 @@ function GeometryModel({
   }, [clippingPlane]);
 
   return (
-    <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
+    <mesh ref={meshRef} geometry={orientedGeometry} castShadow receiveShadow>
       <meshStandardMaterial
         ref={materialRef}
         color="#808080"
@@ -97,16 +140,36 @@ function GeometryModel({
 function GroupModel({
   group,
   clippingPlane,
+  autoOrient = true,
+  rotation,
 }: {
   group: THREE.Group;
   clippingPlane: THREE.Plane | null;
+  autoOrient?: boolean;
+  rotation?: ModelRotation;
 }) {
   const groupRef = useRef<THREE.Group>(null);
 
+  // Clone the group once
+  const clonedGroup = useMemo(() => group.clone(), [group]);
+
   useEffect(() => {
-    if (groupRef.current && group) {
-      // Compute overall bounding box and scale
-      const box = new THREE.Box3().setFromObject(group);
+    if (groupRef.current && clonedGroup) {
+      // Reset transforms
+      groupRef.current.position.set(0, 0, 0);
+      groupRef.current.rotation.set(0, 0, 0);
+      groupRef.current.scale.set(1, 1, 1);
+
+      // Step 1: Apply Z-up to Y-up rotation if enabled
+      if (autoOrient) {
+        applyZUpToYUpRotation(clonedGroup);
+      }
+
+      // Update matrix after rotation
+      clonedGroup.updateMatrixWorld(true);
+
+      // Step 2: Compute overall bounding box and scale
+      const box = new THREE.Box3().setFromObject(clonedGroup);
       const size = new THREE.Vector3();
       box.getSize(size);
       const maxDim = Math.max(size.x, size.y, size.z);
@@ -117,8 +180,21 @@ function GroupModel({
       const center = new THREE.Vector3();
       box.getCenter(center);
       groupRef.current.position.copy(center.multiplyScalar(-scale));
+
+      // Update matrix after scale/center
+      groupRef.current.updateMatrixWorld(true);
+
+      // Step 3: Align to ground plane
+      alignToGroundPlane(groupRef.current, -1.2);
+
+      // Step 4: Apply user rotation (additive)
+      if (rotation) {
+        groupRef.current.rotation.x += THREE.MathUtils.degToRad(rotation.x);
+        groupRef.current.rotation.y += THREE.MathUtils.degToRad(rotation.y);
+        groupRef.current.rotation.z += THREE.MathUtils.degToRad(rotation.z);
+      }
     }
-  }, [group]);
+  }, [clonedGroup, autoOrient, rotation]);
 
   useEffect(() => {
     // Apply clipping planes to all materials in the group
@@ -140,7 +216,7 @@ function GroupModel({
     }
   }, [clippingPlane]);
 
-  return <primitive ref={groupRef} object={group.clone()} />;
+  return <primitive ref={groupRef} object={clonedGroup} />;
 }
 
 /**
@@ -190,6 +266,8 @@ export function PreviewViewer({
   clippingPosition = 50,
   clippingInverted = false,
   boundingBox,
+  rotation,
+  autoOrient = true,
 }: PreviewViewerProps) {
   // Calculate clipping plane
   const clippingPlane = useMemo(() => {
@@ -256,12 +334,22 @@ export function PreviewViewer({
 
         {/* Model */}
         <Suspense fallback={<LoadingSpinner />}>
-          <Center>
-            {geometry && !group && (
-              <GeometryModel geometry={geometry} clippingPlane={clippingPlane} />
-            )}
-            {group && <GroupModel group={group} clippingPlane={clippingPlane} />}
-          </Center>
+          {geometry && !group && (
+            <GeometryModel
+              geometry={geometry}
+              clippingPlane={clippingPlane}
+              autoOrient={autoOrient}
+              rotation={rotation}
+            />
+          )}
+          {group && (
+            <GroupModel
+              group={group}
+              clippingPlane={clippingPlane}
+              autoOrient={autoOrient}
+              rotation={rotation}
+            />
+          )}
         </Suspense>
 
         {/* Grid when no model loaded */}

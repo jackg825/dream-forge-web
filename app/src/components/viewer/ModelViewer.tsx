@@ -2,17 +2,28 @@
 
 import { Suspense, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useThree, useLoader } from '@react-three/fiber';
-import { OrbitControls, Environment, Center, useGLTF } from '@react-three/drei';
+import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import type { ViewMode, DownloadFile } from '@/types';
+import {
+  orientGeometry,
+  applyZUpToYUpRotation,
+  alignToGroundPlane,
+  type ModelRotation,
+} from '@/lib/modelOrientation';
 
 interface ModelViewerProps {
   modelUrl: string;           // Primary model URL (usually STL for download)
   downloadFiles?: DownloadFile[]; // All available files from Rodin
   viewMode?: ViewMode;        // clay | textured | wireframe
   backgroundColor?: string;
+  rotation?: ModelRotation;   // User rotation override (degrees)
+  autoOrient?: boolean;       // Apply Z-up to Y-up conversion (default: true)
 }
+
+// Re-export ModelRotation for convenience
+export type { ModelRotation };
 
 /**
  * Find GLB file URL from download files list
@@ -31,9 +42,13 @@ function findGlbUrl(downloadFiles?: DownloadFile[]): string | null {
 function GLBModel({
   url,
   viewMode,
+  autoOrient = true,
+  rotation,
 }: {
   url: string;
   viewMode: ViewMode;
+  autoOrient?: boolean;
+  rotation?: ModelRotation;
 }) {
   const { scene } = useGLTF(url);
   const groupRef = useRef<THREE.Group>(null);
@@ -44,7 +59,20 @@ function GLBModel({
   useEffect(() => {
     if (!groupRef.current) return;
 
-    // Compute bounding box for scaling
+    // Reset transforms before applying new ones
+    groupRef.current.position.set(0, 0, 0);
+    groupRef.current.rotation.set(0, 0, 0);
+    groupRef.current.scale.set(1, 1, 1);
+
+    // Step 1: Apply Z-up to Y-up rotation if enabled
+    if (autoOrient) {
+      applyZUpToYUpRotation(clonedScene);
+    }
+
+    // Update matrix after rotation
+    clonedScene.updateMatrixWorld(true);
+
+    // Step 2: Compute bounding box for scaling (after rotation)
     const box = new THREE.Box3().setFromObject(clonedScene);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -52,11 +80,24 @@ function GLBModel({
     const scale = 2 / maxDim;
     groupRef.current.scale.setScalar(scale);
 
-    // Center the model
+    // Step 3: Center the model
     const center = new THREE.Vector3();
     box.getCenter(center);
     groupRef.current.position.copy(center.multiplyScalar(-scale));
-  }, [clonedScene]);
+
+    // Update matrix after scale/center
+    groupRef.current.updateMatrixWorld(true);
+
+    // Step 4: Align to ground plane
+    alignToGroundPlane(groupRef.current, -1);
+
+    // Step 5: Apply user rotation (additive)
+    if (rotation) {
+      groupRef.current.rotation.x += THREE.MathUtils.degToRad(rotation.x);
+      groupRef.current.rotation.y += THREE.MathUtils.degToRad(rotation.y);
+      groupRef.current.rotation.z += THREE.MathUtils.degToRad(rotation.z);
+    }
+  }, [clonedScene, autoOrient, rotation]);
 
   // Apply view mode to all materials in the scene
   useEffect(() => {
@@ -105,17 +146,37 @@ function GLBModel({
 function STLModel({
   url,
   viewMode,
+  autoOrient = true,
+  rotation,
 }: {
   url: string;
   viewMode: ViewMode;
+  autoOrient?: boolean;
+  rotation?: ModelRotation;
 }) {
   const geometry = useLoader(STLLoader, url);
   const meshRef = useRef<THREE.Mesh>(null);
 
+  // Clone and orient geometry
+  const orientedGeometry = useMemo(() => {
+    const cloned = geometry.clone();
+    if (autoOrient) {
+      orientGeometry(cloned, true);
+    } else {
+      cloned.computeBoundingBox();
+    }
+    return cloned;
+  }, [geometry, autoOrient]);
+
   useEffect(() => {
-    if (meshRef.current && geometry) {
-      geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
+    if (meshRef.current && orientedGeometry) {
+      // Reset transforms
+      meshRef.current.position.set(0, 0, 0);
+      meshRef.current.rotation.set(0, 0, 0);
+      meshRef.current.scale.set(1, 1, 1);
+
+      // Get bounding box (already computed after orientation)
+      const box = orientedGeometry.boundingBox!;
       const size = new THREE.Vector3();
       box.getSize(size);
       const maxDim = Math.max(size.x, size.y, size.z);
@@ -126,8 +187,21 @@ function STLModel({
       const center = new THREE.Vector3();
       box.getCenter(center);
       meshRef.current.position.copy(center.multiplyScalar(-scale));
+
+      // Update matrix after scale/center
+      meshRef.current.updateMatrixWorld(true);
+
+      // Align to ground plane
+      alignToGroundPlane(meshRef.current, -1);
+
+      // Apply user rotation (additive)
+      if (rotation) {
+        meshRef.current.rotation.x += THREE.MathUtils.degToRad(rotation.x);
+        meshRef.current.rotation.y += THREE.MathUtils.degToRad(rotation.y);
+        meshRef.current.rotation.z += THREE.MathUtils.degToRad(rotation.z);
+      }
     }
-  }, [geometry]);
+  }, [orientedGeometry, rotation]);
 
   const materialProps = useMemo(() => {
     if (viewMode === 'wireframe') {
@@ -146,7 +220,7 @@ function STLModel({
   }, [viewMode]);
 
   return (
-    <mesh ref={meshRef} geometry={geometry} castShadow receiveShadow>
+    <mesh ref={meshRef} geometry={orientedGeometry} castShadow receiveShadow>
       <meshStandardMaterial
         {...materialProps}
         side={THREE.DoubleSide}
@@ -199,6 +273,8 @@ export function ModelViewer({
   downloadFiles,
   viewMode = 'clay',
   backgroundColor = '#f3f4f6',
+  rotation,
+  autoOrient = true,
 }: ModelViewerProps) {
   // Determine which model to load based on view mode
   const glbUrl = findGlbUrl(downloadFiles);
@@ -235,13 +311,21 @@ export function ModelViewer({
 
         {/* Model - use GLB or STL based on availability and view mode */}
         <Suspense fallback={<LoadingSpinner />}>
-          <Center>
-            {isGlb ? (
-              <GLBModel url={effectiveUrl} viewMode={viewMode} />
-            ) : (
-              <STLModel url={effectiveUrl} viewMode={viewMode} />
-            )}
-          </Center>
+          {isGlb ? (
+            <GLBModel
+              url={effectiveUrl}
+              viewMode={viewMode}
+              autoOrient={autoOrient}
+              rotation={rotation}
+            />
+          ) : (
+            <STLModel
+              url={effectiveUrl}
+              viewMode={viewMode}
+              autoOrient={autoOrient}
+              rotation={rotation}
+            />
+          )}
         </Suspense>
 
         {/* Controls */}
