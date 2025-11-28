@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useRef, useEffect, useMemo } from 'react';
+import { Suspense, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { Canvas, useThree, useLoader } from '@react-three/fiber';
-import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
+import { OrbitControls, Environment, useGLTF, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import type { ViewMode, DownloadFile } from '@/types';
@@ -13,6 +13,11 @@ import {
   type ModelRotation,
 } from '@/lib/modelOrientation';
 
+export interface ModelViewerRef {
+  takeScreenshot: () => string | null;
+  resetCamera: () => void;
+}
+
 interface ModelViewerProps {
   modelUrl: string;           // Primary model URL (usually STL for download)
   downloadFiles?: DownloadFile[]; // All available files from Rodin
@@ -20,6 +25,9 @@ interface ModelViewerProps {
   backgroundColor?: string;
   rotation?: ModelRotation;   // User rotation override (degrees)
   autoOrient?: boolean;       // Apply Z-up to Y-up conversion (default: true)
+  showGrid?: boolean;         // Show reference grid
+  showAxes?: boolean;         // Show XYZ axes gizmo
+  autoRotate?: boolean;       // Auto rotate model
 }
 
 // Re-export ModelRotation for convenience
@@ -256,6 +264,47 @@ function CameraSetup() {
 }
 
 /**
+ * Camera controls component with reset capability
+ */
+function CameraControls({
+  autoRotate,
+  onResetRef,
+}: {
+  autoRotate: boolean;
+  onResetRef: React.MutableRefObject<(() => void) | null>;
+}) {
+  const controlsRef = useRef<any>(null);
+  const { camera } = useThree();
+
+  useEffect(() => {
+    onResetRef.current = () => {
+      if (controlsRef.current) {
+        camera.position.set(3, 2, 3);
+        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.update();
+      }
+    };
+  }, [camera, onResetRef]);
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enablePan={true}
+      enableZoom={true}
+      enableRotate={true}
+      minDistance={1}
+      maxDistance={20}
+      rotateSpeed={0.5}
+      enableDamping={true}
+      dampingFactor={0.05}
+      autoRotate={autoRotate}
+      autoRotateSpeed={2}
+      makeDefault
+    />
+  );
+}
+
+/**
  * 3D Model Viewer Component
  *
  * Features:
@@ -264,89 +313,137 @@ function CameraSetup() {
  * - OrbitControls for rotation/zoom/pan
  * - Studio lighting setup
  * - Configurable background color
+ * - Reference grid and axes gizmo
+ * - Auto rotate option
+ * - Screenshot capability
  *
  * For textured mode, uses GLB file if available (contains PBR materials).
  * For clay/wireframe modes, can use either format.
  */
-export function ModelViewer({
-  modelUrl,
-  downloadFiles,
-  viewMode = 'clay',
-  backgroundColor = '#f3f4f6',
-  rotation,
-  autoOrient = true,
-}: ModelViewerProps) {
-  // Determine which model to load based on view mode
-  const glbUrl = findGlbUrl(downloadFiles);
+export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
+  function ModelViewer(
+    {
+      modelUrl,
+      downloadFiles,
+      viewMode = 'clay',
+      backgroundColor = '#f3f4f6',
+      rotation,
+      autoOrient = true,
+      showGrid = false,
+      showAxes = false,
+      autoRotate = false,
+    },
+    ref
+  ) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const resetCameraRef = useRef<(() => void) | null>(null);
 
-  // For textured mode, prefer GLB (has materials). Otherwise use primary URL.
-  const useGlb = viewMode === 'textured' && glbUrl;
-  const effectiveUrl = useGlb ? glbUrl : modelUrl;
+    // Expose screenshot and reset methods via ref
+    useImperativeHandle(ref, () => ({
+      takeScreenshot: () => {
+        if (canvasRef.current) {
+          return canvasRef.current.toDataURL('image/png');
+        }
+        return null;
+      },
+      resetCamera: () => {
+        resetCameraRef.current?.();
+      },
+    }));
 
-  // Determine file type from URL
-  const isGlb = effectiveUrl.includes('.glb') || effectiveUrl.includes('.gltf');
+    // Determine which model to load based on view mode
+    const glbUrl = findGlbUrl(downloadFiles);
 
-  return (
-    <div className="w-full h-full min-h-[400px] rounded-lg overflow-hidden">
-      <Canvas
-        shadows
-        gl={{ antialias: true, preserveDrawingBuffer: true }}
-        style={{ background: backgroundColor }}
-      >
-        <CameraSetup />
+    // For textured mode, prefer GLB (has materials). Otherwise use primary URL.
+    const useGlb = viewMode === 'textured' && glbUrl;
+    const effectiveUrl = useGlb ? glbUrl : modelUrl;
 
-        {/* Lighting */}
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+    // Determine file type from URL
+    const isGlb = effectiveUrl.includes('.glb') || effectiveUrl.includes('.gltf');
 
-        {/* Environment for reflections */}
-        <Environment preset="studio" />
+    return (
+      <div className="w-full h-full min-h-[400px] rounded-lg overflow-hidden">
+        <Canvas
+          ref={canvasRef}
+          shadows
+          gl={{ antialias: true, preserveDrawingBuffer: true }}
+          style={{ background: backgroundColor }}
+        >
+          <CameraSetup />
 
-        {/* Model - use GLB or STL based on availability and view mode */}
-        <Suspense fallback={<LoadingSpinner />}>
-          {isGlb ? (
-            <GLBModel
-              url={effectiveUrl}
-              viewMode={viewMode}
-              autoOrient={autoOrient}
-              rotation={rotation}
-            />
-          ) : (
-            <STLModel
-              url={effectiveUrl}
-              viewMode={viewMode}
-              autoOrient={autoOrient}
-              rotation={rotation}
+          {/* Lighting */}
+          <ambientLight intensity={0.5} />
+          <directionalLight
+            position={[5, 5, 5]}
+            intensity={1}
+            castShadow
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
+          />
+          <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+
+          {/* Environment for reflections */}
+          <Environment preset="studio" />
+
+          {/* Model - use GLB or STL based on availability and view mode */}
+          <Suspense fallback={<LoadingSpinner />}>
+            {isGlb ? (
+              <GLBModel
+                url={effectiveUrl}
+                viewMode={viewMode}
+                autoOrient={autoOrient}
+                rotation={rotation}
+              />
+            ) : (
+              <STLModel
+                url={effectiveUrl}
+                viewMode={viewMode}
+                autoOrient={autoOrient}
+                rotation={rotation}
+              />
+            )}
+          </Suspense>
+
+          {/* Controls */}
+          <CameraControls autoRotate={autoRotate} onResetRef={resetCameraRef} />
+
+          {/* Reference Grid */}
+          {showGrid && (
+            <Grid
+              position={[0, -1, 0]}
+              args={[10, 10]}
+              cellSize={0.5}
+              cellThickness={0.5}
+              cellColor="#6b7280"
+              sectionSize={2}
+              sectionThickness={1}
+              sectionColor="#4b5563"
+              fadeDistance={15}
+              fadeStrength={1}
+              followCamera={false}
+              infiniteGrid={false}
             />
           )}
-        </Suspense>
 
-        {/* Controls */}
-        <OrbitControls
-          enablePan={true}
-          enableZoom={true}
-          enableRotate={true}
-          minDistance={1}
-          maxDistance={20}
-          rotateSpeed={0.5}
-          enableDamping={true}
-          dampingFactor={0.05}
-          makeDefault
-        />
+          {/* Axes Gizmo */}
+          {showAxes && (
+            <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+              <GizmoViewport
+                axisColors={['#ef4444', '#22c55e', '#3b82f6']}
+                labelColor="white"
+              />
+            </GizmoHelper>
+          )}
 
-        {/* Ground plane for shadows */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-          <planeGeometry args={[10, 10]} />
-          <shadowMaterial opacity={0.2} />
-        </mesh>
-      </Canvas>
-    </div>
-  );
-}
+          {/* Ground plane for shadows (only when grid is off) */}
+          {!showGrid && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
+              <planeGeometry args={[10, 10]} />
+              <shadowMaterial opacity={0.2} />
+            </mesh>
+          )}
+        </Canvas>
+      </div>
+    );
+  }
+);

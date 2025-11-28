@@ -7,9 +7,7 @@ import { FileDropZone } from '@/components/preview/FileDropZone';
 import { ModelInfoPanel } from '@/components/preview/ModelInfoPanel';
 import { ClippingPlaneControls, type ClippingAxis } from '@/components/preview/ClippingPlaneControls';
 import { PreviewControls } from '@/components/preview/PreviewControls';
-import { RotationControls } from '@/components/viewer/RotationControls';
 import { useModelLoader } from '@/hooks/useModelLoader';
-import type { ModelRotation } from '@/lib/modelOrientation';
 
 // Dynamic import for PreviewViewer to avoid SSR issues with Three.js
 const PreviewViewer = dynamic(
@@ -39,16 +37,12 @@ export default function PreviewPage() {
   const [clippingPosition, setClippingPosition] = useState(50);
   const [clippingInverted, setClippingInverted] = useState(false);
 
-  // Rotation state
-  const [modelRotation, setModelRotation] = useState<ModelRotation>({ x: 0, y: 0, z: 0 });
-
   const handleFileSelect = useCallback(
     (file: File) => {
-      // Reset clipping and rotation when loading new model
+      // Reset clipping when loading new model
       setClippingEnabled(false);
       setClippingPosition(50);
       setClippingInverted(false);
-      setModelRotation({ x: 0, y: 0, z: 0 });
       loadFile(file);
     },
     [loadFile]
@@ -59,7 +53,6 @@ export default function PreviewPage() {
     setClippingEnabled(false);
     setClippingPosition(50);
     setClippingInverted(false);
-    setModelRotation({ x: 0, y: 0, z: 0 });
   }, [reset]);
 
   const hasModel = state === 'ready' && model;
@@ -171,7 +164,6 @@ export default function PreviewPage() {
                     clippingPosition={clippingPosition}
                     clippingInverted={clippingInverted}
                     boundingBox={model.info?.boundingBox}
-                    rotation={modelRotation}
                     autoOrient={true}
                   />
                 </div>
@@ -216,14 +208,6 @@ export default function PreviewPage() {
           <div className="space-y-4">
             {/* Model Info */}
             <ModelInfoPanel info={model?.info ?? null} loading={isLoading} />
-
-            {/* Rotation Controls */}
-            <RotationControls
-              rotation={modelRotation}
-              onRotationChange={setModelRotation}
-              onReset={() => setModelRotation({ x: 0, y: 0, z: 0 })}
-              disabled={!hasModel}
-            />
 
             {/* Clipping Plane Controls */}
             <ClippingPlaneControls

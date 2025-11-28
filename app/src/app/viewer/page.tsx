@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { ViewerControls } from '@/components/viewer/ViewerControls';
-import { RotationControls } from '@/components/viewer/RotationControls';
+import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
 import { JOB_STATUS_MESSAGES, type JobStatus, type ViewMode } from '@/types';
-import type { ModelRotation } from '@/lib/modelOrientation';
+import type { ModelViewerRef } from '@/components/viewer/ModelViewer';
 
 // Dynamic import for ModelViewer to avoid SSR issues with Three.js
 const ModelViewer = dynamic(
@@ -19,7 +18,7 @@ const ModelViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[500px] bg-gray-100 rounded-lg flex items-center justify-center">
+      <div className="w-full h-full bg-gray-900 rounded-lg flex items-center justify-center">
         <LoadingSpinner message="Loading viewer..." />
       </div>
     ),
@@ -32,12 +31,20 @@ function ViewerContentInner() {
   const jobId = searchParams.get('id');
 
   const { job, loading: jobLoading, error: jobError } = useJob(jobId || '');
-  const [backgroundColor, setBackgroundColor] = useState('#f3f4f6');
+
+  // Viewer state
+  const [backgroundColor, setBackgroundColor] = useState('#1f2937');
   const [viewMode, setViewMode] = useState<ViewMode>('clay');
-  const [modelRotation, setModelRotation] = useState<ModelRotation>({ x: 0, y: 0, z: 0 });
+  const [showGrid, setShowGrid] = useState(false);
+  const [showAxes, setShowAxes] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Refs
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const modelViewerRef = useRef<ModelViewerRef>(null);
 
   // Check if GLB is available for textured mode
-  // GLB can come from: 1) outputModelUrl (Firebase Storage) or 2) downloadFiles (Rodin API)
   const hasTextures = Boolean(
     job?.outputModelUrl?.includes('.glb') ||
     job?.downloadFiles?.some((f) => f.name.endsWith('.glb') || f.name.endsWith('.gltf'))
@@ -46,17 +53,42 @@ function ViewerContentInner() {
   // Set default view mode based on printer type when job loads
   useEffect(() => {
     if (job?.settings.printerType) {
-      // FDM = mono prints → clay mode, SLA/Resin = color prints → textured mode
       const defaultMode: ViewMode =
         job.settings.printerType === 'fdm' ? 'clay' : hasTextures ? 'textured' : 'clay';
       setViewMode(defaultMode);
     }
   }, [job?.settings.printerType, hasTextures]);
 
-  // Camera reset callback (will be passed to controls)
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Handlers
+  const handleScreenshot = useCallback(() => {
+    const dataUrl = modelViewerRef.current?.takeScreenshot();
+    if (dataUrl) {
+      const link = document.createElement('a');
+      link.download = `model-screenshot-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+    }
+  }, []);
+
+  const handleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      viewerContainerRef.current?.requestFullscreen();
+    }
+  }, []);
+
   const handleReset = useCallback(() => {
-    // This triggers a re-render which resets the OrbitControls
-    setBackgroundColor((prev) => prev);
+    modelViewerRef.current?.resetCamera();
   }, []);
 
   // Poll for status if job is not yet completed or failed
@@ -112,18 +144,18 @@ function ViewerContentInner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-gray-900/80 backdrop-blur-lg border-b border-white/10 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
                 href="/dashboard"
-                className="text-gray-500 hover:text-gray-700"
+                className="text-white/60 hover:text-white transition-colors"
               >
                 <svg
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -137,11 +169,11 @@ function ViewerContentInner() {
                 </svg>
               </Link>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">
+                <h1 className="text-lg font-medium text-white">
                   3D Model Viewer
                 </h1>
-                <p className="text-sm text-gray-500">
-                  {job.settings.quality} quality • {job.settings.format.toUpperCase()}
+                <p className="text-xs text-white/50 font-mono">
+                  {job.settings.quality.toUpperCase()} • {job.settings.format.toUpperCase()}
                 </p>
               </div>
             </div>
@@ -153,12 +185,11 @@ function ViewerContentInner() {
       </header>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Processing state - show for all non-completed/failed statuses */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Processing state */}
         {isProcessing && currentStatus && (
-          <div className="bg-white rounded-lg shadow-sm p-8">
+          <div className="bg-gray-800/50 backdrop-blur rounded-2xl border border-white/10 p-8">
             <div className="text-center">
-              {/* Step indicator */}
               <ProgressSteps currentStatus={currentStatus} />
 
               <LoadingSpinner
@@ -166,13 +197,13 @@ function ViewerContentInner() {
               />
 
               <div className="mt-6 max-w-md mx-auto">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="flex items-center gap-3 text-sm text-white/50">
                   <img
                     src={job.inputImageUrl}
                     alt="Input"
-                    className="w-12 h-12 rounded object-cover"
+                    className="w-12 h-12 rounded-lg object-cover ring-1 ring-white/10"
                   />
-                  <span>
+                  <span className="font-mono text-xs">
                     {job.settings.quality === 'fine'
                       ? '精細品質生成約需 3 分鐘'
                       : job.settings.quality === 'standard'
@@ -187,11 +218,11 @@ function ViewerContentInner() {
 
         {/* Failed state */}
         {job.status === 'failed' && (
-          <div className="bg-white rounded-lg shadow-sm p-8">
+          <div className="bg-gray-800/50 backdrop-blur rounded-2xl border border-red-500/30 p-8">
             <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
                 <svg
-                  className="w-8 h-8 text-red-600"
+                  className="w-8 h-8 text-red-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -204,18 +235,18 @@ function ViewerContentInner() {
                   />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              <h2 className="text-xl font-semibold text-white mb-2">
                 Generation Failed
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-white/60 mb-6">
                 {job.error || 'An error occurred during 3D model generation.'}
               </p>
-              <p className="text-sm text-gray-500 mb-4">
+              <p className="text-sm text-white/40 mb-4">
                 Your credit has been refunded automatically.
               </p>
               <Link
                 href="/"
-                className="inline-flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                className="inline-flex items-center justify-center px-5 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-medium"
               >
                 Try Again
               </Link>
@@ -226,28 +257,44 @@ function ViewerContentInner() {
         {/* Completed state with viewer */}
         {job.status === 'completed' && job.outputModelUrl && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Viewer */}
-            <div className="lg:col-span-3 space-y-4">
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="h-[500px]">
-                  <ModelViewer
-                    modelUrl={job.outputModelUrl}
-                    downloadFiles={job.downloadFiles}
-                    viewMode={viewMode}
-                    backgroundColor={backgroundColor}
-                    rotation={modelRotation}
-                    autoOrient={true}
-                  />
-                </div>
+            {/* Viewer - takes more space now */}
+            <div className="lg:col-span-3">
+              <div
+                ref={viewerContainerRef}
+                className="relative bg-gray-800 rounded-2xl overflow-hidden border border-white/10"
+                style={{ height: isFullscreen ? '100vh' : '600px' }}
+              >
+                <ModelViewer
+                  ref={modelViewerRef}
+                  modelUrl={job.outputModelUrl}
+                  downloadFiles={job.downloadFiles}
+                  viewMode={viewMode}
+                  backgroundColor={backgroundColor}
+                  autoOrient={true}
+                  showGrid={showGrid}
+                  showAxes={showAxes}
+                  autoRotate={autoRotate}
+                />
+
+                {/* Floating Toolbar */}
+                <ViewerToolbar
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  hasTextures={hasTextures}
+                  backgroundColor={backgroundColor}
+                  onBackgroundChange={setBackgroundColor}
+                  showGrid={showGrid}
+                  onShowGridChange={setShowGrid}
+                  showAxes={showAxes}
+                  onShowAxesChange={setShowAxes}
+                  autoRotate={autoRotate}
+                  onAutoRotateChange={setAutoRotate}
+                  onScreenshot={handleScreenshot}
+                  onFullscreen={handleFullscreen}
+                  isFullscreen={isFullscreen}
+                  onReset={handleReset}
+                />
               </div>
-              <ViewerControls
-                backgroundColor={backgroundColor}
-                onBackgroundChange={setBackgroundColor}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                hasTextures={hasTextures}
-                onReset={handleReset}
-              />
             </div>
 
             {/* Sidebar */}
@@ -259,20 +306,13 @@ function ViewerContentInner() {
                 currentFormat={job.settings.format}
               />
 
-              {/* Rotation Controls */}
-              <RotationControls
-                rotation={modelRotation}
-                onRotationChange={setModelRotation}
-                onReset={() => setModelRotation({ x: 0, y: 0, z: 0 })}
-              />
-
               {/* Input image */}
-              <div className="bg-white rounded-lg shadow-sm p-4">
-                <h3 className="font-medium text-gray-900 mb-3">Source Image</h3>
+              <div className="bg-gray-800/50 backdrop-blur rounded-xl border border-white/10 p-4">
+                <h3 className="font-medium text-white/90 mb-3 text-sm">Source Image</h3>
                 <img
                   src={job.inputImageUrl}
                   alt="Source"
-                  className="w-full rounded-md"
+                  className="w-full rounded-lg ring-1 ring-white/10"
                 />
               </div>
             </div>
@@ -306,12 +346,12 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
             <div key={step.status} className="flex items-center">
               {/* Step circle */}
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono transition-colors ${
                   isActive
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-indigo-500 text-white ring-4 ring-indigo-500/30'
                     : isCompleted
                     ? 'bg-green-500 text-white'
-                    : 'bg-gray-200 text-gray-500'
+                    : 'bg-gray-700 text-gray-400'
                 }`}
               >
                 {isCompleted ? (
@@ -330,8 +370,8 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
               {/* Connector line */}
               {index < PROGRESS_STEPS.length - 1 && (
                 <div
-                  className={`w-8 h-1 mx-1 transition-colors ${
-                    isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                  className={`w-8 h-0.5 mx-1 transition-colors ${
+                    isCompleted ? 'bg-green-500' : 'bg-gray-700'
                   }`}
                 />
               )}
@@ -348,8 +388,8 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
           return (
             <div
               key={step.status}
-              className={`text-xs text-center whitespace-nowrap ${
-                isActive ? 'text-indigo-600 font-medium' : 'text-gray-400'
+              className={`text-xs text-center font-mono whitespace-nowrap ${
+                isActive ? 'text-indigo-400 font-medium' : 'text-gray-500'
               }`}
               style={{ width: '48px' }}
             >
@@ -364,13 +404,13 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    'generating-views': 'bg-blue-100 text-blue-800',
-    'generating-model': 'bg-blue-100 text-blue-800',
-    'downloading-model': 'bg-blue-100 text-blue-800',
-    'uploading-storage': 'bg-blue-100 text-blue-800',
-    completed: 'bg-green-100 text-green-800',
-    failed: 'bg-red-100 text-red-800',
+    pending: 'bg-yellow-500/20 text-yellow-300 ring-yellow-500/30',
+    'generating-views': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
+    'generating-model': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
+    'downloading-model': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
+    'uploading-storage': 'bg-blue-500/20 text-blue-300 ring-blue-500/30',
+    completed: 'bg-green-500/20 text-green-300 ring-green-500/30',
+    failed: 'bg-red-500/20 text-red-300 ring-red-500/30',
   };
 
   const labels: Record<string, string> = {
@@ -385,7 +425,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono ring-1 ${
         styles[status] || styles.pending
       }`}
     >
@@ -398,7 +438,7 @@ function ViewerContent() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-screen flex items-center justify-center bg-gray-900">
           <LoadingSpinner message="Loading..." />
         </div>
       }
