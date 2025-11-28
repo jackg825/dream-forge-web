@@ -16,8 +16,10 @@ import { functions, db } from '@/lib/firebase';
 import type {
   Job,
   JobStatus,
+  JobType,
   QualityLevel,
   OutputFormat,
+  GenerateModelRequest,
   GenerateModelResponse,
   CheckJobStatusResponse,
 } from '@/types';
@@ -52,8 +54,11 @@ export function useJobs(userId: string | undefined) {
           return {
             id: docSnap.id,
             userId: data.userId,
+            jobType: data.jobType || 'model',
             status: data.status as JobStatus,
             inputImageUrl: data.inputImageUrl,
+            inputImageUrls: data.inputImageUrls,
+            viewAngles: data.viewAngles,
             outputModelUrl: data.outputModelUrl,
             settings: data.settings,
             error: data.error,
@@ -100,8 +105,11 @@ export function useJob(jobId: string | null) {
           setJob({
             id: docSnap.id,
             userId: data.userId,
+            jobType: data.jobType || 'model',
             status: data.status as JobStatus,
             inputImageUrl: data.inputImageUrl,
+            inputImageUrls: data.inputImageUrls,
+            viewAngles: data.viewAngles,
             outputModelUrl: data.outputModelUrl,
             settings: data.settings,
             error: data.error,
@@ -130,6 +138,7 @@ export function useJob(jobId: string | null) {
 
 /**
  * Hook for generating a new model
+ * Supports single image, multi-image upload, and AI-generated views
  */
 export function useGenerateModel() {
   const [generating, setGenerating] = useState(false);
@@ -138,18 +147,14 @@ export function useGenerateModel() {
   // Create callable function reference only when functions is available
   const generateModelFn = useMemo(() => {
     if (!functions) return null;
-    return httpsCallable<
-      { imageUrl: string; quality: QualityLevel; format?: OutputFormat },
-      GenerateModelResponse
-    >(functions, 'generateModel');
+    return httpsCallable<GenerateModelRequest, GenerateModelResponse>(
+      functions,
+      'generateModel'
+    );
   }, []);
 
   const generate = useCallback(
-    async (
-      imageUrl: string,
-      quality: QualityLevel,
-      format: OutputFormat = 'glb'
-    ): Promise<string | null> => {
+    async (request: GenerateModelRequest): Promise<string | null> => {
       if (!generateModelFn) {
         setError('Firebase is not configured');
         return null;
@@ -159,7 +164,13 @@ export function useGenerateModel() {
       setError(null);
 
       try {
-        const result = await generateModelFn({ imageUrl, quality, format });
+        // Ensure format defaults to STL
+        const requestWithDefaults: GenerateModelRequest = {
+          ...request,
+          format: request.format || 'stl',
+        };
+
+        const result = await generateModelFn(requestWithDefaults);
         return result.data.jobId;
       } catch (err) {
         const message =
@@ -240,4 +251,48 @@ export function useJobStatusPolling(jobId: string | null, enabled: boolean = tru
   }, [jobId, enabled, checkJobStatusFn]);
 
   return { status, polling };
+}
+
+/**
+ * Hook for retrying a failed job
+ */
+export function useRetryJob() {
+  const [retrying, setRetrying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Create callable function reference only when functions is available
+  const retryFailedJobFn = useMemo(() => {
+    if (!functions) return null;
+    return httpsCallable<{ jobId: string }, CheckJobStatusResponse>(
+      functions,
+      'retryFailedJob'
+    );
+  }, []);
+
+  const retry = useCallback(
+    async (jobId: string): Promise<CheckJobStatusResponse | null> => {
+      if (!retryFailedJobFn) {
+        setError('Firebase is not configured');
+        return null;
+      }
+
+      setRetrying(true);
+      setError(null);
+
+      try {
+        const result = await retryFailedJobFn({ jobId });
+        return result.data;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to retry job';
+        setError(message);
+        return null;
+      } finally {
+        setRetrying(false);
+      }
+    },
+    [retryFailedJobFn]
+  );
+
+  return { retry, retrying, error };
 }
