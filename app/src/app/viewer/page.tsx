@@ -336,10 +336,10 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
           return (
             <div
               key={step.status}
-              className={`text-xs px-2 ${
+              className={`text-xs text-center whitespace-nowrap ${
                 isActive ? 'text-indigo-600 font-medium' : 'text-gray-400'
               }`}
-              style={{ width: index < PROGRESS_STEPS.length - 1 ? '56px' : '32px' }}
+              style={{ width: '48px' }}
             >
               {step.label}
             </div>
