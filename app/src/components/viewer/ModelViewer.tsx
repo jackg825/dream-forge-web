@@ -335,6 +335,9 @@ export function ModelViewer({
           enableRotate={true}
           minDistance={1}
           maxDistance={20}
+          rotateSpeed={0.5}
+          enableDamping={true}
+          dampingFactor={0.05}
           makeDefault
         />
 
