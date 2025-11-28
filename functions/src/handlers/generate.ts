@@ -261,14 +261,15 @@ export const generateModel = functions
       await jobRef.update({ status: 'generating-model' });
 
       // Call Rodin API with multi-image support
+      // Use GLB format for preview with PBR materials (matching job.settings.format)
       const rodinClient = createRodinClient();
       const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateModelMulti(
         imageBuffers,
         {
           tier: 'Gen-2',
           quality: quality as PrintQuality | QualityLevel,
-          format: 'stl' as OutputFormat,
-          meshMode: 'Raw' as MeshMode,
+          format: 'glb' as OutputFormat,  // GLB for preview with textures
+          meshMode: 'Quad' as MeshMode,   // Quad mesh for better quality
           printerType,
           conditionMode: imageBuffers.length > 1 ? 'concat' : undefined,
         }
@@ -480,7 +481,7 @@ export const checkJobStatus = functions
 
         await jobRef.update({
           status: 'failed',
-          error: errorMessage,
+          error: `Unexpected error in getDownloadUrls: ${errorMessage}`,
         });
 
         // Refund credits based on input mode
@@ -489,7 +490,7 @@ export const checkJobStatus = functions
 
         return {
           status: 'failed',
-          error: errorMessage,
+          error: `Unexpected error in getDownloadUrls: ${errorMessage}`,
         };
       }
     }
