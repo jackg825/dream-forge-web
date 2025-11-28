@@ -349,14 +349,14 @@ export class RodinClient {
    * and files being available for download.
    *
    * @param taskUuid - The task UUID (from generateModel response)
-   * @param maxRetries - Number of retry attempts (default: 3)
-   * @param retryDelayMs - Delay between retries in ms (default: 2000)
+   * @param maxRetries - Number of retry attempts (default: 5)
+   * @param retryDelayMs - Delay between retries in ms (default: 3000)
    * @returns List of downloadable files with URLs and names
    */
   async getDownloadUrls(
     taskUuid: string,
-    maxRetries: number = 3,
-    retryDelayMs: number = 2000
+    maxRetries: number = 5,
+    retryDelayMs: number = 3000
   ): Promise<Array<{ url: string; name: string }>> {
     functions.logger.info('Fetching download URLs', { taskUuid, maxRetries, retryDelayMs });
 
