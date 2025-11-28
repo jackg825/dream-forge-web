@@ -12,13 +12,18 @@ export interface OrientationResult {
 }
 
 /**
- * Apply Z-up to Y-up coordinate conversion
- * Rotates the object -90 degrees around the X-axis
- * This transforms: Z-up → Y-up, Y-forward → Z-backward
+ * Apply Z-up to Y-up coordinate conversion and face the camera
+ * Step 1: Rotates the object -90 degrees around the X-axis (Z-up → Y-up)
+ * Step 2: Rotates 180 degrees around Y-axis so model faces camera (-Z direction)
  */
 export function applyZUpToYUpRotation(object: THREE.Object3D): void {
-  const rotationMatrix = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
-  object.applyMatrix4(rotationMatrix);
+  // Z-up to Y-up
+  const rotationX = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+  object.applyMatrix4(rotationX);
+
+  // Rotate 180° around Y so model faces camera (-Z direction)
+  const rotationY = new THREE.Matrix4().makeRotationY(Math.PI);
+  object.applyMatrix4(rotationY);
 }
 
 /**
@@ -130,8 +135,10 @@ export function orientGeometry(
   applyZToYRotation: boolean = true
 ): void {
   if (applyZToYRotation) {
-    // Rotate the geometry itself
+    // Z-up to Y-up
     geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+    // Rotate 180° around Y so model faces camera (-Z direction)
+    geometry.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.PI));
   }
 
   // Recompute normals after rotation
