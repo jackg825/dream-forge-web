@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -9,7 +9,7 @@ import { ViewerControls } from '@/components/viewer/ViewerControls';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
-import { JOB_STATUS_MESSAGES, type JobStatus } from '@/types';
+import { JOB_STATUS_MESSAGES, type JobStatus, type ViewMode } from '@/types';
 
 // Dynamic import for ModelViewer to avoid SSR issues with Three.js
 const ModelViewer = dynamic(
@@ -31,6 +31,28 @@ function ViewerContentInner() {
 
   const { job, loading: jobLoading, error: jobError } = useJob(jobId || '');
   const [backgroundColor, setBackgroundColor] = useState('#f3f4f6');
+  const [viewMode, setViewMode] = useState<ViewMode>('clay');
+
+  // Check if GLB/textures are available for textured mode
+  const hasTextures = Boolean(
+    job?.downloadFiles?.some((f) => f.name.endsWith('.glb') || f.name.endsWith('.gltf'))
+  );
+
+  // Set default view mode based on printer type when job loads
+  useEffect(() => {
+    if (job?.settings.printerType) {
+      // FDM = mono prints → clay mode, SLA/Resin = color prints → textured mode
+      const defaultMode: ViewMode =
+        job.settings.printerType === 'fdm' ? 'clay' : hasTextures ? 'textured' : 'clay';
+      setViewMode(defaultMode);
+    }
+  }, [job?.settings.printerType, hasTextures]);
+
+  // Camera reset callback (will be passed to controls)
+  const handleReset = useCallback(() => {
+    // This triggers a re-render which resets the OrbitControls
+    setBackgroundColor((prev) => prev);
+  }, []);
 
   // Poll for status if job is not yet completed or failed
   const isProcessing = job?.status && !['completed', 'failed'].includes(job.status);
@@ -205,6 +227,8 @@ function ViewerContentInner() {
                 <div className="h-[500px]">
                   <ModelViewer
                     modelUrl={job.outputModelUrl}
+                    downloadFiles={job.downloadFiles}
+                    viewMode={viewMode}
                     backgroundColor={backgroundColor}
                   />
                 </div>
@@ -212,6 +236,10 @@ function ViewerContentInner() {
               <ViewerControls
                 backgroundColor={backgroundColor}
                 onBackgroundChange={setBackgroundColor}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                hasTextures={hasTextures}
+                onReset={handleReset}
               />
             </div>
 
@@ -219,6 +247,7 @@ function ViewerContentInner() {
             <div className="space-y-4">
               <DownloadPanel
                 modelUrl={job.outputModelUrl}
+                downloadFiles={job.downloadFiles}
                 jobId={job.id}
                 currentFormat={job.settings.format}
               />

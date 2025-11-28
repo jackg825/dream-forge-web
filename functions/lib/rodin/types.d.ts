@@ -81,7 +81,7 @@ export interface UserDocument {
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt: FirebaseFirestore.Timestamp;
 }
-export type JobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type JobStatus = 'pending' | 'generating-views' | 'generating-model' | 'downloading-model' | 'uploading-storage' | 'completed' | 'failed';
 export type JobType = 'model' | 'texture';
 export interface JobSettings {
     tier: 'Gen-2';
@@ -91,6 +91,10 @@ export interface JobSettings {
     inputMode: InputMode;
     imageCount: number;
 }
+export interface DownloadFile {
+    url: string;
+    name: string;
+}
 export interface JobDocument {
     userId: string;
     jobType: JobType;
@@ -99,6 +103,7 @@ export interface JobDocument {
     inputImageUrls?: string[];
     viewAngles?: ViewAngle[];
     outputModelUrl: string | null;
+    downloadFiles?: DownloadFile[];
     rodinTaskId: string;
     rodinSubscriptionKey: string;
     rodinTaskUuid?: string;

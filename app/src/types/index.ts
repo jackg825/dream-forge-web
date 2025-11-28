@@ -193,6 +193,15 @@ export interface JobSettings {
   imageCount: number;
 }
 
+// Download file from Rodin API (GLB, textures, etc.)
+export interface DownloadFile {
+  url: string;
+  name: string;
+}
+
+// View mode for 3D preview - matches printer type for accurate preview
+export type ViewMode = 'clay' | 'textured' | 'wireframe';
+
 export interface Job {
   id: string;
   userId: string;
@@ -202,6 +211,7 @@ export interface Job {
   inputImageUrls?: string[];
   viewAngles?: ViewAngle[];
   outputModelUrl: string | null;
+  downloadFiles?: DownloadFile[]; // All available files from Rodin (GLB, textures, etc.)
   settings: JobSettings;
   error: string | null;
   createdAt: Date;

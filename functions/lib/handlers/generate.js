@@ -161,6 +161,8 @@ exports.generateModel = functions
         });
         // Handle AI-generated views
         if (inputMode === 'ai-generated' && generateAngles && generateAngles.length > 0) {
+            // Update status to generating-views
+            await jobRef.update({ status: 'generating-views' });
             functions.logger.info('Generating AI views', {
                 angles: generateAngles,
                 jobId,
@@ -203,7 +205,9 @@ exports.generateModel = functions
             viewAngles: finalViewAngles,
             'settings.imageCount': imageBuffers.length,
         });
-        // 6. Call Rodin API with multi-image support
+        // 6. Update status to generating-model before calling Rodin API
+        await jobRef.update({ status: 'generating-model' });
+        // Call Rodin API with multi-image support
         const rodinClient = (0, client_1.createRodinClient)();
         const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateModelMulti(imageBuffers, {
             tier: 'Gen-2',
@@ -213,13 +217,12 @@ exports.generateModel = functions
             printerType,
             conditionMode: imageBuffers.length > 1 ? 'concat' : undefined,
         });
-        // 7. Update job with all Rodin IDs for flexibility
+        // 7. Update job with all Rodin IDs for flexibility (status already 'generating-model')
         await jobRef.update({
             rodinTaskId: taskUuid, // Legacy field for backwards compat
             rodinTaskUuid: taskUuid, // Main UUID (required for download API)
             rodinJobUuids: jobUuids, // Individual job UUIDs
             rodinSubscriptionKey: subscriptionKey,
-            status: 'processing',
         });
         functions.logger.info('Generation started', {
             jobId,
@@ -232,7 +235,7 @@ exports.generateModel = functions
             imageCount: imageBuffers.length,
         });
         // 8. Return job ID
-        return { jobId, status: 'processing' };
+        return { jobId, status: 'generating-model' };
     }
     catch (error) {
         // Rollback: Refund credits and mark job as failed
@@ -313,6 +316,8 @@ exports.checkJobStatus = functions
     // 3. Handle completion (status is 'Done' per API docs)
     if (rodinStatus.status === 'Done') {
         try {
+            // Update status to downloading-model
+            await jobRef.update({ status: 'downloading-model' });
             // Get download URLs using the main task UUID
             // Use rodinTaskUuid (new field) with fallback to rodinTaskId (legacy field)
             const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
@@ -330,6 +335,8 @@ exports.checkJobStatus = functions
             }
             // Download model from Rodin
             const modelBuffer = await rodinClient.downloadModel(modelFile.url);
+            // Update status to uploading-storage
+            await jobRef.update({ status: 'uploading-storage' });
             // Upload to Firebase Storage
             const bucket = storage.bucket();
             const modelPath = `models/${userId}/${jobId}.${job.settings.format}`;
@@ -344,18 +351,25 @@ exports.checkJobStatus = functions
                 action: 'read',
                 expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
             });
-            // Update job
+            // Update job with signed URL and all available download files for preview
             await jobRef.update({
                 status: 'completed',
                 outputModelUrl: signedUrl,
+                downloadFiles: downloadList, // Save all Rodin files (GLB, textures, etc.) for preview
                 completedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
             // Increment generation count
             await (0, credits_1.incrementGenerationCount)(userId);
-            functions.logger.info('Job completed', { jobId, modelPath });
+            functions.logger.info('Job completed', {
+                jobId,
+                modelPath,
+                downloadFilesCount: downloadList.length,
+                downloadFileNames: downloadList.map((f) => f.name),
+            });
             return {
                 status: 'completed',
                 outputModelUrl: signedUrl,
+                downloadFiles: downloadList,
             };
         }
         catch (error) {
@@ -394,8 +408,8 @@ exports.checkJobStatus = functions
         };
     }
     // 5. Still processing (status is 'Waiting' or 'Generating')
-    // Map Rodin statuses to our internal status
-    const mappedStatus = rodinStatus.status === 'Waiting' ? 'pending' : 'processing';
+    // Map Rodin statuses to our granular internal status
+    const mappedStatus = rodinStatus.status === 'Waiting' ? 'pending' : 'generating-model';
     return {
         status: mappedStatus,
     };
@@ -630,9 +644,9 @@ exports.retryFailedJob = functions
         downloadTaskUuid,
         previousError: job.error,
     });
-    // Reset job status to processing
+    // Reset job status to downloading-model (retrying from download phase)
     await jobRef.update({
-        status: 'processing',
+        status: 'downloading-model',
         error: null,
     });
     try {
@@ -646,6 +660,8 @@ exports.retryFailedJob = functions
         }
         // Download model from Rodin
         const modelBuffer = await rodinClient.downloadModel(modelFile.url);
+        // Update status to uploading-storage
+        await jobRef.update({ status: 'uploading-storage' });
         // Upload to Firebase Storage
         const bucket = storage.bucket();
         const modelPath = `models/${userId}/${jobId}.${job.settings.format}`;
@@ -660,18 +676,24 @@ exports.retryFailedJob = functions
             action: 'read',
             expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
         });
-        // Update job as completed
+        // Update job as completed with all download files for preview
         await jobRef.update({
             status: 'completed',
             outputModelUrl: signedUrl,
+            downloadFiles: downloadList, // Save all Rodin files for preview
             completedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         // Increment generation count
         await (0, credits_1.incrementGenerationCount)(userId);
-        functions.logger.info('Retry successful', { jobId, modelPath });
+        functions.logger.info('Retry successful', {
+            jobId,
+            modelPath,
+            downloadFilesCount: downloadList.length,
+        });
         return {
             status: 'completed',
             outputModelUrl: signedUrl,
+            downloadFiles: downloadList,
         };
     }
     catch (error) {

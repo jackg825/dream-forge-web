@@ -163,6 +163,12 @@ export interface JobSettings {
   imageCount: number;
 }
 
+// Download file from Rodin API
+export interface DownloadFile {
+  url: string;
+  name: string;
+}
+
 export interface JobDocument {
   userId: string;
   jobType: JobType;               // 'model' or 'texture'
@@ -171,6 +177,7 @@ export interface JobDocument {
   inputImageUrls?: string[];      // All image URLs for multi-view
   viewAngles?: ViewAngle[];       // Corresponding angles
   outputModelUrl: string | null;
+  downloadFiles?: DownloadFile[]; // All available download files (GLB, textures, etc.)
   rodinTaskId: string;            // Legacy: kept for backwards compat (= taskUuid)
   rodinSubscriptionKey: string;
   rodinTaskUuid?: string;         // Main task UUID (required for download API)

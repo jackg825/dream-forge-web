@@ -446,21 +446,28 @@ export const checkJobStatus = functions
           expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
-        // Update job
+        // Update job with signed URL and all available download files for preview
         await jobRef.update({
           status: 'completed',
           outputModelUrl: signedUrl,
+          downloadFiles: downloadList, // Save all Rodin files (GLB, textures, etc.) for preview
           completedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
         // Increment generation count
         await incrementGenerationCount(userId);
 
-        functions.logger.info('Job completed', { jobId, modelPath });
+        functions.logger.info('Job completed', {
+          jobId,
+          modelPath,
+          downloadFilesCount: downloadList.length,
+          downloadFileNames: downloadList.map((f) => f.name),
+        });
 
         return {
           status: 'completed',
           outputModelUrl: signedUrl,
+          downloadFiles: downloadList,
         };
       } catch (error) {
         // Preserve actual error message for debugging
@@ -885,21 +892,27 @@ export const retryFailedJob = functions
         expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
       });
 
-      // Update job as completed
+      // Update job as completed with all download files for preview
       await jobRef.update({
         status: 'completed',
         outputModelUrl: signedUrl,
+        downloadFiles: downloadList, // Save all Rodin files for preview
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       // Increment generation count
       await incrementGenerationCount(userId);
 
-      functions.logger.info('Retry successful', { jobId, modelPath });
+      functions.logger.info('Retry successful', {
+        jobId,
+        modelPath,
+        downloadFilesCount: downloadList.length,
+      });
 
       return {
         status: 'completed',
         outputModelUrl: signedUrl,
+        downloadFiles: downloadList,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Retry failed';
