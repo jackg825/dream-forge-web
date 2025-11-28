@@ -345,54 +345,93 @@ export class RodinClient {
    *
    * See: https://developer.hyper3d.ai/api-specification/download-results
    *
+   * Includes retry logic to handle timing delays between status=Done
+   * and files being available for download.
+   *
    * @param taskUuid - The task UUID (from generateModel response)
+   * @param maxRetries - Number of retry attempts (default: 3)
+   * @param retryDelayMs - Delay between retries in ms (default: 2000)
    * @returns List of downloadable files with URLs and names
    */
   async getDownloadUrls(
-    taskUuid: string
+    taskUuid: string,
+    maxRetries: number = 3,
+    retryDelayMs: number = 2000
   ): Promise<Array<{ url: string; name: string }>> {
-    try {
-      functions.logger.info('Fetching download URLs', { taskUuid });
+    functions.logger.info('Fetching download URLs', { taskUuid, maxRetries, retryDelayMs });
 
-      const response = await axios.post<RodinDownloadResponse>(
-        `${RODIN_API_BASE}/download`,
-        { task_uuid: taskUuid },
-        {
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000,
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await axios.post<RodinDownloadResponse>(
+          `${RODIN_API_BASE}/download`,
+          { task_uuid: taskUuid },
+          {
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 30000,
+          }
+        );
+
+        const responseData = response.data;
+        functions.logger.info('Download API raw response', {
+          taskUuid,
+          attempt,
+          httpStatus: response.status,
+          fullResponseData: JSON.stringify(response.data),
+          hasError: !!responseData.error,
+          errorValue: responseData.error,
+          hasList: !!responseData.list,
+          listLength: responseData.list?.length ?? 0,
+          listContents: responseData.list?.map((f: {url: string; name: string}) => f.name) ?? [],
+        });
+
+        // If list is empty, retry (files may not be ready yet)
+        if (!responseData.list || responseData.list.length === 0) {
+          if (attempt < maxRetries) {
+            functions.logger.warn('Download list empty, retrying...', {
+              taskUuid,
+              attempt,
+              maxRetries,
+              nextRetryIn: retryDelayMs,
+            });
+            await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+            continue;
+          }
+          throw new Error(`No download URLs after ${maxRetries} attempts. API error: ${responseData.error || 'none'}`);
         }
-      );
 
-      const responseData = response.data;
-      functions.logger.info('Download API raw response', {
-        taskUuid,
-        httpStatus: response.status,
-        fullResponseData: JSON.stringify(response.data),
-        hasError: !!responseData.error,
-        errorValue: responseData.error,
-        hasList: !!responseData.list,
-        listLength: responseData.list?.length ?? 0,
-        listContents: responseData.list?.map((f: {url: string; name: string}) => f.name) ?? [],
-      });
+        functions.logger.info('Rodin download URLs retrieved', {
+          taskUuid,
+          attempt,
+          fileCount: response.data.list.length,
+          files: response.data.list.map((f) => f.name),
+        });
 
-      if (!responseData.list || responseData.list.length === 0) {
-        throw new Error(`No download URLs in response. API error: ${responseData.error || 'none'}`);
+        return response.data.list;
+      } catch (error) {
+        // Only retry on empty list, not on actual errors
+        if (attempt >= maxRetries) {
+          this.handleError(error, 'getDownloadUrls');
+          throw error;
+        }
+        // If it's an axios error (network/API), don't retry
+        if (axios.isAxiosError(error)) {
+          this.handleError(error, 'getDownloadUrls');
+          throw error;
+        }
+        // Otherwise, it's our "empty list" error - retry
+        functions.logger.warn('Retrying after error...', {
+          taskUuid,
+          attempt,
+          error: error instanceof Error ? error.message : 'Unknown',
+        });
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
       }
-
-      functions.logger.info('Rodin download URLs retrieved', {
-        taskUuid,
-        fileCount: response.data.list.length,
-        files: response.data.list.map((f) => f.name),
-      });
-
-      return response.data.list;
-    } catch (error) {
-      this.handleError(error, 'getDownloadUrls');
-      throw error;
     }
+
+    throw new Error(`Failed to get download URLs after ${maxRetries} attempts`);
   }
 
   /**

@@ -72,10 +72,15 @@ export declare class RodinClient {
      *
      * See: https://developer.hyper3d.ai/api-specification/download-results
      *
+     * Includes retry logic to handle timing delays between status=Done
+     * and files being available for download.
+     *
      * @param taskUuid - The task UUID (from generateModel response)
+     * @param maxRetries - Number of retry attempts (default: 3)
+     * @param retryDelayMs - Delay between retries in ms (default: 2000)
      * @returns List of downloadable files with URLs and names
      */
-    getDownloadUrls(taskUuid: string): Promise<Array<{
+    getDownloadUrls(taskUuid: string, maxRetries?: number, retryDelayMs?: number): Promise<Array<{
         url: string;
         name: string;
     }>>;
