@@ -9,6 +9,7 @@ import { ViewerControls } from '@/components/viewer/ViewerControls';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
+import { JOB_STATUS_MESSAGES, type JobStatus } from '@/types';
 
 // Dynamic import for ModelViewer to avoid SSR issues with Three.js
 const ModelViewer = dynamic(
@@ -31,12 +32,12 @@ function ViewerContentInner() {
   const { job, loading: jobLoading, error: jobError } = useJob(jobId || '');
   const [backgroundColor, setBackgroundColor] = useState('#f3f4f6');
 
-  // Poll for status if job is processing
-  const shouldPoll = job?.status === 'pending' || job?.status === 'processing';
-  const { status: polledStatus } = useJobStatusPolling(jobId || '', shouldPoll);
+  // Poll for status if job is not yet completed or failed
+  const isProcessing = job?.status && !['completed', 'failed'].includes(job.status);
+  const { status: polledStatus } = useJobStatusPolling(jobId || '', isProcessing || false);
 
-  // Get the effective progress
-  const progress = polledStatus?.progress;
+  // Use polled status if available, otherwise fall back to job status
+  const currentStatus = (polledStatus?.status || job?.status) as JobStatus | undefined;
 
   // Redirect if no jobId
   useEffect(() => {
@@ -126,17 +127,15 @@ function ViewerContentInner() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Processing state */}
-        {(job.status === 'pending' || job.status === 'processing') && (
+        {/* Processing state - show for all non-completed/failed statuses */}
+        {isProcessing && currentStatus && (
           <div className="bg-white rounded-lg shadow-sm p-8">
             <div className="text-center">
+              {/* Step indicator */}
+              <ProgressSteps currentStatus={currentStatus} />
+
               <LoadingSpinner
-                message={
-                  job.status === 'pending'
-                    ? 'Queued for processing...'
-                    : 'Generating your 3D model...'
-                }
-                progress={progress}
+                message={JOB_STATUS_MESSAGES[currentStatus] || '處理中...'}
               />
 
               <div className="mt-6 max-w-md mx-auto">
@@ -241,28 +240,113 @@ function ViewerContentInner() {
   );
 }
 
+// Progress steps component
+const PROGRESS_STEPS: { status: JobStatus; label: string }[] = [
+  { status: 'pending', label: '排隊' },
+  { status: 'generating-views', label: '視角' },
+  { status: 'generating-model', label: '模型' },
+  { status: 'downloading-model', label: '下載' },
+  { status: 'uploading-storage', label: '完成' },
+];
+
+function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
+  const currentIndex = PROGRESS_STEPS.findIndex((s) => s.status === currentStatus);
+
+  return (
+    <div className="mb-8">
+      <div className="flex items-center justify-center">
+        {PROGRESS_STEPS.map((step, index) => {
+          const isActive = index === currentIndex;
+          const isCompleted = index < currentIndex;
+
+          return (
+            <div key={step.status} className="flex items-center">
+              {/* Step circle */}
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                  isActive
+                    ? 'bg-indigo-600 text-white'
+                    : isCompleted
+                    ? 'bg-green-500 text-white'
+                    : 'bg-gray-200 text-gray-500'
+                }`}
+              >
+                {isCompleted ? (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                ) : (
+                  index + 1
+                )}
+              </div>
+
+              {/* Connector line */}
+              {index < PROGRESS_STEPS.length - 1 && (
+                <div
+                  className={`w-8 h-1 mx-1 transition-colors ${
+                    isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                  }`}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Step labels */}
+      <div className="flex items-center justify-center mt-2">
+        {PROGRESS_STEPS.map((step, index) => {
+          const isActive = index === currentIndex;
+
+          return (
+            <div
+              key={step.status}
+              className={`text-xs px-2 ${
+                isActive ? 'text-indigo-600 font-medium' : 'text-gray-400'
+              }`}
+              style={{ width: index < PROGRESS_STEPS.length - 1 ? '56px' : '32px' }}
+            >
+              {step.label}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
-  const styles = {
+  const styles: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
-    processing: 'bg-blue-100 text-blue-800',
+    'generating-views': 'bg-blue-100 text-blue-800',
+    'generating-model': 'bg-blue-100 text-blue-800',
+    'downloading-model': 'bg-blue-100 text-blue-800',
+    'uploading-storage': 'bg-blue-100 text-blue-800',
     completed: 'bg-green-100 text-green-800',
     failed: 'bg-red-100 text-red-800',
   };
 
-  const labels = {
-    pending: 'Queued',
-    processing: 'Processing',
-    completed: 'Completed',
-    failed: 'Failed',
+  const labels: Record<string, string> = {
+    pending: '排隊中',
+    'generating-views': '生成視角',
+    'generating-model': '生成模型',
+    'downloading-model': '下載中',
+    'uploading-storage': '準備連結',
+    completed: '完成',
+    failed: '失敗',
   };
 
   return (
     <span
       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-        styles[status as keyof typeof styles] || styles.pending
+        styles[status] || styles.pending
       }`}
     >
-      {labels[status as keyof typeof labels] || status}
+      {labels[status] || status}
     </span>
   );
 }

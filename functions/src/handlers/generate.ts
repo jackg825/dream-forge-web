@@ -201,6 +201,9 @@ export const generateModel = functions
 
       // Handle AI-generated views
       if (inputMode === 'ai-generated' && generateAngles && generateAngles.length > 0) {
+        // Update status to generating-views
+        await jobRef.update({ status: 'generating-views' });
+
         functions.logger.info('Generating AI views', {
           angles: generateAngles,
           jobId,
@@ -254,7 +257,10 @@ export const generateModel = functions
         'settings.imageCount': imageBuffers.length,
       });
 
-      // 6. Call Rodin API with multi-image support
+      // 6. Update status to generating-model before calling Rodin API
+      await jobRef.update({ status: 'generating-model' });
+
+      // Call Rodin API with multi-image support
       const rodinClient = createRodinClient();
       const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateModelMulti(
         imageBuffers,
@@ -268,13 +274,12 @@ export const generateModel = functions
         }
       );
 
-      // 7. Update job with all Rodin IDs for flexibility
+      // 7. Update job with all Rodin IDs for flexibility (status already 'generating-model')
       await jobRef.update({
         rodinTaskId: taskUuid,           // Legacy field for backwards compat
         rodinTaskUuid: taskUuid,         // Main UUID (required for download API)
         rodinJobUuids: jobUuids,         // Individual job UUIDs
         rodinSubscriptionKey: subscriptionKey,
-        status: 'processing',
       });
 
       functions.logger.info('Generation started', {
@@ -289,7 +294,7 @@ export const generateModel = functions
       });
 
       // 8. Return job ID
-      return { jobId, status: 'processing' };
+      return { jobId, status: 'generating-model' };
     } catch (error) {
       // Rollback: Refund credits and mark job as failed
       await refundCredits(userId, creditCost, jobId);
@@ -395,6 +400,9 @@ export const checkJobStatus = functions
     // 3. Handle completion (status is 'Done' per API docs)
     if (rodinStatus.status === 'Done') {
       try {
+        // Update status to downloading-model
+        await jobRef.update({ status: 'downloading-model' });
+
         // Get download URLs using the main task UUID
         // Use rodinTaskUuid (new field) with fallback to rodinTaskId (legacy field)
         const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
@@ -417,6 +425,9 @@ export const checkJobStatus = functions
 
         // Download model from Rodin
         const modelBuffer = await rodinClient.downloadModel(modelFile.url);
+
+        // Update status to uploading-storage
+        await jobRef.update({ status: 'uploading-storage' });
 
         // Upload to Firebase Storage
         const bucket = storage.bucket();
@@ -496,8 +507,8 @@ export const checkJobStatus = functions
     }
 
     // 5. Still processing (status is 'Waiting' or 'Generating')
-    // Map Rodin statuses to our internal status
-    const mappedStatus = rodinStatus.status === 'Waiting' ? 'pending' : 'processing';
+    // Map Rodin statuses to our granular internal status
+    const mappedStatus = rodinStatus.status === 'Waiting' ? 'pending' : 'generating-model';
 
     return {
       status: mappedStatus,
@@ -830,9 +841,9 @@ export const retryFailedJob = functions
       previousError: job.error,
     });
 
-    // Reset job status to processing
+    // Reset job status to downloading-model (retrying from download phase)
     await jobRef.update({
-      status: 'processing',
+      status: 'downloading-model',
       error: null,
     });
 
@@ -853,6 +864,9 @@ export const retryFailedJob = functions
 
       // Download model from Rodin
       const modelBuffer = await rodinClient.downloadModel(modelFile.url);
+
+      // Update status to uploading-storage
+      await jobRef.update({ status: 'uploading-storage' });
 
       // Upload to Firebase Storage
       const bucket = storage.bucket();

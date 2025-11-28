@@ -9,34 +9,57 @@ interface JobCardProps {
   job: Job;
 }
 
-const STATUS_STYLES = {
+// Status styles - all intermediate statuses shown as blue (processing)
+const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
   pending: {
     bg: 'bg-yellow-100',
     text: 'text-yellow-800',
-    label: 'Queued',
+    label: '排隊中',
   },
-  processing: {
+  'generating-views': {
     bg: 'bg-blue-100',
     text: 'text-blue-800',
-    label: 'Processing',
+    label: '生成視角',
+  },
+  'generating-model': {
+    bg: 'bg-blue-100',
+    text: 'text-blue-800',
+    label: '生成模型',
+  },
+  'downloading-model': {
+    bg: 'bg-blue-100',
+    text: 'text-blue-800',
+    label: '下載中',
+  },
+  'uploading-storage': {
+    bg: 'bg-blue-100',
+    text: 'text-blue-800',
+    label: '準備連結',
   },
   completed: {
     bg: 'bg-green-100',
     text: 'text-green-800',
-    label: 'Completed',
+    label: '完成',
   },
   failed: {
     bg: 'bg-red-100',
     text: 'text-red-800',
-    label: 'Failed',
+    label: '失敗',
   },
+};
+
+// Default style for unknown statuses
+const DEFAULT_STATUS_STYLE = {
+  bg: 'bg-gray-100',
+  text: 'text-gray-800',
+  label: '處理中',
 };
 
 /**
  * Card component for displaying a generation job
  */
 export function JobCard({ job }: JobCardProps) {
-  const status = STATUS_STYLES[job.status];
+  const status = STATUS_STYLES[job.status] || DEFAULT_STATUS_STYLE;
   const { retry, retrying } = useRetryJob();
   const [retryError, setRetryError] = useState<string | null>(null);
 

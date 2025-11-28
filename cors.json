@@ -1,0 +1,11 @@
+[
+  {
+    "origin": [
+      "https://dreamforge-66998.web.app",
+      "http://localhost:3000"
+    ],
+    "method": ["GET", "HEAD"],
+    "responseHeader": ["Content-Type", "Content-Length"],
+    "maxAgeSeconds": 3600
+  }
+]

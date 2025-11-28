@@ -10,7 +10,16 @@ import { useCredits } from '@/hooks/useCredits';
 import { useJobs } from '@/hooks/useJobs';
 import type { JobStatus } from '@/types';
 
-type FilterStatus = 'all' | JobStatus;
+// Filter options - 'processing' covers all intermediate statuses
+type FilterStatus = 'all' | 'completed' | 'processing' | 'pending' | 'failed';
+
+// All statuses considered "processing"
+const PROCESSING_STATUSES: JobStatus[] = [
+  'generating-views',
+  'generating-model',
+  'downloading-model',
+  'uploading-storage',
+];
 
 const ITEMS_PER_PAGE = 12;
 
@@ -22,9 +31,12 @@ function HistoryContent() {
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [page, setPage] = useState(1);
 
-  // Filter jobs
+  // Filter jobs - 'processing' filter includes all intermediate statuses
   const filteredJobs = useMemo(() => {
     if (filter === 'all') return jobs;
+    if (filter === 'processing') {
+      return jobs.filter((job) => PROCESSING_STATUSES.includes(job.status));
+    }
     return jobs.filter((job) => job.status === filter);
   }, [jobs, filter]);
 
@@ -35,12 +47,12 @@ function HistoryContent() {
     return filteredJobs.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredJobs, page]);
 
-  // Status counts
+  // Status counts - 'processing' includes all intermediate statuses
   const statusCounts = useMemo(() => {
     return {
       all: jobs.length,
       completed: jobs.filter((j) => j.status === 'completed').length,
-      processing: jobs.filter((j) => j.status === 'processing').length,
+      processing: jobs.filter((j) => PROCESSING_STATUSES.includes(j.status)).length,
       pending: jobs.filter((j) => j.status === 'pending').length,
       failed: jobs.filter((j) => j.status === 'failed').length,
     };

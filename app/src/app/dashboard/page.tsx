@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
 import { useJobs } from '@/hooks/useJobs';
 import type { Job } from '@/types';
+import { JOB_STATUS_MESSAGES } from '@/types';
 
 function DashboardContent() {
   const { user, signOut } = useAuth();
@@ -180,9 +181,13 @@ function DashboardContent() {
 }
 
 function JobListItem({ job }: { job: Job }) {
-  const statusStyles = {
+  // Status styles - all intermediate statuses shown as blue (processing)
+  const statusStyles: Record<string, string> = {
     pending: 'bg-yellow-100 text-yellow-800',
-    processing: 'bg-blue-100 text-blue-800',
+    'generating-views': 'bg-blue-100 text-blue-800',
+    'generating-model': 'bg-blue-100 text-blue-800',
+    'downloading-model': 'bg-blue-100 text-blue-800',
+    'uploading-storage': 'bg-blue-100 text-blue-800',
     completed: 'bg-green-100 text-green-800',
     failed: 'bg-red-100 text-red-800',
   };
@@ -227,10 +232,10 @@ function JobListItem({ job }: { job: Job }) {
         {/* Status */}
         <span
           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            statusStyles[job.status]
+            statusStyles[job.status] || 'bg-gray-100 text-gray-800'
           }`}
         >
-          {job.status}
+          {JOB_STATUS_MESSAGES[job.status] || job.status}
         </span>
 
         {/* Arrow */}
