@@ -1,8 +1,9 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, X, Coins } from 'lucide-react';
+import { X, Coins } from 'lucide-react';
 
 interface NoCreditsModalProps {
   isOpen: boolean;
@@ -10,6 +11,9 @@ interface NoCreditsModalProps {
 }
 
 export function NoCreditsModal({ isOpen, onClose }: NoCreditsModalProps) {
+  const t = useTranslations('credits');
+  const tCommon = useTranslations('common');
+
   if (!isOpen) return null;
 
   return (
@@ -37,25 +41,25 @@ export function NoCreditsModal({ isOpen, onClose }: NoCreditsModalProps) {
             <div className="mx-auto w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4">
               <Coins className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
             </div>
-            <CardTitle>No Credits Remaining</CardTitle>
+            <CardTitle>{t('noCreditsTitle')}</CardTitle>
           </CardHeader>
 
           <CardContent className="text-center">
             <p className="text-muted-foreground mb-6">
-              You've used all your free credits. Each 3D model generation requires 1 credit.
+              {t('noCreditsDescription')}
             </p>
 
             {/* Coming soon notice */}
             <div className="bg-muted rounded-lg p-4">
               <p className="text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">Coming soon:</span> Purchase additional credits to continue generating 3D models.
+                {t('contactAdmin')}
               </p>
             </div>
           </CardContent>
 
           <CardFooter>
             <Button onClick={onClose} className="w-full">
-              Got it
+              {t('close')}
             </Button>
           </CardFooter>
         </Card>

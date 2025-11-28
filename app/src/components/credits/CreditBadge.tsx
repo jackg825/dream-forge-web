@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,7 @@ interface CreditBadgeProps {
 }
 
 export function CreditBadge({ credits, loading, showLabel = true }: CreditBadgeProps) {
+  const t = useTranslations('home');
   const isLow = credits > 0 && credits < 2;
   const isEmpty = credits === 0;
 
@@ -30,7 +32,7 @@ export function CreditBadge({ credits, loading, showLabel = true }: CreditBadgeP
       ) : (
         <>
           <span className="font-bold">{credits}</span>
-          {showLabel && <span className="text-xs opacity-75">credits</span>}
+          {showLabel && <span className="text-xs opacity-75">{credits === 1 ? t('credit') : t('credits')}</span>}
         </>
       )}
     </Badge>

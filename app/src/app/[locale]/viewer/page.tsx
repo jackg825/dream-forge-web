@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
+import { Link, useRouter } from '@/i18n/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +21,7 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react';
-import { JOB_STATUS_MESSAGES, type JobStatus, type ViewMode } from '@/types';
+import type { JobStatus, ViewMode } from '@/types';
 import type { ModelViewerRef } from '@/components/viewer/ModelViewer';
 
 // Dynamic import for ModelViewer to avoid SSR issues with Three.js
@@ -30,13 +31,14 @@ const ModelViewer = dynamic(
     ssr: false,
     loading: () => (
       <div className="w-full h-full bg-gray-900 rounded-lg flex items-center justify-center">
-        <LoadingSpinner message="Loading viewer..." />
+        <LoadingSpinner message="" />
       </div>
     ),
   }
 );
 
 function ViewerContentInner() {
+  const t = useTranslations();
   const searchParams = useSearchParams();
   const router = useRouter();
   const jobId = searchParams.get('id');
@@ -109,6 +111,20 @@ function ViewerContentInner() {
   // Use polled status if available, otherwise fall back to job status
   const currentStatus = (polledStatus?.status || job?.status) as JobStatus | undefined;
 
+  // Get translated status message
+  const getStatusMessage = (status: JobStatus): string => {
+    const statusMap: Record<JobStatus, string> = {
+      'pending': t('status.pending'),
+      'generating-views': t('status.generatingViews'),
+      'generating-model': t('status.generatingModel'),
+      'downloading-model': t('status.downloadingModel'),
+      'uploading-storage': t('status.uploadingStorage'),
+      'completed': t('status.completed'),
+      'failed': t('status.failed'),
+    };
+    return statusMap[status] || status;
+  };
+
   // Redirect if no jobId
   useEffect(() => {
     if (!jobId) {
@@ -120,7 +136,7 @@ function ViewerContentInner() {
   if (!jobId) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <LoadingSpinner message="Redirecting..." />
+        <LoadingSpinner message={t('viewer.redirecting')} />
       </div>
     );
   }
@@ -129,7 +145,7 @@ function ViewerContentInner() {
   if (jobLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <LoadingSpinner message="Loading job..." />
+        <LoadingSpinner message={t('viewer.loadingJob')} />
       </div>
     );
   }
@@ -141,12 +157,12 @@ function ViewerContentInner() {
         <Card className="max-w-md w-full mx-4">
           <CardContent className="pt-6 text-center">
             <XCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <h1 className="text-xl font-bold mb-2">Job Not Found</h1>
+            <h1 className="text-xl font-bold mb-2">{t('viewer.jobNotFound')}</h1>
             <p className="text-muted-foreground mb-6">
-              {jobError || 'The requested job could not be found.'}
+              {jobError || t('viewer.jobNotFoundDescription')}
             </p>
             <Button asChild>
-              <Link href="/dashboard">Back to Dashboard</Link>
+              <Link href="/dashboard">{t('viewer.backToDashboard')}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -173,7 +189,7 @@ function ViewerContentInner() {
               </Button>
               <div>
                 <h1 className="text-lg font-medium text-white">
-                  3D Model Viewer
+                  {t('viewer.title')}
                 </h1>
                 <p className="text-xs text-white/50 font-mono">
                   {job.settings.quality.toUpperCase()} • {job.settings.format.toUpperCase()}
@@ -197,7 +213,7 @@ function ViewerContentInner() {
                 <ProgressSteps currentStatus={currentStatus} />
 
                 <LoadingSpinner
-                  message={JOB_STATUS_MESSAGES[currentStatus] || 'Processing...'}
+                  message={getStatusMessage(currentStatus)}
                 />
 
                 <div className="mt-6 max-w-md mx-auto">
@@ -209,10 +225,10 @@ function ViewerContentInner() {
                     />
                     <span className="font-mono text-xs">
                       {job.settings.quality === 'fine'
-                        ? 'Fine quality ~3 minutes'
+                        ? t('viewer.estimatedTime.fine')
                         : job.settings.quality === 'standard'
-                        ? 'Standard quality ~2 minutes'
-                        : 'Draft quality ~1 minute'}
+                        ? t('viewer.estimatedTime.standard')
+                        : t('viewer.estimatedTime.draft')}
                     </span>
                   </div>
                 </div>
@@ -229,18 +245,18 @@ function ViewerContentInner() {
                 <XCircle className="h-8 w-8 text-destructive" />
               </div>
               <h2 className="text-xl font-semibold text-white mb-2">
-                Generation Failed
+                {t('viewer.generationFailed')}
               </h2>
               <p className="text-white/60 mb-6">
-                {job.error || 'An error occurred during 3D model generation.'}
+                {job.error || t('viewer.errorOccurred')}
               </p>
               <p className="text-sm text-white/40 mb-4">
-                Your credit has been refunded automatically.
+                {t('viewer.creditRefunded')}
               </p>
               <Button asChild>
                 <Link href="/" className="gap-2">
                   <RefreshCw className="h-4 w-4" />
-                  Try Again
+                  {t('viewer.tryAgain')}
                 </Link>
               </Button>
             </CardContent>
@@ -302,7 +318,7 @@ function ViewerContentInner() {
               {/* Input image */}
               <Card className="bg-gray-900/50 border-white/10">
                 <CardContent className="pt-4">
-                  <h3 className="font-medium text-white/90 mb-3 text-sm">Source Image</h3>
+                  <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
                   <img
                     src={job.inputImageUrl}
                     alt="Source"
@@ -319,15 +335,17 @@ function ViewerContentInner() {
 }
 
 // Progress steps component
-const PROGRESS_STEPS: { status: JobStatus; label: string }[] = [
-  { status: 'pending', label: 'Queue' },
-  { status: 'generating-views', label: 'Views' },
-  { status: 'generating-model', label: 'Model' },
-  { status: 'downloading-model', label: 'Download' },
-  { status: 'uploading-storage', label: 'Done' },
-];
-
 function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
+  const t = useTranslations();
+
+  const PROGRESS_STEPS: { status: JobStatus; label: string }[] = [
+    { status: 'pending', label: t('viewer.progress.queue') },
+    { status: 'generating-views', label: t('viewer.progress.views') },
+    { status: 'generating-model', label: t('viewer.progress.model') },
+    { status: 'downloading-model', label: t('viewer.progress.download') },
+    { status: 'uploading-storage', label: t('viewer.progress.done') },
+  ];
+
   const currentIndex = PROGRESS_STEPS.findIndex((s) => s.status === currentStatus);
 
   return (
@@ -392,31 +410,33 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const t = useTranslations();
+
   const getConfig = (status: string) => {
     switch (status) {
       case 'completed':
         return {
           icon: CheckCircle2,
           className: 'bg-green-500/20 text-green-300 border-green-500/30',
-          label: 'Completed',
+          label: t('status.badge.completed'),
         };
       case 'failed':
         return {
           icon: XCircle,
           className: 'bg-red-500/20 text-red-300 border-red-500/30',
-          label: 'Failed',
+          label: t('status.badge.failed'),
         };
       case 'pending':
         return {
           icon: Clock,
           className: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-          label: 'Pending',
+          label: t('status.badge.pending'),
         };
       default:
         return {
           icon: Loader2,
           className: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-          label: 'Processing',
+          label: t('status.badge.processing'),
         };
     }
   };
@@ -434,11 +454,13 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function ViewerContent() {
+  const t = useTranslations();
+
   return (
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-gray-950">
-          <LoadingSpinner message="Loading..." />
+          <LoadingSpinner message={t('common.loading')} />
         </div>
       }
     >

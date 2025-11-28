@@ -1,11 +1,12 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
+import { useTheme } from 'next-themes';
+import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
 import { CreditBadge } from '@/components/credits/CreditBadge';
-import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -15,29 +16,50 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { locales, localeNames, type Locale } from '@/i18n/config';
 import {
   Box,
   LayoutDashboard,
   History,
   Eye,
   LogOut,
-  Settings,
   Shield,
+  Sun,
+  Moon,
+  Monitor,
+  Globe,
+  Palette,
+  Settings2,
 } from 'lucide-react';
 
-const navItems = [
-  { href: '/preview', label: 'Preview Tool', icon: Eye, showAlways: true },
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requireAuth: true },
-  { href: '/dashboard/history', label: 'History', icon: History, requireAuth: true },
-];
-
 export function Header() {
+  const t = useTranslations();
+  const locale = useLocale() as Locale;
+  const router = useRouter();
+  const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
   const { user, loading, signOut } = useAuth();
   const { credits, loading: creditsLoading } = useCredits(user?.uid);
-  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch for theme
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const navItems = [
+    { href: '/preview', labelKey: 'nav.previewTool', icon: Eye, showAlways: true },
+    { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, requireAuth: true },
+    { href: '/dashboard/history', labelKey: 'nav.history', icon: History, requireAuth: true },
+  ];
 
   const getInitials = (name: string | undefined) => {
     if (!name) return 'U';
@@ -47,6 +69,29 @@ export function Header() {
       .join('')
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const handleLocaleChange = (newLocale: string) => {
+    router.replace(pathname, { locale: newLocale as Locale });
+  };
+
+  const getThemeIcon = () => {
+    if (!mounted) return <Settings2 className="h-4 w-4" />;
+    if (theme === 'light') return <Sun className="h-4 w-4" />;
+    if (theme === 'dark') return <Moon className="h-4 w-4" />;
+    return <Monitor className="h-4 w-4" />;
+  };
+
+  const getThemeLabel = () => {
+    if (!mounted) return '';
+    if (theme === 'light') return t('settings.theme.light');
+    if (theme === 'dark') return t('settings.theme.dark');
+    return t('settings.theme.system');
+  };
+
+  // Check if current path matches (without locale prefix)
+  const isActivePath = (href: string) => {
+    return pathname === href;
   };
 
   return (
@@ -66,7 +111,7 @@ export function Header() {
             if (item.requireAuth && !user) return null;
             if (!item.showAlways && !user) return null;
 
-            const isActive = pathname === item.href;
+            const isActive = isActivePath(item.href);
             const Icon = item.icon;
 
             return (
@@ -81,7 +126,7 @@ export function Header() {
                 )}
               >
                 <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline-block">{item.label}</span>
+                <span className="hidden sm:inline-block">{t(item.labelKey)}</span>
               </Link>
             );
           })}
@@ -89,8 +134,6 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
-          <ThemeToggle />
-
           {loading ? (
             <div className="h-9 w-24 animate-pulse rounded-md bg-muted" />
           ) : user ? (
@@ -118,7 +161,7 @@ export function Header() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {user.displayName || 'User'}
+                        {user.displayName || t('common.user')}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.email}
@@ -126,16 +169,65 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+
+                  {/* Theme Selector */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Palette className="mr-2 h-4 w-4" />
+                      <span>{t('settings.appearance')}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {getThemeLabel()}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                        <DropdownMenuRadioItem value="light">
+                          <Sun className="mr-2 h-4 w-4" />
+                          {t('settings.theme.light')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="dark">
+                          <Moon className="mr-2 h-4 w-4" />
+                          {t('settings.theme.dark')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="system">
+                          <Monitor className="mr-2 h-4 w-4" />
+                          {t('settings.theme.system')}
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  {/* Language Selector */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Globe className="mr-2 h-4 w-4" />
+                      <span>{t('settings.language')}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {localeNames[locale]}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup value={locale} onValueChange={handleLocaleChange}>
+                        {locales.map((loc) => (
+                          <DropdownMenuRadioItem key={loc} value={loc}>
+                            {localeNames[loc]}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="cursor-pointer">
                       <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Dashboard
+                      {t('nav.dashboard')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard/history" className="cursor-pointer">
                       <History className="mr-2 h-4 w-4" />
-                      History
+                      {t('nav.history')}
                     </Link>
                   </DropdownMenuItem>
                   {user.role === 'admin' && (
@@ -144,9 +236,9 @@ export function Header() {
                       <DropdownMenuItem asChild>
                         <Link href="/admin" className="cursor-pointer">
                           <Shield className="mr-2 h-4 w-4" />
-                          Admin Panel
+                          {t('nav.adminPanel')}
                           <Badge variant="destructive" className="ml-auto text-xs">
-                            Admin
+                            {t('common.admin')}
                           </Badge>
                         </Link>
                       </DropdownMenuItem>
@@ -158,15 +250,75 @@ export function Header() {
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    {t('common.signOut')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
           ) : (
-            <Button asChild>
-              <Link href="/auth">Sign In</Link>
-            </Button>
+            /* Logged out user menu - still has settings */
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
+                {/* Theme Selector */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Palette className="mr-2 h-4 w-4" />
+                    <span>{t('settings.appearance')}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {getThemeLabel()}
+                    </span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                      <DropdownMenuRadioItem value="light">
+                        <Sun className="mr-2 h-4 w-4" />
+                        {t('settings.theme.light')}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="dark">
+                        <Moon className="mr-2 h-4 w-4" />
+                        {t('settings.theme.dark')}
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="system">
+                        <Monitor className="mr-2 h-4 w-4" />
+                        {t('settings.theme.system')}
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+
+                {/* Language Selector */}
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Globe className="mr-2 h-4 w-4" />
+                    <span>{t('settings.language')}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {localeNames[locale]}
+                    </span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup value={locale} onValueChange={handleLocaleChange}>
+                      {locales.map((loc) => (
+                        <DropdownMenuRadioItem key={loc} value={loc}>
+                          {localeNames[loc]}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/auth" className="cursor-pointer">
+                    {t('common.signIn')}
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </div>

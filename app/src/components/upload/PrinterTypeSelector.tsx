@@ -1,12 +1,15 @@
 'use client';
 
-import { PRINTER_TYPE_OPTIONS, type PrinterType } from '@/types';
+import { useTranslations } from 'next-intl';
+import type { PrinterType } from '@/types';
 
 interface PrinterTypeSelectorProps {
   value: PrinterType;
   onChange: (printerType: PrinterType) => void;
   disabled?: boolean;
 }
+
+const PRINTER_TYPES: PrinterType[] = ['fdm', 'sla', 'resin'];
 
 // Icon components for each printer type
 const PrinterIcon = ({ type }: { type: PrinterType }) => {
@@ -41,19 +44,12 @@ const PrinterIcon = ({ type }: { type: PrinterType }) => {
 };
 
 export function PrinterTypeSelector({ value, onChange, disabled }: PrinterTypeSelectorProps) {
-  const options = Object.entries(PRINTER_TYPE_OPTIONS) as [PrinterType, typeof PRINTER_TYPE_OPTIONS[PrinterType]][];
+  const t = useTranslations('upload.printerType');
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
-        列印機類型
-      </label>
-      <p className="text-xs text-gray-500">
-        根據列印機類型自動選擇最佳材質設定
-      </p>
-
       <div className="grid grid-cols-3 gap-3">
-        {options.map(([key, option]) => {
+        {PRINTER_TYPES.map((key) => {
           const isSelected = value === key;
 
           return (
@@ -65,8 +61,8 @@ export function PrinterTypeSelector({ value, onChange, disabled }: PrinterTypeSe
               className={`
                 relative rounded-lg border-2 p-3 text-center transition-all
                 ${isSelected
-                  ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 ring-1 ring-indigo-600'
+                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }
                 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
               `}
@@ -88,7 +84,7 @@ export function PrinterTypeSelector({ value, onChange, disabled }: PrinterTypeSe
               <div
                 className={`
                   mx-auto w-10 h-10 rounded-full flex items-center justify-center mb-2
-                  ${isSelected ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}
+                  ${isSelected ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}
                 `}
               >
                 <PrinterIcon type={key} />
@@ -96,23 +92,23 @@ export function PrinterTypeSelector({ value, onChange, disabled }: PrinterTypeSe
 
               {/* Content */}
               <h3
-                className={`font-medium text-sm ${isSelected ? 'text-indigo-900' : 'text-gray-900'}`}
+                className={`font-medium text-sm ${isSelected ? 'text-indigo-900 dark:text-indigo-100' : 'text-gray-900 dark:text-gray-100'}`}
               >
-                {option.label}
+                {t(`${key}.label`)}
               </h3>
-              <p className="text-xs text-gray-500 mt-0.5">{option.description}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t(`${key}.description`)}</p>
 
               {/* Material badge */}
               <div
                 className={`
                   mt-2 inline-block px-2 py-0.5 rounded-full text-xs
                   ${isSelected
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'bg-gray-100 text-gray-600'
+                    ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                   }
                 `}
               >
-                {option.material}
+                {t(`${key}.material`)}
               </div>
             </button>
           );

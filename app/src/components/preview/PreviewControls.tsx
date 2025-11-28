@@ -1,5 +1,11 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 interface PreviewControlsProps {
   backgroundColor: string;
   onBackgroundChange: (color: string) => void;
@@ -7,11 +13,13 @@ interface PreviewControlsProps {
   hasModel: boolean;
 }
 
-const BACKGROUND_OPTIONS = [
-  { value: '#ffffff', label: '白色', preview: 'bg-white' },
-  { value: '#f3f4f6', label: '灰色', preview: 'bg-gray-100' },
-  { value: '#1f2937', label: '深色', preview: 'bg-gray-800' },
-  { value: '#000000', label: '黑色', preview: 'bg-black' },
+type BackgroundKey = 'white' | 'gray' | 'dark' | 'black';
+
+const BACKGROUND_OPTIONS: { value: string; key: BackgroundKey; preview: string }[] = [
+  { value: '#ffffff', key: 'white', preview: 'bg-white' },
+  { value: '#f3f4f6', key: 'gray', preview: 'bg-gray-100' },
+  { value: '#1f2937', key: 'dark', preview: 'bg-gray-800' },
+  { value: '#000000', key: 'black', preview: 'bg-black' },
 ];
 
 export function PreviewControls({
@@ -20,64 +28,55 @@ export function PreviewControls({
   onReset,
   hasModel,
 }: PreviewControlsProps) {
+  const t = useTranslations('controls');
+
   return (
-    <div className="flex items-center gap-4 p-4 bg-white rounded-lg shadow-sm">
-      {/* Background Color */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600">背景：</span>
-        <div className="flex gap-1">
-          {BACKGROUND_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onBackgroundChange(option.value)}
-              className={`
-                w-6 h-6 rounded-full border-2 transition-all
-                ${option.preview}
-                ${
+    <Card>
+      <CardContent className="flex items-center gap-4 p-4">
+        {/* Background Color */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{t('background')}:</span>
+          <div className="flex gap-1">
+            {BACKGROUND_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onBackgroundChange(option.value)}
+                className={cn(
+                  'w-6 h-6 rounded-full border-2 transition-all',
+                  option.preview,
                   backgroundColor === option.value
-                    ? 'border-indigo-600 ring-2 ring-indigo-200'
-                    : 'border-gray-300 hover:border-gray-400'
-                }
-              `}
-              title={option.label}
-              aria-label={`設定背景為${option.label}`}
-            />
-          ))}
+                    ? 'border-primary ring-2 ring-primary/20'
+                    : 'border-border hover:border-muted-foreground'
+                )}
+                title={t(`backgroundColor.${option.key}`)}
+                aria-label={t('setBackgroundTo', { color: t(`backgroundColor.${option.key}`) })}
+              />
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Divider */}
-      <div className="h-6 w-px bg-gray-200" />
+        {/* Divider */}
+        <div className="h-6 w-px bg-border" />
 
-      {/* Clear Model */}
-      {hasModel && (
-        <button
-          type="button"
-          onClick={onReset}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {/* Clear Model */}
+        {hasModel && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onReset}
+            className="gap-1 text-muted-foreground hover:text-foreground"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-          清除模型
-        </button>
-      )}
+            <Trash2 className="h-4 w-4" />
+            {t('clearModel')}
+          </Button>
+        )}
 
-      {/* Help text */}
-      <div className="ml-auto text-xs text-gray-400">
-        拖曳旋轉 • 滾輪縮放 • Shift+拖曳平移
-      </div>
-    </div>
+        {/* Help text */}
+        <div className="ml-auto text-xs text-muted-foreground">
+          {t('helpText')}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

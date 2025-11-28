@@ -1,6 +1,7 @@
 'use client';
 
-import { QUALITY_OPTIONS, type QualityLevel } from '@/types';
+import { useTranslations } from 'next-intl';
+import type { QualityLevel } from '@/types';
 
 interface QualitySelectorProps {
   value: QualityLevel;
@@ -8,17 +9,15 @@ interface QualitySelectorProps {
   disabled?: boolean;
 }
 
+const QUALITY_LEVELS: QualityLevel[] = ['draft', 'standard', 'fine'];
+
 export function QualitySelector({ value, onChange, disabled }: QualitySelectorProps) {
-  const options = Object.entries(QUALITY_OPTIONS) as [QualityLevel, typeof QUALITY_OPTIONS[QualityLevel]][];
+  const t = useTranslations('upload.quality');
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-gray-700">
-        Generation Quality
-      </label>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {options.map(([key, option]) => {
+        {QUALITY_LEVELS.map((key) => {
           const isSelected = value === key;
 
           return (
@@ -30,8 +29,8 @@ export function QualitySelector({ value, onChange, disabled }: QualitySelectorPr
               className={`
                 relative rounded-lg border-2 p-4 text-left transition-all
                 ${isSelected
-                  ? 'border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                  ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 ring-1 ring-indigo-600'
+                  : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }
                 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
               `}
@@ -40,7 +39,7 @@ export function QualitySelector({ value, onChange, disabled }: QualitySelectorPr
               <div
                 className={`
                   absolute top-3 right-3 w-4 h-4 rounded-full border-2
-                  ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300'}
+                  ${isSelected ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 dark:border-gray-600'}
                 `}
               >
                 {isSelected && (
@@ -61,18 +60,18 @@ export function QualitySelector({ value, onChange, disabled }: QualitySelectorPr
               {/* Content */}
               <div className="pr-6">
                 <h3
-                  className={`font-medium ${isSelected ? 'text-indigo-900' : 'text-gray-900'}`}
+                  className={`font-medium ${isSelected ? 'text-indigo-900 dark:text-indigo-100' : 'text-gray-900 dark:text-gray-100'}`}
                 >
-                  {option.label}
+                  {t(`${key}.label`)}
                 </h3>
-                <p className="mt-1 text-sm text-gray-500">{option.description}</p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t(`${key}.description`)}</p>
 
                 {/* Stats */}
                 <div className="mt-3 flex items-center gap-3 text-xs">
                   <span
                     className={`
                       inline-flex items-center gap-1
-                      ${isSelected ? 'text-indigo-700' : 'text-gray-500'}
+                      ${isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400'}
                     `}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,12 +82,12 @@ export function QualitySelector({ value, onChange, disabled }: QualitySelectorPr
                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    {option.time}
+                    {t(`${key}.time`)}
                   </span>
                   <span
                     className={`
                       inline-flex items-center gap-1
-                      ${isSelected ? 'text-indigo-700' : 'text-gray-500'}
+                      ${isSelected ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-500 dark:text-gray-400'}
                     `}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,7 +98,7 @@ export function QualitySelector({ value, onChange, disabled }: QualitySelectorPr
                         d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
                       />
                     </svg>
-                    {option.faces}
+                    {t(`${key}.faces`)}
                   </span>
                 </div>
               </div>

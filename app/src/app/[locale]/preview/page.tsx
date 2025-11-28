@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { Header } from '@/components/layout/Header';
 import { FileDropZone } from '@/components/preview/FileDropZone';
 import { ModelInfoPanel } from '@/components/preview/ModelInfoPanel';
 import { ClippingPlaneControls, type ClippingAxis } from '@/components/preview/ClippingPlaneControls';
 import { PreviewControls } from '@/components/preview/PreviewControls';
 import { useModelLoader } from '@/hooks/useModelLoader';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from '@/i18n/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Loader2, Sparkles, RefreshCw } from 'lucide-react';
@@ -31,6 +32,7 @@ const PreviewViewer = dynamic(
 );
 
 export default function PreviewPage() {
+  const t = useTranslations();
   const { state, model, error, loadFile, reset } = useModelLoader();
 
   // Viewer state
@@ -73,13 +75,13 @@ export default function PreviewPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">3D Model Preview Tool</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{t('preview.title')}</h1>
               <Badge variant="secondary" className="gap-1">
-                Free
+                {t('common.free')}
               </Badge>
             </div>
             <p className="text-muted-foreground">
-              Upload STL, OBJ, GLB, or GLTF files to preview
+              {t('preview.subtitle')}
             </p>
           </div>
         </div>
@@ -97,7 +99,7 @@ export default function PreviewPage() {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center h-64 py-8">
                   <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                  <p className="text-muted-foreground">Loading model...</p>
+                  <p className="text-muted-foreground">{t('preview.loadingModel')}</p>
                 </CardContent>
               </Card>
             )}
@@ -109,7 +111,7 @@ export default function PreviewPage() {
                   <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <h3 className="text-sm font-medium text-destructive">
-                      Failed to load model
+                      {t('preview.failedToLoad')}
                     </h3>
                     <p className="mt-1 text-sm text-destructive/80">{error}</p>
                     <Button
@@ -118,7 +120,7 @@ export default function PreviewPage() {
                       className="h-auto p-0 mt-2 text-destructive hover:text-destructive/80"
                     >
                       <RefreshCw className="h-3 w-3 mr-1" />
-                      Try another file
+                      {t('preview.tryAnotherFile')}
                     </Button>
                   </div>
                 </CardContent>
@@ -163,7 +165,7 @@ export default function PreviewPage() {
                   className="gap-1"
                 >
                   <RefreshCw className="h-3 w-3" />
-                  Upload another file
+                  {t('preview.uploadAnotherFile')}
                 </Button>
                 <input
                   id="hidden-file-input"
@@ -201,14 +203,14 @@ export default function PreviewPage() {
             {/* Tips */}
             <Card className="bg-primary/5 border-primary/20">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Tips</CardTitle>
+                <CardTitle className="text-sm">{t('preview.tips.title')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Left-click drag: Rotate view</li>
-                  <li>• Scroll: Zoom</li>
-                  <li>• Shift + drag: Pan</li>
-                  <li>• Use clipping plane to view cross-sections</li>
+                  <li>• {t('preview.tips.rotate')}</li>
+                  <li>• {t('preview.tips.zoom')}</li>
+                  <li>• {t('preview.tips.pan')}</li>
+                  <li>• {t('preview.tips.clipping')}</li>
                 </ul>
               </CardContent>
             </Card>
@@ -218,13 +220,13 @@ export default function PreviewPage() {
               <CardContent className="pt-6">
                 <h3 className="font-semibold mb-2 flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
-                  Need to generate 3D models?
+                  {t('preview.cta.title')}
                 </h3>
                 <p className="text-sm text-indigo-100 mb-4">
-                  Use AI to automatically generate 3D printable models from photos
+                  {t('preview.cta.description')}
                 </p>
                 <Button asChild variant="secondary">
-                  <Link href="/">Start Generating</Link>
+                  <Link href="/">{t('preview.cta.button')}</Link>
                 </Button>
               </CardContent>
             </Card>

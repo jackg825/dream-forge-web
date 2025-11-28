@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { type ModelInfo, formatFileSize, formatNumber, formatDimension } from '@/lib/modelAnalysis';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -10,11 +11,13 @@ interface ModelInfoPanelProps {
 }
 
 export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
+  const t = useTranslations('modelInfo');
+
   if (loading) {
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Model Info</CardTitle>
+          <CardTitle className="text-sm">{t('title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-3">
@@ -31,26 +34,26 @@ export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
     return (
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Model Info</CardTitle>
+          <CardTitle className="text-sm">{t('title')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Upload a model to view info</p>
+          <p className="text-sm text-muted-foreground">{t('uploadHint')}</p>
         </CardContent>
       </Card>
     );
   }
 
   const infoItems = [
-    { label: 'File Name', value: info.fileName },
-    { label: 'File Size', value: formatFileSize(info.fileSize) },
-    { label: 'Vertices', value: formatNumber(info.vertexCount) },
-    { label: 'Faces', value: formatNumber(info.faceCount) },
+    { label: t('fileName'), value: info.fileName },
+    { label: t('fileSize'), value: formatFileSize(info.fileSize) },
+    { label: t('vertices'), value: formatNumber(info.vertexCount) },
+    { label: t('faces'), value: formatNumber(info.faceCount) },
   ];
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Model Info</CardTitle>
+        <CardTitle className="text-sm">{t('title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <dl className="space-y-2">
@@ -66,11 +69,11 @@ export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
 
         {/* Dimensions Section */}
         <Separator className="my-4" />
-        <h4 className="text-sm font-medium mb-2">Dimensions</h4>
+        <h4 className="text-sm font-medium mb-2">{t('dimensions')}</h4>
         <div className="grid grid-cols-3 gap-2">
-          <DimensionCard label="X (Width)" value={info.boundingBox.width} color="text-red-500" />
-          <DimensionCard label="Y (Height)" value={info.boundingBox.height} color="text-green-500" />
-          <DimensionCard label="Z (Depth)" value={info.boundingBox.depth} color="text-blue-500" />
+          <DimensionCard label={t('width')} value={info.boundingBox.width} color="text-red-500" />
+          <DimensionCard label={t('height')} value={info.boundingBox.height} color="text-green-500" />
+          <DimensionCard label={t('depth')} value={info.boundingBox.depth} color="text-blue-500" />
         </div>
       </CardContent>
     </Card>

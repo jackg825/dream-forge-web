@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import type { OutputFormat, DownloadFile } from '@/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Download, Loader2, Check, X, Printer, ChevronDown, ImageIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DownloadPanelProps {
   modelUrl: string;
@@ -13,51 +19,17 @@ interface DownloadPanelProps {
 // STL conversion status
 type ConversionStatus = 'idle' | 'loading' | 'converting' | 'done' | 'error';
 
-const FORMAT_INFO: Record<string, { label: string; description: string }> = {
-  glb: { label: 'GLB', description: '3D模型 - 含材質貼圖' },
-  obj: { label: 'OBJ', description: '3D模型 - 通用格式' },
-  fbx: { label: 'FBX', description: '3D模型 - 動畫支援' },
-  stl: { label: 'STL', description: '3D模型 - 3D列印推薦' },
-  usdz: { label: 'USDZ', description: '3D模型 - iOS AR' },
-  // Texture files
-  png: { label: 'PNG', description: '貼圖檔案' },
-  jpg: { label: 'JPG', description: '貼圖檔案' },
-  jpeg: { label: 'JPEG', description: '貼圖檔案' },
-};
+// Texture name mapping keys
+const TEXTURE_TYPE_KEYS = ['albedo', 'diffuse', 'basecolor', 'normal', 'metallic', 'roughness', 'ao', 'occlusion'] as const;
 
-// Texture name mapping for display
-const TEXTURE_LABELS: Record<string, string> = {
-  albedo: '色彩貼圖',
-  diffuse: '色彩貼圖',
-  basecolor: '色彩貼圖',
-  normal: '法線貼圖',
-  metallic: '金屬度貼圖',
-  roughness: '粗糙度貼圖',
-  ao: '環境遮蔽貼圖',
-  occlusion: '環境遮蔽貼圖',
-};
-
-function getFileInfo(fileName: string): { label: string; isTexture: boolean; textureType?: string } {
-  const ext = fileName.split('.').pop()?.toLowerCase() || '';
+function getTextureTypeKey(fileName: string): string | undefined {
   const baseName = fileName.split('.').slice(0, -1).join('.').toLowerCase();
-
-  // Check if it's a texture file
-  const isTexture = ['png', 'jpg', 'jpeg'].includes(ext) && !fileName.includes('preview');
-
-  // Try to identify texture type from filename
-  let textureType: string | undefined;
-  for (const [key, label] of Object.entries(TEXTURE_LABELS)) {
+  for (const key of TEXTURE_TYPE_KEYS) {
     if (baseName.includes(key)) {
-      textureType = label;
-      break;
+      return key;
     }
   }
-
-  return {
-    label: FORMAT_INFO[ext]?.label || ext.toUpperCase(),
-    isTexture,
-    textureType,
-  };
+  return undefined;
 }
 
 /**
@@ -105,6 +77,7 @@ export function DownloadPanel({
   jobId,
   currentFormat,
 }: DownloadPanelProps) {
+  const t = useTranslations('download');
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const [showTextures, setShowTextures] = useState(false);
   const [stlConversionStatus, setStlConversionStatus] = useState<ConversionStatus>('idle');
@@ -179,244 +152,179 @@ export function DownloadPanel({
       return ['png', 'jpg', 'jpeg'].includes(ext || '');
     }) || [];
 
-  const formatInfo = FORMAT_INFO[currentFormat] || { label: currentFormat.toUpperCase(), description: '' };
+  // Get format info from translations
+  const formatKey = currentFormat as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz';
+  const formatLabel = t(`format.${formatKey}.label`);
+  const formatDescription = t(`format.${formatKey}.description`);
 
   // Check if current format is GLB (our new default)
   const isGlbFormat = currentFormat === 'glb' || modelUrl.includes('.glb');
 
-  // STL conversion button text based on status
+  // STL conversion button content based on status
   const getStlButtonContent = () => {
     switch (stlConversionStatus) {
       case 'loading':
         return (
           <>
-            <LoadingIcon />
-            載入模型中...
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('loadingModel')}
           </>
         );
       case 'converting':
         return (
           <>
-            <LoadingIcon />
-            轉換中...
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('converting')}
           </>
         );
       case 'done':
         return (
           <>
-            <CheckIcon />
-            下載完成
+            <Check className="h-4 w-4" />
+            {t('downloadComplete')}
           </>
         );
       case 'error':
         return (
           <>
-            <ErrorIcon />
-            轉換失敗
+            <X className="h-4 w-4" />
+            {t('conversionFailed')}
           </>
         );
       default:
         return (
           <>
-            <PrinterIcon />
-            下載 STL (3D列印)
+            <Printer className="h-4 w-4" />
+            {t('downloadStl')}
           </>
         );
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4">
-      <h3 className="font-medium text-gray-900 mb-3">下載模型</h3>
-
-      {/* Primary download - GLB with materials */}
-      <div className="mb-3 p-3 bg-indigo-50 rounded-md border border-indigo-100">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <span className="font-medium text-indigo-900">{formatInfo.label}</span>
-            <p className="text-sm text-indigo-600">{formatInfo.description}</p>
-          </div>
-          <span className="text-xs text-indigo-400 uppercase">.{currentFormat}</span>
-        </div>
-        <button
-          type="button"
-          onClick={() => handleDownload(modelUrl, `model_${jobId}.${currentFormat}`)}
-          disabled={downloadingFile !== null}
-          className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
-        >
-          {downloadingFile === `model_${jobId}.${currentFormat}` ? (
-            <LoadingIcon />
-          ) : (
-            <DownloadIcon />
-          )}
-          下載 {formatInfo.label}
-        </button>
-      </div>
-
-      {/* STL conversion download - for 3D printing */}
-      {isGlbFormat && glbUrl && (
-        <div className="mb-3 p-3 bg-gray-50 rounded-md border border-gray-200">
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">{t('title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* Primary download - GLB with materials */}
+        <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
           <div className="flex items-center justify-between mb-2">
             <div>
-              <span className="font-medium text-gray-900">STL</span>
-              <p className="text-sm text-gray-500">3D列印格式（前端轉換）</p>
+              <span className="font-medium text-foreground">{formatLabel}</span>
+              <p className="text-sm text-muted-foreground">{formatDescription}</p>
             </div>
-            <span className="text-xs text-gray-400 uppercase">.stl</span>
+            <span className="text-xs text-muted-foreground uppercase">.{currentFormat}</span>
           </div>
-          <button
-            type="button"
-            onClick={handleStlDownload}
-            disabled={stlConversionStatus !== 'idle' && stlConversionStatus !== 'done' && stlConversionStatus !== 'error'}
-            className={`w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md transition-colors text-sm ${
-              stlConversionStatus === 'done'
-                ? 'bg-green-600 text-white'
-                : stlConversionStatus === 'error'
-                ? 'bg-red-600 text-white'
-                : 'bg-gray-700 text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed'
-            }`}
+          <Button
+            onClick={() => handleDownload(modelUrl, `model_${jobId}.${currentFormat}`)}
+            disabled={downloadingFile !== null}
+            className="w-full"
           >
-            {getStlButtonContent()}
-          </button>
+            {downloadingFile === `model_${jobId}.${currentFormat}` ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            {t('downloadButton')} {formatLabel}
+          </Button>
         </div>
-      )}
 
-      {/* Other model formats from Rodin (if any) */}
-      {modelFiles.length > 1 && (
-        <div className="mb-3">
-          <p className="text-xs text-gray-500 mb-2">其他格式</p>
-          <div className="space-y-1">
-            {modelFiles
-              .filter((f) => !f.name.toLowerCase().endsWith(`.${currentFormat}`) && !f.name.endsWith('.stl'))
-              .map((file) => {
-                const info = getFileInfo(file.name);
-                return (
-                  <button
-                    key={file.name}
-                    type="button"
-                    onClick={() => handleDownload(file.url, file.name)}
-                    disabled={downloadingFile !== null}
-                    className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-700 hover:bg-gray-50 rounded-md disabled:opacity-50 transition-colors"
-                  >
-                    <span className="flex items-center gap-2">
-                      {downloadingFile === file.name ? <LoadingIcon /> : <DownloadIcon />}
-                      {info.label}
-                    </span>
-                    <span className="text-xs text-gray-400">{file.name}</span>
-                  </button>
-                );
-              })}
-          </div>
-        </div>
-      )}
-
-      {/* Texture files section */}
-      {textureFiles.length > 0 && (
-        <div className="border-t border-gray-100 pt-3">
-          <button
-            type="button"
-            onClick={() => setShowTextures(!showTextures)}
-            className="w-full flex items-center justify-between py-1 text-sm text-gray-600 hover:text-gray-900"
-          >
-            <span className="flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              材質貼圖 ({textureFiles.length})
-            </span>
-            <svg
-              className={`w-4 h-4 transition-transform ${showTextures ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        {/* STL conversion download - for 3D printing */}
+        {isGlbFormat && glbUrl && (
+          <div className="p-3 bg-muted rounded-lg border">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <span className="font-medium text-foreground">STL</span>
+                <p className="text-sm text-muted-foreground">{t('stlFormat')}</p>
+              </div>
+              <span className="text-xs text-muted-foreground uppercase">.stl</span>
+            </div>
+            <Button
+              variant={stlConversionStatus === 'done' ? 'default' : stlConversionStatus === 'error' ? 'destructive' : 'secondary'}
+              onClick={handleStlDownload}
+              disabled={stlConversionStatus !== 'idle' && stlConversionStatus !== 'done' && stlConversionStatus !== 'error'}
+              className="w-full"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+              {getStlButtonContent()}
+            </Button>
+          </div>
+        )}
 
-          {showTextures && (
-            <div className="mt-2 space-y-1">
+        {/* Other model formats from Rodin (if any) */}
+        {modelFiles.length > 1 && (
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">{t('otherFormats')}</p>
+            <div className="space-y-1">
+              {modelFiles
+                .filter((f) => !f.name.toLowerCase().endsWith(`.${currentFormat}`) && !f.name.endsWith('.stl'))
+                .map((file) => {
+                  const ext = file.name.split('.').pop()?.toLowerCase() as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz';
+                  const label = t(`format.${ext}.label`);
+                  return (
+                    <Button
+                      key={file.name}
+                      variant="ghost"
+                      onClick={() => handleDownload(file.url, file.name)}
+                      disabled={downloadingFile !== null}
+                      className="w-full justify-between h-auto py-2"
+                    >
+                      <span className="flex items-center gap-2">
+                        {downloadingFile === file.name ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4" />
+                        )}
+                        {label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{file.name}</span>
+                    </Button>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* Texture files section */}
+        {textureFiles.length > 0 && (
+          <Collapsible open={showTextures} onOpenChange={setShowTextures}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" className="w-full justify-between">
+                <span className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  {t('textures')} ({textureFiles.length})
+                </span>
+                <ChevronDown className={cn('h-4 w-4 transition-transform', showTextures && 'rotate-180')} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-1">
               {textureFiles.map((file) => {
-                const info = getFileInfo(file.name);
+                const textureKey = getTextureTypeKey(file.name);
+                const ext = file.name.split('.').pop()?.toUpperCase();
                 return (
-                  <button
+                  <Button
                     key={file.name}
-                    type="button"
+                    variant="ghost"
                     onClick={() => handleDownload(file.url, file.name)}
                     disabled={downloadingFile !== null}
-                    className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-600 hover:bg-gray-50 rounded-md disabled:opacity-50 transition-colors"
+                    className="w-full justify-between h-auto py-2"
                   >
                     <span className="flex items-center gap-2">
-                      {downloadingFile === file.name ? <LoadingIcon /> : <DownloadIcon />}
-                      {info.textureType || file.name}
+                      {downloadingFile === file.name ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                      {textureKey ? t(`textureType.${textureKey}`) : file.name}
                     </span>
-                    <span className="text-xs text-gray-400">{info.label}</span>
-                  </button>
+                    <span className="text-xs text-muted-foreground">{ext}</span>
+                  </Button>
                 );
               })}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-      />
-    </svg>
-  );
-}
-
-function LoadingIcon() {
-  return (
-    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      />
-    </svg>
-  );
-}
-
-function PrinterIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-      />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-function ErrorIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-    </svg>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </CardContent>
+    </Card>
   );
 }

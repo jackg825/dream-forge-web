@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { Header } from '@/components/layout/Header';
 import { JobCard } from '@/components/history/JobCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useJobs } from '@/hooks/useJobs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from '@/i18n/navigation';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +29,7 @@ const PROCESSING_STATUSES: JobStatus[] = [
 const ITEMS_PER_PAGE = 12;
 
 function HistoryContent() {
+  const t = useTranslations();
   const { user } = useAuth();
   const { jobs, loading: jobsLoading } = useJobs(user?.uid);
 
@@ -75,16 +77,16 @@ function HistoryContent() {
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Generation History</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t('history.title')}</h1>
             <p className="text-muted-foreground">
-              View and manage your 3D model generations
+              {t('history.subtitle')}
             </p>
           </div>
 
           <Button asChild>
             <Link href="/" className="gap-2">
               <Plus className="h-4 w-4" />
-              New Generation
+              {t('history.newGeneration')}
             </Link>
           </Button>
         </div>
@@ -93,25 +95,25 @@ function HistoryContent() {
         <Tabs value={filter} onValueChange={(v) => handleFilterChange(v as FilterStatus)} className="mb-6">
           <TabsList>
             <TabsTrigger value="all" className="gap-2">
-              All
+              {t('history.filter.all')}
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
                 {statusCounts.all}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="completed" className="gap-2">
-              Completed
+              {t('history.filter.completed')}
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
                 {statusCounts.completed}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="processing" className="gap-2">
-              Processing
+              {t('history.filter.processing')}
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
                 {statusCounts.processing}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="failed" className="gap-2">
-              Failed
+              {t('history.filter.failed')}
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
                 {statusCounts.failed}
               </Badge>
@@ -129,18 +131,18 @@ function HistoryContent() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Box className="h-16 w-16 text-muted-foreground/30 mb-4" />
               <h3 className="text-lg font-medium mb-1">
-                {filter === 'all' ? 'No generations yet' : `No ${filter} generations`}
+                {filter === 'all' ? t('history.noGenerations') : t('history.noGenerationsFiltered', { filter: t(`history.filter.${filter}`) })}
               </h3>
               <p className="text-muted-foreground mb-4">
                 {filter === 'all'
-                  ? 'Upload a photo to create your first 3D model'
-                  : 'Try adjusting your filter'}
+                  ? t('history.uploadToCreate')
+                  : t('history.tryAdjustingFilter')}
               </p>
               {filter === 'all' && (
                 <Button asChild>
                   <Link href="/" className="gap-2">
                     <Plus className="h-4 w-4" />
-                    Create First Model
+                    {t('history.createFirstModel')}
                   </Link>
                 </Button>
               )}
@@ -163,7 +165,7 @@ function HistoryContent() {
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                 >
-                  Previous
+                  {t('history.pagination.previous')}
                 </Button>
 
                 <div className="flex gap-1">
@@ -186,7 +188,7 @@ function HistoryContent() {
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
                 >
-                  Next
+                  {t('history.pagination.next')}
                 </Button>
               </div>
             )}

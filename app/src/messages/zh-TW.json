@@ -1,0 +1,383 @@
+{
+  "common": {
+    "signIn": "登入",
+    "signOut": "登出",
+    "signUp": "註冊",
+    "createAccount": "建立帳號",
+    "loading": "載入中...",
+    "pleaseWait": "請稍候...",
+    "submit": "送出",
+    "cancel": "取消",
+    "save": "儲存",
+    "delete": "刪除",
+    "edit": "編輯",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "retry": "重試",
+    "close": "關閉",
+    "or": "或",
+    "free": "免費",
+    "user": "使用者",
+    "admin": "管理員",
+    "error": "錯誤",
+    "success": "成功"
+  },
+  "nav": {
+    "home": "首頁",
+    "dashboard": "儀表板",
+    "history": "歷史紀錄",
+    "previewTool": "預覽工具",
+    "adminPanel": "管理面板"
+  },
+  "settings": {
+    "appearance": "外觀",
+    "language": "語言",
+    "theme": {
+      "light": "淺色",
+      "dark": "深色",
+      "system": "系統"
+    }
+  },
+  "auth": {
+    "welcomeBack": "歡迎回來",
+    "transformPhotos": "將照片轉換成 3D 模型",
+    "tabSignIn": "登入",
+    "tabSignUp": "建立帳號",
+    "nameOptional": "名稱（選填）",
+    "email": "電子郵件",
+    "password": "密碼",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "至少 6 個字元",
+    "namePlaceholder": "您的名稱",
+    "orContinueWith": "或使用以下方式繼續",
+    "continueWithGoogle": "使用 Google 帳號繼續",
+    "newUsersReceive": "新用戶可獲得 3 點免費點數",
+    "backToHome": "返回首頁",
+    "signInToUpload": "登入以上傳照片",
+    "newUsersGet3Credits": "新用戶可獲得 3 點免費點數",
+    "signInToGenerate": "登入以開始生成 3D 模型"
+  },
+  "home": {
+    "badge": "AI 驅動 3D 生成",
+    "title": "將照片轉換成 3D 模型",
+    "subtitle": "上傳照片，AI 將為您打造精美的 3D 模型。適用於 3D 列印、遊戲或數位藝術創作。",
+    "step1": "上傳照片",
+    "step2": "選擇品質",
+    "step3": "選擇列印機類型",
+    "step4": "生成 3D 模型",
+    "generateButton": "生成 3D 模型",
+    "startingGeneration": "正在開始生成...",
+    "creditsRemaining": {
+      "none": "點數已用完",
+      "one": "還有 1 次生成機會",
+      "many": "還有 {count} 次生成機會"
+    },
+    "credit": "點",
+    "credits": "點",
+    "features": {
+      "aiPowered": {
+        "title": "AI 驅動",
+        "description": "採用先進的 Rodin Gen-2 技術，將照片轉換為精細的 3D 模型"
+      },
+      "multipleFormats": {
+        "title": "多種格式",
+        "description": "可下載 GLB、OBJ、FBX 或 STL 格式，滿足各種需求"
+      },
+      "printReady": {
+        "title": "可直接列印",
+        "description": "模型已針對 3D 列印優化，具備適當的網格品質"
+      }
+    }
+  },
+  "upload": {
+    "quality": {
+      "title": "生成品質",
+      "draft": {
+        "label": "草稿",
+        "description": "快速預覽，適合測試列印",
+        "time": "約 1 分鐘",
+        "faces": "5 萬面"
+      },
+      "standard": {
+        "label": "標準",
+        "description": "適合 FDM 列印",
+        "time": "約 2 分鐘",
+        "faces": "15 萬面"
+      },
+      "fine": {
+        "label": "精細",
+        "description": "適合 SLA 高品質列印",
+        "time": "約 3 分鐘",
+        "faces": "30 萬面"
+      }
+    },
+    "printerType": {
+      "title": "列印機類型",
+      "fdm": {
+        "label": "FDM",
+        "description": "熔融沉積成型",
+        "material": "單色"
+      },
+      "sla": {
+        "label": "SLA",
+        "description": "光固化成型",
+        "material": "彩色"
+      },
+      "resin": {
+        "label": "Resin",
+        "description": "樹脂列印",
+        "material": "彩色"
+      }
+    },
+    "viewAngles": {
+      "front": "正面",
+      "back": "背面",
+      "left": "左側",
+      "right": "右側",
+      "top": "俯視"
+    },
+    "textureResolution": {
+      "basic": {
+        "label": "基本",
+        "description": "標準解析度貼圖"
+      },
+      "high": {
+        "label": "高畫質",
+        "description": "高解析度 PBR 貼圖"
+      }
+    },
+    "dragDrop": "拖放照片到此處",
+    "orClickToUpload": "或點擊上傳",
+    "supportedFormats": "支援 JPG、PNG、WEBP 格式",
+    "maxFileSize": "最大檔案大小：10MB"
+  },
+  "dashboard": {
+    "welcomeBack": "歡迎回來，{name}",
+    "subtitle": "將照片轉換成精美的 3D 模型",
+    "availableCredits": "可用點數",
+    "totalGenerations": "總生成次數",
+    "modelsCreated": "已建立的 3D 模型",
+    "creditEquation": "1 點 = 1 次生成",
+    "createNewModel": "建立新模型",
+    "uploadAndTransform": "上傳照片，轉換成 3D 模型",
+    "newGeneration": "新增生成",
+    "recentGenerations": "最近生成",
+    "recentDescription": "您最新的 3D 模型作品",
+    "viewAll": "查看全部",
+    "noGenerationsYet": "尚無生成紀錄",
+    "createFirstModel": "建立您的第一個 3D 模型"
+  },
+  "history": {
+    "title": "生成歷史紀錄",
+    "subtitle": "查看及管理您的 3D 模型生成紀錄",
+    "newGeneration": "新增生成",
+    "filter": {
+      "all": "全部",
+      "completed": "已完成",
+      "processing": "處理中",
+      "pending": "等待中",
+      "failed": "失敗"
+    },
+    "noGenerations": "尚無生成紀錄",
+    "noGenerationsFiltered": "沒有{filter}的生成紀錄",
+    "uploadToCreate": "上傳照片以建立您的第一個 3D 模型",
+    "tryAdjustingFilter": "請嘗試調整篩選條件",
+    "createFirstModel": "建立第一個模型",
+    "pagination": {
+      "previous": "上一頁",
+      "next": "下一頁"
+    }
+  },
+  "viewer": {
+    "title": "3D 模型檢視器",
+    "loadingViewer": "載入檢視器中...",
+    "loadingJob": "載入工作中...",
+    "redirecting": "重新導向中...",
+    "jobNotFound": "找不到工作",
+    "jobNotFoundDescription": "找不到指定的工作。",
+    "backToDashboard": "返回儀表板",
+    "generationFailed": "生成失敗",
+    "errorOccurred": "3D 模型生成時發生錯誤。",
+    "creditRefunded": "您的點數已自動退還。",
+    "tryAgain": "重試",
+    "sourceImage": "原始圖片",
+    "progress": {
+      "queue": "排隊",
+      "views": "視角",
+      "model": "模型",
+      "download": "下載",
+      "done": "完成"
+    },
+    "estimatedTime": {
+      "fine": "精細品質 約 3 分鐘",
+      "standard": "標準品質 約 2 分鐘",
+      "draft": "草稿品質 約 1 分鐘"
+    }
+  },
+  "status": {
+    "pending": "排隊中...",
+    "generatingViews": "生成視角中...",
+    "generatingModel": "生成 3D 模型中...",
+    "downloadingModel": "下載模型中...",
+    "uploadingStorage": "準備下載連結...",
+    "completed": "完成",
+    "failed": "失敗",
+    "processing": "處理中",
+    "badge": {
+      "completed": "已完成",
+      "failed": "失敗",
+      "pending": "等待中",
+      "processing": "處理中"
+    }
+  },
+  "preview": {
+    "title": "3D 模型預覽工具",
+    "subtitle": "上傳 STL、OBJ、GLB 或 GLTF 檔案進行預覽",
+    "loadingModel": "載入模型中...",
+    "loadingViewer": "載入檢視器中...",
+    "failedToLoad": "無法載入模型",
+    "tryAnotherFile": "請嘗試其他檔案",
+    "uploadAnotherFile": "上傳其他檔案",
+    "unsupportedFormat": "不支援的檔案格式。請上傳 STL、OBJ、GLB 或 GLTF 檔案。",
+    "dropZone": {
+      "clickToUpload": "點擊上傳",
+      "orDragDrop": "或拖放檔案",
+      "title": "拖放 3D 模型檔案",
+      "orClick": "或點擊選擇檔案",
+      "supportedFormats": "支援 STL、OBJ、GLB、GLTF（最大 100MB）",
+      "maxSize": "最大 50MB"
+    },
+    "tips": {
+      "title": "操作提示",
+      "rotate": "左鍵拖曳：旋轉視角",
+      "zoom": "滾輪：縮放",
+      "pan": "Shift + 拖曳：平移",
+      "clipping": "使用剖面工具查看模型內部"
+    },
+    "cta": {
+      "title": "需要生成 3D 模型？",
+      "description": "使用 AI 自動從照片生成可 3D 列印的模型",
+      "button": "開始生成"
+    }
+  },
+  "download": {
+    "title": "下載模型",
+    "printRecommended": "3D 列印推薦",
+    "allFormats": "所有格式",
+    "otherFormats": "其他格式",
+    "textures": "材質貼圖",
+    "downloadButton": "下載",
+    "downloadStl": "下載 STL (3D列印)",
+    "loadingModel": "載入模型中...",
+    "converting": "轉換中...",
+    "downloadComplete": "下載完成",
+    "conversionFailed": "轉換失敗",
+    "stlFormat": "3D列印格式（前端轉換）",
+    "format": {
+      "glb": {
+        "label": "GLB",
+        "description": "3D模型 - 含材質貼圖"
+      },
+      "obj": {
+        "label": "OBJ",
+        "description": "3D模型 - 通用格式"
+      },
+      "fbx": {
+        "label": "FBX",
+        "description": "3D模型 - 動畫支援"
+      },
+      "stl": {
+        "label": "STL",
+        "description": "3D模型 - 3D列印推薦"
+      },
+      "usdz": {
+        "label": "USDZ",
+        "description": "3D模型 - iOS AR"
+      }
+    },
+    "textureType": {
+      "albedo": "色彩貼圖",
+      "diffuse": "色彩貼圖",
+      "basecolor": "色彩貼圖",
+      "normal": "法線貼圖",
+      "metallic": "金屬度貼圖",
+      "roughness": "粗糙度貼圖",
+      "ao": "環境遮蔽貼圖",
+      "occlusion": "環境遮蔽貼圖"
+    },
+    "texture": {
+      "title": "貼圖",
+      "none": "無貼圖"
+    }
+  },
+  "modelInfo": {
+    "title": "模型資訊",
+    "fileName": "檔案名稱",
+    "vertices": "頂點數",
+    "faces": "面數",
+    "fileSize": "檔案大小",
+    "dimensions": "尺寸",
+    "width": "X（寬）",
+    "height": "Y（高）",
+    "depth": "Z（深）",
+    "uploadHint": "上傳模型以查看資訊"
+  },
+  "clipping": {
+    "title": "切面預覽",
+    "enable": "啟用剖面",
+    "axis": "切割軸向",
+    "axisLabel": "{axis} 軸",
+    "position": "切割位置",
+    "invert": "反向切割",
+    "invertDescription": {
+      "normal": "顯示切割前方",
+      "inverted": "顯示切割後方"
+    },
+    "disabledHint": "啟用切面功能可查看模型內部結構"
+  },
+  "controls": {
+    "background": "背景",
+    "clearModel": "清除模型",
+    "helpText": "拖曳旋轉 • 滾輪縮放 • Shift+拖曳平移",
+    "backgroundColor": {
+      "white": "白色",
+      "gray": "灰色",
+      "dark": "深色",
+      "black": "黑色"
+    },
+    "setBackgroundTo": "設定背景為{color}",
+    "reset": "重設",
+    "viewMode": {
+      "clay": "陶土",
+      "textured": "貼圖",
+      "wireframe": "線框"
+    },
+    "grid": "網格",
+    "axes": "軸線",
+    "autoRotate": "自動旋轉",
+    "screenshot": "截圖",
+    "fullscreen": "全螢幕",
+    "exitFullscreen": "退出全螢幕",
+    "resetCamera": "重設視角"
+  },
+  "credits": {
+    "badge": "{count} 點",
+    "noCreditsTitle": "點數不足",
+    "noCreditsDescription": "您需要更多點數才能生成 3D 模型。",
+    "contactAdmin": "請聯繫管理員取得更多點數。",
+    "close": "關閉"
+  },
+  "time": {
+    "justNow": "剛剛",
+    "minutesAgo": "{count} 分鐘前",
+    "hoursAgo": "{count} 小時前",
+    "daysAgo": "{count} 天前"
+  },
+  "errors": {
+    "generic": "發生錯誤，請稍後再試。",
+    "unauthorized": "請先登入。",
+    "notFound": "找不到資源。",
+    "networkError": "網路錯誤，請檢查您的連線。"
+  }
+}

@@ -1,0 +1,383 @@
+{
+  "common": {
+    "signIn": "Sign In",
+    "signOut": "Sign Out",
+    "signUp": "Sign Up",
+    "createAccount": "Create Account",
+    "loading": "Loading...",
+    "pleaseWait": "Please wait...",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "retry": "Retry",
+    "close": "Close",
+    "or": "or",
+    "free": "Free",
+    "user": "User",
+    "admin": "Admin",
+    "error": "Error",
+    "success": "Success"
+  },
+  "nav": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "history": "History",
+    "previewTool": "Preview Tool",
+    "adminPanel": "Admin Panel"
+  },
+  "settings": {
+    "appearance": "Appearance",
+    "language": "Language",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "transformPhotos": "Transform your photos into 3D models",
+    "tabSignIn": "Sign In",
+    "tabSignUp": "Create Account",
+    "nameOptional": "Name (optional)",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "you@example.com",
+    "passwordPlaceholder": "At least 6 characters",
+    "namePlaceholder": "Your name",
+    "orContinueWith": "Or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "newUsersReceive": "New users receive 3 free credits",
+    "backToHome": "Back to home",
+    "signInToUpload": "Sign in to upload photos",
+    "newUsersGet3Credits": "New users get 3 free credits",
+    "signInToGenerate": "Sign in to start generating 3D models"
+  },
+  "home": {
+    "badge": "AI-Powered 3D Generation",
+    "title": "Transform Photos into 3D Models",
+    "subtitle": "Upload a photo and watch it transform into a stunning 3D model. Perfect for 3D printing, gaming, or digital art.",
+    "step1": "Upload Your Photo",
+    "step2": "Choose Quality",
+    "step3": "Select Printer Type",
+    "step4": "Generate 3D Model",
+    "generateButton": "Generate 3D Model",
+    "startingGeneration": "Starting Generation...",
+    "creditsRemaining": {
+      "none": "No credits remaining",
+      "one": "1 generation available",
+      "many": "{count} generations available"
+    },
+    "credit": "credit",
+    "credits": "credits",
+    "features": {
+      "aiPowered": {
+        "title": "AI-Powered",
+        "description": "Advanced Rodin Gen-2 technology transforms your photos into detailed 3D models"
+      },
+      "multipleFormats": {
+        "title": "Multiple Formats",
+        "description": "Download in GLB, OBJ, FBX, or STL format for any use case"
+      },
+      "printReady": {
+        "title": "Print Ready",
+        "description": "Models are optimized for 3D printing with proper mesh quality"
+      }
+    }
+  },
+  "upload": {
+    "quality": {
+      "title": "Generation Quality",
+      "draft": {
+        "label": "Draft",
+        "description": "Quick preview, good for test prints",
+        "time": "~1 min",
+        "faces": "50K faces"
+      },
+      "standard": {
+        "label": "Standard",
+        "description": "Suitable for FDM printing",
+        "time": "~2 min",
+        "faces": "150K faces"
+      },
+      "fine": {
+        "label": "Fine",
+        "description": "Suitable for SLA high-quality printing",
+        "time": "~3 min",
+        "faces": "300K faces"
+      }
+    },
+    "printerType": {
+      "title": "Printer Type",
+      "fdm": {
+        "label": "FDM",
+        "description": "Fused Deposition Modeling",
+        "material": "Single color"
+      },
+      "sla": {
+        "label": "SLA",
+        "description": "Stereolithography",
+        "material": "Full color"
+      },
+      "resin": {
+        "label": "Resin",
+        "description": "Resin Printing",
+        "material": "Full color"
+      }
+    },
+    "viewAngles": {
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right",
+      "top": "Top"
+    },
+    "textureResolution": {
+      "basic": {
+        "label": "Basic",
+        "description": "Standard resolution texture"
+      },
+      "high": {
+        "label": "High",
+        "description": "High resolution PBR texture"
+      }
+    },
+    "dragDrop": "Drag and drop your photo here",
+    "orClickToUpload": "or click to upload",
+    "supportedFormats": "Supports JPG, PNG, WEBP formats",
+    "maxFileSize": "Max file size: 10MB"
+  },
+  "dashboard": {
+    "welcomeBack": "Welcome back, {name}",
+    "subtitle": "Transform your photos into stunning 3D models",
+    "availableCredits": "Available Credits",
+    "totalGenerations": "Total Generations",
+    "modelsCreated": "3D models created",
+    "creditEquation": "1 credit = 1 generation",
+    "createNewModel": "Create New Model",
+    "uploadAndTransform": "Upload a photo and transform it into a 3D model",
+    "newGeneration": "New Generation",
+    "recentGenerations": "Recent Generations",
+    "recentDescription": "Your latest 3D model creations",
+    "viewAll": "View all",
+    "noGenerationsYet": "No generations yet",
+    "createFirstModel": "Create your first 3D model"
+  },
+  "history": {
+    "title": "Generation History",
+    "subtitle": "View and manage your 3D model generations",
+    "newGeneration": "New Generation",
+    "filter": {
+      "all": "All",
+      "completed": "Completed",
+      "processing": "Processing",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "noGenerations": "No generations yet",
+    "noGenerationsFiltered": "No {filter} generations",
+    "uploadToCreate": "Upload a photo to create your first 3D model",
+    "tryAdjustingFilter": "Try adjusting your filter",
+    "createFirstModel": "Create First Model",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    }
+  },
+  "viewer": {
+    "title": "3D Model Viewer",
+    "loadingViewer": "Loading viewer...",
+    "loadingJob": "Loading job...",
+    "redirecting": "Redirecting...",
+    "jobNotFound": "Job Not Found",
+    "jobNotFoundDescription": "The requested job could not be found.",
+    "backToDashboard": "Back to Dashboard",
+    "generationFailed": "Generation Failed",
+    "errorOccurred": "An error occurred during 3D model generation.",
+    "creditRefunded": "Your credit has been refunded automatically.",
+    "tryAgain": "Try Again",
+    "sourceImage": "Source Image",
+    "progress": {
+      "queue": "Queue",
+      "views": "Views",
+      "model": "Model",
+      "download": "Download",
+      "done": "Done"
+    },
+    "estimatedTime": {
+      "fine": "Fine quality ~3 minutes",
+      "standard": "Standard quality ~2 minutes",
+      "draft": "Draft quality ~1 minute"
+    }
+  },
+  "status": {
+    "pending": "Queued...",
+    "generatingViews": "Generating views...",
+    "generatingModel": "Generating 3D model...",
+    "downloadingModel": "Downloading model...",
+    "uploadingStorage": "Preparing download link...",
+    "completed": "Completed",
+    "failed": "Failed",
+    "processing": "Processing",
+    "badge": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "pending": "Pending",
+      "processing": "Processing"
+    }
+  },
+  "preview": {
+    "title": "3D Model Preview Tool",
+    "subtitle": "Upload STL, OBJ, GLB, or GLTF files to preview",
+    "loadingModel": "Loading model...",
+    "loadingViewer": "Loading viewer...",
+    "failedToLoad": "Failed to load model",
+    "tryAnotherFile": "Try another file",
+    "uploadAnotherFile": "Upload another file",
+    "unsupportedFormat": "Unsupported file format. Please upload STL, OBJ, GLB, or GLTF files.",
+    "dropZone": {
+      "clickToUpload": "Click to upload",
+      "orDragDrop": "or drag and drop",
+      "title": "Drop 3D model file here",
+      "orClick": "or click to select file",
+      "supportedFormats": "Supports STL, OBJ, GLB, GLTF (max 100MB)",
+      "maxSize": "Max 50MB"
+    },
+    "tips": {
+      "title": "Tips",
+      "rotate": "Left-click drag: Rotate view",
+      "zoom": "Scroll: Zoom",
+      "pan": "Shift + drag: Pan",
+      "clipping": "Use clipping plane to view cross-sections"
+    },
+    "cta": {
+      "title": "Need to generate 3D models?",
+      "description": "Use AI to automatically generate 3D printable models from photos",
+      "button": "Start Generating"
+    }
+  },
+  "download": {
+    "title": "Download Model",
+    "printRecommended": "3D Print Recommended",
+    "allFormats": "All Formats",
+    "otherFormats": "Other Formats",
+    "textures": "Textures",
+    "downloadButton": "Download",
+    "downloadStl": "Download STL (3D Print)",
+    "loadingModel": "Loading model...",
+    "converting": "Converting...",
+    "downloadComplete": "Download complete",
+    "conversionFailed": "Conversion failed",
+    "stlFormat": "3D print format (client conversion)",
+    "format": {
+      "glb": {
+        "label": "GLB",
+        "description": "3D Model - With textures"
+      },
+      "obj": {
+        "label": "OBJ",
+        "description": "3D Model - Universal format"
+      },
+      "fbx": {
+        "label": "FBX",
+        "description": "3D Model - Animation support"
+      },
+      "stl": {
+        "label": "STL",
+        "description": "3D Model - 3D print recommended"
+      },
+      "usdz": {
+        "label": "USDZ",
+        "description": "3D Model - iOS AR"
+      }
+    },
+    "textureType": {
+      "albedo": "Albedo Map",
+      "diffuse": "Diffuse Map",
+      "basecolor": "Base Color Map",
+      "normal": "Normal Map",
+      "metallic": "Metallic Map",
+      "roughness": "Roughness Map",
+      "ao": "Ambient Occlusion Map",
+      "occlusion": "Occlusion Map"
+    },
+    "texture": {
+      "title": "Texture",
+      "none": "No texture"
+    }
+  },
+  "modelInfo": {
+    "title": "Model Info",
+    "fileName": "File Name",
+    "vertices": "Vertices",
+    "faces": "Faces",
+    "fileSize": "File Size",
+    "dimensions": "Dimensions",
+    "width": "X (Width)",
+    "height": "Y (Height)",
+    "depth": "Z (Depth)",
+    "uploadHint": "Upload a model to view info"
+  },
+  "clipping": {
+    "title": "Clipping Plane",
+    "enable": "Enable Clipping",
+    "axis": "Clipping Axis",
+    "axisLabel": "{axis} Axis",
+    "position": "Clipping Position",
+    "invert": "Invert Clipping",
+    "invertDescription": {
+      "normal": "Show front side",
+      "inverted": "Show back side"
+    },
+    "disabledHint": "Enable clipping to view model cross-section"
+  },
+  "controls": {
+    "background": "Background",
+    "clearModel": "Clear Model",
+    "helpText": "Drag to rotate • Scroll to zoom • Shift+drag to pan",
+    "backgroundColor": {
+      "white": "White",
+      "gray": "Gray",
+      "dark": "Dark",
+      "black": "Black"
+    },
+    "setBackgroundTo": "Set background to {color}",
+    "reset": "Reset",
+    "viewMode": {
+      "clay": "Clay",
+      "textured": "Textured",
+      "wireframe": "Wireframe"
+    },
+    "grid": "Grid",
+    "axes": "Axes",
+    "autoRotate": "Auto Rotate",
+    "screenshot": "Screenshot",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
+    "resetCamera": "Reset Camera"
+  },
+  "credits": {
+    "badge": "{count} credits",
+    "noCreditsTitle": "No Credits",
+    "noCreditsDescription": "You need more credits to generate 3D models.",
+    "contactAdmin": "Please contact an admin to get more credits.",
+    "close": "Close"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
+  },
+  "errors": {
+    "generic": "An error occurred. Please try again later.",
+    "unauthorized": "Please sign in first.",
+    "notFound": "Resource not found.",
+    "networkError": "Network error. Please check your connection."
+  }
+}

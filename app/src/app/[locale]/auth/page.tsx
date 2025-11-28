@@ -1,20 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link, useRouter } from '@/i18n/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Box, Loader2, Gift, AlertCircle } from 'lucide-react';
 
 export default function AuthPage() {
+  const t = useTranslations();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -98,9 +99,9 @@ export default function AuthPage() {
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold tracking-tight mb-2">Welcome back</h1>
+            <h1 className="text-2xl font-bold tracking-tight mb-2">{t('auth.welcomeBack')}</h1>
             <p className="text-muted-foreground">
-              Transform your photos into 3D models
+              {t('auth.transformPhotos')}
             </p>
           </div>
 
@@ -108,8 +109,8 @@ export default function AuthPage() {
             <CardHeader className="pb-4">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'signin' | 'signup')}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="signin">Sign In</TabsTrigger>
-                  <TabsTrigger value="signup">Create Account</TabsTrigger>
+                  <TabsTrigger value="signin">{t('auth.tabSignIn')}</TabsTrigger>
+                  <TabsTrigger value="signup">{t('auth.tabSignUp')}</TabsTrigger>
                 </TabsList>
               </Tabs>
             </CardHeader>
@@ -127,33 +128,33 @@ export default function AuthPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {activeTab === 'signup' && (
                   <div className="space-y-2">
-                    <Label htmlFor="displayName">Name (optional)</Label>
+                    <Label htmlFor="displayName">{t('auth.nameOptional')}</Label>
                     <Input
                       id="displayName"
                       type="text"
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Your name"
+                      placeholder={t('auth.namePlaceholder')}
                       disabled={isSubmitting}
                     />
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('auth.email')}</Label>
                   <Input
                     id="email"
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder={t('auth.emailPlaceholder')}
                     disabled={isSubmitting}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t('auth.password')}</Label>
                   <Input
                     id="password"
                     type="password"
@@ -161,7 +162,7 @@ export default function AuthPage() {
                     minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="At least 6 characters"
+                    placeholder={t('auth.passwordPlaceholder')}
                     disabled={isSubmitting}
                   />
                 </div>
@@ -174,12 +175,12 @@ export default function AuthPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Please wait...
+                      {t('common.pleaseWait')}
                     </>
                   ) : activeTab === 'signin' ? (
-                    'Sign In'
+                    t('common.signIn')
                   ) : (
-                    'Create Account'
+                    t('common.createAccount')
                   )}
                 </Button>
               </form>
@@ -189,7 +190,7 @@ export default function AuthPage() {
                 <Separator />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="px-2 bg-card text-muted-foreground text-sm">
-                    Or continue with
+                    {t('auth.orContinueWith')}
                   </span>
                 </div>
               </div>
@@ -220,7 +221,7 @@ export default function AuthPage() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-                Continue with Google
+                {t('auth.continueWithGoogle')}
               </Button>
             </CardContent>
 
@@ -229,7 +230,7 @@ export default function AuthPage() {
               <CardFooter className="flex justify-center border-t pt-4">
                 <Badge variant="secondary" className="gap-1">
                   <Gift className="h-3 w-3" />
-                  New users receive 3 free credits
+                  {t('auth.newUsersReceive')}
                 </Badge>
               </CardFooter>
             )}
@@ -238,7 +239,7 @@ export default function AuthPage() {
           {/* Back to home link */}
           <p className="text-center mt-6 text-sm text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">
-              Back to home
+              {t('auth.backToHome')}
             </Link>
           </p>
         </div>

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { isSupported3DFormat } from '@/lib/modelAnalysis';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Box, Upload } from 'lucide-react';
+import { Box } from 'lucide-react';
 
 interface FileDropZoneProps {
   onFileSelect: (file: File) => void;
@@ -14,6 +15,7 @@ interface FileDropZoneProps {
 const ACCEPTED_EXTENSIONS = '.stl,.obj,.glb,.gltf';
 
 export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
+  const t = useTranslations('preview');
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -23,13 +25,13 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
       setError(null);
 
       if (!isSupported3DFormat(file.name)) {
-        setError('Unsupported file format. Please upload STL, OBJ, GLB, or GLTF files.');
+        setError(t('unsupportedFormat'));
         return;
       }
 
       onFileSelect(file);
     },
-    [onFileSelect]
+    [onFileSelect, t]
   );
 
   const handleDrop = useCallback(
@@ -117,10 +119,11 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
         </div>
 
         <p className="text-foreground">
-          <span className="text-primary font-medium">Click to upload</span> or drag and drop
+          <span className="text-primary font-medium">{t('dropZone.clickToUpload')}</span>{' '}
+          {t('dropZone.orDragDrop')}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Supports STL, OBJ, GLB, GLTF (max 100MB)
+          {t('dropZone.supportedFormats')}
         </p>
 
         {error && <p className="mt-2 text-sm text-destructive">{error}</p>}

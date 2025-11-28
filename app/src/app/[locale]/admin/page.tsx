@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { AdminGuard } from '@/components/auth/AdminGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
+import { Link } from '@/i18n/navigation';
 import type { AdminUser } from '@/types';
 
 function AdminDashboardContent() {
+  const t = useTranslations();
   const { user, signOut } = useAuth();
   const {
     rodinBalance,
@@ -62,28 +64,28 @@ function AdminDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/" className="text-xl font-bold text-gray-900">
+              <Link href="/" className="text-xl font-bold text-gray-900 dark:text-white">
                 Dream Forge
               </Link>
-              <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded">
-                Admin
+              <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs font-medium rounded">
+                {t('common.admin')}
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <Link href="/dashboard" className="text-sm text-gray-600 hover:text-gray-900">
-                Dashboard
+              <Link href="/dashboard" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                {t('nav.dashboard')}
               </Link>
               <button
                 onClick={signOut}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               >
-                Sign Out
+                {t('common.signOut')}
               </button>
             </div>
           </div>
@@ -94,11 +96,11 @@ function AdminDashboardContent() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error banner */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             <button
               onClick={clearError}
-              className="text-red-600 hover:text-red-800"
+              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -113,30 +115,30 @@ function AdminDashboardContent() {
 
         {/* Welcome */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">
-            Welcome, {user?.displayName}. Manage users and monitor system status.
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.adminPanel')}</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {t('dashboard.welcomeBack', { name: user?.displayName || t('common.user') })}
           </p>
         </div>
 
         {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Rodin API Balance */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Rodin API Balance</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Rodin API Balance</p>
                 {loadingBalance ? (
-                  <div className="h-9 w-20 bg-gray-200 animate-pulse rounded mt-1" />
+                  <div className="h-9 w-20 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
                 ) : (
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {rodinBalance !== null ? rodinBalance.toFixed(1) : '—'}
                   </p>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-purple-600"
+                  className="w-6 h-6 text-purple-600 dark:text-purple-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -153,28 +155,28 @@ function AdminDashboardContent() {
             <button
               onClick={fetchRodinBalance}
               disabled={loadingBalance}
-              className="mt-3 text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50"
+              className="mt-3 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 disabled:opacity-50"
             >
-              {loadingBalance ? 'Refreshing...' : 'Refresh'}
+              {loadingBalance ? t('common.loading') : t('controls.reset')}
             </button>
           </div>
 
           {/* Total Users */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Users</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Total Users</p>
                 {loadingStats ? (
-                  <div className="h-9 w-16 bg-gray-200 animate-pulse rounded mt-1" />
+                  <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
                 ) : (
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {stats?.totalUsers ?? '—'}
                   </p>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-blue-600"
+                  className="w-6 h-6 text-blue-600 dark:text-blue-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -191,21 +193,21 @@ function AdminDashboardContent() {
           </div>
 
           {/* Total Jobs */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Generations</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.totalGenerations')}</p>
                 {loadingStats ? (
-                  <div className="h-9 w-16 bg-gray-200 animate-pulse rounded mt-1" />
+                  <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
                 ) : (
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {stats?.jobs.total ?? '—'}
                   </p>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-green-600"
+                  className="w-6 h-6 text-green-600 dark:text-green-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -221,29 +223,29 @@ function AdminDashboardContent() {
             </div>
             {stats && (
               <div className="mt-2 flex gap-2 text-xs">
-                <span className="text-green-600">{stats.jobs.completed} done</span>
-                <span className="text-yellow-600">{stats.jobs.pending} pending</span>
-                <span className="text-red-600">{stats.jobs.failed} failed</span>
+                <span className="text-green-600 dark:text-green-400">{stats.jobs.completed} done</span>
+                <span className="text-yellow-600 dark:text-yellow-400">{stats.jobs.pending} pending</span>
+                <span className="text-red-600 dark:text-red-400">{stats.jobs.failed} failed</span>
               </div>
             )}
           </div>
 
           {/* Credits Distributed */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Credits Distributed</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Credits Distributed</p>
                 {loadingStats ? (
-                  <div className="h-9 w-16 bg-gray-200 animate-pulse rounded mt-1" />
+                  <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
                 ) : (
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
                     {stats?.totalCreditsDistributed ?? '—'}
                   </p>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-indigo-600"
+                  className="w-6 h-6 text-indigo-600 dark:text-indigo-400"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -259,12 +261,12 @@ function AdminDashboardContent() {
         </div>
 
         {/* Users table */}
-        <div className="bg-white rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Users</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Users</h2>
               {usersPagination && (
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-gray-500 dark:text-gray-400">
                   {usersPagination.total} total users
                 </span>
               )}
@@ -276,35 +278,35 @@ function AdminDashboardContent() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
             </div>
           ) : users.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">No users found</div>
+            <div className="p-6 text-center text-gray-500 dark:text-gray-400">No users found</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       User
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Credits
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Generations
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Role
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Joined
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {users.map((targetUser) => (
-                    <tr key={targetUser.uid} className="hover:bg-gray-50">
+                    <tr key={targetUser.uid} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {targetUser.photoURL ? (
@@ -314,17 +316,17 @@ function AdminDashboardContent() {
                               alt=""
                             />
                           ) : (
-                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                              <span className="text-sm font-medium text-gray-500">
+                            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                              <span className="text-sm font-medium text-gray-500 dark:text-gray-300">
                                 {targetUser.displayName?.[0] || '?'}
                               </span>
                             </div>
                           )}
                           <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
                               {targetUser.displayName}
                             </p>
-                            <p className="text-xs text-gray-500">{targetUser.email}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{targetUser.email}</p>
                           </div>
                         </div>
                       </td>
@@ -332,30 +334,30 @@ function AdminDashboardContent() {
                         <span
                           className={`text-sm font-medium ${
                             targetUser.credits >= 999999
-                              ? 'text-purple-600'
+                              ? 'text-purple-600 dark:text-purple-400'
                               : targetUser.credits > 0
-                              ? 'text-green-600'
-                              : 'text-red-600'
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-red-600 dark:text-red-400'
                           }`}
                         >
                           {targetUser.credits >= 999999 ? '∞' : targetUser.credits}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {targetUser.totalGenerated}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             targetUser.role === 'admin'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
                           }`}
                         >
                           {targetUser.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {targetUser.createdAt
                           ? new Date(targetUser.createdAt).toLocaleDateString()
                           : '—'}
@@ -363,7 +365,7 @@ function AdminDashboardContent() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => openAddCreditsModal(targetUser)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
                         >
                           Add Credits
                         </button>
@@ -377,7 +379,7 @@ function AdminDashboardContent() {
 
           {/* Pagination */}
           {usersPagination && usersPagination.hasMore && (
-            <div className="px-6 py-4 border-t border-gray-200">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() =>
                   fetchUsers(
@@ -385,7 +387,7 @@ function AdminDashboardContent() {
                     usersPagination.offset + usersPagination.limit
                   )
                 }
-                className="text-sm text-indigo-600 hover:text-indigo-900"
+                className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
               >
                 Load more
               </button>
@@ -402,11 +404,11 @@ function AdminDashboardContent() {
               className="fixed inset-0 bg-black bg-opacity-30"
               onClick={() => setShowAddCreditsModal(false)}
             />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 Add Credits
               </h3>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Adding credits to{' '}
                 <span className="font-medium">{selectedUser.displayName}</span> (
                 {selectedUser.email})
@@ -414,7 +416,7 @@ function AdminDashboardContent() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Amount
                   </label>
                   <input
@@ -422,12 +424,12 @@ function AdminDashboardContent() {
                     min="1"
                     value={creditAmount}
                     onChange={(e) => setCreditAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Reason (optional)
                   </label>
                   <input
@@ -435,7 +437,7 @@ function AdminDashboardContent() {
                     value={creditReason}
                     onChange={(e) => setCreditReason(e.target.value)}
                     placeholder="e.g., Bug compensation, Promotion"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
               </div>
@@ -443,16 +445,16 @@ function AdminDashboardContent() {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowAddCreditsModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleAddCredits}
                   disabled={addingCredits}
                   className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
                 >
-                  {addingCredits ? 'Adding...' : 'Add Credits'}
+                  {addingCredits ? t('common.loading') : 'Add Credits'}
                 </button>
               </div>
             </div>
