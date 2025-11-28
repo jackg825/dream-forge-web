@@ -85,7 +85,7 @@ function GLBModel({
     const size = new THREE.Vector3();
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z);
-    const scale = 2 / maxDim;
+    const scale = 3 / maxDim; // Larger scale for better visibility
     groupRef.current.scale.setScalar(scale);
 
     // Step 3: Center the model
@@ -97,7 +97,7 @@ function GLBModel({
     groupRef.current.updateMatrixWorld(true);
 
     // Step 4: Align to ground plane
-    alignToGroundPlane(groupRef.current, -1);
+    alignToGroundPlane(groupRef.current, -1.5);
 
     // Step 5: Apply user rotation (additive)
     if (rotation) {
@@ -188,7 +188,7 @@ function STLModel({
       const size = new THREE.Vector3();
       box.getSize(size);
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 2 / maxDim;
+      const scale = 3 / maxDim; // Larger scale for better visibility
 
       meshRef.current.scale.setScalar(scale);
 
@@ -200,7 +200,7 @@ function STLModel({
       meshRef.current.updateMatrixWorld(true);
 
       // Align to ground plane
-      alignToGroundPlane(meshRef.current, -1);
+      alignToGroundPlane(meshRef.current, -1.5);
 
       // Apply user rotation (additive)
       if (rotation) {
@@ -256,7 +256,8 @@ function CameraSetup() {
   const { camera } = useThree();
 
   useEffect(() => {
-    camera.position.set(3, 2, 3);
+    // Position camera in front of model, slightly elevated
+    camera.position.set(0, 1.5, 5);
     camera.lookAt(0, 0, 0);
   }, [camera]);
 
@@ -279,7 +280,8 @@ function CameraControls({
   useEffect(() => {
     onResetRef.current = () => {
       if (controlsRef.current) {
-        camera.position.set(3, 2, 3);
+        // Reset to front view position
+        camera.position.set(0, 1.5, 5);
         controlsRef.current.target.set(0, 0, 0);
         controlsRef.current.update();
       }
@@ -292,7 +294,7 @@ function CameraControls({
       enablePan={true}
       enableZoom={true}
       enableRotate={true}
-      minDistance={1}
+      minDistance={2}
       maxDistance={20}
       rotateSpeed={0.5}
       enableDamping={true}
@@ -410,7 +412,7 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
           {/* Reference Grid */}
           {showGrid && (
             <Grid
-              position={[0, -1, 0]}
+              position={[0, -1.5, 0]}
               args={[10, 10]}
               cellSize={0.5}
               cellThickness={0.5}
@@ -437,7 +439,7 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
 
           {/* Ground plane for shadows (only when grid is off) */}
           {!showGrid && (
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.5, 0]} receiveShadow>
               <planeGeometry args={[10, 10]} />
               <shadowMaterial opacity={0.2} />
             </mesh>
