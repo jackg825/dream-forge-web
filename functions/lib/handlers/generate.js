@@ -122,7 +122,7 @@ exports.generateModel = functions
     const jobSettings = {
         tier: 'Gen-2',
         quality: quality,
-        format: 'stl',
+        format: 'glb', // GLB for preview with PBR materials
         printerType,
         inputMode,
         imageCount: 1, // Will be updated after image processing
