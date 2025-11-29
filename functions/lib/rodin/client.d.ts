@@ -78,9 +78,10 @@ export declare class RodinClient {
      * @param taskUuid - The task UUID (from generateModel response)
      * @param maxRetries - Number of retry attempts (default: 5)
      * @param retryDelayMs - Delay between retries in ms (default: 3000)
+     * @param requiredFormat - Optional: wait for a file with this extension (e.g., 'glb')
      * @returns List of downloadable files with URLs and names
      */
-    getDownloadUrls(taskUuid: string, maxRetries?: number, retryDelayMs?: number): Promise<Array<{
+    getDownloadUrls(taskUuid: string, maxRetries?: number, retryDelayMs?: number, requiredFormat?: string): Promise<Array<{
         url: string;
         name: string;
     }>>;

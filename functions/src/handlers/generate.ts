@@ -425,15 +425,22 @@ export const checkJobStatus = functions
       });
 
       try {
-        // Try to get download URLs (only 1 attempt per poll, no internal retry)
-        const downloadList = await rodinClient.getDownloadUrls(downloadTaskUuid, 1, 0);
+        // Try to get download URLs (1 attempt per poll, but wait for required format)
+        // Pass the required format so it retries if only preview.webp is available
+        const downloadList = await rodinClient.getDownloadUrls(
+          downloadTaskUuid,
+          1,    // maxRetries per poll
+          0,    // retryDelayMs (no delay, handled by polling)
+          job.settings.format  // requiredFormat: wait for .glb/.obj/etc
+        );
 
-        // Find the model file with the requested format
+        // Find the model file with the requested format (should exist now)
         const modelFile = downloadList.find((file) =>
           file.name.endsWith(`.${job.settings.format}`)
         );
 
         if (!modelFile) {
+          // This shouldn't happen since getDownloadUrls now checks for required format
           throw new Error(`No ${job.settings.format} file in download list`);
         }
 
@@ -893,10 +900,15 @@ export const retryFailedJob = functions
     try {
       const rodinClient = createRodinClient();
 
-      // Try to get download URLs (with retry logic)
-      const downloadList = await rodinClient.getDownloadUrls(downloadTaskUuid);
+      // Try to get download URLs (with retry logic, wait for required format)
+      const downloadList = await rodinClient.getDownloadUrls(
+        downloadTaskUuid,
+        5,     // maxRetries
+        3000,  // retryDelayMs
+        job.settings.format  // requiredFormat
+      );
 
-      // Find the model file
+      // Find the model file (should exist now)
       const modelFile = downloadList.find((file) =>
         file.name.endsWith(`.${job.settings.format}`)
       );

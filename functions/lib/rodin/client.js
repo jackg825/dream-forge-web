@@ -346,10 +346,16 @@ class RodinClient {
      * @param taskUuid - The task UUID (from generateModel response)
      * @param maxRetries - Number of retry attempts (default: 5)
      * @param retryDelayMs - Delay between retries in ms (default: 3000)
+     * @param requiredFormat - Optional: wait for a file with this extension (e.g., 'glb')
      * @returns List of downloadable files with URLs and names
      */
-    async getDownloadUrls(taskUuid, maxRetries = 5, retryDelayMs = 3000) {
-        functions.logger.info('Fetching download URLs', { taskUuid, maxRetries, retryDelayMs });
+    async getDownloadUrls(taskUuid, maxRetries = 5, retryDelayMs = 3000, requiredFormat) {
+        functions.logger.info('Fetching download URLs', {
+            taskUuid,
+            maxRetries,
+            retryDelayMs,
+            requiredFormat: requiredFormat || 'any',
+        });
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 const response = await axios_1.default.post(`${RODIN_API_BASE}/download`, { task_uuid: taskUuid }, {
@@ -364,7 +370,6 @@ class RodinClient {
                     taskUuid,
                     attempt,
                     httpStatus: response.status,
-                    fullResponseData: JSON.stringify(response.data),
                     hasError: !!responseData.error,
                     errorValue: responseData.error,
                     hasList: !!responseData.list,
@@ -385,6 +390,24 @@ class RodinClient {
                     }
                     throw new Error(`No download URLs after ${maxRetries} attempts. API error: ${responseData.error || 'none'}`);
                 }
+                // If requiredFormat specified, check if it's in the list
+                if (requiredFormat) {
+                    const hasRequiredFile = responseData.list.some((f) => f.name.endsWith(`.${requiredFormat}`));
+                    if (!hasRequiredFile) {
+                        if (attempt < maxRetries) {
+                            functions.logger.warn(`Required format .${requiredFormat} not in list yet, retrying...`, {
+                                taskUuid,
+                                attempt,
+                                maxRetries,
+                                currentFiles: responseData.list.map((f) => f.name),
+                                nextRetryIn: retryDelayMs,
+                            });
+                            await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+                            continue;
+                        }
+                        throw new Error(`No .${requiredFormat} file after ${maxRetries} attempts. Available: ${responseData.list.map((f) => f.name).join(', ')}`);
+                    }
+                }
                 functions.logger.info('Rodin download URLs retrieved', {
                     taskUuid,
                     attempt,
@@ -394,7 +417,7 @@ class RodinClient {
                 return response.data.list;
             }
             catch (error) {
-                // Only retry on empty list, not on actual errors
+                // Only retry on empty list or missing format, not on actual errors
                 if (attempt >= maxRetries) {
                     this.handleError(error, 'getDownloadUrls');
                     throw error;
@@ -404,7 +427,7 @@ class RodinClient {
                     this.handleError(error, 'getDownloadUrls');
                     throw error;
                 }
-                // Otherwise, it's our "empty list" error - retry
+                // Otherwise, it's our "empty list" or "missing format" error - retry
                 functions.logger.warn('Retrying after error...', {
                     taskUuid,
                     attempt,
