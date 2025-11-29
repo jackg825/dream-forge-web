@@ -53,6 +53,9 @@ interface ViewerToolbarProps {
   onFullscreen: () => void;
   isFullscreen: boolean;
   onReset: () => void;
+
+  // Container for portals (needed for fullscreen mode)
+  portalContainer?: HTMLElement | null;
 }
 
 const VIEW_MODES: { value: ViewMode; label: string; icon: string }[] = [
@@ -84,9 +87,13 @@ export function ViewerToolbar({
   onFullscreen,
   isFullscreen,
   onReset,
+  portalContainer,
 }: ViewerToolbarProps) {
   const [viewModeOpen, setViewModeOpen] = useState(false);
   const [bgOpen, setBgOpen] = useState(false);
+
+  // Portal props for fullscreen compatibility
+  const portalProps = portalContainer ? { container: portalContainer } : {};
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -116,13 +123,14 @@ export function ViewerToolbar({
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+              <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
                 視圖模式
               </TooltipContent>
             </Tooltip>
             <PopoverContent
               className="w-36 p-1 bg-black/90 backdrop-blur-xl border-white/10"
               align="start"
+              container={portalContainer}
             >
               {VIEW_MODES.map((mode) => {
                 const isDisabled = mode.value === 'textured' && !hasTextures;
@@ -176,13 +184,14 @@ export function ViewerToolbar({
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+              <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
                 背景色
               </TooltipContent>
             </Tooltip>
             <PopoverContent
               className="w-auto p-2 bg-black/90 backdrop-blur-xl border-white/10"
               align="center"
+              container={portalContainer}
             >
               <div className="flex gap-2">
                 {BACKGROUND_COLORS.map((color) => (
@@ -219,7 +228,7 @@ export function ViewerToolbar({
                 <Grid3X3 className="w-4 h-4" />
               </Toggle>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+            <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
               參考網格
             </TooltipContent>
           </Tooltip>
@@ -237,7 +246,7 @@ export function ViewerToolbar({
                 <Axis3D className="w-4 h-4" />
               </Toggle>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+            <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
               座標軸
             </TooltipContent>
           </Tooltip>
@@ -256,7 +265,7 @@ export function ViewerToolbar({
                           style={{ animationDuration: '3s' }} />
               </Toggle>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+            <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
               自動旋轉
             </TooltipContent>
           </Tooltip>
@@ -275,7 +284,7 @@ export function ViewerToolbar({
                 <Camera className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+            <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
               截圖
             </TooltipContent>
           </Tooltip>
@@ -296,7 +305,7 @@ export function ViewerToolbar({
                 )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+            <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
               {isFullscreen ? '退出全螢幕' : '全螢幕'}
             </TooltipContent>
           </Tooltip>
@@ -313,7 +322,7 @@ export function ViewerToolbar({
                 <RefreshCw className="w-4 h-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="top" className="bg-black/90 text-white border-white/10">
+            <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
               重設視角
             </TooltipContent>
           </Tooltip>

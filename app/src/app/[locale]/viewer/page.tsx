@@ -302,6 +302,7 @@ function ViewerContentInner() {
                   onFullscreen={handleFullscreen}
                   isFullscreen={isFullscreen}
                   onReset={handleReset}
+                  portalContainer={viewerContainerRef.current}
                 />
               </div>
             </div>
