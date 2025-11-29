@@ -18,9 +18,14 @@ export interface GeminiRequest {
         imageSizes?: string[];
     };
 }
+export interface SafetyRating {
+    category: string;
+    probability: string;
+}
+export type FinishReason = 'STOP' | 'MAX_TOKENS' | 'SAFETY' | 'RECITATION' | 'OTHER';
 export interface GeminiResponse {
-    candidates: Array<{
-        content: {
+    candidates?: Array<{
+        content?: {
             parts: Array<{
                 inline_data?: {
                     mime_type: string;
@@ -29,7 +34,26 @@ export interface GeminiResponse {
                 text?: string;
             }>;
         };
+        finishReason?: FinishReason;
+        safetyRatings?: SafetyRating[];
     }>;
+    promptFeedback?: {
+        blockReason?: string;
+        safetyRatings?: SafetyRating[];
+    };
+    error?: {
+        code: number;
+        message: string;
+        status: string;
+    };
+}
+export interface GeminiResponseAnalysis {
+    hasImage: boolean;
+    textContent: string | null;
+    blockReason: string | null;
+    finishReason: string | null;
+    safetyIssues: string[];
+    errorMessage: string | null;
 }
 export interface GeminiGeneratedView {
     angle: ViewAngle;

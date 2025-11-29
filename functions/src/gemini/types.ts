@@ -22,10 +22,24 @@ export interface GeminiRequest {
   };
 }
 
-// Gemini API response structure
+// Safety rating from Gemini API
+export interface SafetyRating {
+  category: string;
+  probability: string;
+}
+
+// Finish reason indicates why generation stopped
+export type FinishReason =
+  | 'STOP' // Normal completion
+  | 'MAX_TOKENS' // Hit token limit
+  | 'SAFETY' // Blocked by safety filters
+  | 'RECITATION' // Content matched training data
+  | 'OTHER'; // Other reasons
+
+// Gemini API response structure (enhanced)
 export interface GeminiResponse {
-  candidates: Array<{
-    content: {
+  candidates?: Array<{
+    content?: {
       parts: Array<{
         inline_data?: {
           mime_type: string;
@@ -34,7 +48,28 @@ export interface GeminiResponse {
         text?: string;
       }>;
     };
+    finishReason?: FinishReason;
+    safetyRatings?: SafetyRating[];
   }>;
+  promptFeedback?: {
+    blockReason?: string;
+    safetyRatings?: SafetyRating[];
+  };
+  error?: {
+    code: number;
+    message: string;
+    status: string;
+  };
+}
+
+// Result of analyzing a Gemini response
+export interface GeminiResponseAnalysis {
+  hasImage: boolean;
+  textContent: string | null;
+  blockReason: string | null;
+  finishReason: string | null;
+  safetyIssues: string[];
+  errorMessage: string | null;
 }
 
 // Generated view result
