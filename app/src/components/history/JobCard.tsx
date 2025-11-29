@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import type { Job } from '@/types';
 import { useRetryJob } from '@/hooks/useJobs';
 import { Card, CardContent } from '@/components/ui/card';
