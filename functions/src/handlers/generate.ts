@@ -3,7 +3,8 @@ import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createRodinClient } from '../rodin/client';
 import { createGeminiClient } from '../gemini/client';
-import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
+import { deductCredits, incrementGenerationCount } from '../utils/credits';
+// import { refundCredits } from '../utils/credits'; // Auto-refund temporarily disabled
 import type {
   JobDocument,
   JobSettings,
@@ -298,8 +299,8 @@ export const generateModel = functions
       // 8. Return job ID
       return { jobId, status: 'generating-model' };
     } catch (error) {
-      // Rollback: Refund credits and mark job as failed
-      await refundCredits(userId, creditCost, jobId);
+      // Mark job as failed (auto-refund temporarily disabled)
+      // await refundCredits(userId, creditCost, jobId);
       await jobRef.update({
         status: 'failed',
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -518,9 +519,9 @@ export const checkJobStatus = functions
             : errorMessage,
         });
 
-        // Refund credits based on input mode
-        const refundAmount = creditCosts[job.settings.inputMode] || 1;
-        await refundCredits(userId, refundAmount, jobId);
+        // Auto-refund temporarily disabled
+        // const refundAmount = creditCosts[job.settings.inputMode] || 1;
+        // await refundCredits(userId, refundAmount, jobId);
 
         return {
           status: 'failed',
@@ -536,9 +537,9 @@ export const checkJobStatus = functions
         error: 'Generation failed',
       });
 
-      // Refund credits based on input mode
-      const refundAmount = creditCosts[job.settings.inputMode] || 1;
-      await refundCredits(userId, refundAmount, jobId);
+      // Auto-refund temporarily disabled
+      // const refundAmount = creditCosts[job.settings.inputMode] || 1;
+      // await refundCredits(userId, refundAmount, jobId);
 
       functions.logger.warn('Job failed', { jobId });
 
@@ -787,8 +788,8 @@ export const generateTexture = functions
 
       return { jobId, status: 'processing' };
     } catch (error) {
-      // Rollback: Refund credits and mark job as failed
-      await refundCredits(userId, TEXTURE_CREDIT_COST, jobId);
+      // Mark job as failed (auto-refund temporarily disabled)
+      // await refundCredits(userId, TEXTURE_CREDIT_COST, jobId);
       await jobRef.update({
         status: 'failed',
         error: error instanceof Error ? error.message : 'Unknown error',

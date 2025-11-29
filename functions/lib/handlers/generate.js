@@ -240,8 +240,8 @@ exports.generateModel = functions
         return { jobId, status: 'generating-model' };
     }
     catch (error) {
-        // Rollback: Refund credits and mark job as failed
-        await (0, credits_1.refundCredits)(userId, creditCost, jobId);
+        // Mark job as failed (auto-refund temporarily disabled)
+        // await refundCredits(userId, creditCost, jobId);
         await jobRef.update({
             status: 'failed',
             error: error instanceof Error ? error.message : 'Unknown error',
@@ -412,9 +412,9 @@ exports.checkJobStatus = functions
                     ? `Download URLs not available after ${downloadRetryCount} attempts (~${Math.round(downloadRetryCount * 5 / 60)} minutes)`
                     : errorMessage,
             });
-            // Refund credits based on input mode
-            const refundAmount = creditCosts[job.settings.inputMode] || 1;
-            await (0, credits_1.refundCredits)(userId, refundAmount, jobId);
+            // Auto-refund temporarily disabled
+            // const refundAmount = creditCosts[job.settings.inputMode] || 1;
+            // await refundCredits(userId, refundAmount, jobId);
             return {
                 status: 'failed',
                 error: errorMessage,
@@ -427,9 +427,9 @@ exports.checkJobStatus = functions
             status: 'failed',
             error: 'Generation failed',
         });
-        // Refund credits based on input mode
-        const refundAmount = creditCosts[job.settings.inputMode] || 1;
-        await (0, credits_1.refundCredits)(userId, refundAmount, jobId);
+        // Auto-refund temporarily disabled
+        // const refundAmount = creditCosts[job.settings.inputMode] || 1;
+        // await refundCredits(userId, refundAmount, jobId);
         functions.logger.warn('Job failed', { jobId });
         return {
             status: 'failed',
@@ -608,8 +608,8 @@ exports.generateTexture = functions
         return { jobId, status: 'processing' };
     }
     catch (error) {
-        // Rollback: Refund credits and mark job as failed
-        await (0, credits_1.refundCredits)(userId, TEXTURE_CREDIT_COST, jobId);
+        // Mark job as failed (auto-refund temporarily disabled)
+        // await refundCredits(userId, TEXTURE_CREDIT_COST, jobId);
         await jobRef.update({
             status: 'failed',
             error: error instanceof Error ? error.message : 'Unknown error',
