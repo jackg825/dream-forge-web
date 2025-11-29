@@ -202,7 +202,11 @@ class GeminiClient {
                 },
             ],
             generationConfig: {
-                responseModalities: ['IMAGE', 'TEXT'],
+                responseModalities: ['TEXT', 'IMAGE'],
+                imageConfig: {
+                    aspectRatio: '1:1',
+                    imageSize: '1K',
+                },
             },
         }, {
             headers: {
