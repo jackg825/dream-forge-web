@@ -112,8 +112,8 @@ function analyzeGeminiResponse(response) {
     }
     // Extract content
     const parts = candidate.content?.parts || [];
-    // Check for image
-    const imagePart = parts.find((p) => p.inline_data?.data);
+    // Check for image (response uses camelCase: inlineData, not inline_data)
+    const imagePart = parts.find((p) => p.inlineData?.data);
     result.hasImage = !!imagePart;
     // Extract text (may explain why image wasn't generated)
     const textContent = extractTextFromParts(parts);
@@ -251,11 +251,12 @@ class GeminiClient {
                 textInfo);
         }
         // Extract the image data (we know it exists from analysis)
+        // Note: Response uses camelCase (inlineData, mimeType)
         const candidates = response.data.candidates;
         const parts = candidates[0].content?.parts || [];
-        const imagePart = parts.find((p) => p.inline_data?.data);
-        // Validate MIME type
-        const responseMimeType = imagePart.inline_data.mime_type;
+        const imagePart = parts.find((p) => p.inlineData?.data);
+        // Validate MIME type (response uses camelCase: mimeType)
+        const responseMimeType = imagePart.inlineData.mimeType;
         const validMimeTypes = ['image/png', 'image/jpeg', 'image/webp'];
         if (responseMimeType && !validMimeTypes.includes(responseMimeType)) {
             functions.logger.warn('Unexpected MIME type from Gemini', {
@@ -266,7 +267,7 @@ class GeminiClient {
         }
         return {
             angle,
-            imageBase64: imagePart.inline_data.data,
+            imageBase64: imagePart.inlineData.data,
             mimeType: responseMimeType && validMimeTypes.includes(responseMimeType)
                 ? responseMimeType
                 : 'image/png',

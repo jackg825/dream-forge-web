@@ -37,15 +37,18 @@ export type FinishReason =
   | 'OTHER'; // Other reasons
 
 // Gemini API response structure (enhanced)
+// Note: Response uses camelCase (inlineData, mimeType) unlike request (inline_data, mime_type)
 export interface GeminiResponse {
   candidates?: Array<{
     content?: {
       parts: Array<{
-        inline_data?: {
-          mime_type: string;
+        // Response format uses camelCase
+        inlineData?: {
+          mimeType: string;
           data: string;
         };
         text?: string;
+        thoughtSignature?: string; // Gemini 3 Pro Image specific
       }>;
     };
     finishReason?: FinishReason;

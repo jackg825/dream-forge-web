@@ -93,8 +93,8 @@ function analyzeGeminiResponse(response: GeminiResponse): GeminiResponseAnalysis
   // Extract content
   const parts = candidate.content?.parts || [];
 
-  // Check for image
-  const imagePart = parts.find((p) => p.inline_data?.data);
+  // Check for image (response uses camelCase: inlineData, not inline_data)
+  const imagePart = parts.find((p) => p.inlineData?.data);
   result.hasImage = !!imagePart;
 
   // Extract text (may explain why image wasn't generated)
@@ -281,12 +281,13 @@ export class GeminiClient {
     }
 
     // Extract the image data (we know it exists from analysis)
+    // Note: Response uses camelCase (inlineData, mimeType)
     const candidates = response.data.candidates!;
     const parts = candidates[0].content?.parts || [];
-    const imagePart = parts.find((p) => p.inline_data?.data)!;
+    const imagePart = parts.find((p) => p.inlineData?.data)!;
 
-    // Validate MIME type
-    const responseMimeType = imagePart.inline_data!.mime_type;
+    // Validate MIME type (response uses camelCase: mimeType)
+    const responseMimeType = imagePart.inlineData!.mimeType;
     const validMimeTypes = ['image/png', 'image/jpeg', 'image/webp'];
 
     if (responseMimeType && !validMimeTypes.includes(responseMimeType)) {
@@ -299,7 +300,7 @@ export class GeminiClient {
 
     return {
       angle,
-      imageBase64: imagePart.inline_data!.data,
+      imageBase64: imagePart.inlineData!.data,
       mimeType:
         responseMimeType && validMimeTypes.includes(responseMimeType)
           ? responseMimeType

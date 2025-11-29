@@ -27,11 +27,12 @@ export interface GeminiResponse {
     candidates?: Array<{
         content?: {
             parts: Array<{
-                inline_data?: {
-                    mime_type: string;
+                inlineData?: {
+                    mimeType: string;
                     data: string;
                 };
                 text?: string;
+                thoughtSignature?: string;
             }>;
         };
         finishReason?: FinishReason;
