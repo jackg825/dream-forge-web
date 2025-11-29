@@ -13,3 +13,25 @@ export {
   getAdminStats,
   listUsers,
 } from './handlers/admin';
+
+// Multi-step creation flow (Sessions)
+export {
+  createSession,
+  getSession,
+  updateSession,
+  deleteSession,
+  getUserSessions,
+} from './handlers/sessions';
+
+// Multi-step creation flow (Views)
+export {
+  generateSessionViews,
+  regenerateView,
+  uploadCustomView,
+} from './handlers/views';
+
+// Multi-step creation flow (Model)
+export {
+  startSessionModelGeneration,
+  checkSessionModelStatus,
+} from './handlers/model';

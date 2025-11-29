@@ -379,5 +379,119 @@
     "unauthorized": "請先登入。",
     "notFound": "找不到資源。",
     "networkError": "網路錯誤，請檢查您的連線。"
+  },
+  "create": {
+    "title": "進階流程",
+    "subtitle": "分步驟生成，可預覽和修改 AI 視角圖",
+    "startButton": "開始進階流程",
+    "steps": {
+      "upload": "上傳圖片",
+      "views": "生成視角",
+      "preview": "預覽視角",
+      "generate": "生成模型",
+      "result": "預覽結果"
+    },
+    "stepper": {
+      "step": "步驟 {step}",
+      "of": "共 {total} 步",
+      "stepOf": "步驟 {step} / {total}"
+    },
+    "upload": {
+      "title": "上傳原始圖片",
+      "description": "上傳物件的正面照片作為起點",
+      "selectAngles": "選擇要 AI 生成的視角",
+      "anglesHelp": "AI 將根據您上傳的正面圖生成其他視角",
+      "settingsTitle": "生成設定",
+      "proceedButton": "生成視角",
+      "creditCost": "將使用 1 點數"
+    },
+    "views": {
+      "title": "AI 視角生成中",
+      "description": "正在使用 AI 生成您選擇的視角圖片",
+      "generating": "生成中...",
+      "progress": "已完成 {completed}/{total}",
+      "estimatedTime": "預計時間：約 30 秒",
+      "noSession": "找不到作業階段，請重新開始",
+      "startOver": "重新開始",
+      "loadingSession": "載入作業階段...",
+      "generationFailed": "生成失敗",
+      "generationComplete": "生成完成！",
+      "generatingViews": "正在生成視角圖片...",
+      "errorDescription": "視角生成過程中發生錯誤",
+      "redirecting": "正在導向預覽頁面...",
+      "pleaseWait": "AI 正在分析圖片並生成不同視角",
+      "statusPreparing": "準備圖片中...",
+      "statusGenerating": "AI 正在生成視角...",
+      "statusProcessing": "處理生成結果...",
+      "statusComplete": "生成完成！",
+      "statusFinalizing": "完成最後處理...",
+      "anglesCount": "生成 {count} 個視角",
+      "backToUpload": "返回上傳",
+      "retry": "重試",
+      "tips": {
+        "title": "小提示",
+        "tip1": "生成通常需要 30-60 秒",
+        "tip2": "您可以在下一步預覽並替換任何不滿意的視角",
+        "tip3": "替換視角不需要額外點數，重新生成需要 1 點"
+      }
+    },
+    "preview": {
+      "title": "預覽與編輯視角",
+      "description": "檢視 AI 生成的視角圖，可替換為自己的圖片",
+      "aiGenerated": "AI 生成",
+      "uploaded": "已上傳",
+      "replaceButton": "替換",
+      "downloadAll": "下載所有視角",
+      "regenerateButton": "重新生成視角",
+      "regenerateCost": "將使用 1 點數",
+      "proceedButton": "生成 3D 模型",
+      "modelCost": "將使用 1 點數",
+      "backToUpload": "返回上傳"
+    },
+    "generate": {
+      "title": "生成 3D 模型中",
+      "description": "正在將視角圖片轉換為 3D 模型",
+      "usedViews": "使用的視角圖",
+      "estimatedTime": "預計時間：約 2 分鐘",
+      "generating": "正在生成 3D 模型...",
+      "complete": "生成完成！",
+      "redirecting": "正在導向預覽頁面...",
+      "errorDescription": "模型生成過程中發生錯誤",
+      "statusPreparing": "準備視角圖片...",
+      "statusGenerating": "正在生成 3D 模型...",
+      "statusProcessing": "處理模型中...",
+      "statusComplete": "生成完成！",
+      "statusFinalizing": "完成最後處理...",
+      "backToPreview": "返回預覽"
+    },
+    "result": {
+      "title": "模型預覽",
+      "description": "您的 3D 模型已準備就緒",
+      "modifyViews": "修改視角",
+      "newSession": "建立新模型",
+      "downloadModel": "下載模型",
+      "modelPreview": "3D 模型預覽",
+      "downloadDescription": "下載您的 3D 模型用於列印或編輯",
+      "sessionInfo": "作業資訊",
+      "noModel": "模型尚未就緒",
+      "goToGenerate": "前往生成"
+    },
+    "session": {
+      "draft": "草稿",
+      "generatingViews": "生成視角中...",
+      "viewsReady": "視角已就緒",
+      "generatingModel": "生成模型中...",
+      "completed": "已完成",
+      "failed": "失敗"
+    },
+    "confirm": {
+      "title": "確認使用點數",
+      "viewGeneration": "即將使用 AI 生成視角圖片",
+      "modelGeneration": "即將生成 3D 模型",
+      "cost": "將使用 {cost} 點數",
+      "currentCredits": "目前點數：{credits}",
+      "confirm": "確認",
+      "cancel": "取消"
+    }
   }
 }

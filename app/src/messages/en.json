@@ -379,5 +379,119 @@
     "unauthorized": "Please sign in first.",
     "notFound": "Resource not found.",
     "networkError": "Network error. Please check your connection."
+  },
+  "create": {
+    "title": "Advanced Flow",
+    "subtitle": "Step-by-step generation with AI view preview and editing",
+    "startButton": "Start Advanced Flow",
+    "steps": {
+      "upload": "Upload",
+      "views": "Generate Views",
+      "preview": "Preview Views",
+      "generate": "Generate Model",
+      "result": "Preview Result"
+    },
+    "stepper": {
+      "step": "Step {step}",
+      "of": "of {total}",
+      "stepOf": "Step {step} / {total}"
+    },
+    "upload": {
+      "title": "Upload Original Image",
+      "description": "Upload a front view photo of your object as the starting point",
+      "selectAngles": "Select angles to generate with AI",
+      "anglesHelp": "AI will generate other views based on your uploaded front image",
+      "settingsTitle": "Generation Settings",
+      "proceedButton": "Generate Views",
+      "creditCost": "Uses 1 credit"
+    },
+    "views": {
+      "title": "Generating AI Views",
+      "description": "AI is generating the view images you selected",
+      "generating": "Generating...",
+      "progress": "Completed {completed}/{total}",
+      "estimatedTime": "Estimated time: ~30 seconds",
+      "noSession": "Session not found, please start over",
+      "startOver": "Start Over",
+      "loadingSession": "Loading session...",
+      "generationFailed": "Generation Failed",
+      "generationComplete": "Generation Complete!",
+      "generatingViews": "Generating view images...",
+      "errorDescription": "An error occurred during view generation",
+      "redirecting": "Redirecting to preview...",
+      "pleaseWait": "AI is analyzing your image and generating different views",
+      "statusPreparing": "Preparing image...",
+      "statusGenerating": "AI is generating views...",
+      "statusProcessing": "Processing results...",
+      "statusComplete": "Generation complete!",
+      "statusFinalizing": "Finalizing...",
+      "anglesCount": "Generating {count} views",
+      "backToUpload": "Back to Upload",
+      "retry": "Retry",
+      "tips": {
+        "title": "Tips",
+        "tip1": "Generation usually takes 30-60 seconds",
+        "tip2": "You can preview and replace any views in the next step",
+        "tip3": "Replacing views is free, regenerating costs 1 credit"
+      }
+    },
+    "preview": {
+      "title": "Preview & Edit Views",
+      "description": "Review AI-generated views and replace with your own images if needed",
+      "aiGenerated": "AI Generated",
+      "uploaded": "Uploaded",
+      "replaceButton": "Replace",
+      "downloadAll": "Download All Views",
+      "regenerateButton": "Regenerate Views",
+      "regenerateCost": "Uses 1 credit",
+      "proceedButton": "Generate 3D Model",
+      "modelCost": "Uses 1 credit",
+      "backToUpload": "Back to Upload"
+    },
+    "generate": {
+      "title": "Generating 3D Model",
+      "description": "Converting view images into a 3D model",
+      "usedViews": "Views used",
+      "estimatedTime": "Estimated time: ~2 minutes",
+      "generating": "Generating 3D Model...",
+      "complete": "Generation Complete!",
+      "redirecting": "Redirecting to preview...",
+      "errorDescription": "An error occurred during generation",
+      "statusPreparing": "Preparing images...",
+      "statusGenerating": "Generating 3D model...",
+      "statusProcessing": "Processing model...",
+      "statusComplete": "Generation complete!",
+      "statusFinalizing": "Finalizing...",
+      "backToPreview": "Back to Preview"
+    },
+    "result": {
+      "title": "Model Preview",
+      "description": "Your 3D model is ready",
+      "modifyViews": "Modify Views",
+      "newSession": "Create New Model",
+      "downloadModel": "Download Model",
+      "modelPreview": "3D Model Preview",
+      "downloadDescription": "Download your 3D model for printing or editing",
+      "sessionInfo": "Session Info",
+      "noModel": "Model not yet available",
+      "goToGenerate": "Go to Generation"
+    },
+    "session": {
+      "draft": "Draft",
+      "generatingViews": "Generating views...",
+      "viewsReady": "Views ready",
+      "generatingModel": "Generating model...",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "confirm": {
+      "title": "Confirm Credit Usage",
+      "viewGeneration": "About to generate AI view images",
+      "modelGeneration": "About to generate 3D model",
+      "cost": "This will use {cost} credit",
+      "currentCredits": "Current credits: {credits}",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    }
   }
 }

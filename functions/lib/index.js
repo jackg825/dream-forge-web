@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.getSession = exports.createSession = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -51,4 +51,20 @@ Object.defineProperty(exports, "setUnlimitedCredits", { enumerable: true, get: f
 Object.defineProperty(exports, "checkRodinBalance", { enumerable: true, get: function () { return admin_1.checkRodinBalance; } });
 Object.defineProperty(exports, "getAdminStats", { enumerable: true, get: function () { return admin_1.getAdminStats; } });
 Object.defineProperty(exports, "listUsers", { enumerable: true, get: function () { return admin_1.listUsers; } });
+// Multi-step creation flow (Sessions)
+var sessions_1 = require("./handlers/sessions");
+Object.defineProperty(exports, "createSession", { enumerable: true, get: function () { return sessions_1.createSession; } });
+Object.defineProperty(exports, "getSession", { enumerable: true, get: function () { return sessions_1.getSession; } });
+Object.defineProperty(exports, "updateSession", { enumerable: true, get: function () { return sessions_1.updateSession; } });
+Object.defineProperty(exports, "deleteSession", { enumerable: true, get: function () { return sessions_1.deleteSession; } });
+Object.defineProperty(exports, "getUserSessions", { enumerable: true, get: function () { return sessions_1.getUserSessions; } });
+// Multi-step creation flow (Views)
+var views_1 = require("./handlers/views");
+Object.defineProperty(exports, "generateSessionViews", { enumerable: true, get: function () { return views_1.generateSessionViews; } });
+Object.defineProperty(exports, "regenerateView", { enumerable: true, get: function () { return views_1.regenerateView; } });
+Object.defineProperty(exports, "uploadCustomView", { enumerable: true, get: function () { return views_1.uploadCustomView; } });
+// Multi-step creation flow (Model)
+var model_1 = require("./handlers/model");
+Object.defineProperty(exports, "startSessionModelGeneration", { enumerable: true, get: function () { return model_1.startSessionModelGeneration; } });
+Object.defineProperty(exports, "checkSessionModelStatus", { enumerable: true, get: function () { return model_1.checkSessionModelStatus; } });
 //# sourceMappingURL=index.js.map

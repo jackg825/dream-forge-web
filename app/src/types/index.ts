@@ -288,3 +288,134 @@ export const TEXTURE_RESOLUTION_OPTIONS: Record<TextureResolution, {
     credits: '0.5 credits',
   },
 };
+
+// ============================================
+// Multi-step Creation Flow Types (Sessions)
+// ============================================
+
+// Session status for multi-step creation flow
+export type SessionStatus =
+  | 'draft'             // Initial state, user is filling in data
+  | 'generating-views'  // Gemini is generating AI views
+  | 'views-ready'       // Views are ready for preview/edit
+  | 'generating-model'  // Rodin is generating 3D model
+  | 'completed'         // Model ready
+  | 'failed';           // Error occurred
+
+// Session status display messages
+export const SESSION_STATUS_MESSAGES: Record<SessionStatus, string> = {
+  'draft': '草稿',
+  'generating-views': '生成視角中...',
+  'views-ready': '視角已就緒',
+  'generating-model': '生成模型中...',
+  'completed': '已完成',
+  'failed': '失敗',
+};
+
+// Credit costs for multi-step flow
+export const SESSION_CREDIT_COSTS = {
+  VIEW_GENERATION: 1,    // Each view generation attempt (regardless of angle count)
+  MODEL_GENERATION: 1,   // 3D model generation
+} as const;
+
+// Maximum drafts per user
+export const MAX_USER_DRAFTS = 3;
+
+// View image with source tracking
+export interface SessionViewImage {
+  url: string;
+  storagePath: string;
+  source: 'ai' | 'upload';
+  createdAt: Date;
+}
+
+// Session settings
+export interface SessionSettings {
+  quality: QualityLevel;
+  printerType: PrinterType;
+  format: OutputFormat;
+}
+
+// Session document structure
+export interface Session {
+  id: string;
+  userId: string;
+
+  // Status tracking
+  status: SessionStatus;
+  currentStep: 1 | 2 | 3 | 4 | 5;
+
+  // Step 1: Original image
+  originalImage: {
+    url: string;
+    storagePath: string;
+  } | null;
+
+  // User selected angles to generate (Step 1)
+  selectedAngles: ViewAngle[];
+
+  // Step 2-3: View images (keyed by angle)
+  views: Record<ViewAngle, SessionViewImage>;
+
+  // Generation settings
+  settings: SessionSettings;
+
+  // Step 4-5: Generated model
+  jobId: string | null;
+  outputModelUrl: string | null;
+
+  // Billing tracking
+  viewGenerationCount: number;
+  totalCreditsUsed: number;
+
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Session API request/response types
+export interface CreateSessionResponse {
+  sessionId: string;
+  status: SessionStatus;
+  currentStep: number;
+}
+
+export interface GetSessionResponse {
+  session: Session;
+}
+
+export interface UpdateSessionRequest {
+  sessionId: string;
+  originalImageUrl?: string;
+  originalStoragePath?: string;
+  selectedAngles?: ViewAngle[];
+  settings?: Partial<SessionSettings>;
+}
+
+export interface GenerateViewsRequest {
+  sessionId: string;
+  angles: ViewAngle[];
+}
+
+export interface GenerateViewsResponse {
+  success: boolean;
+  views: Record<ViewAngle, SessionViewImage>;
+  creditsCharged: number;
+}
+
+export interface UploadCustomViewRequest {
+  sessionId: string;
+  angle: ViewAngle;
+  imageUrl: string;
+  storagePath: string;
+}
+
+export interface StartModelGenerationRequest {
+  sessionId: string;
+}
+
+export interface StartModelGenerationResponse {
+  jobId: string;
+  status: JobStatus;
+  creditsCharged: number;
+}

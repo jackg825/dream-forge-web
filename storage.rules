@@ -16,5 +16,12 @@ service firebase.storage {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if false; // Only Cloud Functions can write
     }
+
+    // Session files - multi-step creation workflow
+    // Users can read their own session files, only Cloud Functions can write
+    match /sessions/{userId}/{sessionId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Only Cloud Functions can write (AI-generated views)
+    }
   }
 }

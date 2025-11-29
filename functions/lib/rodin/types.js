@@ -8,7 +8,7 @@
  * - format: 'stl' as the standard 3D printing format
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.QUALITY_FACE_COUNTS = exports.PRINT_QUALITY_FACE_COUNTS = exports.CREDIT_COSTS = exports.PRINTER_MATERIAL_MAP = void 0;
+exports.MAX_USER_DRAFTS = exports.SESSION_CREDIT_COSTS = exports.QUALITY_FACE_COUNTS = exports.PRINT_QUALITY_FACE_COUNTS = exports.CREDIT_COSTS = exports.PRINTER_MATERIAL_MAP = void 0;
 // Printer type to material mapping
 exports.PRINTER_MATERIAL_MAP = {
     fdm: 'Shaded', // Mono prints don't need PBR textures
@@ -34,4 +34,11 @@ exports.QUALITY_FACE_COUNTS = {
     medium: 150000,
     high: 300000,
 };
+// Credit costs for multi-step flow
+exports.SESSION_CREDIT_COSTS = {
+    VIEW_GENERATION: 1, // Each view generation attempt
+    MODEL_GENERATION: 1, // 3D model generation
+};
+// Maximum drafts per user
+exports.MAX_USER_DRAFTS = 3;
 //# sourceMappingURL=types.js.map

@@ -144,6 +144,56 @@ function getImageDimensions(file: File): Promise<{ width: number; height: number
 }
 
 /**
+ * Upload a view image for a session
+ * Uses a specific path structure for session views
+ *
+ * @param file - The file to upload
+ * @param userId - The user's ID
+ * @param sessionId - The session ID
+ * @param angle - The view angle name
+ * @returns Promise with download URL and storage path
+ */
+export async function uploadSessionView(
+  file: File,
+  userId: string,
+  sessionId: string,
+  angle: string
+): Promise<UploadResult> {
+  if (!storage) {
+    throw new Error('Firebase Storage is not configured');
+  }
+
+  // Generate path for session view
+  const timestamp = Date.now();
+  const extension = file.type.split('/')[1] || 'png';
+  const storagePath = `sessions/${userId}/${sessionId}/views/${angle}_${timestamp}.${extension}`;
+
+  const storageRef = ref(storage, storagePath);
+  const uploadTask: UploadTask = uploadBytesResumable(storageRef, file, {
+    contentType: file.type,
+  });
+
+  return new Promise((resolve, reject) => {
+    uploadTask.on(
+      'state_changed',
+      undefined,
+      (error) => {
+        console.error('Upload error:', error);
+        reject(new Error(getUploadErrorMessage(error)));
+      },
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve({ downloadUrl, storagePath });
+        } catch (error) {
+          reject(error);
+        }
+      }
+    );
+  });
+}
+
+/**
  * Get human-readable error message for upload errors
  */
 function getUploadErrorMessage(error: unknown): string {

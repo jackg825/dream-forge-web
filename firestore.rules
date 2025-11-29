@@ -19,5 +19,12 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       allow write: if false; // Only Cloud Functions can write
     }
+
+    // Sessions collection - multi-step creation workflow
+    // Users can read their own sessions, all writes via Cloud Functions
+    match /sessions/{sessionId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create, update, delete: if false; // Only Cloud Functions can write
+    }
   }
 }

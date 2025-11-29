@@ -122,5 +122,40 @@ export interface TransactionDocument {
     type: TransactionType;
     amount: number;
     jobId: string | null;
+    sessionId?: string | null;
     createdAt: FirebaseFirestore.Timestamp;
+}
+export type SessionStatus = 'draft' | 'generating-views' | 'views-ready' | 'generating-model' | 'completed' | 'failed';
+export declare const SESSION_CREDIT_COSTS: {
+    readonly VIEW_GENERATION: 1;
+    readonly MODEL_GENERATION: 1;
+};
+export declare const MAX_USER_DRAFTS = 3;
+export interface SessionViewImage {
+    url: string;
+    storagePath: string;
+    source: 'ai' | 'upload';
+    createdAt: FirebaseFirestore.Timestamp;
+}
+export interface SessionSettings {
+    quality: PrintQuality;
+    printerType: PrinterType;
+    format: OutputFormat;
+}
+export interface SessionDocument {
+    userId: string;
+    status: SessionStatus;
+    currentStep: 1 | 2 | 3 | 4 | 5;
+    originalImage: {
+        url: string;
+        storagePath: string;
+    } | null;
+    selectedAngles: ViewAngle[];
+    views: Partial<Record<ViewAngle, SessionViewImage>>;
+    settings: SessionSettings;
+    jobId: string | null;
+    viewGenerationCount: number;
+    totalCreditsUsed: number;
+    createdAt: FirebaseFirestore.Timestamp;
+    updatedAt: FirebaseFirestore.Timestamp;
 }
