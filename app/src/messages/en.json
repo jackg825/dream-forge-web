@@ -409,15 +409,21 @@
   },
   "landing": {
     "hero": {
-      "badge": "AI-Powered 3D Generation",
-      "title1": "Transform Any Photo Into",
-      "title2": "Stunning 3D Models",
-      "subtitle": "One photo. One model. One click to download. Perfect for 3D printing, gaming, or digital art.",
+      "badge": "AI-Powered · Worldwide Delivery",
+      "title1": "From Photo to Your Hands",
+      "title2": "Physical 3D Models",
+      "subtitle": "Upload a photo, AI generates a 3D model. Download digital files, or let us professionally print and ship it to you worldwide.",
       "cta": "Start Creating Free",
       "ctaSecondary": "See Examples",
       "stat1": "Free credits to start",
       "stat2": "Minutes to generate",
-      "stat3": "Export formats"
+      "stat3": "Export formats",
+      "stat4": "Worldwide shipping",
+      "journey": {
+        "photo": "Upload Photo",
+        "model": "Generate Model",
+        "deliver": "Print & Ship"
+      }
     },
     "showcase": {
       "badge": "See It In Action",
