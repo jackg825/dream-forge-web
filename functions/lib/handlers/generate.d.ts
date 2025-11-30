@@ -13,8 +13,8 @@ import * as functions from 'firebase-functions/v1';
  * 3. Deduct credits
  * 4. Create job document
  * 5. Prepare images (download uploaded or generate via Gemini)
- * 6. Call Rodin API with multi-image support
- * 7. Update job with Rodin task ID
+ * 6. Call provider API (Rodin or Meshy)
+ * 7. Update job with provider task ID
  * 8. Return job ID to client
  */
 export declare const generateModel: functions.HttpsFunction & functions.Runnable<any>;

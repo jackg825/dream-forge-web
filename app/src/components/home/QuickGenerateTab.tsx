@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation';
 import { MultiImageUploader } from '@/components/upload/MultiImageUploader';
 import { QualitySelector } from '@/components/upload/QualitySelector';
 import { PrinterTypeSelector } from '@/components/upload/PrinterTypeSelector';
+import { ProviderSelector } from '@/components/upload/ProviderSelector';
 import { CreditBadge } from '@/components/credits/CreditBadge';
 import { GenerateButton } from './GenerateButton';
 import { Upload } from 'lucide-react';
@@ -14,6 +15,7 @@ import type {
   InputMode,
   QualityLevel,
   PrinterType,
+  ModelProvider,
 } from '@/types';
 
 interface QuickGenerateTabProps {
@@ -35,6 +37,8 @@ interface QuickGenerateTabProps {
   onQualityChange: (quality: QualityLevel) => void;
   printerType: PrinterType;
   onPrinterTypeChange: (type: PrinterType) => void;
+  provider: ModelProvider;
+  onProviderChange: (provider: ModelProvider) => void;
 
   // Generation
   generating: boolean;
@@ -59,6 +63,8 @@ export function QuickGenerateTab({
   onQualityChange,
   printerType,
   onPrinterTypeChange,
+  provider,
+  onProviderChange,
   generating,
   generateError,
   canGenerate,
@@ -130,6 +136,13 @@ export function QuickGenerateTab({
           />
         </div>
       </div>
+
+      {/* Provider selector */}
+      <ProviderSelector
+        value={provider}
+        onChange={onProviderChange}
+        disabled={uploadedImages.length === 0}
+      />
 
       {/* Generate button */}
       <GenerateButton

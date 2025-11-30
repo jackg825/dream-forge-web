@@ -41,3 +41,14 @@ export {
   optimizeColorsForH2C,
   uploadEditedH2CImage,
 } from './handlers/h2c';
+
+// New simplified pipeline flow (Gemini + Meshy)
+export {
+  createPipeline,
+  getPipeline,
+  generatePipelineImages,
+  regeneratePipelineImage,
+  startPipelineMesh,
+  checkPipelineStatus,
+  startPipelineTexture,
+} from './handlers/pipeline';

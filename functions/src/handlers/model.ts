@@ -2,21 +2,19 @@
  * Model Generation Cloud Functions for Multi-Step Flow
  *
  * Handles 3D model generation from session view images:
- * - startSessionModelGeneration: Start Rodin generation using session views
+ * - startSessionModelGeneration: Start generation using session views
  * - checkSessionModelStatus: Poll status and update session when complete
  */
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
-import { createRodinClient } from '../rodin/client';
+import { createProvider } from '../providers/factory';
+import type { ProviderType } from '../providers/types';
 import { deductCredits, incrementGenerationCount } from '../utils/credits';
 import type {
   SessionDocument,
   ViewAngle,
-  PrintQuality,
-  OutputFormat,
-  MeshMode,
 } from '../rodin/types';
 import { SESSION_CREDIT_COSTS } from '../rodin/types';
 
@@ -48,12 +46,13 @@ export const startSessionModelGeneration = functions
   .runWith({
     timeoutSeconds: 300,
     memory: '1GB',
-    secrets: ['RODIN_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
   })
   .https.onCall(
     async (
       data: {
         sessionId: string;
+        provider?: ProviderType;  // 'rodin' | 'meshy' (default: 'meshy')
       },
       context: functions.https.CallableContext
     ) => {
@@ -65,7 +64,7 @@ export const startSessionModelGeneration = functions
         );
       }
 
-      const { sessionId } = data;
+      const { sessionId, provider = 'meshy' } = data;
       if (!sessionId) {
         throw new functions.https.HttpsError(
           'invalid-argument',
@@ -74,6 +73,7 @@ export const startSessionModelGeneration = functions
       }
 
       const userId = context.auth.uid;
+      const selectedProvider = provider as ProviderType;
 
       // Get session
       const sessionRef = db.collection('sessions').doc(sessionId);
@@ -147,17 +147,15 @@ export const startSessionModelGeneration = functions
         const quality = session.settings?.quality || 'standard';
         const printerType = session.settings?.printerType || 'fdm';
 
-        // Call Rodin API with multi-image support
-        const rodinClient = createRodinClient();
-        const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateModelMulti(
+        // Call provider API
+        const generationProvider = createProvider(selectedProvider);
+        const generationResult = await generationProvider.generateFromMultipleImages(
           imageBuffers,
           {
-            tier: 'Gen-2',
-            quality: quality as PrintQuality,
-            format: 'stl' as OutputFormat, // STL for 3D printing
-            meshMode: 'Raw' as MeshMode,
-            printerType,
-            conditionMode: imageBuffers.length > 1 ? 'concat' : undefined,
+            quality: quality as 'draft' | 'standard' | 'fine',
+            format: 'stl',  // STL for 3D printing
+            enableTexture: false,
+            enablePBR: false,
           }
         );
 
@@ -165,17 +163,17 @@ export const startSessionModelGeneration = functions
         const jobRef = db.collection('jobs').doc();
         const jobId = jobRef.id;
 
-        await jobRef.set({
+        const jobData: Record<string, unknown> = {
           userId,
           jobType: 'model',
           status: 'generating-model',
           inputImageUrls: availableAngles.map((a) => views[a]?.url),
           viewAngles,
           outputModelUrl: null,
-          rodinTaskId: taskUuid,
-          rodinTaskUuid: taskUuid,
-          rodinJobUuids: jobUuids,
-          rodinSubscriptionKey: subscriptionKey,
+          // Provider abstraction fields
+          provider: selectedProvider,
+          providerTaskId: generationResult.taskId,
+          providerSubscriptionKey: generationResult.subscriptionKey || '',
           sessionId, // Link back to session
           settings: {
             tier: 'Gen-2',
@@ -184,11 +182,22 @@ export const startSessionModelGeneration = functions
             printerType,
             inputMode: 'multi',
             imageCount: imageBuffers.length,
+            provider: selectedProvider,
           },
           error: null,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
           completedAt: null,
-        });
+        };
+
+        // Add legacy Rodin fields for backwards compatibility
+        if (selectedProvider === 'rodin') {
+          jobData.rodinTaskId = generationResult.taskId;
+          jobData.rodinTaskUuid = generationResult.taskId;
+          jobData.rodinJobUuids = generationResult.jobUuids || [];
+          jobData.rodinSubscriptionKey = generationResult.subscriptionKey || '';
+        }
+
+        await jobRef.set(jobData);
 
         // Update session with job reference
         await sessionRef.update({
@@ -202,7 +211,8 @@ export const startSessionModelGeneration = functions
         functions.logger.info('Model generation started', {
           sessionId,
           jobId,
-          taskUuid,
+          provider: selectedProvider,
+          taskId: generationResult.taskId,
           quality,
           imageCount: imageBuffers.length,
         });
@@ -243,7 +253,7 @@ export const checkSessionModelStatus = functions
   .runWith({
     timeoutSeconds: 540, // 9 minutes for model download
     memory: '1GB',
-    secrets: ['RODIN_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
   })
   .https.onCall(
     async (
@@ -320,36 +330,38 @@ export const checkSessionModelStatus = functions
         };
       }
 
-      // Poll Rodin status
-      const rodinClient = createRodinClient();
-      const rodinStatus = await rodinClient.checkStatus(job?.rodinSubscriptionKey);
+      // Determine provider (backwards compat: default to rodin for old jobs)
+      const provider = (job?.provider || job?.settings?.provider || 'rodin') as ProviderType;
+      const generationProvider = createProvider(provider);
 
-      functions.logger.info('Rodin status polled', {
+      // Get task ID and subscription key
+      const taskId = job?.providerTaskId || job?.rodinTaskUuid || job?.rodinTaskId;
+      const subscriptionKey = job?.providerSubscriptionKey || job?.rodinSubscriptionKey;
+
+      const statusResult = await generationProvider.checkStatus(taskId, subscriptionKey);
+
+      functions.logger.info('Provider status polled', {
         sessionId,
         jobId: session.jobId,
-        status: rodinStatus.status,
+        provider,
+        status: statusResult.status,
+        progress: statusResult.progress,
       });
 
-      if (rodinStatus.status === 'Done') {
+      if (statusResult.status === 'completed') {
         // Download and upload model
         try {
-          const downloadUrls = await rodinClient.getDownloadUrls(
-            job?.rodinTaskUuid,
-            5, // maxRetries
-            3000, // retryDelayMs
+          const downloadResult = await generationProvider.getDownloadUrls(
+            taskId,
             'stl' // requiredFormat
           );
 
-          if (downloadUrls.length === 0) {
+          if (downloadResult.files.length === 0) {
             throw new Error('No download URLs available');
           }
 
-          // Download the model (downloadUrls is Array<{url, name}>)
-          const modelResponse = await axios.get(downloadUrls[0].url, {
-            responseType: 'arraybuffer',
-            timeout: 120000,
-          });
-          const modelBuffer = Buffer.from(modelResponse.data);
+          // Download the model
+          const modelBuffer = await generationProvider.downloadModel(downloadResult.files[0].url);
 
           // Upload to Storage
           const storagePath = `sessions/${userId}/${sessionId}/model.stl`;
@@ -412,10 +424,10 @@ export const checkSessionModelStatus = functions
         }
       }
 
-      if (rodinStatus.status === 'Failed') {
+      if (statusResult.status === 'failed') {
         await jobRef.update({
           status: 'failed',
-          error: 'Model generation failed on Rodin',
+          error: statusResult.error || 'Model generation failed',
         });
 
         await sessionRef.update({
@@ -426,13 +438,14 @@ export const checkSessionModelStatus = functions
 
         return {
           status: 'failed',
-          error: 'Model generation failed',
+          error: statusResult.error || 'Model generation failed',
         };
       }
 
       // Still processing
       return {
-        status: rodinStatus.status === 'Running' ? 'generating-model' : 'pending',
+        status: statusResult.status === 'pending' ? 'pending' : 'generating-model',
+        progress: statusResult.progress,
       };
     }
   );

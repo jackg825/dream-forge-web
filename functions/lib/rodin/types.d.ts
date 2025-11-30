@@ -6,6 +6,7 @@
  * - mesh_mode: 'Raw' for triangle meshes (required by slicers)
  * - format: 'stl' as the standard 3D printing format
  */
+export type { ProviderType } from '../providers/types';
 export type MeshMode = 'Raw' | 'Quad';
 export type ViewAngle = 'front' | 'back' | 'left' | 'right' | 'top';
 export type PrinterType = 'fdm' | 'sla' | 'resin';
@@ -90,6 +91,7 @@ export interface JobSettings {
     printerType: PrinterType;
     inputMode: InputMode;
     imageCount: number;
+    provider?: import('../providers/types').ProviderType;
 }
 export interface DownloadFile {
     url: string;
@@ -104,6 +106,9 @@ export interface JobDocument {
     viewAngles?: ViewAngle[];
     outputModelUrl: string | null;
     downloadFiles?: DownloadFile[];
+    provider?: import('../providers/types').ProviderType;
+    providerTaskId?: string;
+    providerSubscriptionKey?: string;
     rodinTaskId: string;
     rodinSubscriptionKey: string;
     rodinTaskUuid?: string;

@@ -496,3 +496,169 @@ export interface H2CUploadEditedResponse {
   imageUrl: string;
   storagePath: string;
 }
+
+// ============================================
+// Pipeline Types (New Simplified Generation Flow)
+// ============================================
+
+/**
+ * Pipeline status for new simplified workflow
+ * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
+ */
+export type PipelineStatus =
+  | 'draft'              // Initial state, user uploading images
+  | 'generating-images'  // Gemini generating 6 views
+  | 'images-ready'       // 6 images ready for preview
+  | 'generating-mesh'    // Meshy generating mesh (no texture)
+  | 'mesh-ready'         // Mesh complete, texture optional
+  | 'generating-texture' // Meshy generating texture
+  | 'completed'          // All done
+  | 'failed';            // Error occurred
+
+/**
+ * Pipeline status display messages
+ */
+export const PIPELINE_STATUS_MESSAGES: Record<PipelineStatus, string> = {
+  'draft': '草稿',
+  'generating-images': '生成視角圖片中...',
+  'images-ready': '圖片就緒',
+  'generating-mesh': '生成 3D 網格中...',
+  'mesh-ready': '網格就緒',
+  'generating-texture': '生成貼圖中...',
+  'completed': '已完成',
+  'failed': '失敗',
+};
+
+/**
+ * Credit costs for pipeline workflow
+ * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ */
+export const PIPELINE_CREDIT_COSTS = {
+  IMAGE_PROCESSING: 0,   // Gemini processing is free
+  MESH_GENERATION: 5,    // Meshy mesh-only
+  TEXTURE_GENERATION: 10, // Meshy retexture
+} as const;
+
+/**
+ * Pipeline mesh angle (4 views)
+ */
+export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
+
+/**
+ * Pipeline texture angle (2 views)
+ */
+export type PipelineTextureAngle = 'front' | 'back';
+
+/**
+ * Processed image from Gemini
+ */
+export interface PipelineProcessedImage {
+  url: string;
+  storagePath: string;
+  source: 'gemini' | 'upload';
+  colorPalette?: string[];
+  generatedAt: Date;
+}
+
+/**
+ * Pipeline settings
+ */
+export interface PipelineSettings {
+  quality: QualityLevel;
+  printerType: PrinterType;
+  format: OutputFormat;
+}
+
+/**
+ * Pipeline document (frontend version)
+ */
+export interface Pipeline {
+  id: string;
+  userId: string;
+  status: PipelineStatus;
+
+  // Input images
+  inputImages: Array<{
+    url: string;
+    storagePath: string;
+    uploadedAt: Date;
+  }>;
+
+  // Gemini-generated images
+  meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
+  textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+
+  // Meshy mesh generation
+  meshyMeshTaskId?: string;
+  meshUrl?: string;
+  meshStoragePath?: string;
+  meshDownloadFiles?: DownloadFile[];
+
+  // Meshy texture generation
+  meshyTextureTaskId?: string;
+  texturedModelUrl?: string;
+  texturedModelStoragePath?: string;
+  texturedDownloadFiles?: DownloadFile[];
+
+  // Credits
+  creditsCharged: {
+    mesh: number;
+    texture: number;
+  };
+
+  // Settings
+  settings: PipelineSettings;
+
+  // Error
+  error?: string;
+  errorStep?: PipelineStatus;
+
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt?: Date;
+}
+
+// Pipeline API request/response types
+export interface CreatePipelineRequest {
+  imageUrls: string[];
+  settings?: Partial<PipelineSettings>;
+}
+
+export interface CreatePipelineResponse {
+  pipelineId: string;
+  status: PipelineStatus;
+}
+
+export interface GeneratePipelineImagesResponse {
+  status: PipelineStatus;
+  meshImages: Record<PipelineMeshAngle, PipelineProcessedImage>;
+  textureImages: Record<PipelineTextureAngle, PipelineProcessedImage>;
+}
+
+export interface RegeneratePipelineImageRequest {
+  pipelineId: string;
+  viewType: 'mesh' | 'texture';
+  angle: string;
+}
+
+export interface StartPipelineMeshResponse {
+  status: PipelineStatus;
+  meshyTaskId: string;
+  creditsCharged: number;
+}
+
+export interface CheckPipelineStatusResponse {
+  status: PipelineStatus;
+  progress?: number;
+  meshUrl?: string;
+  texturedModelUrl?: string;
+  downloadFiles?: DownloadFile[];
+  error?: string;
+}
+
+export interface StartPipelineTextureResponse {
+  status: PipelineStatus;
+  meshyTextureTaskId: string;
+  creditsCharged: number;
+}

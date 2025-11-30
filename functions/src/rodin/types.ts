@@ -7,6 +7,9 @@
  * - format: 'stl' as the standard 3D printing format
  */
 
+// Re-export provider type for convenience
+export type { ProviderType } from '../providers/types';
+
 // Mesh mode determines face type
 export type MeshMode = 'Raw' | 'Quad';
 
@@ -161,6 +164,7 @@ export interface JobSettings {
   printerType: PrinterType;
   inputMode: InputMode;
   imageCount: number;
+  provider?: import('../providers/types').ProviderType;  // 'rodin' | 'meshy'
 }
 
 // Download file from Rodin API
@@ -178,10 +182,18 @@ export interface JobDocument {
   viewAngles?: ViewAngle[];       // Corresponding angles
   outputModelUrl: string | null;
   downloadFiles?: DownloadFile[]; // All available download files (GLB, textures, etc.)
+
+  // Provider abstraction fields
+  provider?: import('../providers/types').ProviderType;  // 'rodin' | 'meshy'
+  providerTaskId?: string;        // Unified task ID
+  providerSubscriptionKey?: string; // For Rodin polling
+
+  // Legacy Rodin fields (kept for backwards compatibility)
   rodinTaskId: string;            // Legacy: kept for backwards compat (= taskUuid)
   rodinSubscriptionKey: string;
   rodinTaskUuid?: string;         // Main task UUID (required for download API)
   rodinJobUuids?: string[];       // Individual job UUIDs (for future API features)
+
   settings: JobSettings;
   error: string | null;
   createdAt: FirebaseFirestore.Timestamp;
@@ -274,4 +286,120 @@ export interface SessionDocument {
   // Timestamps
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
+}
+
+// ============================================
+// Pipeline Types (New Simplified Generation Flow)
+// ============================================
+
+/**
+ * Pipeline Status for new simplified 3D generation workflow
+ * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
+ */
+export type PipelineStatus =
+  | 'draft'              // Initial state, user uploading images
+  | 'generating-images'  // Gemini generating 6 views (real-time)
+  | 'images-ready'       // 6 images ready for preview
+  | 'generating-mesh'    // Meshy generating mesh (no texture)
+  | 'mesh-ready'         // Mesh complete, texture optional
+  | 'generating-texture' // Meshy generating texture
+  | 'completed'          // All done
+  | 'failed';            // Error occurred
+
+/**
+ * Credit costs for pipeline workflow
+ * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ */
+export const PIPELINE_CREDIT_COSTS = {
+  IMAGE_PROCESSING: 0,   // Gemini processing is free (absorbed cost)
+  MESH_GENERATION: 5,    // Meshy mesh-only generation
+  TEXTURE_GENERATION: 10, // Meshy texture/retexture
+} as const;
+
+/**
+ * Processed image from Gemini
+ */
+export interface PipelineProcessedImage {
+  url: string;
+  storagePath: string;
+  source: 'gemini' | 'upload';  // AI-generated or user-uploaded
+  colorPalette?: string[];       // 7 HEX colors for H2C mesh images
+  generatedAt: FirebaseFirestore.Timestamp;
+}
+
+/**
+ * View types for pipeline images
+ */
+export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
+export type PipelineTextureAngle = 'front' | 'back';
+
+/**
+ * Pipeline settings
+ */
+export interface PipelineSettings {
+  quality: PrintQuality;
+  printerType: PrinterType;
+  format: OutputFormat;
+}
+
+/**
+ * Pipeline document for new simplified 3D generation workflow
+ *
+ * Flow:
+ * 1. User uploads 1+ images
+ * 2. Gemini generates 6 images:
+ *    - 4 mesh-optimized (7-color H2C style) for front/back/left/right
+ *    - 2 texture-ready (full color) for front/back
+ * 3. User previews images, can regenerate individual views
+ * 4. Meshy Multi-Image-to-3D generates mesh (5 credits)
+ * 5. User previews mesh
+ * 6. Optional: Meshy Retexture generates texture (10 credits)
+ * 7. Final model ready with download options
+ */
+export interface PipelineDocument {
+  userId: string;
+  status: PipelineStatus;
+
+  // Step 1: User-uploaded input images
+  inputImages: Array<{
+    url: string;
+    storagePath: string;
+    uploadedAt: FirebaseFirestore.Timestamp;
+  }>;
+
+  // Step 2-3: Gemini-generated images
+  // 4 mesh-optimized images (7-color simplified for 3D mesh)
+  meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
+  // 2 texture-ready images (full color for texture mapping)
+  textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+
+  // Step 4-5: Meshy mesh generation
+  meshyMeshTaskId?: string;
+  meshUrl?: string;
+  meshStoragePath?: string;
+  meshDownloadFiles?: DownloadFile[];
+
+  // Step 6-7: Meshy texture generation (optional)
+  meshyTextureTaskId?: string;
+  texturedModelUrl?: string;
+  texturedModelStoragePath?: string;
+  texturedDownloadFiles?: DownloadFile[];
+
+  // Credit tracking
+  creditsCharged: {
+    mesh: number;     // 5 when mesh generated
+    texture: number;  // 10 when texture generated
+  };
+
+  // Generation settings
+  settings: PipelineSettings;
+
+  // Error handling
+  error?: string;
+  errorStep?: PipelineStatus;
+
+  // Timestamps
+  createdAt: FirebaseFirestore.Timestamp;
+  updatedAt: FirebaseFirestore.Timestamp;
+  completedAt?: FirebaseFirestore.Timestamp;
 }

@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.getSession = exports.createSession = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.getSession = exports.createSession = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -67,4 +67,8 @@ Object.defineProperty(exports, "uploadCustomView", { enumerable: true, get: func
 var model_1 = require("./handlers/model");
 Object.defineProperty(exports, "startSessionModelGeneration", { enumerable: true, get: function () { return model_1.startSessionModelGeneration; } });
 Object.defineProperty(exports, "checkSessionModelStatus", { enumerable: true, get: function () { return model_1.checkSessionModelStatus; } });
+// H2C 7-color optimization for Bambu Lab H2C printer
+var h2c_1 = require("./handlers/h2c");
+Object.defineProperty(exports, "optimizeColorsForH2C", { enumerable: true, get: function () { return h2c_1.optimizeColorsForH2C; } });
+Object.defineProperty(exports, "uploadEditedH2CImage", { enumerable: true, get: function () { return h2c_1.uploadEditedH2CImage; } });
 //# sourceMappingURL=index.js.map

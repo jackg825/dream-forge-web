@@ -11,6 +11,7 @@ import type {
   ViewAngle,
   QualityLevel,
   PrinterType,
+  ModelProvider,
 } from '@/types';
 import { CREDIT_COSTS } from '@/types';
 
@@ -32,6 +33,7 @@ export function useQuickGenerate() {
   // Settings (always visible with smart defaults)
   const [quality, setQuality] = useState<QualityLevel>('standard');
   const [printerType, setPrinterType] = useState<PrinterType>('fdm');
+  const [provider, setProvider] = useState<ModelProvider>('meshy');
 
   // Handle image changes from MultiImageUploader
   const handleImagesChange = useCallback((images: UploadedImage[], mode: InputMode) => {
@@ -91,6 +93,7 @@ export function useQuickGenerate() {
       printerType,
       inputMode,
       generateAngles: inputMode === 'ai-generated' ? selectedAngles : undefined,
+      provider,
     });
 
     // Redirect to viewer on success
@@ -110,6 +113,7 @@ export function useQuickGenerate() {
     printerType,
     inputMode,
     selectedAngles,
+    provider,
   ]);
 
   // Reset all state
@@ -119,6 +123,7 @@ export function useQuickGenerate() {
     setSelectedAngles(['back', 'left', 'right']);
     setQuality('standard');
     setPrinterType('fdm');
+    setProvider('meshy');
   }, []);
 
   return {
@@ -143,6 +148,8 @@ export function useQuickGenerate() {
     setQuality,
     printerType,
     setPrinterType,
+    provider,
+    setProvider,
 
     // Generation state
     generating,

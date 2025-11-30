@@ -3,6 +3,8 @@ import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createRodinClient } from '../rodin/client';
 import { createGeminiClient } from '../gemini/client';
+import { createProvider, isValidProvider } from '../providers/factory';
+import type { ProviderType } from '../providers/types';
 import { deductCredits, incrementGenerationCount } from '../utils/credits';
 // import { refundCredits } from '../utils/credits'; // Auto-refund temporarily disabled
 import type {
@@ -11,7 +13,6 @@ import type {
   QualityLevel,
   OutputFormat,
   PrintQuality,
-  MeshMode,
   ViewAngle,
   PrinterType,
   InputMode,
@@ -37,6 +38,7 @@ interface GenerateModelData {
   inputMode?: InputMode;          // single | multi | ai-generated
   generateAngles?: ViewAngle[];   // Angles to generate via Gemini
   format?: OutputFormat;
+  provider?: ProviderType;        // 'rodin' | 'meshy' (default: 'meshy')
 }
 
 interface CheckJobStatusData {
@@ -61,16 +63,16 @@ interface RetryFailedJobData {
  * 3. Deduct credits
  * 4. Create job document
  * 5. Prepare images (download uploaded or generate via Gemini)
- * 6. Call Rodin API with multi-image support
- * 7. Update job with Rodin task ID
+ * 6. Call provider API (Rodin or Meshy)
+ * 7. Update job with provider task ID
  * 8. Return job ID to client
  */
 export const generateModel = functions
   .region('asia-east1')
   .runWith({
-    timeoutSeconds: 120,  // Increased for Gemini + Rodin
+    timeoutSeconds: 120,  // Increased for Gemini + provider API
     memory: '1GB',        // Increased for image processing
-    secrets: ['RODIN_API_KEY', 'GEMINI_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'GEMINI_API_KEY', 'MESHY_API_KEY'],
   })
   .https.onCall(async (data: GenerateModelData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
@@ -90,6 +92,7 @@ export const generateModel = functions
       printerType = 'fdm',
       inputMode = 'single',
       generateAngles,
+      provider = 'meshy',  // Default to Meshy-6
     } = data;
 
     // Validate input
@@ -97,6 +100,14 @@ export const generateModel = functions
       throw new functions.https.HttpsError(
         'invalid-argument',
         'Image URL is required'
+      );
+    }
+
+    // Validate provider
+    if (!isValidProvider(provider)) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Invalid provider. Use: rodin, meshy'
       );
     }
 
@@ -158,6 +169,7 @@ export const generateModel = functions
       printerType,
       inputMode,
       imageCount: 1, // Will be updated after image processing
+      provider,      // Track which provider is used
     };
 
     const jobDoc: Omit<JobDocument, 'createdAt' | 'completedAt'> & {
@@ -171,6 +183,11 @@ export const generateModel = functions
       inputImageUrls: [imageUrl],
       viewAngles: ['front'],
       outputModelUrl: null,
+      // Provider abstraction fields
+      provider,
+      providerTaskId: '',
+      providerSubscriptionKey: '',
+      // Legacy Rodin fields (for backwards compatibility)
       rodinTaskId: '',
       rodinSubscriptionKey: '',
       settings: jobSettings,
@@ -258,38 +275,43 @@ export const generateModel = functions
         'settings.imageCount': imageBuffers.length,
       });
 
-      // 6. Update status to generating-model before calling Rodin API
+      // 6. Update status to generating-model before calling provider API
       await jobRef.update({ status: 'generating-model' });
 
-      // Call Rodin API with multi-image support
-      // Use GLB format for preview with PBR materials (matching job.settings.format)
-      // Use Raw mesh mode to support higher poly counts (up to 1M vs Quad's 200K limit)
-      const rodinClient = createRodinClient();
-      const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateModelMulti(
+      // Call provider API (Rodin or Meshy)
+      const generationProvider = createProvider(provider);
+      const generationResult = await generationProvider.generateFromMultipleImages(
         imageBuffers,
         {
-          tier: 'Gen-2',
-          quality: quality as PrintQuality | QualityLevel,
-          format: 'glb' as OutputFormat,  // GLB for preview with textures
-          meshMode: 'Raw' as MeshMode,    // Raw mode supports higher poly counts
-          printerType,
-          conditionMode: imageBuffers.length > 1 ? 'concat' : undefined,
+          quality: quality as 'draft' | 'standard' | 'fine',
+          format: 'glb',
+          enableTexture: true,
+          enablePBR: printerType !== 'fdm',
         }
       );
 
-      // 7. Update job with all Rodin IDs for flexibility (status already 'generating-model')
-      await jobRef.update({
-        rodinTaskId: taskUuid,           // Legacy field for backwards compat
-        rodinTaskUuid: taskUuid,         // Main UUID (required for download API)
-        rodinJobUuids: jobUuids,         // Individual job UUIDs
-        rodinSubscriptionKey: subscriptionKey,
-      });
+      // 7. Update job with provider task IDs
+      const updateData: Record<string, unknown> = {
+        // Provider abstraction fields
+        providerTaskId: generationResult.taskId,
+        providerSubscriptionKey: generationResult.subscriptionKey || '',
+      };
+
+      // Also update legacy Rodin fields if using Rodin (for backwards compatibility)
+      if (provider === 'rodin') {
+        updateData.rodinTaskId = generationResult.taskId;
+        updateData.rodinTaskUuid = generationResult.taskId;
+        updateData.rodinJobUuids = generationResult.jobUuids || [];
+        updateData.rodinSubscriptionKey = generationResult.subscriptionKey || '';
+      }
+
+      await jobRef.update(updateData);
 
       functions.logger.info('Generation started', {
         jobId,
         userId,
-        taskUuid,
-        jobUuids,
+        provider,
+        taskId: generationResult.taskId,
         quality,
         printerType,
         inputMode,
@@ -333,7 +355,7 @@ export const checkJobStatus = functions
   .runWith({
     timeoutSeconds: 540, // 9 minutes for model download/upload
     memory: '1GB',
-    secrets: ['RODIN_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
   })
   .https.onCall(async (data: CheckJobStatusData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
@@ -390,26 +412,30 @@ export const checkJobStatus = functions
       };
     }
 
-    // 2. Poll Rodin status (API changed: only needs subscriptionKey)
-    const rodinClient = createRodinClient();
-    const rodinStatus = await rodinClient.checkStatus(job.rodinSubscriptionKey);
+    // 2. Determine provider and poll status
+    // Backwards compatibility: jobs without provider field are Rodin jobs
+    const provider = job.provider || job.settings?.provider || 'rodin';
+    const generationProvider = createProvider(provider as ProviderType);
 
-    functions.logger.info('Rodin status polled', {
+    // Get task ID and subscription key (use new fields with fallback to legacy)
+    const taskId = job.providerTaskId || job.rodinTaskUuid || job.rodinTaskId;
+    const subscriptionKey = job.providerSubscriptionKey || job.rodinSubscriptionKey;
+
+    const statusResult = await generationProvider.checkStatus(taskId, subscriptionKey);
+
+    functions.logger.info('Provider status polled', {
       jobId,
-      status: rodinStatus.status,
-      jobUuid: rodinStatus.jobUuid,
+      provider,
+      status: statusResult.status,
+      progress: statusResult.progress,
     });
 
-    // 3. Handle completion (status is 'Done' per API docs)
-    if (rodinStatus.status === 'Done') {
+    // 3. Handle completion
+    if (statusResult.status === 'completed') {
       // Update status to downloading-model
       if (job.status !== 'downloading-model') {
         await jobRef.update({ status: 'downloading-model' });
       }
-
-      // Get download URLs using the main task UUID
-      // Use rodinTaskUuid (new field) with fallback to rodinTaskId (legacy field)
-      const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
 
       // Track download retry attempts (frontend polls every ~5 seconds)
       const downloadRetryCount = (job.downloadRetryCount || 0) + 1;
@@ -417,22 +443,21 @@ export const checkJobStatus = functions
 
       functions.logger.info('Attempting download', {
         jobId,
-        rodinTaskUuid: job.rodinTaskUuid,
-        rodinTaskId: job.rodinTaskId,
-        usingUuid: downloadTaskUuid,
+        provider,
+        taskId,
         downloadRetryCount,
         maxDownloadRetries,
       });
 
       try {
-        // Try to get download URLs (1 attempt per poll, but wait for required format)
-        // Pass the required format so it retries if only preview.webp is available
-        const downloadList = await rodinClient.getDownloadUrls(
-          downloadTaskUuid,
-          1,    // maxRetries per poll
-          0,    // retryDelayMs (no delay, handled by polling)
-          job.settings.format  // requiredFormat: wait for .glb/.obj/etc
+        // Get download URLs from provider
+        const downloadResult = await generationProvider.getDownloadUrls(
+          taskId,
+          job.settings.format  // requiredFormat
         );
+
+        // Convert to legacy format for consistency
+        const downloadList = downloadResult.files.map(f => ({ url: f.url, name: f.name }));
 
         // Find the model file with the requested format (should exist now)
         const modelFile = downloadList.find((file) =>
@@ -444,8 +469,8 @@ export const checkJobStatus = functions
           throw new Error(`No ${job.settings.format} file in download list`);
         }
 
-        // Download model from Rodin
-        const modelBuffer = await rodinClient.downloadModel(modelFile.url);
+        // Download model from provider
+        const modelBuffer = await generationProvider.downloadModel(modelFile.url);
 
         // Update status to uploading-storage
         await jobRef.update({ status: 'uploading-storage' });
@@ -538,7 +563,7 @@ export const checkJobStatus = functions
     }
 
     // 4. Handle failure
-    if (rodinStatus.status === 'Failed') {
+    if (statusResult.status === 'failed') {
       await jobRef.update({
         status: 'failed',
         error: 'Generation failed',
@@ -556,12 +581,13 @@ export const checkJobStatus = functions
       };
     }
 
-    // 5. Still processing (status is 'Waiting' or 'Generating')
-    // Map Rodin statuses to our granular internal status
-    const mappedStatus = rodinStatus.status === 'Waiting' ? 'pending' : 'generating-model';
+    // 5. Still processing
+    // Map provider status to our granular internal status
+    const mappedStatus = statusResult.status === 'pending' ? 'pending' : 'generating-model';
 
     return {
       status: mappedStatus,
+      progress: statusResult.progress,  // Meshy provides 0-100 progress
     };
   });
 
@@ -826,7 +852,7 @@ export const retryFailedJob = functions
   .runWith({
     timeoutSeconds: 540,
     memory: '1GB',
-    secrets: ['RODIN_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
   })
   .https.onCall(async (data: RetryFailedJobData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
@@ -876,18 +902,22 @@ export const retryFailedJob = functions
       );
     }
 
-    // Need rodinTaskUuid to retry
-    const downloadTaskUuid = job.rodinTaskUuid || job.rodinTaskId;
-    if (!downloadTaskUuid) {
+    // Need task ID to retry
+    const taskId = job.providerTaskId || job.rodinTaskUuid || job.rodinTaskId;
+    if (!taskId) {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        'Job has no Rodin task UUID - cannot retry'
+        'Job has no provider task ID - cannot retry'
       );
     }
 
+    // Determine provider (backwards compat: default to rodin for old jobs)
+    const provider = job.provider || job.settings?.provider || 'rodin';
+
     functions.logger.info('Retrying failed job', {
       jobId,
-      downloadTaskUuid,
+      provider,
+      taskId,
       previousError: job.error,
     });
 
@@ -898,15 +928,15 @@ export const retryFailedJob = functions
     });
 
     try {
-      const rodinClient = createRodinClient();
+      const generationProvider = createProvider(provider as ProviderType);
 
-      // Try to get download URLs (with retry logic, wait for required format)
-      const downloadList = await rodinClient.getDownloadUrls(
-        downloadTaskUuid,
-        5,     // maxRetries
-        3000,  // retryDelayMs
+      // Try to get download URLs
+      const downloadResult = await generationProvider.getDownloadUrls(
+        taskId,
         job.settings.format  // requiredFormat
       );
+
+      const downloadList = downloadResult.files.map(f => ({ url: f.url, name: f.name }));
 
       // Find the model file (should exist now)
       const modelFile = downloadList.find((file) =>
@@ -917,8 +947,8 @@ export const retryFailedJob = functions
         throw new Error(`No ${job.settings.format} file in download list`);
       }
 
-      // Download model from Rodin
-      const modelBuffer = await rodinClient.downloadModel(modelFile.url);
+      // Download model from provider
+      const modelBuffer = await generationProvider.downloadModel(modelFile.url);
 
       // Update status to uploading-storage
       await jobRef.update({ status: 'uploading-storage' });

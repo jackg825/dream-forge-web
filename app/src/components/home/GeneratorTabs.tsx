@@ -3,11 +3,16 @@
 import { useTranslations } from 'next-intl';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { QuickGenerateTab } from './QuickGenerateTab';
 import { AdvancedFlowPreview } from './AdvancedFlowPreview';
 import { H2COptimizeTab } from '@/components/h2c';
+import { PipelineFlow } from '@/components/generate';
 import { useQuickGenerate } from '@/hooks/useQuickGenerate';
-import { Zap, Sparkles, Palette } from 'lucide-react';
+import { Zap, Sparkles, Palette, Wand2 } from 'lucide-react';
+
+// Feature flag for legacy modes
+const LEGACY_DISABLED = true;
 
 interface GeneratorTabsProps {
   onNoCredits: () => void;
@@ -59,26 +64,39 @@ export function GeneratorTabs({ onNoCredits, className }: GeneratorTabsProps) {
   };
 
   return (
-    <Tabs defaultValue="quick" className={className}>
+    <Tabs defaultValue="pipeline" className={className}>
       {/* Tab triggers - centered */}
       <div className="flex justify-center mb-6">
-        <TabsList className="grid w-full max-w-lg grid-cols-3">
-          <TabsTrigger value="quick" className="gap-2">
+        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+          {/* New Pipeline tab - default */}
+          <TabsTrigger value="pipeline" className="gap-2">
+            <Wand2 className="h-4 w-4" />
+            新流程
+            <Badge variant="default" className="ml-1 text-xs">推薦</Badge>
+          </TabsTrigger>
+
+          {/* Legacy tabs - disabled */}
+          <TabsTrigger value="quick" className="gap-2" disabled={LEGACY_DISABLED}>
             <Zap className="h-4 w-4" />
             {t('quick')}
           </TabsTrigger>
-          <TabsTrigger value="h2c" className="gap-2">
+          <TabsTrigger value="h2c" className="gap-2" disabled={LEGACY_DISABLED}>
             <Palette className="h-4 w-4" />
             {t('h2c')}
           </TabsTrigger>
-          <TabsTrigger value="advanced" className="gap-2">
+          <TabsTrigger value="advanced" className="gap-2" disabled={LEGACY_DISABLED}>
             <Sparkles className="h-4 w-4" />
             {t('advanced')}
           </TabsTrigger>
         </TabsList>
       </div>
 
-      {/* Quick Generate tab content */}
+      {/* New Pipeline Flow - Default */}
+      <TabsContent value="pipeline">
+        <PipelineFlow onNoCredits={onNoCredits} />
+      </TabsContent>
+
+      {/* Quick Generate tab content (legacy) */}
       <TabsContent value="quick">
         <Card>
           <CardContent className="pt-6">
@@ -105,7 +123,7 @@ export function GeneratorTabs({ onNoCredits, className }: GeneratorTabsProps) {
         </Card>
       </TabsContent>
 
-      {/* H2C 7-Color Optimization tab content */}
+      {/* H2C 7-Color Optimization tab content (legacy) */}
       <TabsContent value="h2c">
         <Card>
           <CardContent className="pt-6">
@@ -114,7 +132,7 @@ export function GeneratorTabs({ onNoCredits, className }: GeneratorTabsProps) {
         </Card>
       </TabsContent>
 
-      {/* Advanced Flow tab content */}
+      {/* Advanced Flow tab content (legacy) */}
       <TabsContent value="advanced">
         <AdvancedFlowPreview user={user} />
       </TabsContent>

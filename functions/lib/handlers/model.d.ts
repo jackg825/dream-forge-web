@@ -2,7 +2,7 @@
  * Model Generation Cloud Functions for Multi-Step Flow
  *
  * Handles 3D model generation from session view images:
- * - startSessionModelGeneration: Start Rodin generation using session views
+ * - startSessionModelGeneration: Start generation using session views
  * - checkSessionModelStatus: Poll status and update session when complete
  */
 import * as functions from 'firebase-functions/v1';

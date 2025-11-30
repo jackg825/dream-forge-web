@@ -1,0 +1,109 @@
+"use strict";
+/**
+ * Provider Factory
+ *
+ * Factory pattern for creating 3D generation provider instances.
+ * Uses singleton pattern to reuse provider instances.
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ProviderFactory = void 0;
+exports.createProvider = createProvider;
+exports.isValidProvider = isValidProvider;
+const functions = __importStar(require("firebase-functions"));
+const client_1 = require("./rodin/client");
+const client_2 = require("./meshy/client");
+/**
+ * Factory for creating provider instances
+ */
+class ProviderFactory {
+    static instances = new Map();
+    /**
+     * Get provider instance (singleton per type)
+     */
+    static getProvider(type) {
+        if (!this.instances.has(type)) {
+            this.instances.set(type, this.createProvider(type));
+        }
+        return this.instances.get(type);
+    }
+    /**
+     * Create new provider instance
+     */
+    static createProvider(type) {
+        switch (type) {
+            case 'rodin':
+                return this.createRodinProvider();
+            case 'meshy':
+                return this.createMeshyProvider();
+            default:
+                throw new functions.https.HttpsError('invalid-argument', `Unknown provider type: ${type}`);
+        }
+    }
+    static createRodinProvider() {
+        const apiKey = process.env.RODIN_API_KEY;
+        if (!apiKey) {
+            throw new functions.https.HttpsError('failed-precondition', 'Rodin API key not configured');
+        }
+        return new client_1.RodinProvider(apiKey);
+    }
+    static createMeshyProvider() {
+        const apiKey = process.env.MESHY_API_KEY;
+        if (!apiKey) {
+            throw new functions.https.HttpsError('failed-precondition', 'Meshy API key not configured');
+        }
+        return new client_2.MeshyProvider(apiKey);
+    }
+    /**
+     * Clear cached instances (for testing)
+     */
+    static clearInstances() {
+        this.instances.clear();
+    }
+}
+exports.ProviderFactory = ProviderFactory;
+/**
+ * Helper function to get provider instance
+ */
+function createProvider(type = 'meshy') {
+    return ProviderFactory.getProvider(type);
+}
+/**
+ * Validate provider type
+ */
+function isValidProvider(provider) {
+    return provider === 'rodin' || provider === 'meshy';
+}
+//# sourceMappingURL=factory.js.map
