@@ -76,6 +76,25 @@
     },
     "credit": "credit",
     "credits": "credits",
+    "hero": {
+      "tagline": "One Photo. One Model. One Click Download.",
+      "subtitle": "Transform any photo into a stunning 3D model. Perfect for 3D printing, gaming, or digital art.",
+      "ctaNew": "Get 3 Free Credits",
+      "ctaReturning": "Create New Model",
+      "ctaSecondary": "See How It Works"
+    },
+    "tabs": {
+      "quick": "Quick Generate",
+      "advanced": "Advanced"
+    },
+    "advancedPreview": {
+      "title": "Advanced Generation Flow",
+      "description": "Get more control over your 3D model generation",
+      "benefit1": "Preview and edit AI-generated views",
+      "benefit2": "Replace views with your own photos",
+      "benefit3": "Higher accuracy for complex objects",
+      "startButton": "Start Advanced Flow"
+    },
     "features": {
       "aiPowered": {
         "title": "AI-Powered",

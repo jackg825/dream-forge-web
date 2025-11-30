@@ -76,6 +76,25 @@
     },
     "credit": "點",
     "credits": "點",
+    "hero": {
+      "tagline": "一張照片，一個模型，一鍵下載",
+      "subtitle": "上傳照片，AI 將為您打造精美的 3D 模型。適用於 3D 列印、遊戲或數位藝術創作。",
+      "ctaNew": "免費獲得 3 點",
+      "ctaReturning": "建立新模型",
+      "ctaSecondary": "了解更多"
+    },
+    "tabs": {
+      "quick": "快速生成",
+      "advanced": "進階"
+    },
+    "advancedPreview": {
+      "title": "進階生成流程",
+      "description": "更精細地控制您的 3D 模型生成",
+      "benefit1": "預覽與編輯 AI 生成的視角",
+      "benefit2": "用自己的照片替換視角",
+      "benefit3": "複雜物件獲得更高精確度",
+      "startButton": "開始進階流程"
+    },
     "features": {
       "aiPowered": {
         "title": "AI 驅動",
