@@ -25,6 +25,7 @@
   },
   "nav": {
     "home": "首頁",
+    "generate": "生成模型",
     "dashboard": "儀表板",
     "history": "歷史紀錄",
     "previewTool": "預覽工具",
@@ -401,6 +402,187 @@
     "unauthorized": "請先登入。",
     "notFound": "找不到資源。",
     "networkError": "網路錯誤，請檢查您的連線。"
+  },
+  "generate": {
+    "title": "建立 3D 模型",
+    "subtitle": "上傳照片，將其轉換為精美的 3D 模型"
+  },
+  "landing": {
+    "hero": {
+      "badge": "AI 驅動 3D 生成",
+      "title1": "將任何照片轉換為",
+      "title2": "精美 3D 模型",
+      "subtitle": "一張照片，一個模型，一鍵下載。適用於 3D 列印、遊戲或數位藝術創作。",
+      "cta": "免費開始創作",
+      "ctaSecondary": "查看範例",
+      "stat1": "免費點數起步",
+      "stat2": "分鐘生成時間",
+      "stat3": "種匯出格式"
+    },
+    "showcase": {
+      "badge": "實際效果",
+      "title": "照片轉 3D 魔法",
+      "subtitle": "拖動滑桿，查看照片到 3D 模型的轉變",
+      "categories": {
+        "collectible": "收藏品",
+        "decor": "居家裝飾",
+        "product": "產品",
+        "art": "藝術雕塑"
+      },
+      "examples": {
+        "figurine": {
+          "before": "原始公仔照片",
+          "after": "3D 渲染公仔",
+          "description": "精細公仔轉換為 3D，保留完整材質"
+        },
+        "vase": {
+          "before": "原始陶瓷花瓶照片",
+          "after": "3D 渲染陶瓷花瓶",
+          "description": "優雅陶瓷花瓶，可直接 3D 列印"
+        },
+        "sneaker": {
+          "before": "原始球鞋照片",
+          "after": "3D 渲染球鞋",
+          "description": "產品攝影轉換為精細 3D 模型"
+        },
+        "sculpture": {
+          "before": "原始雕塑照片",
+          "after": "3D 渲染雕塑",
+          "description": "藝術雕塑完整呈現於 3D"
+        }
+      }
+    },
+    "howItWorks": {
+      "badge": "簡單流程",
+      "title": "如何使用",
+      "subtitle": "三個簡單步驟，將照片轉換為 3D 模型",
+      "timeLabel": "分鐘平均生成時間",
+      "steps": {
+        "upload": {
+          "title": "上傳照片",
+          "description": "上傳任何物品的照片。清晰、光線充足的圖片效果最佳。"
+        },
+        "process": {
+          "title": "AI 處理",
+          "description": "AI 分析您的照片，自動生成精細的 3D 模型。"
+        },
+        "download": {
+          "title": "下載使用",
+          "description": "以 STL、OBJ、GLB 或 FBX 格式下載模型，可直接列印或編輯。"
+        }
+      }
+    },
+    "features": {
+      "badge": "強大功能",
+      "title": "您所需要的一切",
+      "subtitle": "為創作者設計的專業級 3D 生成工具",
+      "items": {
+        "fast": {
+          "title": "閃電快速",
+          "description": "約 2 分鐘即可獲得 3D 模型。無需等待，無需複雜軟體。",
+          "subtext": "由先進 AI 驅動"
+        },
+        "formats": {
+          "title": "多種格式",
+          "description": "支援 STL、OBJ、GLB、FBX 或 USDZ 匯出，相容任何 3D 軟體或切片器。"
+        },
+        "printing": {
+          "title": "可直接列印",
+          "description": "模型針對 3D 列印優化，具備適當的網格品質和流形幾何。"
+        },
+        "quality": {
+          "title": "品質選項",
+          "description": "根據需求和時間選擇草稿、標準或精細品質。"
+        },
+        "secure": {
+          "title": "安全私密",
+          "description": "照片安全處理，生成後即刪除。您的資料屬於您。"
+        },
+        "global": {
+          "title": "多語系支援",
+          "description": "提供英文和繁體中文，更多語言即將推出。"
+        }
+      }
+    },
+    "useCases": {
+      "badge": "適用對象",
+      "title": "為創作者打造",
+      "subtitle": "無論您是業餘愛好者還是專業人士，DreamForge 都能幫助您實現創意",
+      "items": {
+        "hobbyist": {
+          "title": "愛好者",
+          "description": "將收藏品和紀念品轉換為 3D 模型，用於保存或重製"
+        },
+        "maker": {
+          "title": "3D 列印玩家",
+          "description": "從參考照片創建自訂模型，用於下一個列印專案"
+        },
+        "artist": {
+          "title": "數位藝術家",
+          "description": "以照片轉 3D 作為 3D 藝術和設計的起點"
+        },
+        "gamer": {
+          "title": "遊戲開發者",
+          "description": "快速從照片生成 3D 素材，用於遊戲開發和原型製作"
+        },
+        "educator": {
+          "title": "教育工作者",
+          "description": "創建真實物品的 3D 模型，用於互動學習體驗"
+        },
+        "seller": {
+          "title": "電商賣家",
+          "description": "生成 3D 產品視圖，提升線上購物體驗"
+        }
+      }
+    },
+    "pricing": {
+      "badge": "簡單定價",
+      "title": "按需付費",
+      "subtitle": "免費開始，3 點起步。需要時再購買更多。",
+      "popular": "最受歡迎",
+      "perPack": "/ 套餐",
+      "credits": "點數",
+      "note": "點數永不過期，無需訂閱。",
+      "plans": {
+        "free": {
+          "name": "免費方案",
+          "freeFeature1": "3 點起步",
+          "freeFeature2": "所有匯出格式",
+          "freeFeature3": "基本支援",
+          "cta": "免費開始"
+        },
+        "starter": {
+          "name": "入門套餐",
+          "starterFeature1": "20 點",
+          "starterFeature2": "所有匯出格式",
+          "starterFeature3": "優先處理",
+          "starterFeature4": "電郵支援",
+          "cta": "購買入門套餐"
+        },
+        "pro": {
+          "name": "專業套餐",
+          "proFeature1": "80 點",
+          "proFeature2": "所有匯出格式",
+          "proFeature3": "優先處理",
+          "proFeature4": "優先支援",
+          "cta": "購買專業套餐"
+        }
+      }
+    },
+    "finalCta": {
+      "badge": "準備好了嗎？",
+      "title": "立即開始轉換您的照片",
+      "subtitle": "加入已在使用 DreamForge 將創意變為 3D 現實的創作者行列",
+      "cta": "建立您的第一個模型",
+      "trust": "無需信用卡 • 3 點免費開始"
+    },
+    "footer": {
+      "generate": "生成模型",
+      "preview": "預覽工具",
+      "dashboard": "儀表板",
+      "pricing": "定價",
+      "rights": "版權所有。"
+    }
   },
   "create": {
     "title": "進階流程",

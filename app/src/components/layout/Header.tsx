@@ -57,7 +57,8 @@ export function Header() {
   }, []);
 
   const navItems = [
-    { href: '/create', labelKey: 'nav.advancedFlow', icon: Sparkles, requireAuth: true },
+    { href: '/generate', labelKey: 'nav.generate', icon: Sparkles, showAlways: true },
+    { href: '/create', labelKey: 'nav.advancedFlow', icon: Palette, requireAuth: true },
     { href: '/preview', labelKey: 'nav.previewTool', icon: Eye, showAlways: true },
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, requireAuth: true },
     { href: '/dashboard/history', labelKey: 'nav.history', icon: History, requireAuth: true },

@@ -25,6 +25,7 @@
   },
   "nav": {
     "home": "Home",
+    "generate": "Generate",
     "dashboard": "Dashboard",
     "history": "History",
     "previewTool": "Preview Tool",
@@ -401,6 +402,187 @@
     "unauthorized": "Please sign in first.",
     "notFound": "Resource not found.",
     "networkError": "Network error. Please check your connection."
+  },
+  "generate": {
+    "title": "Create 3D Model",
+    "subtitle": "Upload a photo and transform it into a stunning 3D model"
+  },
+  "landing": {
+    "hero": {
+      "badge": "AI-Powered 3D Generation",
+      "title1": "Transform Any Photo Into",
+      "title2": "Stunning 3D Models",
+      "subtitle": "One photo. One model. One click to download. Perfect for 3D printing, gaming, or digital art.",
+      "cta": "Start Creating Free",
+      "ctaSecondary": "See Examples",
+      "stat1": "Free credits to start",
+      "stat2": "Minutes to generate",
+      "stat3": "Export formats"
+    },
+    "showcase": {
+      "badge": "See It In Action",
+      "title": "Photo to 3D Magic",
+      "subtitle": "Drag the slider to see the transformation from photo to 3D model",
+      "categories": {
+        "collectible": "Collectibles",
+        "decor": "Home Decor",
+        "product": "Products",
+        "art": "Art & Sculpture"
+      },
+      "examples": {
+        "figurine": {
+          "before": "Original figurine photo",
+          "after": "3D rendered figurine",
+          "description": "Detailed figurine converted to 3D with preserved textures"
+        },
+        "vase": {
+          "before": "Original ceramic vase photo",
+          "after": "3D rendered ceramic vase",
+          "description": "Elegant ceramic vase ready for 3D printing"
+        },
+        "sneaker": {
+          "before": "Original sneaker photo",
+          "after": "3D rendered sneaker",
+          "description": "Product photography transformed into detailed 3D model"
+        },
+        "sculpture": {
+          "before": "Original sculpture photo",
+          "after": "3D rendered sculpture",
+          "description": "Artistic sculpture captured in full 3D"
+        }
+      }
+    },
+    "howItWorks": {
+      "badge": "Simple Process",
+      "title": "How It Works",
+      "subtitle": "Three simple steps to transform your photos into 3D models",
+      "timeLabel": "minutes average generation time",
+      "steps": {
+        "upload": {
+          "title": "Upload Photo",
+          "description": "Upload any photo of an object. Works best with clear, well-lit images."
+        },
+        "process": {
+          "title": "AI Processing",
+          "description": "Our AI analyzes your photo and generates a detailed 3D model automatically."
+        },
+        "download": {
+          "title": "Download & Use",
+          "description": "Download your model in STL, OBJ, GLB, or FBX format. Ready for printing or editing."
+        }
+      }
+    },
+    "features": {
+      "badge": "Powerful Features",
+      "title": "Everything You Need",
+      "subtitle": "Professional-grade 3D generation tools designed for creators",
+      "items": {
+        "fast": {
+          "title": "Lightning Fast",
+          "description": "Get your 3D model in about 2 minutes. No waiting, no complex software required.",
+          "subtext": "Powered by advanced AI"
+        },
+        "formats": {
+          "title": "Multiple Formats",
+          "description": "Export in STL, OBJ, GLB, FBX, or USDZ. Compatible with any 3D software or slicer."
+        },
+        "printing": {
+          "title": "Print Ready",
+          "description": "Models are optimized for 3D printing with proper mesh quality and manifold geometry."
+        },
+        "quality": {
+          "title": "Quality Options",
+          "description": "Choose from draft, standard, or fine quality based on your needs and time constraints."
+        },
+        "secure": {
+          "title": "Secure & Private",
+          "description": "Your photos are processed securely and deleted after generation. Your data stays yours."
+        },
+        "global": {
+          "title": "Multi-language",
+          "description": "Available in English and Traditional Chinese with more languages coming soon."
+        }
+      }
+    },
+    "useCases": {
+      "badge": "Who It's For",
+      "title": "Built for Creators",
+      "subtitle": "Whether you're a hobbyist or professional, DreamForge helps bring your ideas to life",
+      "items": {
+        "hobbyist": {
+          "title": "Hobbyists",
+          "description": "Turn collectibles and keepsakes into 3D models for preservation or recreation"
+        },
+        "maker": {
+          "title": "3D Print Makers",
+          "description": "Create custom models from reference photos for your next print project"
+        },
+        "artist": {
+          "title": "Digital Artists",
+          "description": "Use photo-to-3D as a starting point for your 3D artwork and designs"
+        },
+        "gamer": {
+          "title": "Game Developers",
+          "description": "Quickly generate 3D assets from photos for game development and prototyping"
+        },
+        "educator": {
+          "title": "Educators",
+          "description": "Create 3D models of real objects for interactive learning experiences"
+        },
+        "seller": {
+          "title": "E-commerce",
+          "description": "Generate 3D product views to enhance online shopping experiences"
+        }
+      }
+    },
+    "pricing": {
+      "badge": "Simple Pricing",
+      "title": "Pay As You Go",
+      "subtitle": "Start free with 3 credits. Buy more when you need them.",
+      "popular": "Most Popular",
+      "perPack": "/ pack",
+      "credits": "credits",
+      "note": "Credits never expire. No subscription required.",
+      "plans": {
+        "free": {
+          "name": "Free Tier",
+          "freeFeature1": "3 credits to start",
+          "freeFeature2": "All export formats",
+          "freeFeature3": "Basic support",
+          "cta": "Get Started Free"
+        },
+        "starter": {
+          "name": "Starter Pack",
+          "starterFeature1": "20 credits",
+          "starterFeature2": "All export formats",
+          "starterFeature3": "Priority processing",
+          "starterFeature4": "Email support",
+          "cta": "Buy Starter Pack"
+        },
+        "pro": {
+          "name": "Pro Pack",
+          "proFeature1": "80 credits",
+          "proFeature2": "All export formats",
+          "proFeature3": "Priority processing",
+          "proFeature4": "Priority support",
+          "cta": "Buy Pro Pack"
+        }
+      }
+    },
+    "finalCta": {
+      "badge": "Ready to Create?",
+      "title": "Start Transforming Your Photos Today",
+      "subtitle": "Join creators who are already using DreamForge to bring their ideas to life in 3D",
+      "cta": "Create Your First Model",
+      "trust": "No credit card required • 3 free credits to start"
+    },
+    "footer": {
+      "generate": "Generate",
+      "preview": "Preview Tool",
+      "dashboard": "Dashboard",
+      "pricing": "Pricing",
+      "rights": "All rights reserved."
+    }
   },
   "create": {
     "title": "Advanced Flow",

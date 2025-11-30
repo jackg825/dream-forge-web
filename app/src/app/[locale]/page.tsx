@@ -1,42 +1,46 @@
 'use client';
 
-import { useState } from 'react';
 import { Header } from '@/components/layout/Header';
-import { MarketingHero, GeneratorTabs } from '@/components/home';
-import { NoCreditsModal } from '@/components/credits/NoCreditsModal';
-import { useAuth } from '@/hooks/useAuth';
+import {
+  HeroSection,
+  ShowcaseSection,
+  HowItWorksSection,
+  FeaturesSection,
+  UseCasesSection,
+  PricingSection,
+  FinalCTASection,
+  Footer,
+} from '@/components/landing';
 
 /**
- * HomePage - Main landing page with marketing hero and tabbed generation interface
+ * HomePage - Marketing landing page for DreamForge
  *
- * Features:
- * - Marketing Hero with value proposition and conditional CTA
- * - Tabbed interface: Quick Generate (simplified) and Advanced (preview + link)
- * - Responsive design for mobile and desktop
+ * Sections:
+ * - Hero: Bold headline with gradient background and floating shapes
+ * - Showcase: Interactive before/after 3D transformation gallery
+ * - How It Works: 3-step process visualization
+ * - Features: Bento grid of key features
+ * - Use Cases: Target audience personas
+ * - Pricing: Credit-based pricing tiers
+ * - Final CTA: Conversion-focused call to action
+ * - Footer: Navigation and copyright
  */
 export default function HomePage() {
-  const { user } = useAuth();
-  const [showNoCreditsModal, setShowNoCreditsModal] = useState(false);
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Marketing Hero Section */}
-        <MarketingHero user={user} />
-
-        {/* Generator Tabs Section */}
-        <div id="generator-tabs">
-          <GeneratorTabs onNoCredits={() => setShowNoCreditsModal(true)} />
-        </div>
+      <main>
+        <HeroSection />
+        <ShowcaseSection />
+        <HowItWorksSection />
+        <FeaturesSection />
+        <UseCasesSection />
+        <PricingSection />
+        <FinalCTASection />
       </main>
 
-      {/* No Credits Modal */}
-      <NoCreditsModal
-        isOpen={showNoCreditsModal}
-        onClose={() => setShowNoCreditsModal(false)}
-      />
+      <Footer />
     </div>
   );
 }

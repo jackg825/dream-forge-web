@@ -1,0 +1,10 @@
+export { FloatingShapes } from './FloatingShapes';
+export { HeroSection } from './HeroSection';
+export { BeforeAfterSlider } from './BeforeAfterSlider';
+export { ShowcaseSection } from './ShowcaseSection';
+export { HowItWorksSection } from './HowItWorksSection';
+export { FeaturesSection } from './FeaturesSection';
+export { UseCasesSection } from './UseCasesSection';
+export { PricingSection } from './PricingSection';
+export { FinalCTASection } from './FinalCTASection';
+export { Footer } from './Footer';
