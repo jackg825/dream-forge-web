@@ -28,7 +28,8 @@
     "dashboard": "Dashboard",
     "history": "History",
     "previewTool": "Preview Tool",
-    "adminPanel": "Admin Panel"
+    "adminPanel": "Admin Panel",
+    "advancedFlow": "Advanced"
   },
   "settings": {
     "appearance": "Appearance",
@@ -162,6 +163,8 @@
     "createNewModel": "Create New Model",
     "uploadAndTransform": "Upload a photo and transform it into a 3D model",
     "newGeneration": "New Generation",
+    "quickGeneration": "Quick",
+    "advancedFlow": "Advanced",
     "recentGenerations": "Recent Generations",
     "recentDescription": "Your latest 3D model creations",
     "viewAll": "View all",

@@ -38,6 +38,7 @@ import {
   Globe,
   Palette,
   Settings2,
+  Sparkles,
 } from 'lucide-react';
 
 export function Header() {
@@ -56,6 +57,7 @@ export function Header() {
   }, []);
 
   const navItems = [
+    { href: '/create', labelKey: 'nav.advancedFlow', icon: Sparkles, requireAuth: true },
     { href: '/preview', labelKey: 'nav.previewTool', icon: Eye, showAlways: true },
     { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, requireAuth: true },
     { href: '/dashboard/history', labelKey: 'nav.history', icon: History, requireAuth: true },

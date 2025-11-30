@@ -28,7 +28,8 @@
     "dashboard": "儀表板",
     "history": "歷史紀錄",
     "previewTool": "預覽工具",
-    "adminPanel": "管理面板"
+    "adminPanel": "管理面板",
+    "advancedFlow": "進階生成"
   },
   "settings": {
     "appearance": "外觀",
@@ -162,6 +163,8 @@
     "createNewModel": "建立新模型",
     "uploadAndTransform": "上傳照片，轉換成 3D 模型",
     "newGeneration": "新增生成",
+    "quickGeneration": "快速",
+    "advancedFlow": "進階",
     "recentGenerations": "最近生成",
     "recentDescription": "您最新的 3D 模型作品",
     "viewAll": "查看全部",
