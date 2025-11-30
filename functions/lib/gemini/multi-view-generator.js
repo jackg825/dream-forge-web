@@ -56,94 +56,131 @@ const MIN_DELAY_BETWEEN_CALLS_MS = 500;
 /**
  * Prompts for mesh-optimized views (7-color H2C style)
  * These images are simplified to 7 solid colors for optimal 3D mesh generation
+ *
+ * Key optimizations for 3D printing:
+ * - NO shadows (shadows confuse mesh generation)
+ * - Flat/uniform lighting (no gradients from light)
+ * - Orthographic view (no perspective distortion)
+ * - Clean silhouette for accurate geometry extraction
  */
 const MESH_VIEW_PROMPTS = {
-    front: `You are an expert at preparing images for multi-color 3D printing.
+    front: `You are an expert at preparing reference images for 3D printing mesh generation.
 
-Generate a FRONT VIEW of this object optimized for 3D mesh generation.
+Generate a FRONT VIEW of this object optimized for 3D mesh reconstruction.
 
-Requirements:
-1. Show the object from directly in front, centered in frame
-2. Reduce to exactly 7 distinct solid colors (no gradients, no anti-aliasing)
-3. Clear, well-defined boundaries between color regions
-4. Clean, plain white background
-5. Maintain recognizable features and proportions
-6. Optimize for layer adhesion (minimum ~2mm width color regions)
+CRITICAL REQUIREMENTS:
+1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly in front, centered
+2. NO SHADOWS - Remove ALL shadows completely (no drop shadows, no cast shadows, no ambient occlusion)
+3. FLAT LIGHTING - Use completely uniform, flat lighting with no highlights or shading gradients
+4. Reduce to exactly 7 distinct SOLID colors (no gradients, no anti-aliasing, no soft edges)
+5. HARD EDGES - All color boundaries must be pixel-sharp, no blending
+6. Pure white background (#FFFFFF)
+7. Object should fill 80-90% of the frame
+8. Maintain accurate proportions and all structural details
 
-After the image, list the 7 colors: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+The output image will be used by AI to generate a 3D printable mesh. Shadows and lighting variations will cause incorrect geometry.
 
-Generate the actual image, not a description.`,
-    back: `You are an expert at preparing images for multi-color 3D printing.
-
-Generate a BACK VIEW of this object (rotated 180 degrees) optimized for 3D mesh generation.
-
-Requirements:
-1. Show the object from directly behind (180° rotation from front)
-2. Reduce to exactly 7 distinct solid colors (no gradients, no anti-aliasing)
-3. Clear, well-defined boundaries between color regions
-4. Clean, plain white background
-5. Maintain consistent lighting, style, and proportions as front view
-6. Optimize for layer adhesion (minimum ~2mm width color regions)
-
-After the image, list the 7 colors: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+After the image, list the 7 colors used: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
 
 Generate the actual image, not a description.`,
-    left: `You are an expert at preparing images for multi-color 3D printing.
+    back: `You are an expert at preparing reference images for 3D printing mesh generation.
 
-Generate a LEFT SIDE VIEW of this object (rotated 90° counterclockwise) optimized for 3D mesh generation.
+Generate a BACK VIEW of this object (rotated 180°) optimized for 3D mesh reconstruction.
 
-Requirements:
-1. Show the object from the left side (90° counterclockwise from front)
-2. Reduce to exactly 7 distinct solid colors (no gradients, no anti-aliasing)
-3. Clear, well-defined boundaries between color regions
-4. Clean, plain white background
-5. Maintain consistent lighting, style, and proportions
-6. Optimize for layer adhesion (minimum ~2mm width color regions)
+CRITICAL REQUIREMENTS:
+1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly behind (180° from front)
+2. NO SHADOWS - Remove ALL shadows completely (no drop shadows, no cast shadows, no ambient occlusion)
+3. FLAT LIGHTING - Use completely uniform, flat lighting with no highlights or shading gradients
+4. Reduce to exactly 7 distinct SOLID colors (no gradients, no anti-aliasing, no soft edges)
+5. HARD EDGES - All color boundaries must be pixel-sharp, no blending
+6. Pure white background (#FFFFFF)
+7. Object should fill 80-90% of the frame
+8. Maintain consistent proportions matching the front view exactly
 
-After the image, list the 7 colors: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+The output image will be used by AI to generate a 3D printable mesh. Shadows and lighting variations will cause incorrect geometry.
+
+After the image, list the 7 colors used: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
 
 Generate the actual image, not a description.`,
-    right: `You are an expert at preparing images for multi-color 3D printing.
+    left: `You are an expert at preparing reference images for 3D printing mesh generation.
 
-Generate a RIGHT SIDE VIEW of this object (rotated 90° clockwise) optimized for 3D mesh generation.
+Generate a LEFT SIDE VIEW of this object (rotated 90° counterclockwise) optimized for 3D mesh reconstruction.
 
-Requirements:
-1. Show the object from the right side (90° clockwise from front)
-2. Reduce to exactly 7 distinct solid colors (no gradients, no anti-aliasing)
-3. Clear, well-defined boundaries between color regions
-4. Clean, plain white background
-5. Maintain consistent lighting, style, and proportions
-6. Optimize for layer adhesion (minimum ~2mm width color regions)
+CRITICAL REQUIREMENTS:
+1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly left side (90° CCW from front)
+2. NO SHADOWS - Remove ALL shadows completely (no drop shadows, no cast shadows, no ambient occlusion)
+3. FLAT LIGHTING - Use completely uniform, flat lighting with no highlights or shading gradients
+4. Reduce to exactly 7 distinct SOLID colors (no gradients, no anti-aliasing, no soft edges)
+5. HARD EDGES - All color boundaries must be pixel-sharp, no blending
+6. Pure white background (#FFFFFF)
+7. Object should fill 80-90% of the frame
+8. Maintain consistent proportions matching other views exactly
 
-After the image, list the 7 colors: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+The output image will be used by AI to generate a 3D printable mesh. Shadows and lighting variations will cause incorrect geometry.
+
+After the image, list the 7 colors used: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+
+Generate the actual image, not a description.`,
+    right: `You are an expert at preparing reference images for 3D printing mesh generation.
+
+Generate a RIGHT SIDE VIEW of this object (rotated 90° clockwise) optimized for 3D mesh reconstruction.
+
+CRITICAL REQUIREMENTS:
+1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly right side (90° CW from front)
+2. NO SHADOWS - Remove ALL shadows completely (no drop shadows, no cast shadows, no ambient occlusion)
+3. FLAT LIGHTING - Use completely uniform, flat lighting with no highlights or shading gradients
+4. Reduce to exactly 7 distinct SOLID colors (no gradients, no anti-aliasing, no soft edges)
+5. HARD EDGES - All color boundaries must be pixel-sharp, no blending
+6. Pure white background (#FFFFFF)
+7. Object should fill 80-90% of the frame
+8. Maintain consistent proportions matching other views exactly
+
+The output image will be used by AI to generate a 3D printable mesh. Shadows and lighting variations will cause incorrect geometry.
+
+After the image, list the 7 colors used: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
 
 Generate the actual image, not a description.`,
 };
 /**
  * Prompts for texture-ready views (full color)
- * These images preserve full color detail for texture mapping
+ * These images preserve full color detail for texture mapping onto 3D printed models
+ *
+ * Key optimizations:
+ * - Soft, diffuse lighting (for accurate color capture)
+ * - NO harsh shadows (would bake into texture incorrectly)
+ * - Orthographic view to match mesh views
  */
 const TEXTURE_VIEW_PROMPTS = {
-    front: `Generate a high-quality FRONT VIEW of this object for texture mapping.
+    front: `You are an expert at preparing texture reference images for 3D printed models.
 
-Requirements:
-1. Show the object from directly in front, centered
-2. Preserve full color detail, gradients, and textures
-3. High-resolution surface detail
-4. Consistent, neutral lighting
-5. Clean, plain background (white or neutral)
-6. Maintain exact proportions and all features
+Generate a FRONT VIEW of this object optimized for texture mapping onto a 3D printed mesh.
+
+REQUIREMENTS:
+1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly in front, centered
+2. NO HARSH SHADOWS - Use soft, diffuse lighting only. Shadows would bake incorrectly into the texture
+3. PRESERVE COLORS - Keep full color detail, natural gradients, and surface textures
+4. High-resolution surface detail for quality texture mapping
+5. Pure white background (#FFFFFF)
+6. Object should fill 80-90% of the frame
+7. Maintain exact proportions matching the reference image
+
+The texture will be applied to a 3D printed model, so accurate colors without lighting artifacts are essential.
 
 Generate the actual image, not a description.`,
-    back: `Generate a high-quality BACK VIEW of this object (rotated 180 degrees) for texture mapping.
+    back: `You are an expert at preparing texture reference images for 3D printed models.
 
-Requirements:
-1. Show the object from directly behind (180° rotation from front)
-2. Preserve full color detail, gradients, and textures
-3. High-resolution surface detail
-4. Consistent, neutral lighting matching front view
-5. Clean, plain background (white or neutral)
-6. Maintain exact proportions and all features
+Generate a BACK VIEW of this object (rotated 180°) optimized for texture mapping onto a 3D printed mesh.
+
+REQUIREMENTS:
+1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly behind (180° from front)
+2. NO HARSH SHADOWS - Use soft, diffuse lighting only. Shadows would bake incorrectly into the texture
+3. PRESERVE COLORS - Keep full color detail, natural gradients, and surface textures
+4. High-resolution surface detail for quality texture mapping
+5. Pure white background (#FFFFFF)
+6. Object should fill 80-90% of the frame
+7. Maintain exact proportions matching the front view
+
+The texture will be applied to a 3D printed model, so accurate colors without lighting artifacts are essential.
 
 Generate the actual image, not a description.`,
 };
