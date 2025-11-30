@@ -8,6 +8,7 @@ import {
   FeaturesSection,
   UseCasesSection,
   PricingSection,
+  PrintServiceSection,
   FinalCTASection,
   Footer,
 } from '@/components/landing';
@@ -37,6 +38,7 @@ export default function HomePage() {
         <FeaturesSection />
         <UseCasesSection />
         <PricingSection />
+        <PrintServiceSection />
         <FinalCTASection />
       </main>
 

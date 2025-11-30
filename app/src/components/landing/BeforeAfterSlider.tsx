@@ -23,7 +23,7 @@ export function BeforeAfterSlider({
   afterAlt = 'After',
   className,
 }: BeforeAfterSliderProps) {
-  const [sliderPosition, setSliderPosition] = useState(20);
+  const [sliderPosition, setSliderPosition] = useState(30);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 

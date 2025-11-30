@@ -569,6 +569,42 @@
         }
       }
     },
+    "printService": {
+      "badge": "Physical Printing Service",
+      "title": "Turn Digital Models into Reality",
+      "subtitle": "Professional 3D printing with worldwide delivery. From photo to physical model in your hands.",
+      "visualCaption": "Professional Print Quality",
+      "statusReady": "Ready to Print",
+      "worldwide": "Worldwide Shipping",
+      "sizesTitle": "Size Options",
+      "sizes": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "materialsTitle": "Material Options",
+      "materials": {
+        "pla": {
+          "name": "PLA Eco Plastic",
+          "desc": "Durable, eco-friendly, great for display"
+        },
+        "resin": {
+          "name": "High-Detail Resin",
+          "desc": "Rich details, smooth surface"
+        }
+      },
+      "features": {
+        "quality": "Professional print quality",
+        "packaging": "Premium packaging",
+        "worldwide": "Global shipping",
+        "tracking": "Order tracking"
+      },
+      "startingFrom": "Starting from",
+      "perModel": "/ model",
+      "shippingIncluded": "Domestic shipping included",
+      "cta": "Order Physical Print",
+      "trustNote": "Ships within 3-5 business days after payment"
+    },
     "finalCta": {
       "badge": "Ready to Create?",
       "title": "Start Transforming Your Photos Today",

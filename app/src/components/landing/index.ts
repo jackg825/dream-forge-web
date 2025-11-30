@@ -6,5 +6,6 @@ export { HowItWorksSection } from './HowItWorksSection';
 export { FeaturesSection } from './FeaturesSection';
 export { UseCasesSection } from './UseCasesSection';
 export { PricingSection } from './PricingSection';
+export { PrintServiceSection } from './PrintServiceSection';
 export { FinalCTASection } from './FinalCTASection';
 export { Footer } from './Footer';

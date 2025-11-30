@@ -556,7 +556,7 @@
           "starterFeature1": "20 點",
           "starterFeature2": "所有匯出格式",
           "starterFeature3": "優先處理",
-          "starterFeature4": "電郵支援",
+          "starterFeature4": "Email 支援",
           "cta": "購買入門套餐"
         },
         "pro": {
@@ -568,6 +568,42 @@
           "cta": "購買專業套餐"
         }
       }
+    },
+    "printService": {
+      "badge": "實體列印服務",
+      "title": "將數位模型變成實體",
+      "subtitle": "專業 3D 列印，全球配送。從照片到手中的實體模型，一站完成。",
+      "visualCaption": "專業列印品質",
+      "statusReady": "即時接單",
+      "worldwide": "全球配送",
+      "sizesTitle": "尺寸選擇",
+      "sizes": {
+        "small": "小型",
+        "medium": "中型",
+        "large": "大型"
+      },
+      "materialsTitle": "材質選項",
+      "materials": {
+        "pla": {
+          "name": "PLA 環保塑料",
+          "desc": "耐用、環保，適合一般擺設"
+        },
+        "resin": {
+          "name": "高精細樹脂",
+          "desc": "細節豐富，表面光滑"
+        }
+      },
+      "features": {
+        "quality": "專業級列印品質",
+        "packaging": "精緻包裝保護",
+        "worldwide": "全球寄送服務",
+        "tracking": "物流追蹤查詢"
+      },
+      "startingFrom": "價格起始",
+      "perModel": "/ 每件",
+      "shippingIncluded": "含國內運費",
+      "cta": "訂購實體列印",
+      "trustNote": "付款後 3-5 個工作天出貨"
     },
     "finalCta": {
       "badge": "準備好了嗎？",
