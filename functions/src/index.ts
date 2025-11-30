@@ -35,3 +35,9 @@ export {
   startSessionModelGeneration,
   checkSessionModelStatus,
 } from './handlers/model';
+
+// H2C 7-color optimization for Bambu Lab H2C printer
+export {
+  optimizeColorsForH2C,
+  uploadEditedH2CImage,
+} from './handlers/h2c';

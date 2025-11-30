@@ -5,8 +5,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { QuickGenerateTab } from './QuickGenerateTab';
 import { AdvancedFlowPreview } from './AdvancedFlowPreview';
+import { H2COptimizeTab } from '@/components/h2c';
 import { useQuickGenerate } from '@/hooks/useQuickGenerate';
-import { Zap, Sparkles } from 'lucide-react';
+import { Zap, Sparkles, Palette } from 'lucide-react';
 
 interface GeneratorTabsProps {
   onNoCredits: () => void;
@@ -33,6 +34,8 @@ export function GeneratorTabs({ onNoCredits, className }: GeneratorTabsProps) {
     setQuality,
     printerType,
     setPrinterType,
+    provider,
+    setProvider,
     generating,
     generateError,
     canGenerate,
@@ -59,10 +62,14 @@ export function GeneratorTabs({ onNoCredits, className }: GeneratorTabsProps) {
     <Tabs defaultValue="quick" className={className}>
       {/* Tab triggers - centered */}
       <div className="flex justify-center mb-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="quick" className="gap-2">
             <Zap className="h-4 w-4" />
             {t('quick')}
+          </TabsTrigger>
+          <TabsTrigger value="h2c" className="gap-2">
+            <Palette className="h-4 w-4" />
+            {t('h2c')}
           </TabsTrigger>
           <TabsTrigger value="advanced" className="gap-2">
             <Sparkles className="h-4 w-4" />
@@ -87,11 +94,22 @@ export function GeneratorTabs({ onNoCredits, className }: GeneratorTabsProps) {
               onQualityChange={setQuality}
               printerType={printerType}
               onPrinterTypeChange={setPrinterType}
+              provider={provider}
+              onProviderChange={setProvider}
               generating={generating}
               generateError={generateError}
               canGenerate={canGenerate}
               onGenerate={onGenerateClick}
             />
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* H2C 7-Color Optimization tab content */}
+      <TabsContent value="h2c">
+        <Card>
+          <CardContent className="pt-6">
+            <H2COptimizeTab onNoCredits={onNoCredits} />
           </CardContent>
         </Card>
       </TabsContent>

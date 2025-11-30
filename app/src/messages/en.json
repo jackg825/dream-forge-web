@@ -86,6 +86,7 @@
     },
     "tabs": {
       "quick": "Quick Generate",
+      "h2c": "H2C 7-Color",
       "advanced": "Advanced"
     },
     "advancedPreview": {
@@ -166,6 +167,18 @@
       "high": {
         "label": "High",
         "description": "High resolution PBR texture"
+      }
+    },
+    "provider": {
+      "title": "Generation Engine",
+      "recommended": "Recommended",
+      "meshy": {
+        "label": "Meshy 6",
+        "description": "Fast, realistic 3D models"
+      },
+      "rodin": {
+        "label": "Rodin Gen-2",
+        "description": "High-quality detail rendering"
       }
     },
     "dragDrop": "Drag and drop your photo here",

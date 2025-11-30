@@ -86,6 +86,7 @@
     },
     "tabs": {
       "quick": "快速生成",
+      "h2c": "H2C 七色",
       "advanced": "進階"
     },
     "advancedPreview": {
@@ -166,6 +167,18 @@
       "high": {
         "label": "高畫質",
         "description": "高解析度 PBR 貼圖"
+      }
+    },
+    "provider": {
+      "title": "生成引擎",
+      "recommended": "推薦",
+      "meshy": {
+        "label": "Meshy 6",
+        "description": "快速逼真 3D 模型"
+      },
+      "rodin": {
+        "label": "Rodin Gen-2",
+        "description": "高品質細節呈現"
       }
     },
     "dragDrop": "拖放照片到此處",

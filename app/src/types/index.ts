@@ -23,11 +23,31 @@ export type PrinterType = 'fdm' | 'sla' | 'resin';
 // Input mode for generation
 export type InputMode = 'single' | 'multi' | 'ai-generated';
 
+// 3D Model Generation Provider
+export type ModelProvider = 'rodin' | 'meshy';
+
 // Credit costs based on input mode
 export const CREDIT_COSTS: Record<InputMode, number> = {
   single: 1,
   multi: 1,
   'ai-generated': 2,
+};
+
+// Provider options for UI
+export const PROVIDER_OPTIONS: Record<ModelProvider, {
+  label: string;
+  description: string;
+  badge?: string;
+}> = {
+  rodin: {
+    label: 'Rodin Gen-2',
+    description: 'Hyper3D - 高品質 3D 模型',
+  },
+  meshy: {
+    label: 'Meshy 6',
+    description: 'Meshy AI - 快速逼真 3D 模型',
+    badge: '推薦',
+  },
 };
 
 // View angle display labels
@@ -191,6 +211,7 @@ export interface JobSettings {
   printerType: PrinterType;
   inputMode: InputMode;
   imageCount: number;
+  provider?: ModelProvider;
 }
 
 // Download file from Rodin API (GLB, textures, etc.)
@@ -211,11 +232,13 @@ export interface Job {
   inputImageUrls?: string[];
   viewAngles?: ViewAngle[];
   outputModelUrl: string | null;
-  downloadFiles?: DownloadFile[]; // All available files from Rodin (GLB, textures, etc.)
+  downloadFiles?: DownloadFile[]; // All available files from provider
   settings: JobSettings;
   error: string | null;
   createdAt: Date;
   completedAt: Date | null;
+  // Provider field
+  provider?: ModelProvider;
   // Texture generation fields
   sourceJobId?: string;
   textureResolution?: TextureResolution;
@@ -243,6 +266,7 @@ export interface GenerateModelRequest {
   inputMode: InputMode;
   generateAngles?: ViewAngle[];  // For AI mode
   format?: OutputFormat;
+  provider?: ModelProvider;       // 'rodin' | 'meshy' (default: 'meshy')
 }
 
 export interface GenerateModelResponse {
@@ -412,10 +436,63 @@ export interface UploadCustomViewRequest {
 
 export interface StartModelGenerationRequest {
   sessionId: string;
+  provider?: ModelProvider;
 }
 
 export interface StartModelGenerationResponse {
   jobId: string;
   status: JobStatus;
   creditsCharged: number;
+}
+
+// ============================================
+// H2C 7-Color Optimization Types
+// (For Bambu Lab H2C multi-color printing)
+// ============================================
+
+// H2C optimization credit costs
+export const H2C_CREDIT_COSTS = {
+  OPTIMIZE: 1,    // Each color optimization
+  GENERATE: 1,    // 3D model generation (uses existing cost)
+} as const;
+
+// H2C workflow step
+export type H2CStep = 'upload' | 'optimize' | 'generate';
+
+// H2C optimization status
+export type H2COptimizeStatus = 'idle' | 'optimizing' | 'optimized' | 'error';
+
+// H2C step display labels
+export const H2C_STEP_LABELS: Record<H2CStep, string> = {
+  upload: '上傳照片',
+  optimize: '七色優化',
+  generate: '生成 3D',
+};
+
+// H2C optimization request
+export interface H2COptimizeRequest {
+  imageUrl: string;
+  storagePath?: string;
+}
+
+// H2C optimization response
+export interface H2COptimizeResponse {
+  success: boolean;
+  optimizedImageUrl: string;
+  optimizedStoragePath: string;
+  colorPalette: string[];
+  creditsCharged: number;
+}
+
+// H2C upload edited image request
+export interface H2CUploadEditedRequest {
+  imageBase64: string;
+  mimeType: string;
+}
+
+// H2C upload edited image response
+export interface H2CUploadEditedResponse {
+  success: boolean;
+  imageUrl: string;
+  storagePath: string;
 }
