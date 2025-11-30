@@ -129,14 +129,17 @@ exports.createPipeline = functions
     }
     const pipelineRef = db.collection('pipelines').doc();
     const pipelineId = pipelineRef.id;
+    // Use serverTimestamp for top-level fields, regular Date for array items
+    // (Firestore doesn't allow serverTimestamp() inside arrays)
     const now = admin.firestore.FieldValue.serverTimestamp();
+    const uploadTime = admin.firestore.Timestamp.now();
     const pipeline = {
         userId,
         status: 'draft',
         inputImages: imageUrls.map((url) => ({
             url,
             storagePath: '', // Will be extracted from URL if needed
-            uploadedAt: now,
+            uploadedAt: uploadTime,
         })),
         meshImages: {},
         textureImages: {},
