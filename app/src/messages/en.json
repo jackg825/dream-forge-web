@@ -430,25 +430,25 @@
         "art": "Art & Sculpture"
       },
       "examples": {
-        "figurine": {
-          "before": "Original figurine photo",
-          "after": "3D rendered figurine",
-          "description": "Detailed figurine converted to 3D with preserved textures"
+        "puppy": {
+          "before": "Original puppy photo",
+          "after": "3D rendered puppy",
+          "description": "Adorable puppy figurine converted to 3D with lifelike details"
         },
         "vase": {
-          "before": "Original ceramic vase photo",
-          "after": "3D rendered ceramic vase",
-          "description": "Elegant ceramic vase ready for 3D printing"
+          "before": "Original succulent pot photo",
+          "after": "3D rendered succulent pot",
+          "description": "Charming succulent planter ready for 3D printing"
         },
-        "sneaker": {
-          "before": "Original sneaker photo",
-          "after": "3D rendered sneaker",
-          "description": "Product photography transformed into detailed 3D model"
+        "racecar": {
+          "before": "Original race car photo",
+          "after": "3D rendered race car",
+          "description": "Detailed race car model transformed into printable 3D"
         },
         "sculpture": {
           "before": "Original sculpture photo",
           "after": "3D rendered sculpture",
-          "description": "Artistic sculpture captured in full 3D"
+          "description": "Classical sculpture captured in full 3D detail"
         }
       }
     },

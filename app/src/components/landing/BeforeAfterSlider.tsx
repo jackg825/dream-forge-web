@@ -13,7 +13,8 @@ interface BeforeAfterSliderProps {
 
 /**
  * BeforeAfterSlider - Interactive comparison slider
- * Shows before (photo) and after (3D render) side by side with draggable divider
+ * Left side (background): 3D render | Right side (overlay): Original photo
+ * Drag slider left-to-right to reveal original photo
  */
 export function BeforeAfterSlider({
   beforeImage,
@@ -22,7 +23,7 @@ export function BeforeAfterSlider({
   afterAlt = 'After',
   className,
 }: BeforeAfterSliderProps) {
-  const [sliderPosition, setSliderPosition] = useState(50);
+  const [sliderPosition, setSliderPosition] = useState(20);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -64,7 +65,7 @@ export function BeforeAfterSlider({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleMouseUp}
     >
-      {/* After image (3D render) - full width background */}
+      {/* 3D render - full width background (left side) */}
       <div className="absolute inset-0">
         <img
           src={afterImage}
@@ -73,15 +74,15 @@ export function BeforeAfterSlider({
           draggable={false}
         />
         {/* Label */}
-        <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-full text-white text-sm font-medium">
+        <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-full text-white text-sm font-medium">
           3D Model
         </div>
       </div>
 
-      {/* Before image (photo) - clipped by slider */}
+      {/* Original photo - clipped from right side */}
       <div
         className="absolute inset-0 overflow-hidden"
-        style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+        style={{ clipPath: `inset(0 0 0 ${sliderPosition}%)` }}
       >
         <img
           src={beforeImage}
@@ -90,7 +91,7 @@ export function BeforeAfterSlider({
           draggable={false}
         />
         {/* Label */}
-        <div className="absolute top-4 left-4 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full text-black text-sm font-medium">
+        <div className="absolute top-4 right-4 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full text-black text-sm font-medium">
           Photo
         </div>
       </div>

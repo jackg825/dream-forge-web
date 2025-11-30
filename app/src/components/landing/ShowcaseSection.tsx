@@ -10,31 +10,14 @@ interface ShowcaseSectionProps {
   className?: string;
 }
 
-// Showcase examples with Unsplash images
+// Showcase examples
+// beforeImage = original photo, afterImage = 3D render from Nano Banana Pro
 const showcaseExamples = [
   {
-    id: 'figurine',
-    beforeImage: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
-    afterImage: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80&sat=-100&con=1.2',
-    category: 'collectible',
-  },
-  {
-    id: 'vase',
-    beforeImage: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&q=80',
-    afterImage: 'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&q=80&sat=-100&con=1.2',
-    category: 'decor',
-  },
-  {
-    id: 'sneaker',
-    beforeImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80',
-    afterImage: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80&sat=-100&con=1.2',
+    id: 'racecar',
+    beforeImage: '/showcase/race_car_origin.jpg',
+    afterImage: '/showcase/race_car_render.png',
     category: 'product',
-  },
-  {
-    id: 'sculpture',
-    beforeImage: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800&q=80',
-    afterImage: 'https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=800&q=80&sat=-100&con=1.2',
-    category: 'art',
   },
 ];
 

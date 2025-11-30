@@ -430,25 +430,25 @@
         "art": "藝術雕塑"
       },
       "examples": {
-        "figurine": {
-          "before": "原始公仔照片",
-          "after": "3D 渲染公仔",
-          "description": "精細公仔轉換為 3D，保留完整材質"
+        "puppy": {
+          "before": "原始小狗照片",
+          "after": "3D 渲染小狗",
+          "description": "可愛小狗公仔轉換為 3D，栩栩如生"
         },
         "vase": {
-          "before": "原始陶瓷花瓶照片",
-          "after": "3D 渲染陶瓷花瓶",
-          "description": "優雅陶瓷花瓶，可直接 3D 列印"
+          "before": "原始多肉盆栽照片",
+          "after": "3D 渲染多肉盆栽",
+          "description": "精緻多肉植物盆栽，可直接 3D 列印"
         },
-        "sneaker": {
-          "before": "原始球鞋照片",
-          "after": "3D 渲染球鞋",
-          "description": "產品攝影轉換為精細 3D 模型"
+        "racecar": {
+          "before": "原始賽車照片",
+          "after": "3D 渲染賽車",
+          "description": "精細賽車模型轉換為可列印 3D"
         },
         "sculpture": {
           "before": "原始雕塑照片",
           "after": "3D 渲染雕塑",
-          "description": "藝術雕塑完整呈現於 3D"
+          "description": "古典雕塑完整呈現於 3D"
         }
       }
     },
