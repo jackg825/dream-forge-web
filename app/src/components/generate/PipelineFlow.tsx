@@ -625,27 +625,85 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </Card>
   );
 
+  // Handle retry for failed pipelines
+  const handleRetry = async () => {
+    if (!pipelineId || !pipeline) return;
+
+    setActionLoading(true);
+    try {
+      // Retry based on which step failed
+      if (pipeline.errorStep === 'generating-images') {
+        await generateImages(pipelineId);
+      } else if (pipeline.errorStep === 'generating-mesh') {
+        await startMeshGeneration();
+      } else if (pipeline.errorStep === 'generating-texture') {
+        await startTextureGeneration();
+      }
+    } catch (err) {
+      console.error('Retry failed:', err);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Render error state
-  const renderErrorState = () => (
-    <Card>
-      <CardContent className="py-12">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error || pipeline?.error || '發生錯誤'}
-          </AlertDescription>
-        </Alert>
-        <div className="flex justify-center mt-6">
-          <Button onClick={() => {
-            setPipelineId(null);
-            setUploadedImages([]);
-          }}>
-            重新開始
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const renderErrorState = () => {
+    const errorStep = pipeline?.errorStep;
+    const canRetry = errorStep === 'generating-images' ||
+                     errorStep === 'generating-mesh' ||
+                     errorStep === 'generating-texture';
+
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error || pipeline?.error || '發生錯誤'}
+              {errorStep && (
+                <span className="block text-xs mt-1 opacity-75">
+                  失敗步驟: {errorStep === 'generating-images' ? '生成視角圖片' :
+                           errorStep === 'generating-mesh' ? '生成 3D 網格' :
+                           errorStep === 'generating-texture' ? '生成貼圖' : errorStep}
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
+          <div className="flex justify-center gap-4">
+            {canRetry && (
+              <Button
+                onClick={handleRetry}
+                disabled={actionLoading}
+                variant="default"
+              >
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    重試中...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    重試
+                  </>
+                )}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPipelineId(null);
+                setUploadedImages([]);
+                router.push('/generate', { scroll: false });
+              }}
+            >
+              重新開始
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   // Main render
   if (pipelineLoading && pipelineId) {

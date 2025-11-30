@@ -22,6 +22,10 @@ export declare const createPipeline: functions.HttpsFunction & functions.Runnabl
  */
 export declare const getPipeline: functions.HttpsFunction & functions.Runnable<any>;
 /**
+ * Get user's pipelines for dashboard
+ */
+export declare const getUserPipelines: functions.HttpsFunction & functions.Runnable<any>;
+/**
  * Generate all 6 views using Gemini
  *
  * Generates:

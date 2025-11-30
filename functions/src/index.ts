@@ -46,6 +46,7 @@ export {
 export {
   createPipeline,
   getPipeline,
+  getUserPipelines,
   generatePipelineImages,
   regeneratePipelineImage,
   startPipelineMesh,

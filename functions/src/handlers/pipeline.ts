@@ -69,6 +69,11 @@ interface GetPipelineData {
   pipelineId: string;
 }
 
+interface GetUserPipelinesData {
+  limit?: number;
+  status?: string;
+}
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -233,6 +238,46 @@ export const getPipeline = functions
   });
 
 /**
+ * Get user's pipelines for dashboard
+ */
+export const getUserPipelines = functions
+  .region('asia-east1')
+  .runWith({ timeoutSeconds: 30 })
+  .https.onCall(async (data: GetUserPipelinesData, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+
+    const userId = context.auth.uid;
+    const limit = Math.min(data.limit || 20, 50); // Max 50
+
+    let query = db
+      .collection('pipelines')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(limit);
+
+    // Optional status filter
+    if (data.status) {
+      query = db
+        .collection('pipelines')
+        .where('userId', '==', userId)
+        .where('status', '==', data.status)
+        .orderBy('createdAt', 'desc')
+        .limit(limit);
+    }
+
+    const snapshot = await query.get();
+
+    const pipelines = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return { pipelines };
+  });
+
+/**
  * Generate all 6 views using Gemini
  *
  * Generates:
@@ -270,16 +315,20 @@ export const generatePipelineImages = functions
       throw new functions.https.HttpsError('permission-denied', 'Not your pipeline');
     }
 
-    if (pipeline.status !== 'draft' && pipeline.status !== 'images-ready') {
+    // Allow retry from failed state if it failed during image generation
+    const canRetry = pipeline.status === 'failed' && pipeline.errorStep === 'generating-images';
+    if (pipeline.status !== 'draft' && pipeline.status !== 'images-ready' && !canRetry) {
       throw new functions.https.HttpsError(
         'failed-precondition',
         `Cannot generate images in status: ${pipeline.status}`
       );
     }
 
-    // Update status
+    // Update status (clear error if retrying)
     await pipelineRef.update({
       status: 'generating-images',
+      error: admin.firestore.FieldValue.delete(),
+      errorStep: admin.firestore.FieldValue.delete(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 

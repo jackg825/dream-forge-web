@@ -47,7 +47,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getPipeline = exports.createPipeline = void 0;
+exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getUserPipelines = exports.getPipeline = exports.createPipeline = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -187,6 +187,39 @@ exports.getPipeline = functions
     };
 });
 /**
+ * Get user's pipelines for dashboard
+ */
+exports.getUserPipelines = functions
+    .region('asia-east1')
+    .runWith({ timeoutSeconds: 30 })
+    .https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+    const userId = context.auth.uid;
+    const limit = Math.min(data.limit || 20, 50); // Max 50
+    let query = db
+        .collection('pipelines')
+        .where('userId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .limit(limit);
+    // Optional status filter
+    if (data.status) {
+        query = db
+            .collection('pipelines')
+            .where('userId', '==', userId)
+            .where('status', '==', data.status)
+            .orderBy('createdAt', 'desc')
+            .limit(limit);
+    }
+    const snapshot = await query.get();
+    const pipelines = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+    }));
+    return { pipelines };
+});
+/**
  * Generate all 6 views using Gemini
  *
  * Generates:
@@ -218,12 +251,16 @@ exports.generatePipelineImages = functions
     if (pipeline.userId !== userId) {
         throw new functions.https.HttpsError('permission-denied', 'Not your pipeline');
     }
-    if (pipeline.status !== 'draft' && pipeline.status !== 'images-ready') {
+    // Allow retry from failed state if it failed during image generation
+    const canRetry = pipeline.status === 'failed' && pipeline.errorStep === 'generating-images';
+    if (pipeline.status !== 'draft' && pipeline.status !== 'images-ready' && !canRetry) {
         throw new functions.https.HttpsError('failed-precondition', `Cannot generate images in status: ${pipeline.status}`);
     }
-    // Update status
+    // Update status (clear error if retrying)
     await pipelineRef.update({
         status: 'generating-images',
+        error: admin.firestore.FieldValue.delete(),
+        errorStep: admin.firestore.FieldValue.delete(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     try {
