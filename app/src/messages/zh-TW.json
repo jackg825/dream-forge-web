@@ -542,7 +542,7 @@
       "popular": "最受歡迎",
       "perPack": "/ 套餐",
       "credits": "點數",
-      "note": "點數永不過期，無需訂閱。",
+      "note": "",
       "plans": {
         "free": {
           "name": "免費方案",

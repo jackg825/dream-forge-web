@@ -542,7 +542,7 @@
       "popular": "Most Popular",
       "perPack": "/ pack",
       "credits": "credits",
-      "note": "Credits never expire. No subscription required.",
+      "note": "",
       "plans": {
         "free": {
           "name": "Free Tier",

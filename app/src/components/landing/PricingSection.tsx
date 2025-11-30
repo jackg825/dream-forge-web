@@ -174,9 +174,11 @@ export function PricingSection({ className }: PricingSectionProps) {
         </div>
 
         {/* Additional note */}
-        <p className="text-center text-sm text-muted-foreground mt-8">
-          {t('pricing.note')}
-        </p>
+        {t('pricing.note') && (
+          <p className="text-center text-sm text-muted-foreground mt-8">
+            {t('pricing.note')}
+          </p>
+        )}
       </div>
     </section>
   );
