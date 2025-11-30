@@ -549,6 +549,7 @@
           "freeFeature1": "3 credits to start",
           "freeFeature2": "All export formats",
           "freeFeature3": "Basic support",
+          "freeFeature4": "Physical printing (per order)",
           "cta": "Get Started Free"
         },
         "starter": {
@@ -557,6 +558,7 @@
           "starterFeature2": "All export formats",
           "starterFeature3": "Priority processing",
           "starterFeature4": "Email support",
+          "starterFeature5": "Physical printing (per order)",
           "cta": "Buy Starter Pack"
         },
         "pro": {
@@ -565,6 +567,7 @@
           "proFeature2": "All export formats",
           "proFeature3": "Priority processing",
           "proFeature4": "Priority support",
+          "proFeature5": "10% off physical printing",
           "cta": "Buy Pro Pack"
         }
       }

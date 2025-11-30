@@ -549,6 +549,7 @@
           "freeFeature1": "3 點起步",
           "freeFeature2": "所有匯出格式",
           "freeFeature3": "基本支援",
+          "freeFeature4": "實體列印（按件計費）",
           "cta": "免費開始"
         },
         "starter": {
@@ -557,6 +558,7 @@
           "starterFeature2": "所有匯出格式",
           "starterFeature3": "優先處理",
           "starterFeature4": "Email 支援",
+          "starterFeature5": "實體列印（按件計費）",
           "cta": "購買入門套餐"
         },
         "pro": {
@@ -565,6 +567,7 @@
           "proFeature2": "所有匯出格式",
           "proFeature3": "優先處理",
           "proFeature4": "優先支援",
+          "proFeature5": "實體列印 9 折優惠",
           "cta": "購買專業套餐"
         }
       }

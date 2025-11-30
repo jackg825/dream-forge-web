@@ -26,7 +26,7 @@ export function PricingSection({ className }: PricingSectionProps) {
       icon: Gift,
       price: '$0',
       credits: 3,
-      features: ['freeFeature1', 'freeFeature2', 'freeFeature3'],
+      features: ['freeFeature1', 'freeFeature2', 'freeFeature3', 'freeFeature4'],
     },
     {
       id: 'starter',
@@ -34,7 +34,7 @@ export function PricingSection({ className }: PricingSectionProps) {
       icon: Sparkles,
       price: '$9',
       credits: 20,
-      features: ['starterFeature1', 'starterFeature2', 'starterFeature3', 'starterFeature4'],
+      features: ['starterFeature1', 'starterFeature2', 'starterFeature3', 'starterFeature4', 'starterFeature5'],
     },
     {
       id: 'pro',
@@ -42,7 +42,7 @@ export function PricingSection({ className }: PricingSectionProps) {
       icon: Sparkles,
       price: '$29',
       credits: 80,
-      features: ['proFeature1', 'proFeature2', 'proFeature3', 'proFeature4'],
+      features: ['proFeature1', 'proFeature2', 'proFeature3', 'proFeature4', 'proFeature5'],
     },
   ];
 
