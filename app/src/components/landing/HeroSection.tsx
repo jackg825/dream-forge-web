@@ -31,8 +31,8 @@ export function HeroSection({ className }: HeroSectionProps) {
         'relative min-h-screen flex items-center justify-center overflow-hidden',
         // Light mode: soft gradient background
         'bg-gradient-to-br from-slate-50 via-violet-50/30 to-rose-50/20',
-        // Dark mode: deep dark background
-        'dark:bg-zinc-950',
+        // Dark mode: subtle radial gradient with violet tint for depth
+        'dark:bg-[radial-gradient(ellipse_at_top,_rgba(124,58,237,0.12)_0%,_rgba(24,24,27,1)_50%)]',
         className
       )}
     >
@@ -245,11 +245,10 @@ export function HeroSection({ className }: HeroSectionProps) {
         </div>
       </div>
 
-      {/* Bottom gradient fade */}
+      {/* Bottom gradient fade - matches next section's background */}
       <div className={cn(
         'absolute bottom-0 left-0 right-0 h-32 pointer-events-none',
-        'bg-gradient-to-t from-slate-50 to-transparent',
-        'dark:from-zinc-950 dark:to-transparent'
+        'bg-gradient-to-t from-background to-transparent'
       )} />
 
       {/* Scroll indicator */}

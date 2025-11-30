@@ -24,14 +24,17 @@ export function FinalCTASection({ className }: FinalCTASectionProps) {
         className
       )}
     >
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-violet)] via-[var(--accent-coral)] to-[var(--accent-mint)] opacity-90" />
+      {/* Dark mode base layer */}
+      <div className="absolute inset-0 bg-zinc-900 hidden dark:block" />
 
-      {/* Decorative shapes */}
+      {/* Background gradient - reduced opacity in dark mode */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-violet)] via-[var(--accent-coral)] to-[var(--accent-mint)] opacity-90 dark:opacity-70" />
+
+      {/* Decorative shapes - reduced in dark mode */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-10 -left-10 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/3 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
+        <div className="absolute -top-10 -left-10 w-64 h-64 bg-white/10 dark:bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/10 dark:bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/3 w-40 h-40 bg-white/5 dark:bg-white/3 rounded-full blur-2xl" />
       </div>
 
       {/* Content */}

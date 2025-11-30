@@ -33,7 +33,7 @@ export function ShowcaseSection({ className }: ShowcaseSectionProps) {
     <section
       id="showcase"
       className={cn(
-        'py-24 bg-gradient-to-b from-background to-muted/30',
+        'py-24 bg-gradient-to-b from-background to-muted/20',
         className
       )}
     >

@@ -71,7 +71,7 @@ export function FeaturesSection({ className }: FeaturesSectionProps) {
   return (
     <section
       className={cn(
-        'py-24 bg-gradient-to-b from-muted/30 to-background',
+        'py-24 bg-gradient-to-b from-background to-muted/20',
         className
       )}
     >

@@ -48,17 +48,12 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
     <section
       id="print-service"
       className={cn(
-        'py-24 bg-gradient-to-b from-muted/30 to-background relative overflow-hidden',
+        'py-24 bg-gradient-to-b from-muted/20 to-background',
         className
       )}
     >
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-10 w-72 h-72 bg-[var(--accent-violet)]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-64 h-64 bg-[var(--accent-coral)]/5 rounded-full blur-3xl" />
-      </div>
 
-      <div className="container max-w-6xl mx-auto px-4 relative z-10">
+      <div className="container max-w-6xl mx-auto px-4">
         {/* Section header */}
         <div className="text-center mb-16">
           <Badge

@@ -64,7 +64,7 @@ export function UseCasesSection({ className }: UseCasesSectionProps) {
   const t = useTranslations('landing');
 
   return (
-    <section className={cn('py-24 bg-background', className)}>
+    <section className={cn('py-24 bg-gradient-to-b from-muted/20 to-background', className)}>
       <div className="container max-w-6xl mx-auto px-4">
         {/* Section header */}
         <div className="text-center mb-16">

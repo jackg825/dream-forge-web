@@ -50,7 +50,7 @@ export function PricingSection({ className }: PricingSectionProps) {
     <section
       id="pricing"
       className={cn(
-        'py-24 bg-gradient-to-b from-background to-muted/30',
+        'py-24 bg-gradient-to-b from-background to-muted/20',
         className
       )}
     >
