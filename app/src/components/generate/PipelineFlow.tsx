@@ -157,8 +157,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       // Update URL with pipeline ID
       router.push(`?id=${newPipelineId}`, { scroll: false });
 
-      // Start generating images immediately
-      await generateImages();
+      // Start generating images immediately (pass ID directly since state not yet updated)
+      await generateImages(newPipelineId);
     } catch (err) {
       console.error('Failed to start pipeline:', err);
     } finally {

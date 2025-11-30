@@ -31,7 +31,7 @@ interface UsePipelineReturn {
 
   // Actions
   createPipeline: (imageUrls: string[], settings?: Partial<PipelineSettings>) => Promise<string>;
-  generateImages: () => Promise<GeneratePipelineImagesResponse>;
+  generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
   regenerateImage: (viewType: 'mesh' | 'texture', angle: string) => Promise<void>;
   startMeshGeneration: () => Promise<StartPipelineMeshResponse>;
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
@@ -167,8 +167,10 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
   );
 
   // Generate all 6 images
-  const generateImages = useCallback(async (): Promise<GeneratePipelineImagesResponse> => {
-    if (!pipelineId) {
+  // Accepts optional overridePipelineId for immediate use after creation
+  const generateImages = useCallback(async (overridePipelineId?: string): Promise<GeneratePipelineImagesResponse> => {
+    const targetPipelineId = overridePipelineId || pipelineId;
+    if (!targetPipelineId) {
       throw new Error('No pipeline ID');
     }
     if (!functions) {
@@ -181,7 +183,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
         GeneratePipelineImagesResponse
       >(functions, 'generatePipelineImages');
 
-      const result = await generateFn({ pipelineId });
+      const result = await generateFn({ pipelineId: targetPipelineId });
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate images';
