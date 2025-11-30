@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Upload,
@@ -33,16 +32,23 @@ interface PipelineFlowProps {
   onNoCredits: () => void;
 }
 
-// Step configuration
+// Simplified step configuration - 4 core stages
 const STEPS = [
-  { id: 1, key: 'upload', icon: Upload, label: '上傳圖片' },
-  { id: 2, key: 'processing', icon: Images, label: '生成視角' },
-  { id: 3, key: 'preview', icon: Images, label: '預覽圖片' },
-  { id: 4, key: 'mesh', icon: Box, label: '生成網格' },
-  { id: 5, key: 'meshPreview', icon: Box, label: '預覽網格' },
-  { id: 6, key: 'texture', icon: Palette, label: '生成貼圖' },
-  { id: 7, key: 'complete', icon: CheckCircle, label: '完成' },
+  { id: 1, key: 'upload', icon: Upload, label: '上傳' },
+  { id: 2, key: 'images', icon: Images, label: '視角圖片' },
+  { id: 3, key: 'mesh', icon: Box, label: '3D 網格' },
+  { id: 4, key: 'complete', icon: CheckCircle, label: '完成' },
 ] as const;
+
+// Map pipeline status to step
+const getStepFromStatus = (status: string | undefined, hasId: boolean): number => {
+  if (!hasId) return 1;
+  if (status === 'generating-images') return 2;
+  if (status === 'images-ready') return 2;
+  if (status === 'generating-mesh' || status === 'mesh-ready' || status === 'generating-texture') return 3;
+  if (status === 'completed') return 4;
+  return 1;
+};
 
 // Loading fallback for Suspense
 function PipelineFlowLoading() {
@@ -212,64 +218,77 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   };
 
-  // Render step indicator
+  // Calculate current step from status
+  const displayStep = getStepFromStatus(pipeline?.status, !!pipelineId);
+  const isFailed = pipeline?.status === 'failed';
+
+  // Render step indicator - cleaner design
   const renderStepper = () => (
-    <div className="flex items-center justify-center gap-2 mb-8 overflow-x-auto py-2">
-      {STEPS.map((step, index) => {
-        const Icon = step.icon;
-        const isActive = currentStep === step.id;
-        const isCompleted = currentStep > step.id;
-        const isFailed = pipeline?.status === 'failed';
+    <div className="flex items-center justify-center mb-8">
+      <div className="flex items-center gap-0">
+        {STEPS.map((step, index) => {
+          const Icon = step.icon;
+          const isActive = displayStep === step.id;
+          const isCompleted = displayStep > step.id;
 
-        return (
-          <div key={step.id} className="flex items-center">
-            <div
-              className={`
-                flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium
-                ${isActive ? 'bg-primary text-primary-foreground' : ''}
-                ${isCompleted ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : ''}
-                ${!isActive && !isCompleted ? 'bg-muted text-muted-foreground' : ''}
-                ${isFailed && isActive ? 'bg-destructive text-destructive-foreground' : ''}
-              `}
-            >
-              <Icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{step.label}</span>
+          return (
+            <div key={step.id} className="flex items-center">
+              {/* Step circle and label */}
+              <div className="flex flex-col items-center">
+                <div
+                  className={`
+                    flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
+                    ${isActive && !isFailed ? 'border-primary bg-primary text-primary-foreground' : ''}
+                    ${isCompleted ? 'border-green-500 bg-green-500 text-white' : ''}
+                    ${!isActive && !isCompleted ? 'border-muted-foreground/30 bg-background text-muted-foreground' : ''}
+                    ${isFailed && isActive ? 'border-destructive bg-destructive text-destructive-foreground' : ''}
+                  `}
+                >
+                  {isCompleted ? (
+                    <CheckCircle className="h-5 w-5" />
+                  ) : (
+                    <Icon className="h-5 w-5" />
+                  )}
+                </div>
+                <span className={`
+                  mt-2 text-xs font-medium
+                  ${isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground'}
+                `}>
+                  {step.label}
+                </span>
+              </div>
+              {/* Connector line */}
+              {index < STEPS.length - 1 && (
+                <div className={`
+                  w-12 sm:w-20 h-0.5 mx-2
+                  ${displayStep > step.id ? 'bg-green-500' : 'bg-muted-foreground/30'}
+                `} />
+              )}
             </div>
-            {index < STEPS.length - 1 && (
-              <ChevronRight className="h-4 w-4 mx-1 text-muted-foreground" />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  // Render credit display
-  const renderCredits = () => (
-    <div className="flex items-center justify-center gap-4 mb-6">
-      <Badge variant="outline" className="text-sm">
-        你的點數: {creditsLoading ? '...' : credits}
-      </Badge>
-      <div className="text-sm text-muted-foreground">
-        網格: {MESH_COST} 點 | 貼圖: +{TEXTURE_COST} 點
+          );
+        })}
       </div>
     </div>
   );
 
-  // Step 1: Upload
+  // Render credit display - more subtle
+  const renderCredits = () => (
+    <div className="flex items-center justify-center gap-3 mb-6 text-sm text-muted-foreground">
+      <span className="font-medium text-foreground">
+        {creditsLoading ? '...' : credits} 點
+      </span>
+      <span className="text-muted-foreground/50">|</span>
+      <span>網格 {MESH_COST} 點</span>
+      <span className="text-muted-foreground/50">|</span>
+      <span>貼圖 +{TEXTURE_COST} 點</span>
+    </div>
+  );
+
+  // Step 1: Upload - cleaner without card wrapper
   const renderUploadStep = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          上傳圖片
-        </CardTitle>
-        <CardDescription>
-          上傳一張或多張圖片，我們將生成多角度視角圖片用於 3D 模型生成
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {user ? (
+    <div className="space-y-6">
+      {user ? (
+        <>
           <PipelineUploader
             userId={user.uid}
             images={uploadedImages}
@@ -277,21 +296,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             maxImages={4}
             disabled={actionLoading}
           />
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">請先登入以上傳圖片</p>
-            <Button onClick={() => router.push('/auth')}>
-              登入
-            </Button>
-          </div>
-        )}
-
-        {user && (
-          <div className="flex justify-end">
+          <div className="flex justify-center">
             <Button
               size="lg"
               onClick={handleStartPipeline}
               disabled={uploadedImages.length === 0 || actionLoading || authLoading}
+              className="px-8"
             >
               {actionLoading ? (
                 <>
@@ -306,210 +316,126 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               )}
             </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground mb-4">請先登入以上傳圖片</p>
+            <Button onClick={() => router.push('/auth')}>
+              登入
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 
-  // Step 2: Processing
+  // Step 2: Processing - minimal loading state
   const renderProcessingStep = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Images className="h-5 w-5" />
-          生成視角圖片
-        </CardTitle>
-        <CardDescription>
-          正在使用 AI 生成 6 張多角度視角圖片...
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg font-medium">生成中...</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            這可能需要 30-60 秒
-          </p>
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="relative">
+        <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+        <div className="relative bg-primary/10 p-6 rounded-full">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <p className="text-lg font-medium mt-6">正在生成視角圖片</p>
+      <p className="text-sm text-muted-foreground mt-2">
+        AI 正在分析您的圖片並生成多角度視圖，約需 30-60 秒
+      </p>
+    </div>
   );
 
-  // Step 3: Image Preview
+  // Step 3: Image Preview - cleaner grid layout
   const renderImagePreviewStep = () => {
     const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
     const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
 
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Images className="h-5 w-5" />
-            預覽生成的圖片
-          </CardTitle>
-          <CardDescription>
-            查看生成的視角圖片，可以重新生成不滿意的圖片
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Mesh images */}
-          <div>
-            <h4 className="text-sm font-medium mb-3">網格用圖片 (7色優化)</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {meshAngles.map((angle) => {
-                const image = pipeline?.meshImages[angle];
-                return (
-                  <div key={angle} className="relative group">
-                    {image ? (
-                      <img
-                        src={image.url}
-                        alt={`${angle} view`}
-                        className="w-full aspect-square object-cover rounded-lg border"
-                      />
-                    ) : (
-                      <Skeleton className="w-full aspect-square rounded-lg" />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleRegenerateImage('mesh', angle)}
-                        disabled={actionLoading}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        重新生成
-                      </Button>
-                    </div>
-                    <Badge className="absolute bottom-2 left-2" variant="secondary">
-                      {angle === 'front' ? '正面' : angle === 'back' ? '背面' : angle === 'left' ? '左側' : '右側'}
-                    </Badge>
+      <div className="space-y-8">
+        {/* Mesh images */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-medium">網格用圖片</h4>
+            <Badge variant="outline" className="text-xs">7色優化</Badge>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {meshAngles.map((angle) => {
+              const image = pipeline?.meshImages[angle];
+              return (
+                <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
+                  {image ? (
+                    <img
+                      src={image.url}
+                      alt={`${angle} view`}
+                      className="w-full aspect-square object-cover"
+                    />
+                  ) : (
+                    <Skeleton className="w-full aspect-square" />
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleRegenerateImage('mesh', angle)}
+                      disabled={actionLoading}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      重新生成
+                    </Button>
                   </div>
-                );
-              })}
-            </div>
+                  <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
+                    {angle === 'front' ? '正面' : angle === 'back' ? '背面' : angle === 'left' ? '左側' : '右側'}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-
-          {/* Texture images */}
-          <div>
-            <h4 className="text-sm font-medium mb-3">貼圖用圖片 (全彩)</h4>
-            <div className="grid grid-cols-2 gap-4 max-w-md">
-              {textureAngles.map((angle) => {
-                const image = pipeline?.textureImages[angle];
-                return (
-                  <div key={angle} className="relative group">
-                    {image ? (
-                      <img
-                        src={image.url}
-                        alt={`${angle} texture view`}
-                        className="w-full aspect-square object-cover rounded-lg border"
-                      />
-                    ) : (
-                      <Skeleton className="w-full aspect-square rounded-lg" />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleRegenerateImage('texture', angle)}
-                        disabled={actionLoading}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        重新生成
-                      </Button>
-                    </div>
-                    <Badge className="absolute bottom-2 left-2" variant="secondary">
-                      {angle === 'front' ? '正面' : '背面'}
-                    </Badge>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button size="lg" onClick={handleStartMesh} disabled={actionLoading}>
-              {actionLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  處理中...
-                </>
-              ) : (
-                <>
-                  <Box className="mr-2 h-4 w-4" />
-                  生成 3D 網格 ({MESH_COST} 點)
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // Step 4: Mesh generation
-  const renderMeshGeneratingStep = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Box className="h-5 w-5" />
-          生成 3D 網格
-        </CardTitle>
-        <CardDescription>
-          正在使用 Meshy AI 生成 3D 模型網格...
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg font-medium">生成網格中...</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            這可能需要 2-5 分鐘
-          </p>
-          <Progress className="w-full max-w-xs mt-4" value={50} />
         </div>
-      </CardContent>
-    </Card>
-  );
 
-  // Step 5: Mesh preview
-  const renderMeshPreviewStep = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Box className="h-5 w-5" />
-          網格預覽
-        </CardTitle>
-        <CardDescription>
-          3D 網格已生成完成！你可以選擇添加貼圖或直接完成
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {pipeline?.meshUrl ? (
-          <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-            {/* TODO: Add 3D viewer component */}
-            <div className="text-center">
-              <Box className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-muted-foreground">3D 模型預覽</p>
-              <a
-                href={pipeline.meshUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline mt-2 inline-block"
-              >
-                下載 GLB 檔案
-              </a>
-            </div>
+        {/* Texture images */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-medium">貼圖用圖片</h4>
+            <Badge variant="outline" className="text-xs">全彩</Badge>
           </div>
-        ) : (
-          <Skeleton className="aspect-video rounded-lg" />
-        )}
+          <div className="grid grid-cols-2 gap-3 max-w-sm">
+            {textureAngles.map((angle) => {
+              const image = pipeline?.textureImages[angle];
+              return (
+                <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
+                  {image ? (
+                    <img
+                      src={image.url}
+                      alt={`${angle} texture view`}
+                      className="w-full aspect-square object-cover"
+                    />
+                  ) : (
+                    <Skeleton className="w-full aspect-square" />
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleRegenerateImage('texture', angle)}
+                      disabled={actionLoading}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      重新生成
+                    </Button>
+                  </div>
+                  <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
+                    {angle === 'front' ? '正面' : '背面'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
-        <div className="flex justify-between">
-          <Button variant="outline" onClick={() => router.push('/dashboard')}>
-            <CheckCircle className="mr-2 h-4 w-4" />
-            完成 (僅網格)
-          </Button>
-          <Button size="lg" onClick={handleStartTexture} disabled={actionLoading}>
+        <div className="flex justify-center pt-4">
+          <Button size="lg" onClick={handleStartMesh} disabled={actionLoading} className="px-8">
             {actionLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -517,93 +443,128 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               </>
             ) : (
               <>
-                <Palette className="mr-2 h-4 w-4" />
-                添加貼圖 (+{TEXTURE_COST} 點)
+                <Box className="mr-2 h-4 w-4" />
+                生成 3D 網格 ({MESH_COST} 點)
               </>
             )}
           </Button>
         </div>
-      </CardContent>
-    </Card>
-  );
+      </div>
+    );
+  };
 
-  // Step 6: Texture generation
-  const renderTextureGeneratingStep = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Palette className="h-5 w-5" />
-          生成貼圖
-        </CardTitle>
-        <CardDescription>
-          正在為 3D 模型添加貼圖...
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg font-medium">生成貼圖中...</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            這可能需要 2-5 分鐘
-          </p>
-          <Progress className="w-full max-w-xs mt-4" value={50} />
+  // Step 4: Mesh generation - consistent loading style
+  const renderMeshGeneratingStep = () => (
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="relative">
+        <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+        <div className="relative bg-primary/10 p-6 rounded-full">
+          <Box className="h-10 w-10 text-primary animate-pulse" />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <p className="text-lg font-medium mt-6">正在生成 3D 網格</p>
+      <p className="text-sm text-muted-foreground mt-2">
+        Meshy AI 正在將您的圖片轉換為 3D 模型，約需 2-5 分鐘
+      </p>
+      <Progress className="w-full max-w-xs mt-6" value={50} />
+    </div>
   );
 
-  // Step 7: Complete
-  const renderCompleteStep = () => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CheckCircle className="h-5 w-5 text-green-500" />
-          完成！
-        </CardTitle>
-        <CardDescription>
-          你的 3D 模型已生成完成
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {pipeline?.texturedModelUrl ? (
-          <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-            {/* TODO: Add 3D viewer component */}
-            <div className="text-center">
-              <Box className="h-16 w-16 mx-auto text-green-500 mb-4" />
-              <p className="text-lg font-medium">3D 模型已就緒</p>
+  // Step 5: Mesh preview - cleaner layout
+  const renderMeshPreviewStep = () => (
+    <div className="space-y-6">
+      {pipeline?.meshUrl ? (
+        <div className="aspect-video bg-muted/50 rounded-2xl flex items-center justify-center border border-border/50">
+          <div className="text-center">
+            <div className="bg-green-500/10 p-4 rounded-full inline-block mb-4">
+              <Box className="h-12 w-12 text-green-500" />
+            </div>
+            <p className="font-medium">3D 網格生成完成</p>
+            <a
+              href={pipeline.meshUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline text-sm mt-2 inline-block"
+            >
+              下載 GLB 檔案
+            </a>
+          </div>
+        </div>
+      ) : (
+        <Skeleton className="aspect-video rounded-2xl" />
+      )}
+
+      <div className="flex justify-center gap-4">
+        <Button variant="outline" onClick={() => router.push('/dashboard')}>
+          <CheckCircle className="mr-2 h-4 w-4" />
+          完成 (僅網格)
+        </Button>
+        <Button size="lg" onClick={handleStartTexture} disabled={actionLoading}>
+          {actionLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              處理中...
+            </>
+          ) : (
+            <>
+              <Palette className="mr-2 h-4 w-4" />
+              添加貼圖 (+{TEXTURE_COST} 點)
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+
+  // Step 6: Texture generation - consistent loading style
+  const renderTextureGeneratingStep = () => (
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="relative">
+        <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+        <div className="relative bg-primary/10 p-6 rounded-full">
+          <Palette className="h-10 w-10 text-primary animate-pulse" />
+        </div>
+      </div>
+      <p className="text-lg font-medium mt-6">正在生成貼圖</p>
+      <p className="text-sm text-muted-foreground mt-2">
+        正在為您的 3D 模型添加精美貼圖，約需 2-5 分鐘
+      </p>
+      <Progress className="w-full max-w-xs mt-6" value={50} />
+    </div>
+  );
+
+  // Step 7: Complete - celebratory design
+  const renderCompleteStep = () => {
+    const modelUrl = pipeline?.texturedModelUrl || pipeline?.meshUrl;
+    const hasTexture = !!pipeline?.texturedModelUrl;
+
+    return (
+      <div className="space-y-6">
+        <div className="aspect-video bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
+          <div className="text-center">
+            <div className="bg-green-500/10 p-5 rounded-full inline-block mb-4">
+              <CheckCircle className="h-14 w-14 text-green-500" />
+            </div>
+            <p className="text-xl font-semibold">
+              {hasTexture ? '3D 模型已完成' : '3D 網格已完成'}
+            </p>
+            {modelUrl && (
               <a
-                href={pipeline.texturedModelUrl}
+                href={modelUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline mt-2 inline-block"
+                className="text-primary hover:underline text-sm mt-2 inline-block"
               >
                 下載 GLB 檔案
               </a>
-            </div>
+            )}
           </div>
-        ) : (
-          <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-            <div className="text-center">
-              <Box className="h-16 w-16 mx-auto text-green-500 mb-4" />
-              <p className="text-lg font-medium">3D 網格已就緒</p>
-              {pipeline?.meshUrl && (
-                <a
-                  href={pipeline.meshUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline mt-2 inline-block"
-                >
-                  下載 GLB 檔案
-                </a>
-              )}
-            </div>
-          </div>
-        )}
+        </div>
 
         {/* Coming soon placeholder */}
-        <div className="bg-muted/50 rounded-lg p-6 text-center">
-          <Printer className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-          <h4 className="font-medium">訂購 3D 列印 (即將推出)</h4>
+        <div className="bg-muted/30 rounded-xl p-6 text-center border border-border/50">
+          <Printer className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+          <h4 className="font-medium">3D 列印服務即將推出</h4>
           <p className="text-sm text-muted-foreground mt-1">
             很快你就可以直接訂購 3D 列印成品並寄送到府
           </p>
@@ -621,9 +582,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             創建新作品
           </Button>
         </div>
-      </CardContent>
-    </Card>
-  );
+      </div>
+    );
+  };
 
   // Handle retry for failed pipelines
   const handleRetry = async () => {
@@ -646,7 +607,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   };
 
-  // Render error state
+  // Render error state - cleaner design
   const renderErrorState = () => {
     const errorStep = pipeline?.errorStep;
     const canRetry = errorStep === 'generating-images' ||
@@ -654,54 +615,53 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                      errorStep === 'generating-texture';
 
     return (
-      <Card>
-        <CardContent className="py-12">
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              {error || pipeline?.error || '發生錯誤'}
-              {errorStep && (
-                <span className="block text-xs mt-1 opacity-75">
-                  失敗步驟: {errorStep === 'generating-images' ? '生成視角圖片' :
-                           errorStep === 'generating-mesh' ? '生成 3D 網格' :
-                           errorStep === 'generating-texture' ? '生成貼圖' : errorStep}
-                </span>
-              )}
-            </AlertDescription>
-          </Alert>
-          <div className="flex justify-center gap-4">
-            {canRetry && (
-              <Button
-                onClick={handleRetry}
-                disabled={actionLoading}
-                variant="default"
-              >
-                {actionLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    重試中...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    重試
-                  </>
-                )}
-              </Button>
-            )}
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="bg-destructive/10 p-4 rounded-full mb-4">
+          <AlertCircle className="h-10 w-10 text-destructive" />
+        </div>
+        <p className="text-lg font-medium mb-2">處理失敗</p>
+        <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
+          {error || pipeline?.error || '發生錯誤，請重試'}
+        </p>
+        {errorStep && (
+          <p className="text-xs text-muted-foreground mb-6">
+            失敗步驟: {errorStep === 'generating-images' ? '生成視角圖片' :
+                     errorStep === 'generating-mesh' ? '生成 3D 網格' :
+                     errorStep === 'generating-texture' ? '生成貼圖' : errorStep}
+          </p>
+        )}
+        <div className="flex justify-center gap-4">
+          {canRetry && (
             <Button
-              variant="outline"
-              onClick={() => {
-                setPipelineId(null);
-                setUploadedImages([]);
-                router.push('/generate', { scroll: false });
-              }}
+              onClick={handleRetry}
+              disabled={actionLoading}
+              variant="default"
             >
-              重新開始
+              {actionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  重試中...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  重試
+                </>
+              )}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => {
+              setPipelineId(null);
+              setUploadedImages([]);
+              router.push('/generate', { scroll: false });
+            }}
+          >
+            重新開始
+          </Button>
+        </div>
+      </div>
     );
   };
 
