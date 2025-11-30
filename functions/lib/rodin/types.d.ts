@@ -164,3 +164,83 @@ export interface SessionDocument {
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt: FirebaseFirestore.Timestamp;
 }
+/**
+ * Pipeline Status for new simplified 3D generation workflow
+ * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
+ */
+export type PipelineStatus = 'draft' | 'generating-images' | 'images-ready' | 'generating-mesh' | 'mesh-ready' | 'generating-texture' | 'completed' | 'failed';
+/**
+ * Credit costs for pipeline workflow
+ * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ */
+export declare const PIPELINE_CREDIT_COSTS: {
+    readonly IMAGE_PROCESSING: 0;
+    readonly MESH_GENERATION: 5;
+    readonly TEXTURE_GENERATION: 10;
+};
+/**
+ * Processed image from Gemini
+ */
+export interface PipelineProcessedImage {
+    url: string;
+    storagePath: string;
+    source: 'gemini' | 'upload';
+    colorPalette?: string[];
+    generatedAt: FirebaseFirestore.Timestamp;
+}
+/**
+ * View types for pipeline images
+ */
+export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
+export type PipelineTextureAngle = 'front' | 'back';
+/**
+ * Pipeline settings
+ */
+export interface PipelineSettings {
+    quality: PrintQuality;
+    printerType: PrinterType;
+    format: OutputFormat;
+}
+/**
+ * Pipeline document for new simplified 3D generation workflow
+ *
+ * Flow:
+ * 1. User uploads 1+ images
+ * 2. Gemini generates 6 images:
+ *    - 4 mesh-optimized (7-color H2C style) for front/back/left/right
+ *    - 2 texture-ready (full color) for front/back
+ * 3. User previews images, can regenerate individual views
+ * 4. Meshy Multi-Image-to-3D generates mesh (5 credits)
+ * 5. User previews mesh
+ * 6. Optional: Meshy Retexture generates texture (10 credits)
+ * 7. Final model ready with download options
+ */
+export interface PipelineDocument {
+    userId: string;
+    status: PipelineStatus;
+    inputImages: Array<{
+        url: string;
+        storagePath: string;
+        uploadedAt: FirebaseFirestore.Timestamp;
+    }>;
+    meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
+    textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+    meshyMeshTaskId?: string;
+    meshUrl?: string;
+    meshStoragePath?: string;
+    meshDownloadFiles?: DownloadFile[];
+    meshyTextureTaskId?: string;
+    texturedModelUrl?: string;
+    texturedModelStoragePath?: string;
+    texturedDownloadFiles?: DownloadFile[];
+    creditsCharged: {
+        mesh: number;
+        texture: number;
+    };
+    settings: PipelineSettings;
+    error?: string;
+    errorStep?: PipelineStatus;
+    createdAt: FirebaseFirestore.Timestamp;
+    updatedAt: FirebaseFirestore.Timestamp;
+    completedAt?: FirebaseFirestore.Timestamp;
+}

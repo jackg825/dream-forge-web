@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.getSession = exports.createSession = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getPipeline = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.getSession = exports.createSession = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -71,4 +71,13 @@ Object.defineProperty(exports, "checkSessionModelStatus", { enumerable: true, ge
 var h2c_1 = require("./handlers/h2c");
 Object.defineProperty(exports, "optimizeColorsForH2C", { enumerable: true, get: function () { return h2c_1.optimizeColorsForH2C; } });
 Object.defineProperty(exports, "uploadEditedH2CImage", { enumerable: true, get: function () { return h2c_1.uploadEditedH2CImage; } });
+// New simplified pipeline flow (Gemini + Meshy)
+var pipeline_1 = require("./handlers/pipeline");
+Object.defineProperty(exports, "createPipeline", { enumerable: true, get: function () { return pipeline_1.createPipeline; } });
+Object.defineProperty(exports, "getPipeline", { enumerable: true, get: function () { return pipeline_1.getPipeline; } });
+Object.defineProperty(exports, "generatePipelineImages", { enumerable: true, get: function () { return pipeline_1.generatePipelineImages; } });
+Object.defineProperty(exports, "regeneratePipelineImage", { enumerable: true, get: function () { return pipeline_1.regeneratePipelineImage; } });
+Object.defineProperty(exports, "startPipelineMesh", { enumerable: true, get: function () { return pipeline_1.startPipelineMesh; } });
+Object.defineProperty(exports, "checkPipelineStatus", { enumerable: true, get: function () { return pipeline_1.checkPipelineStatus; } });
+Object.defineProperty(exports, "startPipelineTexture", { enumerable: true, get: function () { return pipeline_1.startPipelineTexture; } });
 //# sourceMappingURL=index.js.map

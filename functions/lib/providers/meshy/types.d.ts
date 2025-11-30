@@ -91,3 +91,38 @@ export declare const MESHY_QUALITY_POLYCOUNT: Record<string, number>;
  * Meshy API base URL
  */
 export declare const MESHY_API_BASE = "https://api.meshy.ai/openapi/v1";
+/**
+ * Request body for retexture task
+ * POST /openapi/v1/retexture
+ *
+ * Requires one of: input_task_id OR model_url
+ * Requires one of: text_style_prompt OR image_style_url
+ */
+export interface MeshyRetextureRequest {
+    input_task_id?: string;
+    model_url?: string;
+    text_style_prompt?: string;
+    image_style_url?: string;
+    ai_model?: MeshyModel;
+    enable_original_uv?: boolean;
+    enable_pbr?: boolean;
+}
+/**
+ * Retexture task response
+ * GET /openapi/v1/retexture/:id
+ */
+export interface MeshyRetextureResponse {
+    id: string;
+    status: MeshyStatus;
+    progress: number;
+    model_urls?: MeshyModelUrls;
+    texture_urls?: MeshyTextureUrls[];
+    thumbnail_url?: string;
+    created_at: number;
+    started_at?: number;
+    finished_at?: number;
+    expires_at?: number;
+    task_error?: {
+        message: string;
+    };
+}

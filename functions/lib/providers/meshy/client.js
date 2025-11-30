@@ -164,6 +164,74 @@ class MeshyProvider {
         }
     }
     /**
+     * Generate 3D mesh only (no texture) from multiple images
+     *
+     * Used for the new pipeline workflow where texture is generated separately.
+     * This costs 5 credits (mesh-only) vs 15 credits (with texture).
+     *
+     * @param imageBuffers - Array of image buffers (max 4)
+     * @param options - Generation options (quality, format)
+     * @returns Task ID for polling
+     */
+    async generateMeshOnly(imageBuffers, options) {
+        try {
+            // Meshy supports max 4 images
+            const limitedBuffers = imageBuffers.slice(0, 4);
+            // Convert buffers to base64 data URIs
+            const imageUrls = limitedBuffers.map((buffer) => {
+                const base64 = buffer.toString('base64');
+                return `data:image/png;base64,${base64}`;
+            });
+            const polycount = types_1.MESHY_QUALITY_POLYCOUNT[options.quality] || 100000;
+            functions.logger.info('Starting Meshy mesh-only generation', {
+                imageCount: imageUrls.length,
+                quality: options.quality,
+                polycount,
+                format: options.format,
+                shouldTexture: false, // Key difference: no texture
+            });
+            // For multi-image, use the appropriate endpoint
+            const endpoint = imageUrls.length > 1
+                ? `${types_1.MESHY_API_BASE}/multi-image-to-3d`
+                : `${types_1.MESHY_API_BASE}/image-to-3d`;
+            const requestBody = imageUrls.length > 1
+                ? {
+                    image_urls: imageUrls,
+                    ai_model: 'meshy-5',
+                    topology: 'triangle',
+                    target_polycount: polycount,
+                    should_remesh: true,
+                    should_texture: false, // KEY: No texture generation
+                    enable_pbr: false,
+                }
+                : {
+                    image_url: imageUrls[0],
+                    ai_model: 'latest',
+                    topology: 'triangle',
+                    target_polycount: polycount,
+                    should_remesh: true,
+                    should_texture: false, // KEY: No texture generation
+                    enable_pbr: false,
+                };
+            const response = await axios_1.default.post(endpoint, requestBody, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 60000,
+            });
+            const taskId = response.data.result;
+            functions.logger.info('Meshy mesh-only generation started', {
+                taskId,
+                imageCount: imageUrls.length,
+            });
+            return { taskId };
+        }
+        catch (error) {
+            this.handleError(error, 'generateMeshOnly');
+        }
+    }
+    /**
      * Check status of a generation task
      */
     async checkStatus(taskId) {

@@ -23,6 +23,17 @@ export declare class MeshyProvider implements I3DProvider {
      */
     generateFromMultipleImages(imageBuffers: Buffer[], options: GenerationOptions): Promise<GenerationTaskResult>;
     /**
+     * Generate 3D mesh only (no texture) from multiple images
+     *
+     * Used for the new pipeline workflow where texture is generated separately.
+     * This costs 5 credits (mesh-only) vs 15 credits (with texture).
+     *
+     * @param imageBuffers - Array of image buffers (max 4)
+     * @param options - Generation options (quality, format)
+     * @returns Task ID for polling
+     */
+    generateMeshOnly(imageBuffers: Buffer[], options: GenerationOptions): Promise<GenerationTaskResult>;
+    /**
      * Check status of a generation task
      */
     checkStatus(taskId: string): Promise<TaskStatusResult>;

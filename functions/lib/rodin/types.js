@@ -8,7 +8,7 @@
  * - format: 'stl' as the standard 3D printing format
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MAX_USER_DRAFTS = exports.SESSION_CREDIT_COSTS = exports.QUALITY_FACE_COUNTS = exports.PRINT_QUALITY_FACE_COUNTS = exports.CREDIT_COSTS = exports.PRINTER_MATERIAL_MAP = void 0;
+exports.PIPELINE_CREDIT_COSTS = exports.MAX_USER_DRAFTS = exports.SESSION_CREDIT_COSTS = exports.QUALITY_FACE_COUNTS = exports.PRINT_QUALITY_FACE_COUNTS = exports.CREDIT_COSTS = exports.PRINTER_MATERIAL_MAP = void 0;
 // Printer type to material mapping
 exports.PRINTER_MATERIAL_MAP = {
     fdm: 'Shaded', // Mono prints don't need PBR textures
@@ -41,4 +41,13 @@ exports.SESSION_CREDIT_COSTS = {
 };
 // Maximum drafts per user
 exports.MAX_USER_DRAFTS = 3;
+/**
+ * Credit costs for pipeline workflow
+ * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ */
+exports.PIPELINE_CREDIT_COSTS = {
+    IMAGE_PROCESSING: 0, // Gemini processing is free (absorbed cost)
+    MESH_GENERATION: 5, // Meshy mesh-only generation
+    TEXTURE_GENERATION: 10, // Meshy texture/retexture
+};
 //# sourceMappingURL=types.js.map

@@ -26,5 +26,12 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create, update, delete: if false; // Only Cloud Functions can write
     }
+
+    // Pipelines collection - new simplified 3D generation flow
+    // Users can read their own pipelines, all writes via Cloud Functions
+    match /pipelines/{pipelineId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create, update, delete: if false; // Only Cloud Functions can write
+    }
   }
 }
