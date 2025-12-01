@@ -185,6 +185,7 @@ export const createPipeline = functions
     } = {
       userId,
       status: 'draft',
+      processingMode: 'batch', // Default to batch mode (50% cost savings)
       generationMode: modeId,
       inputImages: imageUrls.map((url) => ({
         url,

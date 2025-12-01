@@ -53,3 +53,9 @@ export {
   checkPipelineStatus,
   startPipelineTexture,
 } from './handlers/pipeline';
+
+// Gemini Batch API handlers
+export {
+  submitGeminiBatch,
+  pollGeminiBatchJobs,
+} from './handlers/gemini-batch';

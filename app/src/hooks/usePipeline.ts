@@ -21,7 +21,14 @@ import type {
   PipelineMeshAngle,
   PipelineTextureAngle,
   GenerationModeId,
+  ProcessingMode,
 } from '@/types';
+
+interface SubmitBatchResponse {
+  success: boolean;
+  batchJobId: string;
+  status: PipelineStatus;
+}
 
 interface UsePipelineReturn {
   // Pipeline state
@@ -34,9 +41,11 @@ interface UsePipelineReturn {
     imageUrls: string[],
     settings?: Partial<PipelineSettings>,
     generationMode?: GenerationModeId,
+    processingMode?: ProcessingMode,
     userDescription?: string
   ) => Promise<string>;
   generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
+  submitBatch: (overridePipelineId?: string) => Promise<SubmitBatchResponse>;
   regenerateImage: (viewType: 'mesh' | 'texture', angle: string, hint?: string) => Promise<void>;
   startMeshGeneration: () => Promise<StartPipelineMeshResponse>;
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
@@ -45,6 +54,7 @@ interface UsePipelineReturn {
   // Navigation helpers
   currentStep: number;
   canProceed: boolean;
+  isBatchProcessing: boolean;
 }
 
 /**
@@ -79,6 +89,8 @@ function getStepFromStatus(status: PipelineStatus): number {
   switch (status) {
     case 'draft':
       return 1;
+    case 'batch-queued':
+    case 'batch-processing':
     case 'generating-images':
       return 2;
     case 'images-ready':
@@ -153,6 +165,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       imageUrls: string[],
       settings?: Partial<PipelineSettings>,
       generationMode?: GenerationModeId,
+      processingMode?: ProcessingMode,
       userDescription?: string
     ): Promise<string> => {
       if (!functions) {
@@ -165,12 +178,19 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
             imageUrls: string[];
             settings?: Partial<PipelineSettings>;
             generationMode?: GenerationModeId;
+            processingMode?: ProcessingMode;
             userDescription?: string;
           },
           CreatePipelineResponse
         >(functions, 'createPipeline');
 
-        const result = await createPipelineFn({ imageUrls, settings, generationMode, userDescription });
+        const result = await createPipelineFn({
+          imageUrls,
+          settings,
+          generationMode,
+          processingMode,
+          userDescription,
+        });
         return result.data.pipelineId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create pipeline';
@@ -181,7 +201,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     []
   );
 
-  // Generate all 6 images
+  // Generate all 6 images (realtime mode)
   // Accepts optional overridePipelineId for immediate use after creation
   const generateImages = useCallback(async (overridePipelineId?: string): Promise<GeneratePipelineImagesResponse> => {
     const targetPipelineId = overridePipelineId || pipelineId;
@@ -202,6 +222,32 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate images';
+      setError(message);
+      throw err;
+    }
+  }, [pipelineId]);
+
+  // Submit batch job for image generation (batch mode)
+  // Uses Gemini Batch API for 50% cost savings, async processing
+  const submitBatch = useCallback(async (overridePipelineId?: string): Promise<SubmitBatchResponse> => {
+    const targetPipelineId = overridePipelineId || pipelineId;
+    if (!targetPipelineId) {
+      throw new Error('No pipeline ID');
+    }
+    if (!functions) {
+      throw new Error('Firebase not initialized');
+    }
+
+    try {
+      const submitBatchFn = httpsCallable<
+        { pipelineId: string },
+        SubmitBatchResponse
+      >(functions, 'submitGeminiBatch');
+
+      const result = await submitBatchFn({ pipelineId: targetPipelineId });
+      return result.data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to submit batch job';
       setError(message);
       throw err;
     }
@@ -314,17 +360,24 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
         pipeline.status === 'completed')
     : false;
 
+  // Check if pipeline is in batch processing state
+  const isBatchProcessing = pipeline
+    ? (pipeline.status === 'batch-queued' || pipeline.status === 'batch-processing')
+    : false;
+
   return {
     pipeline,
     loading,
     error,
     createPipeline,
     generateImages,
+    submitBatch,
     regenerateImage,
     startMeshGeneration,
     checkStatus,
     startTextureGeneration,
     currentStep,
     canProceed,
+    isBatchProcessing,
   };
 }

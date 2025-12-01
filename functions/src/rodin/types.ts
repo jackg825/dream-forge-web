@@ -298,13 +298,22 @@ export interface SessionDocument {
  */
 export type PipelineStatus =
   | 'draft'              // Initial state, user uploading images
-  | 'generating-images'  // Gemini generating 6 views (real-time)
+  | 'batch-queued'       // Batch job submitted, waiting to process
+  | 'batch-processing'   // Batch job running on Gemini
+  | 'generating-images'  // Gemini generating 6 views (real-time mode)
   | 'images-ready'       // 6 images ready for preview
   | 'generating-mesh'    // Meshy generating mesh (no texture)
   | 'mesh-ready'         // Mesh complete, texture optional
   | 'generating-texture' // Meshy generating texture
   | 'completed'          // All done
   | 'failed';            // Error occurred
+
+/**
+ * Processing mode for image generation
+ * - realtime: Sequential Gemini API calls (faster but less reliable)
+ * - batch: Gemini Batch API (50% cheaper, async, more reliable)
+ */
+export type ProcessingMode = 'realtime' | 'batch';
 
 /**
  * Credit costs for pipeline workflow
@@ -366,8 +375,20 @@ export interface PipelineDocument {
   userId: string;
   status: PipelineStatus;
 
+  // Processing mode (realtime or batch)
+  processingMode: ProcessingMode;
+
   // Generation mode for A/B testing
   generationMode: GenerationModeId;
+
+  // Batch processing fields (only if processingMode === 'batch')
+  batchJobId?: string;              // Reference to geminiBatchJobs document
+  batchProgress?: {
+    total: number;                  // 6 (number of views)
+    completed: number;              // 0-6
+    failed: number;
+  };
+  estimatedCompletionTime?: FirebaseFirestore.Timestamp;
 
   // Step 1: User-uploaded input images
   inputImages: Array<{
@@ -414,4 +435,76 @@ export interface PipelineDocument {
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
   completedAt?: FirebaseFirestore.Timestamp;
+}
+
+// ============================================
+// Gemini Batch Job Types
+// ============================================
+
+/**
+ * Batch job status
+ */
+export type GeminiBatchJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+
+/**
+ * Individual batch request tracking
+ */
+export interface GeminiBatchRequest {
+  index: number;                       // 0-5 for 6 views
+  viewType: 'mesh' | 'texture';
+  angle: string;                       // front, back, left, right
+  prompt: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+}
+
+/**
+ * Individual batch result
+ */
+export interface GeminiBatchResult {
+  index: number;
+  viewType: 'mesh' | 'texture';
+  angle: string;
+  status: 'success' | 'failed';
+  imageBase64?: string;
+  mimeType?: string;
+  colorPalette?: string[];
+  storagePath?: string;
+  storageUrl?: string;
+  error?: string;
+}
+
+/**
+ * Gemini Batch Job document
+ *
+ * Stored in the 'geminiBatchJobs' collection.
+ * Tracks the state of a batch image generation job.
+ */
+export interface GeminiBatchJobDocument {
+  // Identity
+  pipelineId: string;                  // Reference to parent pipeline
+  userId: string;                      // Owner
+
+  // Gemini Batch API fields
+  batchJobName: string;                // Gemini operation name for polling
+  batchJobStatus: GeminiBatchJobStatus;
+
+  // Request tracking (6 requests per batch)
+  requests: GeminiBatchRequest[];
+
+  // Results (populated when complete)
+  results: GeminiBatchResult[];
+
+  // Timing
+  submittedAt: FirebaseFirestore.Timestamp;
+  startedAt?: FirebaseFirestore.Timestamp;
+  completedAt?: FirebaseFirestore.Timestamp;
+  lastPolledAt?: FirebaseFirestore.Timestamp;
+
+  // Error tracking
+  error?: string;
+  failedRequestCount: number;
+
+  // Retry tracking
+  retryCount: number;
+  maxRetries: number;
 }

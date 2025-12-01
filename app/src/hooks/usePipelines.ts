@@ -57,6 +57,10 @@ export function usePipelines(
             id: doc.id,
             userId: data.userId,
             status: data.status,
+            processingMode: data.processingMode || 'batch',
+            batchJobId: data.batchJobId,
+            batchProgress: data.batchProgress,
+            estimatedCompletionTime: data.estimatedCompletionTime?.toDate?.(),
             generationMode: data.generationMode || 'simplified-mesh',
             inputImages: (data.inputImages || []).map((img: any) => ({
               url: img.url,
@@ -75,6 +79,7 @@ export function usePipelines(
             texturedDownloadFiles: data.texturedDownloadFiles,
             creditsCharged: data.creditsCharged || { mesh: 0, texture: 0 },
             settings: data.settings || { quality: 'standard', printerType: 'fdm', format: 'glb' },
+            userDescription: data.userDescription,
             error: data.error,
             errorStep: data.errorStep,
             createdAt: data.createdAt?.toDate?.() || new Date(),

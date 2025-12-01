@@ -32,14 +32,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
 import { PipelineUploader } from './PipelineUploader';
 import { ModeSelector } from './ModeSelector';
+import { ProcessingModeSelector } from './ProcessingModeSelector';
+import { BatchProgressIndicator } from './BatchProgressIndicator';
 import { PreviousOutputs } from './PreviousOutputs';
 import { RegenerateDialog } from './RegenerateDialog';
+import { PipelineErrorState } from './PipelineErrorState';
 import type {
   PipelineMeshAngle,
   PipelineTextureAngle,
   GenerationModeId,
+  ProcessingMode,
 } from '@/types';
-import { GENERATION_MODE_OPTIONS, DEFAULT_GENERATION_MODE } from '@/types';
+import { GENERATION_MODE_OPTIONS, DEFAULT_GENERATION_MODE, DEFAULT_PROCESSING_MODE } from '@/types';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -56,7 +60,7 @@ const STEPS = [
 // Map pipeline status to step
 const getStepFromStatus = (status: string | undefined, hasId: boolean): number => {
   if (!hasId) return 1;
-  if (status === 'generating-images') return 2;
+  if (status === 'batch-queued' || status === 'batch-processing' || status === 'generating-images') return 2;
   if (status === 'images-ready') return 2;
   if (status === 'generating-mesh' || status === 'mesh-ready' || status === 'generating-texture') return 3;
   if (status === 'completed') return 4;
@@ -107,6 +111,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [generationMode, setGenerationMode] = useState<GenerationModeId>(DEFAULT_GENERATION_MODE);
+  const [processingMode, setProcessingMode] = useState<ProcessingMode>(DEFAULT_PROCESSING_MODE);
   const [userDescription, setUserDescription] = useState<string>('');
 
   // 3D Viewer state - mesh preview (Step 5)
@@ -143,11 +148,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     error,
     createPipeline,
     generateImages,
+    submitBatch,
     regenerateImage,
     startMeshGeneration,
     checkStatus,
     startTextureGeneration,
     currentStep,
+    isBatchProcessing,
   } = usePipeline(pipelineId);
 
   // Credit costs
@@ -198,12 +205,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
     setActionLoading(true);
     try {
-      // Create pipeline with image URLs, generation mode, and optional description
+      // Create pipeline with image URLs, generation mode, processing mode, and optional description
       const imageUrls = uploadedImages.map((img) => img.url);
       const newPipelineId = await createPipeline(
         imageUrls,
         undefined,
         generationMode,
+        processingMode,
         userDescription.trim() || undefined
       );
       setPipelineId(newPipelineId);
@@ -211,8 +219,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       // Update URL with pipeline ID
       router.push(`?id=${newPipelineId}`, { scroll: false });
 
-      // Start generating images immediately (pass ID directly since state not yet updated)
-      await generateImages(newPipelineId);
+      // Start image generation based on processing mode
+      if (processingMode === 'batch') {
+        // Batch mode: submit to Gemini Batch API for async processing
+        await submitBatch(newPipelineId);
+      } else {
+        // Realtime mode: generate images immediately
+        await generateImages(newPipelineId);
+      }
     } catch (err) {
       console.error('Failed to start pipeline:', err);
     } finally {
@@ -347,7 +361,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     <div className="space-y-6">
       {user ? (
         <>
-          {/* Mode selector - show before upload */}
+          {/* Processing mode selector - batch (default) or realtime */}
+          <ProcessingModeSelector
+            value={processingMode}
+            onChange={setProcessingMode}
+            disabled={actionLoading}
+          />
+
+          {/* Generation mode selector - show before upload */}
           <ModeSelector
             value={generationMode}
             onChange={setGenerationMode}
@@ -417,21 +438,49 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 2: Processing - minimal loading state
-  const renderProcessingStep = () => (
-    <div className="flex flex-col items-center justify-center py-16">
-      <div className="relative">
-        <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-        <div className="relative bg-primary/10 p-6 rounded-full">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+  // Step 2: Processing - shows batch or realtime progress
+  const renderProcessingStep = () => {
+    const isBatch = pipeline?.processingMode === 'batch' || isBatchProcessing;
+
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <div className="relative">
+          <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
+          <div className="relative bg-primary/10 p-6 rounded-full">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
         </div>
+        <p className="text-lg font-medium mt-6">正在生成視角圖片</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          {isBatch
+            ? 'AI 正在批次處理您的圖片，您可以離開此頁面稍後回來'
+            : 'AI 正在分析您的圖片並生成多角度視圖，約需 30-60 秒'}
+        </p>
+
+        {/* Show batch progress indicator for batch mode */}
+        {isBatch && pipeline && (
+          <div className="w-full max-w-md mt-6">
+            <BatchProgressIndicator
+              status={pipeline.status}
+              progress={pipeline.batchProgress}
+              estimatedCompletionTime={pipeline.estimatedCompletionTime}
+            />
+          </div>
+        )}
+
+        {/* Show link to history for batch mode */}
+        {isBatch && (
+          <Button
+            variant="outline"
+            className="mt-6"
+            onClick={() => router.push('/dashboard/history')}
+          >
+            前往歷史記錄查看
+          </Button>
+        )}
       </div>
-      <p className="text-lg font-medium mt-6">正在生成視角圖片</p>
-      <p className="text-sm text-muted-foreground mt-2">
-        AI 正在分析您的圖片並生成多角度視圖，約需 30-60 秒
-      </p>
-    </div>
-  );
+    );
+  };
 
   // Step 3: Image Preview - cleaner grid layout
   const renderImagePreviewStep = () => {
@@ -964,10 +1013,20 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       {renderCredits()}
 
       {pipeline?.status === 'failed' || error ? (
-        renderErrorState()
+        <PipelineErrorState
+          pipeline={pipeline}
+          error={error}
+          onRetry={handleRetry}
+          onReset={() => {
+            setPipelineId(null);
+            setUploadedImages([]);
+            router.push('/generate', { scroll: false });
+          }}
+          isRetrying={actionLoading}
+        />
       ) : !pipelineId ? (
         renderUploadStep()
-      ) : pipeline?.status === 'generating-images' ? (
+      ) : pipeline?.status === 'batch-queued' || pipeline?.status === 'batch-processing' || pipeline?.status === 'generating-images' ? (
         renderProcessingStep()
       ) : pipeline?.status === 'images-ready' ? (
         renderImagePreviewStep()

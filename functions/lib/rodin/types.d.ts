@@ -168,7 +168,13 @@ export interface SessionDocument {
  * Pipeline Status for new simplified 3D generation workflow
  * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
  */
-export type PipelineStatus = 'draft' | 'generating-images' | 'images-ready' | 'generating-mesh' | 'mesh-ready' | 'generating-texture' | 'completed' | 'failed';
+export type PipelineStatus = 'draft' | 'batch-queued' | 'batch-processing' | 'generating-images' | 'images-ready' | 'generating-mesh' | 'mesh-ready' | 'generating-texture' | 'completed' | 'failed';
+/**
+ * Processing mode for image generation
+ * - realtime: Sequential Gemini API calls (faster but less reliable)
+ * - batch: Gemini Batch API (50% cheaper, async, more reliable)
+ */
+export type ProcessingMode = 'realtime' | 'batch';
 /**
  * Credit costs for pipeline workflow
  * Total: 5 (mesh) + 10 (texture) = 15 credits max
@@ -223,7 +229,15 @@ export interface PipelineSettings {
 export interface PipelineDocument {
     userId: string;
     status: PipelineStatus;
+    processingMode: ProcessingMode;
     generationMode: GenerationModeId;
+    batchJobId?: string;
+    batchProgress?: {
+        total: number;
+        completed: number;
+        failed: number;
+    };
+    estimatedCompletionTime?: FirebaseFirestore.Timestamp;
     inputImages: Array<{
         url: string;
         storagePath: string;
@@ -250,4 +264,55 @@ export interface PipelineDocument {
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt: FirebaseFirestore.Timestamp;
     completedAt?: FirebaseFirestore.Timestamp;
+}
+/**
+ * Batch job status
+ */
+export type GeminiBatchJobStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+/**
+ * Individual batch request tracking
+ */
+export interface GeminiBatchRequest {
+    index: number;
+    viewType: 'mesh' | 'texture';
+    angle: string;
+    prompt: string;
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+}
+/**
+ * Individual batch result
+ */
+export interface GeminiBatchResult {
+    index: number;
+    viewType: 'mesh' | 'texture';
+    angle: string;
+    status: 'success' | 'failed';
+    imageBase64?: string;
+    mimeType?: string;
+    colorPalette?: string[];
+    storagePath?: string;
+    storageUrl?: string;
+    error?: string;
+}
+/**
+ * Gemini Batch Job document
+ *
+ * Stored in the 'geminiBatchJobs' collection.
+ * Tracks the state of a batch image generation job.
+ */
+export interface GeminiBatchJobDocument {
+    pipelineId: string;
+    userId: string;
+    batchJobName: string;
+    batchJobStatus: GeminiBatchJobStatus;
+    requests: GeminiBatchRequest[];
+    results: GeminiBatchResult[];
+    submittedAt: FirebaseFirestore.Timestamp;
+    startedAt?: FirebaseFirestore.Timestamp;
+    completedAt?: FirebaseFirestore.Timestamp;
+    lastPolledAt?: FirebaseFirestore.Timestamp;
+    error?: string;
+    failedRequestCount: number;
+    retryCount: number;
+    maxRetries: number;
 }

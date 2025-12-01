@@ -25,6 +25,8 @@ const STATUS_CONFIG: Record<
   { label: string; icon: typeof Box; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
   draft: { label: '草稿', icon: Clock, variant: 'secondary' },
+  'batch-queued': { label: '排隊中', icon: Clock, variant: 'secondary' },
+  'batch-processing': { label: '批次處理中', icon: Loader2, variant: 'default' },
   'generating-images': { label: '生成圖片中', icon: Loader2, variant: 'default' },
   'images-ready': { label: '圖片就緒', icon: CheckCircle, variant: 'secondary' },
   'generating-mesh': { label: '生成網格中', icon: Loader2, variant: 'default' },
@@ -55,6 +57,8 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
 
   // Determine if pipeline is in progress
   const isProcessing =
+    pipeline.status === 'batch-queued' ||
+    pipeline.status === 'batch-processing' ||
     pipeline.status === 'generating-images' ||
     pipeline.status === 'generating-mesh' ||
     pipeline.status === 'generating-texture';

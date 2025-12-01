@@ -543,7 +543,9 @@ export const DEFAULT_GENERATION_MODE: GenerationModeId = 'simplified-mesh';
  */
 export type PipelineStatus =
   | 'draft'              // Initial state, user uploading images
-  | 'generating-images'  // Gemini generating 6 views
+  | 'batch-queued'       // Batch job submitted, waiting to process
+  | 'batch-processing'   // Batch job running on Gemini
+  | 'generating-images'  // Gemini generating 6 views (real-time mode)
   | 'images-ready'       // 6 images ready for preview
   | 'generating-mesh'    // Meshy generating mesh (no texture)
   | 'mesh-ready'         // Mesh complete, texture optional
@@ -552,10 +554,49 @@ export type PipelineStatus =
   | 'failed';            // Error occurred
 
 /**
+ * Processing mode for image generation
+ * - realtime: Sequential Gemini API calls (faster but less reliable)
+ * - batch: Gemini Batch API (50% cheaper, async, more reliable)
+ */
+export type ProcessingMode = 'realtime' | 'batch';
+
+/**
+ * Default processing mode
+ */
+export const DEFAULT_PROCESSING_MODE: ProcessingMode = 'batch';
+
+/**
+ * Processing mode options for UI
+ */
+export const PROCESSING_MODE_OPTIONS: Record<ProcessingMode, {
+  id: ProcessingMode;
+  name: string;
+  description: string;
+  badge?: string;
+  estimatedTime: string;
+}> = {
+  batch: {
+    id: 'batch',
+    name: '批次處理',
+    description: '成本較低，適合不急用的情況',
+    badge: '推薦',
+    estimatedTime: '約 5-15 分鐘',
+  },
+  realtime: {
+    id: 'realtime',
+    name: '即時處理',
+    description: '立即處理，但可能遇到超時錯誤',
+    estimatedTime: '約 2-5 分鐘',
+  },
+};
+
+/**
  * Pipeline status display messages
  */
 export const PIPELINE_STATUS_MESSAGES: Record<PipelineStatus, string> = {
   'draft': '草稿',
+  'batch-queued': '排隊中...',
+  'batch-processing': '批次處理中...',
   'generating-images': '生成視角圖片中...',
   'images-ready': '圖片就緒',
   'generating-mesh': '生成 3D 網格中...',
@@ -607,12 +648,29 @@ export interface PipelineSettings {
 }
 
 /**
+ * Batch progress tracking
+ */
+export interface BatchProgress {
+  total: number;
+  completed: number;
+  failed: number;
+}
+
+/**
  * Pipeline document (frontend version)
  */
 export interface Pipeline {
   id: string;
   userId: string;
   status: PipelineStatus;
+
+  // Processing mode: realtime (sequential API) or batch (async Batch API)
+  processingMode: ProcessingMode;
+
+  // Batch processing tracking
+  batchJobId?: string;
+  batchProgress?: BatchProgress;
+  estimatedCompletionTime?: Date;
 
   // Generation mode for A/B testing
   generationMode: GenerationModeId;
@@ -667,6 +725,7 @@ export interface CreatePipelineRequest {
   imageUrls: string[];
   settings?: Partial<PipelineSettings>;
   generationMode?: GenerationModeId;
+  processingMode?: ProcessingMode;  // Default: 'batch' (50% cheaper, async)
   userDescription?: string;  // Optional description of the object for better AI generation
 }
 
