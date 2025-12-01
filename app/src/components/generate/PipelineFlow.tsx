@@ -732,7 +732,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
       {/* Sidebar - previous outputs + actions */}
       {pipeline && (
-        <div className="lg:col-span-1 lg:pt-7">
+        <div className="lg:col-span-1 lg:pt-10">
           <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={false}>
             {/* Action buttons in sidebar */}
             <div className="space-y-3 pt-4">
@@ -880,7 +880,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
         {/* Sidebar - previous outputs + print service + actions */}
         {pipeline && (
-          <div className="lg:col-span-1 lg:pt-7">
+          <div className="lg:col-span-1 lg:pt-10">
             <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={true}>
               {/* Print service coming soon */}
               <div className="bg-muted/30 rounded-xl p-4 text-center border border-border/50">
