@@ -22,6 +22,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { ModelViewer, type ModelViewerRef } from '@/components/viewer/ModelViewer';
+import { ModelViewerErrorBoundary } from '@/components/viewer/ModelViewerErrorBoundary';
 import { usePipeline } from '@/hooks/usePipeline';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
@@ -547,15 +548,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
             {/* 3D Viewer */}
             <div className="aspect-video bg-muted/30 rounded-2xl overflow-hidden border border-border/50">
-              <ModelViewer
-                ref={meshViewerRef}
-                modelUrl={pipeline.meshUrl}
-                downloadFiles={pipeline.meshDownloadFiles}
-                viewMode={meshViewMode}
-                backgroundColor="#fafafa"
-                showGrid={true}
-                autoRotate={false}
-              />
+              <ModelViewerErrorBoundary>
+                <ModelViewer
+                  ref={meshViewerRef}
+                  modelUrl={pipeline.meshUrl}
+                  downloadFiles={pipeline.meshDownloadFiles}
+                  viewMode={meshViewMode}
+                  backgroundColor="#fafafa"
+                  showGrid={true}
+                  autoRotate={false}
+                />
+              </ModelViewerErrorBoundary>
             </div>
 
             {/* Download link */}
@@ -689,15 +692,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
               {/* 3D Viewer */}
               <div className="aspect-video bg-muted/30 rounded-2xl overflow-hidden border border-green-500/20">
-                <ModelViewer
-                  ref={texturedViewerRef}
-                  modelUrl={modelUrl}
-                  downloadFiles={downloadFiles}
-                  viewMode={texturedViewMode}
-                  backgroundColor="#fafafa"
-                  showGrid={true}
-                  autoRotate={false}
-                />
+                <ModelViewerErrorBoundary>
+                  <ModelViewer
+                    ref={texturedViewerRef}
+                    modelUrl={modelUrl}
+                    downloadFiles={downloadFiles}
+                    viewMode={texturedViewMode}
+                    backgroundColor="#fafafa"
+                    showGrid={true}
+                    autoRotate={false}
+                  />
+                </ModelViewerErrorBoundary>
               </div>
 
               {/* Download link */}
