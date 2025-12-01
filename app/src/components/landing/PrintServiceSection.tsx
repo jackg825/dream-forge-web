@@ -21,7 +21,7 @@ interface PrintServiceSectionProps {
 
 /**
  * PrintServiceSection - 3D printing service advertisement
- * Promotes physical 3D printing and global delivery service
+ * Mobile-optimized with stacked layout and touch-friendly elements
  */
 export function PrintServiceSection({ className }: PrintServiceSectionProps) {
   const t = useTranslations('landing');
@@ -48,52 +48,51 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
     <section
       id="print-service"
       className={cn(
-        'py-24 bg-gradient-to-b from-muted/20 to-background',
+        'py-16 sm:py-24 bg-gradient-to-b from-muted/20 to-background',
         className
       )}
     >
-
       <div className="container max-w-6xl mx-auto px-4">
         {/* Section header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <Badge
             variant="outline"
-            className="mb-4 px-3 py-1 text-xs font-medium border-[var(--accent-coral)] text-[var(--accent-coral)]"
+            className="mb-3 sm:mb-4 px-3 py-1 text-xs font-medium border-[var(--accent-coral)] text-[var(--accent-coral)]"
           >
             {t('printService.badge')}
           </Badge>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4">
             {t('printService.title')}
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
             {t('printService.subtitle')}
           </p>
         </div>
 
-        {/* Main content grid */}
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left: Visual showcase */}
-          <div className="relative">
-            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-2xl">
+        {/* Main content grid - stacks on mobile */}
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          {/* Left: Visual showcase - hidden on mobile, shown at top on tablet */}
+          <div className="relative order-2 lg:order-1">
+            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl">
               <CardContent className="p-0">
-                {/* Mockup image area */}
-                <div className="aspect-square bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center relative">
+                {/* Mockup image area - shorter on mobile */}
+                <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center relative">
                   {/* 3D printer illustration placeholder */}
-                  <div className="text-center p-8">
-                    <div className="w-32 h-32 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[var(--accent-violet)] to-[var(--accent-coral)] flex items-center justify-center">
-                      <Printer className="w-16 h-16 text-white" />
+                  <div className="text-center p-4 sm:p-8">
+                    <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[var(--accent-violet)] to-[var(--accent-coral)] flex items-center justify-center">
+                      <Printer className="w-10 h-10 sm:w-16 sm:h-16 text-white" />
                     </div>
-                    <p className="text-lg font-medium text-muted-foreground">
+                    <p className="text-sm sm:text-lg font-medium text-muted-foreground">
                       {t('printService.visualCaption')}
                     </p>
                   </div>
 
-                  {/* Floating badges */}
-                  <div className="absolute top-4 left-4 px-3 py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-sm font-medium flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  {/* Floating badges - smaller on mobile */}
+                  <div className="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2">
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
                     {t('printService.statusReady')}
                   </div>
-                  <div className="absolute bottom-4 right-4 px-3 py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-sm font-medium">
+                  <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium">
                     🌍 {t('printService.worldwide')}
                   </div>
                 </div>
@@ -101,25 +100,25 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
             </Card>
           </div>
 
-          {/* Right: Details */}
-          <div className="space-y-8">
+          {/* Right: Details - shows first on mobile */}
+          <div className="space-y-6 sm:space-y-8 order-1 lg:order-2">
             {/* Size options */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Package className="w-5 h-5 text-[var(--accent-violet)]" />
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+                <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-violet)]" />
                 {t('printService.sizesTitle')}
               </h3>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {sizes.map((size) => (
                   <Card
                     key={size.id}
-                    className="text-center p-4 hover:border-[var(--accent-violet)] transition-colors cursor-default"
+                    className="text-center p-3 sm:p-4 active:scale-[0.98] transition-all cursor-default"
                   >
-                    <div className="text-2xl mb-2">{size.icon}</div>
-                    <div className="font-medium">
+                    <div className="text-xl sm:text-2xl mb-1 sm:mb-2">{size.icon}</div>
+                    <div className="text-xs sm:text-sm font-medium">
                       {t(`printService.sizes.${size.id}`)}
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-[10px] sm:text-sm text-muted-foreground">
                       {size.dimension}
                     </div>
                   </Card>
@@ -129,23 +128,23 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
 
             {/* Material options */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
                 <span className="text-[var(--accent-coral)]">✨</span>
                 {t('printService.materialsTitle')}
               </h3>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 {materials.map((material) => (
                   <Card
                     key={material.id}
-                    className="p-4 hover:border-[var(--accent-coral)] transition-colors cursor-default"
+                    className="p-3 sm:p-4 active:scale-[0.98] transition-all cursor-default"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">{material.icon}</div>
-                      <div>
-                        <div className="font-medium">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="text-xl sm:text-2xl">{material.icon}</div>
+                      <div className="min-w-0">
+                        <div className="text-xs sm:text-sm font-medium truncate">
                           {t(`printService.materials.${material.id}.name`)}
                         </div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-[10px] sm:text-sm text-muted-foreground truncate">
                           {t(`printService.materials.${material.id}.desc`)}
                         </div>
                       </div>
@@ -155,16 +154,16 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
               </div>
             </div>
 
-            {/* Features list */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Features list - 2x2 grid */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               {features.map((feature) => {
                 const Icon = feature.icon;
                 return (
-                  <div key={feature.key} className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-[var(--accent-mint)]/10 flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-[var(--accent-mint)]" />
+                  <div key={feature.key} className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[var(--accent-mint)]/10 flex items-center justify-center shrink-0">
+                      <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-mint)]" />
                     </div>
-                    <span className="text-sm font-medium">
+                    <span className="text-xs sm:text-sm font-medium leading-tight">
                       {t(`printService.features.${feature.key}`)}
                     </span>
                   </div>
@@ -173,39 +172,39 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
             </div>
 
             {/* Pricing teaser */}
-            <Card className="p-6 bg-gradient-to-r from-[var(--accent-violet)]/5 to-[var(--accent-coral)]/5 border-dashed">
-              <div className="flex items-center justify-between">
+            <Card className="p-4 sm:p-6 bg-gradient-to-r from-[var(--accent-violet)]/5 to-[var(--accent-coral)]/5 border-dashed">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">
+                  <div className="text-xs sm:text-sm text-muted-foreground mb-0.5 sm:mb-1">
                     {t('printService.startingFrom')}
                   </div>
-                  <div className="text-3xl font-bold font-display">
+                  <div className="text-2xl sm:text-3xl font-bold font-display">
                     NT$ 500
-                    <span className="text-base font-normal text-muted-foreground ml-2">
+                    <span className="text-sm sm:text-base font-normal text-muted-foreground ml-1 sm:ml-2">
                       {t('printService.perModel')}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-[var(--accent-mint)]" />
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--accent-mint)]" />
                   {t('printService.shippingIncluded')}
                 </div>
               </div>
             </Card>
 
             {/* CTA */}
-            <Link href="/print">
+            <Link href="/print" className="block">
               <Button
                 size="lg"
-                className="w-full text-lg py-6 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90 shadow-lg"
+                className="w-full text-base sm:text-lg py-5 sm:py-6 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90 shadow-lg active:scale-[0.98]"
               >
                 {t('printService.cta')}
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </Link>
 
             {/* Trust note */}
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-xs sm:text-sm text-muted-foreground">
               {t('printService.trustNote')}
             </p>
           </div>

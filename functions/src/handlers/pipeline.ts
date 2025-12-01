@@ -367,13 +367,17 @@ export const generatePipelineImages = functions
         const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
         const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
 
-        meshImages[angle as PipelineMeshAngle] = {
+        // Build mesh image object, only include colorPalette if it exists
+        const meshImage: PipelineProcessedImage = {
           url,
           storagePath,
           source: 'gemini',
-          colorPalette: view.colorPalette,
           generatedAt: now as unknown as FirebaseFirestore.Timestamp,
         };
+        if (view.colorPalette && view.colorPalette.length > 0) {
+          meshImage.colorPalette = view.colorPalette;
+        }
+        meshImages[angle as PipelineMeshAngle] = meshImage;
       }
 
       // Upload texture views

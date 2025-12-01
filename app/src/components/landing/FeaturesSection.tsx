@@ -63,7 +63,7 @@ const features = [
 
 /**
  * FeaturesSection - Bento grid layout showcasing key features
- * Uses asymmetric grid with one large featured card
+ * Mobile-optimized with 2-column grid and touch-friendly cards
  */
 export function FeaturesSection({ className }: FeaturesSectionProps) {
   const t = useTranslations('landing');
@@ -71,29 +71,29 @@ export function FeaturesSection({ className }: FeaturesSectionProps) {
   return (
     <section
       className={cn(
-        'py-24 bg-gradient-to-b from-background to-muted/20',
+        'py-16 sm:py-24 bg-gradient-to-b from-background to-muted/20',
         className
       )}
     >
       <div className="container max-w-6xl mx-auto px-4">
         {/* Section header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           <Badge
             variant="outline"
-            className="mb-4 px-3 py-1 text-xs font-medium"
+            className="mb-3 sm:mb-4 px-3 py-1 text-xs font-medium"
           >
             {t('features.badge')}
           </Badge>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4">
             {t('features.title')}
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
             {t('features.subtitle')}
           </p>
         </div>
 
-        {/* Bento Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        {/* Bento Grid - 2 cols on mobile, 3 on desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {features.map((feature) => {
             const Icon = feature.icon;
             const isLarge = feature.size === 'large';
@@ -102,8 +102,11 @@ export function FeaturesSection({ className }: FeaturesSectionProps) {
               <div
                 key={feature.id}
                 className={cn(
-                  'group relative overflow-hidden rounded-2xl border bg-card p-6 md:p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1',
-                  isLarge && 'lg:col-span-2 lg:row-span-1',
+                  'group relative overflow-hidden rounded-xl sm:rounded-2xl border bg-card transition-all duration-300',
+                  'p-4 sm:p-6 md:p-8',
+                  'active:scale-[0.98] md:hover:shadow-xl md:hover:-translate-y-1',
+                  // Large card spans full width on mobile, 2 cols on desktop
+                  isLarge && 'col-span-2',
                   `bg-gradient-to-br ${feature.bgGradient}`
                 )}
               >
@@ -112,42 +115,45 @@ export function FeaturesSection({ className }: FeaturesSectionProps) {
 
                 {/* Content */}
                 <div className="relative z-10">
-                  {/* Icon */}
+                  {/* Icon - smaller on mobile */}
                   <div
                     className={cn(
-                      'mb-4 p-3 rounded-xl w-fit transition-transform duration-300 group-hover:scale-110',
+                      'mb-3 sm:mb-4 p-2 sm:p-3 rounded-lg sm:rounded-xl w-fit transition-transform duration-300 md:group-hover:scale-110',
                       'bg-background/80'
                     )}
                   >
                     <Icon
-                      className="w-6 h-6"
+                      className="w-5 h-5 sm:w-6 sm:h-6"
                       style={{ color: feature.color }}
                       strokeWidth={1.5}
                     />
                   </div>
 
                   {/* Title */}
-                  <h3 className="font-display text-xl font-bold mb-2">
+                  <h3 className="font-display text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">
                     {t(`features.items.${feature.id}.title`)}
                   </h3>
 
-                  {/* Description */}
-                  <p className="text-muted-foreground text-sm leading-relaxed">
+                  {/* Description - hidden on very small screens for non-large cards */}
+                  <p className={cn(
+                    'text-muted-foreground text-xs sm:text-sm leading-relaxed',
+                    !isLarge && 'line-clamp-2 sm:line-clamp-none'
+                  )}>
                     {t(`features.items.${feature.id}.description`)}
                   </p>
 
                   {/* Extra content for large card */}
                   {isLarge && (
-                    <div className="mt-4 flex items-center gap-4">
+                    <div className="mt-3 sm:mt-4 flex items-center gap-3 sm:gap-4">
                       <div className="flex -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-[var(--accent-violet)] flex items-center justify-center text-white text-xs font-bold">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[var(--accent-violet)] flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">
                           AI
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-[var(--accent-mint)] flex items-center justify-center text-white text-xs font-bold">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[var(--accent-mint)] flex items-center justify-center text-white text-[10px] sm:text-xs font-bold">
                           3D
                         </div>
                       </div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] sm:text-xs text-muted-foreground">
                         {t('features.items.fast.subtext')}
                       </span>
                     </div>

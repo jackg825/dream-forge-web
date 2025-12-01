@@ -290,13 +290,17 @@ exports.generatePipelineImages = functions
             const ext = getExtensionFromMimeType(view.mimeType);
             const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
             const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-            meshImages[angle] = {
+            // Build mesh image object, only include colorPalette if it exists
+            const meshImage = {
                 url,
                 storagePath,
                 source: 'gemini',
-                colorPalette: view.colorPalette,
                 generatedAt: now,
             };
+            if (view.colorPalette && view.colorPalette.length > 0) {
+                meshImage.colorPalette = view.colorPalette;
+            }
+            meshImages[angle] = meshImage;
         }
         // Upload texture views
         for (const [angle, view] of Object.entries(views.textureViews)) {

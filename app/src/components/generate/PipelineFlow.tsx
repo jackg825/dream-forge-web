@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,10 @@ import {
   AlertCircle,
   ChevronRight,
   Printer,
+  RotateCcw,
+  Eye,
 } from 'lucide-react';
+import { ModelViewer, type ModelViewerRef } from '@/components/viewer/ModelViewer';
 import { usePipeline } from '@/hooks/usePipeline';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
@@ -97,6 +100,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [generationMode, setGenerationMode] = useState<GenerationModeId>(DEFAULT_GENERATION_MODE);
+
+  // 3D Viewer state
+  const meshViewerRef = useRef<ModelViewerRef>(null);
+  const texturedViewerRef = useRef<ModelViewerRef>(null);
+  const [meshViewMode, setMeshViewMode] = useState<'clay' | 'wireframe'>('clay');
+  const [texturedViewMode, setTexturedViewMode] = useState<'clay' | 'textured' | 'wireframe'>('textured');
 
   const {
     pipeline,
@@ -293,6 +302,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     <div className="space-y-6">
       {user ? (
         <>
+          {/* Mode selector - show before upload */}
+          <ModeSelector
+            value={generationMode}
+            onChange={setGenerationMode}
+            disabled={actionLoading}
+          />
+
           <PipelineUploader
             userId={user.uid}
             images={uploadedImages}
@@ -300,15 +316,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             maxImages={4}
             disabled={actionLoading}
           />
-
-          {/* Mode selector - only show when images are uploaded */}
-          {uploadedImages.length > 0 && (
-            <ModeSelector
-              value={generationMode}
-              onChange={setGenerationMode}
-              disabled={actionLoading}
-            />
-          )}
 
           <div className="flex justify-center">
             <Button
@@ -488,22 +495,65 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 5: Mesh preview - cleaner layout
+  // Step 5: Mesh preview - with 3D viewer
   const renderMeshPreviewStep = () => (
     <div className="space-y-6">
       {pipeline?.meshUrl ? (
-        <div className="aspect-video bg-muted/50 rounded-2xl flex items-center justify-center border border-border/50">
-          <div className="text-center">
-            <div className="bg-green-500/10 p-4 rounded-full inline-block mb-4">
-              <Box className="h-12 w-12 text-green-500" />
+        <div className="space-y-4">
+          {/* 3D Preview Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium">3D 網格預覽</span>
             </div>
-            <p className="font-medium">3D 網格生成完成</p>
+            <div className="flex items-center gap-2">
+              {/* View mode toggle */}
+              <Button
+                variant={meshViewMode === 'clay' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMeshViewMode('clay')}
+              >
+                實體
+              </Button>
+              <Button
+                variant={meshViewMode === 'wireframe' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setMeshViewMode('wireframe')}
+              >
+                線框
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => meshViewerRef.current?.resetCamera()}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* 3D Viewer */}
+          <div className="aspect-video bg-muted/30 rounded-2xl overflow-hidden border border-border/50">
+            <ModelViewer
+              ref={meshViewerRef}
+              modelUrl={pipeline.meshUrl}
+              downloadFiles={pipeline.meshDownloadFiles}
+              viewMode={meshViewMode}
+              backgroundColor="#fafafa"
+              showGrid={true}
+              autoRotate={false}
+            />
+          </div>
+
+          {/* Download link */}
+          <div className="text-center">
             <a
               href={pipeline.meshUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline text-sm mt-2 inline-block"
+              className="text-primary hover:underline text-sm inline-flex items-center gap-1"
             >
+              <Box className="h-3 w-3" />
               下載 GLB 檔案
             </a>
           </div>
@@ -551,33 +601,97 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 7: Complete - celebratory design
+  // Step 7: Complete - with 3D viewer for textured model
   const renderCompleteStep = () => {
     const modelUrl = pipeline?.texturedModelUrl || pipeline?.meshUrl;
     const hasTexture = !!pipeline?.texturedModelUrl;
+    const downloadFiles = hasTexture ? pipeline?.texturedDownloadFiles : pipeline?.meshDownloadFiles;
 
     return (
       <div className="space-y-6">
-        <div className="aspect-video bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
-          <div className="text-center">
-            <div className="bg-green-500/10 p-5 rounded-full inline-block mb-4">
-              <CheckCircle className="h-14 w-14 text-green-500" />
+        {modelUrl ? (
+          <div className="space-y-4">
+            {/* 3D Preview Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium">
+                  {hasTexture ? '3D 模型預覽 (含貼圖)' : '3D 網格預覽'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* View mode toggle - show textured option only when texture exists */}
+                {hasTexture && (
+                  <Button
+                    variant={texturedViewMode === 'textured' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTexturedViewMode('textured')}
+                  >
+                    貼圖
+                  </Button>
+                )}
+                <Button
+                  variant={texturedViewMode === 'clay' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTexturedViewMode('clay')}
+                >
+                  實體
+                </Button>
+                <Button
+                  variant={texturedViewMode === 'wireframe' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTexturedViewMode('wireframe')}
+                >
+                  線框
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => texturedViewerRef.current?.resetCamera()}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <p className="text-xl font-semibold">
-              {hasTexture ? '3D 模型已完成' : '3D 網格已完成'}
-            </p>
-            {modelUrl && (
+
+            {/* 3D Viewer */}
+            <div className="aspect-video bg-muted/30 rounded-2xl overflow-hidden border border-green-500/20">
+              <ModelViewer
+                ref={texturedViewerRef}
+                modelUrl={modelUrl}
+                downloadFiles={downloadFiles}
+                viewMode={texturedViewMode}
+                backgroundColor="#fafafa"
+                showGrid={true}
+                autoRotate={false}
+              />
+            </div>
+
+            {/* Download link */}
+            <div className="text-center">
               <a
                 href={modelUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline text-sm mt-2 inline-block"
+                className="text-primary hover:underline text-sm inline-flex items-center gap-1"
               >
+                {hasTexture ? <Palette className="h-3 w-3" /> : <Box className="h-3 w-3" />}
                 下載 GLB 檔案
               </a>
-            )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="aspect-video bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
+            <div className="text-center">
+              <div className="bg-green-500/10 p-5 rounded-full inline-block mb-4">
+                <CheckCircle className="h-14 w-14 text-green-500" />
+              </div>
+              <p className="text-xl font-semibold">
+                {hasTexture ? '3D 模型已完成' : '3D 網格已完成'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Coming soon placeholder */}
         <div className="bg-muted/30 rounded-xl p-6 text-center border border-border/50">

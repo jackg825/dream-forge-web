@@ -260,3 +260,19 @@
     radial-gradient(ellipse at 60% 20%, oklch(50% 0.18 50 / 0.2), transparent 40%),
     oklch(15% 0.02 280);
 }
+
+/* Hide scrollbar utility for mobile horizontal scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area insets for mobile */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
