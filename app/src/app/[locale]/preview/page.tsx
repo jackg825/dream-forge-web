@@ -36,7 +36,7 @@ export default function PreviewPage() {
   const { state, model, error, loadFile, reset } = useModelLoader();
 
   // Viewer state
-  const [backgroundColor, setBackgroundColor] = useState('#f3f4f6');
+  const [backgroundColor, setBackgroundColor] = useState('#1f2937');
 
   // Clipping plane state
   const [clippingEnabled, setClippingEnabled] = useState(false);
