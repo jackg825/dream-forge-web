@@ -403,6 +403,9 @@ export interface PipelineDocument {
   // Generation settings
   settings: PipelineSettings;
 
+  // User-provided description for better AI generation
+  userDescription?: string | null;
+
   // Error handling
   error?: string;
   errorStep?: PipelineStatus;

@@ -649,6 +649,9 @@ export interface Pipeline {
   // Settings
   settings: PipelineSettings;
 
+  // User-provided description for better AI generation
+  userDescription?: string;
+
   // Error
   error?: string;
   errorStep?: PipelineStatus;
@@ -664,6 +667,7 @@ export interface CreatePipelineRequest {
   imageUrls: string[];
   settings?: Partial<PipelineSettings>;
   generationMode?: GenerationModeId;
+  userDescription?: string;  // Optional description of the object for better AI generation
 }
 
 export interface CreatePipelineResponse {

@@ -134,10 +134,16 @@ function extractColorPalette(text: string | null, expectedCount: number): string
 export class MultiViewGenerator {
   private apiKey: string;
   private modeConfig: ModeConfig;
+  private userDescription?: string | null;
 
-  constructor(apiKey: string, modeId: GenerationModeId = DEFAULT_MODE) {
+  constructor(
+    apiKey: string,
+    modeId: GenerationModeId = DEFAULT_MODE,
+    userDescription?: string | null
+  ) {
     this.apiKey = apiKey;
     this.modeConfig = getMode(modeId);
+    this.userDescription = userDescription;
   }
 
   /**
@@ -187,9 +193,10 @@ export class MultiViewGenerator {
         viewIndex,
         type: 'mesh',
         simplified: this.modeConfig.mesh.simplified,
+        hasUserDescription: !!this.userDescription,
       });
 
-      const prompt = getMeshPrompt(this.modeConfig, angle);
+      const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription);
       const result = await this.generateSingleView(
         referenceImageBase64,
         mimeType,
@@ -210,9 +217,10 @@ export class MultiViewGenerator {
         viewIndex,
         type: 'texture',
         simplified: this.modeConfig.texture.simplified,
+        hasUserDescription: !!this.userDescription,
       });
 
-      const prompt = getTexturePrompt(this.modeConfig, angle);
+      const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription);
       const result = await this.generateSingleView(
         referenceImageBase64,
         mimeType,
@@ -239,13 +247,15 @@ export class MultiViewGenerator {
 
   /**
    * Generate a single mesh view
+   * @param hint - Optional regeneration hint for adjustments
    */
   async generateMeshView(
     referenceImageBase64: string,
     mimeType: string,
-    angle: PipelineMeshAngle
+    angle: PipelineMeshAngle,
+    hint?: string
   ): Promise<GeneratedViewResult> {
-    const prompt = getMeshPrompt(this.modeConfig, angle);
+    const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, hint);
     return this.generateSingleView(
       referenceImageBase64,
       mimeType,
@@ -257,13 +267,15 @@ export class MultiViewGenerator {
 
   /**
    * Generate a single texture view
+   * @param hint - Optional regeneration hint for adjustments
    */
   async generateTextureView(
     referenceImageBase64: string,
     mimeType: string,
-    angle: PipelineTextureAngle
+    angle: PipelineTextureAngle,
+    hint?: string
   ): Promise<GeneratedViewResult> {
-    const prompt = getTexturePrompt(this.modeConfig, angle);
+    const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription, hint);
     return this.generateSingleView(
       referenceImageBase64,
       mimeType,
@@ -401,9 +413,11 @@ export class MultiViewGenerator {
  * Create a MultiViewGenerator instance with the API key from environment
  *
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
+ * @param userDescription - Optional user-provided description of the object
  */
 export function createMultiViewGenerator(
-  modeId: GenerationModeId = DEFAULT_MODE
+  modeId: GenerationModeId = DEFAULT_MODE,
+  userDescription?: string | null
 ): MultiViewGenerator {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -414,5 +428,5 @@ export function createMultiViewGenerator(
     );
   }
 
-  return new MultiViewGenerator(apiKey, modeId);
+  return new MultiViewGenerator(apiKey, modeId, userDescription);
 }

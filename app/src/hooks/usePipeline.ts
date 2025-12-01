@@ -33,10 +33,11 @@ interface UsePipelineReturn {
   createPipeline: (
     imageUrls: string[],
     settings?: Partial<PipelineSettings>,
-    generationMode?: GenerationModeId
+    generationMode?: GenerationModeId,
+    userDescription?: string
   ) => Promise<string>;
   generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
-  regenerateImage: (viewType: 'mesh' | 'texture', angle: string) => Promise<void>;
+  regenerateImage: (viewType: 'mesh' | 'texture', angle: string, hint?: string) => Promise<void>;
   startMeshGeneration: () => Promise<StartPipelineMeshResponse>;
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
   startTextureGeneration: () => Promise<StartPipelineTextureResponse>;
@@ -151,7 +152,8 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     async (
       imageUrls: string[],
       settings?: Partial<PipelineSettings>,
-      generationMode?: GenerationModeId
+      generationMode?: GenerationModeId,
+      userDescription?: string
     ): Promise<string> => {
       if (!functions) {
         throw new Error('Firebase not initialized');
@@ -163,11 +165,12 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
             imageUrls: string[];
             settings?: Partial<PipelineSettings>;
             generationMode?: GenerationModeId;
+            userDescription?: string;
           },
           CreatePipelineResponse
         >(functions, 'createPipeline');
 
-        const result = await createPipelineFn({ imageUrls, settings, generationMode });
+        const result = await createPipelineFn({ imageUrls, settings, generationMode, userDescription });
         return result.data.pipelineId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create pipeline';
@@ -204,9 +207,9 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     }
   }, [pipelineId]);
 
-  // Regenerate single image
+  // Regenerate single image with optional hint for adjustments
   const regenerateImage = useCallback(
-    async (viewType: 'mesh' | 'texture', angle: string): Promise<void> => {
+    async (viewType: 'mesh' | 'texture', angle: string, hint?: string): Promise<void> => {
       if (!pipelineId) {
         throw new Error('No pipeline ID');
       }
@@ -216,11 +219,11 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
 
       try {
         const regenerateFn = httpsCallable<
-          { pipelineId: string; viewType: string; angle: string },
+          { pipelineId: string; viewType: string; angle: string; hint?: string },
           { viewType: string; angle: string }
         >(functions, 'regeneratePipelineImage');
 
-        await regenerateFn({ pipelineId, viewType, angle });
+        await regenerateFn({ pipelineId, viewType, angle, hint });
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to regenerate image';
         setError(message);
