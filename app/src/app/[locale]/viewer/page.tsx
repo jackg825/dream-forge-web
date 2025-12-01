@@ -20,9 +20,17 @@ import {
   XCircle,
   Loader2,
   RefreshCw,
+  PanelRight,
 } from 'lucide-react';
 import type { JobStatus, ViewMode } from '@/types';
 import type { ModelViewerRef } from '@/components/viewer/ModelViewer';
+import { ViewerSidePanel } from '@/components/viewer/ViewerSidePanel';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 
 // Dynamic import for ModelViewer to avoid SSR issues with Three.js
 const ModelViewer = dynamic(
@@ -52,6 +60,30 @@ function ViewerContentInner() {
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Side panel state
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Persist panel state in localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('viewerPanelOpen');
+    if (saved !== null) {
+      setIsPanelOpen(JSON.parse(saved));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('viewerPanelOpen', JSON.stringify(isPanelOpen));
+  }, [isPanelOpen]);
 
   // Refs
   const viewerContainerRef = useRef<HTMLDivElement>(null);
@@ -174,7 +206,7 @@ function ViewerContentInner() {
     <div className="min-h-screen bg-gray-950">
       {/* Header - Dark themed for viewer */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-gray-900/80 backdrop-blur-lg">
-        <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div className="w-full px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
@@ -197,14 +229,27 @@ function ViewerContentInner() {
               </div>
             </div>
 
-            {/* Status badge */}
-            <StatusBadge status={job.status} />
+            <div className="flex items-center gap-3">
+              {/* Panel toggle button (desktop) */}
+              {!isMobile && job.status === 'completed' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsPanelOpen(!isPanelOpen)}
+                  className="text-white/60 hover:text-white hover:bg-white/10"
+                >
+                  <PanelRight className="h-5 w-5" />
+                </Button>
+              )}
+              {/* Status badge */}
+              <StatusBadge status={job.status} />
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="w-full px-4 py-4">
         {/* Processing state */}
         {isProcessing && currentStatus && (
           <Card className="bg-gray-900/50 border-white/10">
@@ -265,68 +310,116 @@ function ViewerContentInner() {
 
         {/* Completed state with viewer */}
         {job.status === 'completed' && job.outputModelUrl && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Viewer */}
-            <div className="lg:col-span-3">
-              <div
-                ref={viewerContainerRef}
-                className="relative bg-gray-900 rounded-2xl overflow-hidden border border-white/10"
-                style={{ height: isFullscreen ? '100vh' : '600px' }}
-              >
-                <ModelViewer
-                  ref={modelViewerRef}
-                  modelUrl={job.outputModelUrl}
-                  viewMode={viewMode}
-                  backgroundColor={backgroundColor}
-                  autoOrient={true}
-                  showGrid={showGrid}
-                  showAxes={showAxes}
-                  autoRotate={autoRotate}
-                />
-
-                {/* Floating Toolbar */}
-                <ViewerToolbar
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
-                  hasTextures={hasTextures}
-                  backgroundColor={backgroundColor}
-                  onBackgroundChange={setBackgroundColor}
-                  showGrid={showGrid}
-                  onShowGridChange={setShowGrid}
-                  showAxes={showAxes}
-                  onShowAxesChange={setShowAxes}
-                  autoRotate={autoRotate}
-                  onAutoRotateChange={setAutoRotate}
-                  onScreenshot={handleScreenshot}
-                  onFullscreen={handleFullscreen}
-                  isFullscreen={isFullscreen}
-                  onReset={handleReset}
-                  portalContainer={viewerContainerRef.current}
-                />
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="space-y-4">
-              <DownloadPanel
+          <div className="relative">
+            {/* Full-width 3D Viewer */}
+            <div
+              ref={viewerContainerRef}
+              className="relative bg-gray-900 rounded-2xl overflow-hidden border border-white/10 w-full h-[calc(100dvh-120px)] min-h-[400px]"
+              style={isFullscreen ? { height: '100vh' } : undefined}
+            >
+              <ModelViewer
+                ref={modelViewerRef}
                 modelUrl={job.outputModelUrl}
-                downloadFiles={job.downloadFiles}
-                jobId={job.id}
-                currentFormat={job.settings.format}
+                viewMode={viewMode}
+                backgroundColor={backgroundColor}
+                autoOrient={true}
+                showGrid={showGrid}
+                showAxes={showAxes}
+                autoRotate={autoRotate}
               />
 
-              {/* Input image */}
-              <Card className="bg-gray-900/50 border-white/10">
-                <CardContent className="pt-4">
-                  <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
-                  <img
-                    src={job.inputImageUrl}
-                    alt="Source"
-                    className="w-full rounded-lg ring-1 ring-white/10"
-                  />
-                </CardContent>
-              </Card>
+              {/* Floating Toolbar */}
+              <ViewerToolbar
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                hasTextures={hasTextures}
+                backgroundColor={backgroundColor}
+                onBackgroundChange={setBackgroundColor}
+                showGrid={showGrid}
+                onShowGridChange={setShowGrid}
+                showAxes={showAxes}
+                onShowAxesChange={setShowAxes}
+                autoRotate={autoRotate}
+                onAutoRotateChange={setAutoRotate}
+                onScreenshot={handleScreenshot}
+                onFullscreen={handleFullscreen}
+                isFullscreen={isFullscreen}
+                onReset={handleReset}
+                portalContainer={viewerContainerRef.current}
+              />
             </div>
+
+            {/* Desktop: Floating Side Panel */}
+            {!isMobile && (
+              <ViewerSidePanel
+                isOpen={isPanelOpen}
+                onToggle={() => setIsPanelOpen(!isPanelOpen)}
+                title={t('viewer.details')}
+              >
+                <DownloadPanel
+                  modelUrl={job.outputModelUrl}
+                  downloadFiles={job.downloadFiles}
+                  jobId={job.id}
+                  currentFormat={job.settings.format}
+                />
+
+                {/* Source image */}
+                <Card className="bg-white/5 border-white/10">
+                  <CardContent className="pt-4">
+                    <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
+                    <img
+                      src={job.inputImageUrl}
+                      alt="Source"
+                      className="w-full rounded-lg ring-1 ring-white/10"
+                    />
+                  </CardContent>
+                </Card>
+              </ViewerSidePanel>
+            )}
+
+            {/* Mobile: Bottom Sheet */}
+            {isMobile && (
+              <>
+                {/* Floating action button to open sheet */}
+                <Button
+                  onClick={() => setIsPanelOpen(true)}
+                  className="fixed bottom-20 right-4 z-50 h-12 w-12 rounded-full bg-primary shadow-lg"
+                >
+                  <PanelRight className="h-5 w-5" />
+                </Button>
+
+                <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
+                  <SheetContent
+                    side="bottom"
+                    className="h-[70vh] rounded-t-2xl bg-gray-900 border-white/10"
+                  >
+                    <SheetHeader className="pb-2">
+                      <SheetTitle className="text-white">{t('viewer.details')}</SheetTitle>
+                    </SheetHeader>
+                    <div className="overflow-y-auto space-y-4 pb-8">
+                      <DownloadPanel
+                        modelUrl={job.outputModelUrl}
+                        downloadFiles={job.downloadFiles}
+                        jobId={job.id}
+                        currentFormat={job.settings.format}
+                      />
+
+                      {/* Source image */}
+                      <Card className="bg-white/5 border-white/10">
+                        <CardContent className="pt-4">
+                          <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
+                          <img
+                            src={job.inputImageUrl}
+                            alt="Source"
+                            className="w-full rounded-lg ring-1 ring-white/10"
+                          />
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            )}
           </div>
         )}
       </main>

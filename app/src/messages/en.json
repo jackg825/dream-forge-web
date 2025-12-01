@@ -238,6 +238,7 @@
     "creditRefunded": "Your credit has been refunded automatically.",
     "tryAgain": "Try Again",
     "sourceImage": "Source Image",
+    "details": "Details",
     "progress": {
       "queue": "Queue",
       "views": "Views",

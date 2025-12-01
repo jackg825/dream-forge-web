@@ -349,7 +349,7 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
     const isGlb = effectiveUrl.includes('.glb') || effectiveUrl.includes('.gltf');
 
     return (
-      <div className="w-full h-full min-h-[400px] rounded-lg overflow-hidden">
+      <div className="w-full h-full rounded-lg overflow-hidden">
         <Canvas
           ref={canvasRef}
           shadows
