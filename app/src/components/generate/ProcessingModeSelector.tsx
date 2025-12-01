@@ -77,8 +77,8 @@ export function ProcessingModeSelector({
                 {mode.description}
               </p>
 
-              {/* Estimated time */}
-              <div className="flex items-center gap-1 mt-1">
+              {/* Estimated time and cost */}
+              <div className="flex items-center gap-1.5 mt-1">
                 <Badge
                   variant="outline"
                   className={cn(
@@ -89,6 +89,17 @@ export function ProcessingModeSelector({
                   )}
                 >
                   {mode.estimatedTime}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'text-xs',
+                    isBatch
+                      ? 'border-green-500/50 text-green-600'
+                      : 'border-green-500/50 text-green-600'
+                  )}
+                >
+                  {isBatch ? '5 點' : '10 點'}
                 </Badge>
               </div>
 

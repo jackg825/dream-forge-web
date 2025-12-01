@@ -37,6 +37,7 @@ import { BatchProgressIndicator } from './BatchProgressIndicator';
 import { PreviousOutputs } from './PreviousOutputs';
 import { RegenerateDialog } from './RegenerateDialog';
 import { PipelineErrorState } from './PipelineErrorState';
+import { PipelineProgressBar } from './PipelineProgressBar';
 import type {
   PipelineMeshAngle,
   PipelineTextureAngle,
@@ -48,14 +49,6 @@ import { GENERATION_MODE_OPTIONS, DEFAULT_GENERATION_MODE, DEFAULT_PROCESSING_MO
 interface PipelineFlowProps {
   onNoCredits: () => void;
 }
-
-// Simplified step configuration - 4 core stages
-const STEPS = [
-  { id: 1, key: 'upload', icon: Upload, label: '上傳' },
-  { id: 2, key: 'images', icon: Images, label: '視角圖片' },
-  { id: 3, key: 'mesh', icon: Box, label: '3D 網格' },
-  { id: 4, key: 'complete', icon: CheckCircle, label: '完成' },
-] as const;
 
 // Map pipeline status to step
 const getStepFromStatus = (status: string | undefined, hasId: boolean): number => {
@@ -293,68 +286,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   // Calculate current step from status
   const displayStep = getStepFromStatus(pipeline?.status, !!pipelineId);
   const isFailed = pipeline?.status === 'failed';
-
-  // Render step indicator - cleaner design
-  const renderStepper = () => (
-    <div className="flex items-center justify-center mb-8">
-      <div className="flex items-center gap-0">
-        {STEPS.map((step, index) => {
-          const Icon = step.icon;
-          const isActive = displayStep === step.id;
-          const isCompleted = displayStep > step.id;
-
-          return (
-            <div key={step.id} className="flex items-center">
-              {/* Step circle and label */}
-              <div className="flex flex-col items-center">
-                <div
-                  className={`
-                    flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
-                    ${isActive && !isFailed ? 'border-primary bg-primary text-primary-foreground' : ''}
-                    ${isCompleted ? 'border-green-500 bg-green-500 text-white' : ''}
-                    ${!isActive && !isCompleted ? 'border-muted-foreground/30 bg-background text-muted-foreground' : ''}
-                    ${isFailed && isActive ? 'border-destructive bg-destructive text-destructive-foreground' : ''}
-                  `}
-                >
-                  {isCompleted ? (
-                    <CheckCircle className="h-5 w-5" />
-                  ) : (
-                    <Icon className="h-5 w-5" />
-                  )}
-                </div>
-                <span className={`
-                  mt-2 text-xs font-medium
-                  ${isActive || isCompleted ? 'text-foreground' : 'text-muted-foreground'}
-                `}>
-                  {step.label}
-                </span>
-              </div>
-              {/* Connector line */}
-              {index < STEPS.length - 1 && (
-                <div className={`
-                  w-12 sm:w-20 h-0.5 mx-2
-                  ${displayStep > step.id ? 'bg-green-500' : 'bg-muted-foreground/30'}
-                `} />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  // Render credit display - more subtle
-  const renderCredits = () => (
-    <div className="flex items-center justify-center gap-3 mb-6 text-sm text-muted-foreground">
-      <span className="font-medium text-foreground">
-        {creditsLoading ? '...' : credits} 點
-      </span>
-      <span className="text-muted-foreground/50">|</span>
-      <span>網格 {MESH_COST} 點</span>
-      <span className="text-muted-foreground/50">|</span>
-      <span>貼圖 +{TEXTURE_COST} 點</span>
-    </div>
-  );
 
   // Step 1: Upload - cleaner without card wrapper
   const renderUploadStep = () => (
@@ -993,10 +924,20 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     );
   }
 
+  // Check if currently processing
+  const isProcessing = pipeline?.status?.includes('generating') ||
+    pipeline?.status === 'batch-queued' ||
+    pipeline?.status === 'batch-processing';
+
   return (
     <div className="space-y-6">
-      {renderStepper()}
-      {renderCredits()}
+      <PipelineProgressBar
+        currentStep={displayStep}
+        isFailed={isFailed}
+        isProcessing={isProcessing}
+        credits={credits}
+        creditsLoading={creditsLoading}
+      />
 
       {pipeline?.status === 'failed' || error ? (
         <PipelineErrorState
