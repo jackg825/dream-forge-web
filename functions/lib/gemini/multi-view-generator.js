@@ -209,6 +209,169 @@ class MultiViewGenerator {
         };
     }
     /**
+     * Aggregate color palettes from all mesh views
+     * Combines colors from all 4 views, deduplicates, and sorts by frequency
+     */
+    aggregateColorPalettes(meshViews) {
+        const colorFrequency = new Map();
+        const byView = {};
+        // Collect colors from each view
+        for (const [angle, view] of Object.entries(meshViews)) {
+            const viewColors = view.colorPalette || [];
+            byView[angle] = viewColors;
+            for (const color of viewColors) {
+                const normalizedColor = color.toUpperCase();
+                colorFrequency.set(normalizedColor, (colorFrequency.get(normalizedColor) || 0) + 1);
+            }
+        }
+        // Sort by frequency (most common first)
+        const sortedColors = [...colorFrequency.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([color]) => color);
+        return {
+            byView: byView,
+            unified: sortedColors,
+            dominantColors: sortedColors.slice(0, 7), // Top 7 colors
+        };
+    }
+    /**
+     * Generate all 6 views using staggered parallel execution
+     *
+     * This method respects the 500ms rate limit while maximizing parallelism:
+     * - Phase 1: Start 4 mesh views with 0, 500, 1000, 1500ms delays
+     * - Aggregate color palette from mesh views
+     * - Phase 2: Start 2 texture views with 0, 500ms delays (with color hints)
+     *
+     * Expected time: ~18s (vs ~50s for sequential)
+     *
+     * @param referenceImageBase64 - Base64 encoded reference image
+     * @param mimeType - MIME type of the input image
+     * @param onProgress - Optional callback for progress updates
+     * @returns All 6 generated views with aggregated color palette
+     */
+    async generateAllViewsParallel(referenceImageBase64, mimeType, onProgress) {
+        const meshAngles = ['front', 'back', 'left', 'right'];
+        const textureAngles = ['front', 'back'];
+        functions.logger.info('Starting parallel multi-view generation', {
+            model: MODEL,
+            mode: this.modeConfig.id,
+            modeName: this.modeConfig.name,
+            strategy: 'staggered-parallel',
+            totalViews: 6,
+        });
+        // Phase 1: Staggered parallel mesh view generation
+        let meshCompleted = 0;
+        const meshPromises = meshAngles.map((angle, index) => this.generateViewWithDelay(referenceImageBase64, mimeType, 'mesh', angle, index * MIN_DELAY_BETWEEN_CALLS_MS // 0, 500, 1000, 1500ms
+        ).then(async (result) => {
+            meshCompleted++;
+            if (onProgress) {
+                await onProgress('mesh', angle, meshCompleted, 4);
+            }
+            return { angle, result };
+        }));
+        const meshResults = await Promise.all(meshPromises);
+        // Build meshViews record
+        const meshViews = {};
+        for (const { angle, result } of meshResults) {
+            meshViews[angle] = result;
+        }
+        // Aggregate color palettes from all mesh views
+        const aggregatedPalette = this.aggregateColorPalettes(meshViews);
+        functions.logger.info('Mesh views complete, starting texture generation', {
+            meshViewCount: meshResults.length,
+            dominantColors: aggregatedPalette.dominantColors,
+            totalUniqueColors: aggregatedPalette.unified.length,
+        });
+        // Phase 2: Staggered parallel texture view generation (with color hints)
+        let textureCompleted = 0;
+        const texturePromises = textureAngles.map((angle, index) => this.generateTextureViewWithColorHints(referenceImageBase64, mimeType, angle, aggregatedPalette.dominantColors, index * MIN_DELAY_BETWEEN_CALLS_MS // 0, 500ms
+        ).then(async (result) => {
+            textureCompleted++;
+            if (onProgress) {
+                await onProgress('texture', angle, textureCompleted, 2);
+            }
+            return { angle, result };
+        }));
+        const textureResults = await Promise.all(texturePromises);
+        // Build textureViews record
+        const textureViews = {};
+        for (const { angle, result } of textureResults) {
+            textureViews[angle] = result;
+        }
+        functions.logger.info('Parallel multi-view generation complete', {
+            mode: this.modeConfig.id,
+            meshViewCount: Object.keys(meshViews).length,
+            textureViewCount: Object.keys(textureViews).length,
+            dominantColorCount: aggregatedPalette.dominantColors.length,
+        });
+        return {
+            meshViews: meshViews,
+            textureViews: textureViews,
+            aggregatedPalette,
+        };
+    }
+    /**
+     * Generate a single view with a delay (for staggered parallel execution)
+     */
+    async generateViewWithDelay(referenceImageBase64, mimeType, type, angle, delayMs) {
+        if (delayMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        functions.logger.info(`Generating ${type} view: ${angle}`, {
+            type,
+            angle,
+            delayMs,
+            simplified: type === 'mesh' ? this.modeConfig.mesh.simplified : this.modeConfig.texture.simplified,
+        });
+        if (type === 'mesh') {
+            const prompt = (0, mode_configs_1.getMeshPrompt)(this.modeConfig, angle, this.userDescription);
+            return this.generateSingleView(referenceImageBase64, mimeType, prompt, this.modeConfig.mesh.extractColors, this.modeConfig.mesh.colorCount);
+        }
+        else {
+            const prompt = (0, mode_configs_1.getTexturePrompt)(this.modeConfig, angle, this.userDescription);
+            return this.generateSingleView(referenceImageBase64, mimeType, prompt, this.modeConfig.texture.extractColors, this.modeConfig.texture.colorCount);
+        }
+    }
+    /**
+     * Generate a texture view with color hints from mesh views
+     * Used during parallel generation to ensure color consistency
+     */
+    async generateTextureViewWithColorHints(referenceImageBase64, mimeType, angle, colorPalette, delayMs) {
+        if (delayMs > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+        functions.logger.info(`Generating texture view with color hints: ${angle}`, {
+            angle,
+            delayMs,
+            colorCount: colorPalette.length,
+            simplified: this.modeConfig.texture.simplified,
+        });
+        // Use color-aware prompt if we have colors
+        const prompt = colorPalette.length > 0
+            ? (0, mode_configs_1.getTexturePromptWithColors)(this.modeConfig, angle, colorPalette, this.userDescription)
+            : (0, mode_configs_1.getTexturePrompt)(this.modeConfig, angle, this.userDescription);
+        return this.generateSingleView(referenceImageBase64, mimeType, prompt, this.modeConfig.texture.extractColors, this.modeConfig.texture.colorCount);
+    }
+    /**
+     * Generate texture views with existing color palette
+     * Used when regenerating mesh views and need to update texture views
+     */
+    async generateTextureViewsWithColors(referenceImageBase64, mimeType, colorPalette) {
+        const textureAngles = ['front', 'back'];
+        functions.logger.info('Generating texture views with color palette', {
+            colorCount: colorPalette.length,
+            colors: colorPalette,
+        });
+        // Staggered parallel generation
+        const promises = textureAngles.map((angle, index) => this.generateTextureViewWithColorHints(referenceImageBase64, mimeType, angle, colorPalette, index * MIN_DELAY_BETWEEN_CALLS_MS).then((result) => ({ angle, result })));
+        const results = await Promise.all(promises);
+        const textureViews = {};
+        for (const { angle, result } of results) {
+            textureViews[angle] = result;
+        }
+        return textureViews;
+    }
+    /**
      * Generate a single mesh view
      * @param hint - Optional regeneration hint for adjustments
      */

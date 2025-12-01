@@ -19,6 +19,11 @@ export type ViewAngle = 'front' | 'back' | 'left' | 'right' | 'top';
 // Printer type determines material selection
 export type PrinterType = 'fdm' | 'sla' | 'resin';
 
+// Mesh precision for 3D printing optimization
+// 'high' = should_remesh: false (preserves original mesh topology)
+// 'standard' = should_remesh: true (optimized polycount)
+export type MeshPrecision = 'high' | 'standard';
+
 // Input mode for generation
 export type InputMode = 'single' | 'multi' | 'ai-generated';
 
@@ -355,6 +360,7 @@ export interface PipelineSettings {
   printerType: PrinterType;
   format: OutputFormat;
   generationMode?: GenerationModeId;
+  meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
 }
 
 /**
@@ -402,6 +408,19 @@ export interface PipelineDocument {
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
   // 2 texture-ready images (full color for texture mapping)
   textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+
+  // Aggregated color palette from all mesh views (for texture consistency)
+  aggregatedColorPalette?: {
+    unified: string[];        // All unique colors, sorted by frequency
+    dominantColors: string[]; // Top 7 most frequent colors
+  };
+
+  // Real-time generation progress tracking
+  generationProgress?: {
+    phase: 'mesh-views' | 'texture-views' | 'complete';
+    meshViewsCompleted: number;     // 0-4
+    textureViewsCompleted: number;  // 0-2
+  };
 
   // Step 4-5: Meshy mesh generation
   meshyMeshTaskId?: string;

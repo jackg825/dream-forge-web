@@ -638,6 +638,40 @@ export interface PipelineProcessedImage {
 }
 
 /**
+ * Mesh precision for 3D printing optimization
+ * - 'high': Preserves original mesh topology (should_remesh=false)
+ * - 'standard': Optimizes polycount for printing (should_remesh=true)
+ */
+export type MeshPrecision = 'high' | 'standard';
+
+/**
+ * Mesh precision display options for UI
+ */
+export const MESH_PRECISION_OPTIONS: Record<MeshPrecision, {
+  id: MeshPrecision;
+  name: string;
+  description: string;
+  badge?: string;
+}> = {
+  standard: {
+    id: 'standard',
+    name: '標準',
+    description: '優化網格密度，適合一般 3D 列印',
+    badge: '推薦',
+  },
+  high: {
+    id: 'high',
+    name: '高精度',
+    description: '保留原始網格細節，檔案較大',
+  },
+};
+
+/**
+ * Default mesh precision
+ */
+export const DEFAULT_MESH_PRECISION: MeshPrecision = 'standard';
+
+/**
  * Pipeline settings
  */
 export interface PipelineSettings {
@@ -645,6 +679,7 @@ export interface PipelineSettings {
   printerType: PrinterType;
   format: OutputFormat;
   generationMode?: GenerationModeId;
+  meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
 }
 
 /**
@@ -685,6 +720,19 @@ export interface Pipeline {
   // Gemini-generated images
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
   textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+
+  // Aggregated color palette from mesh views (for texture consistency)
+  aggregatedColorPalette?: {
+    unified: string[];        // All unique colors, sorted by frequency
+    dominantColors: string[]; // Top 7 most frequent colors
+  };
+
+  // Real-time generation progress tracking
+  generationProgress?: {
+    phase: 'mesh-views' | 'texture-views' | 'complete';
+    meshViewsCompleted: number;     // 0-4
+    textureViewsCompleted: number;  // 0-2
+  };
 
   // Meshy mesh generation
   meshyMeshTaskId?: string;

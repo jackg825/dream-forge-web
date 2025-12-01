@@ -55,3 +55,14 @@ export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle
  * @param hint - Optional regeneration hint for adjustments
  */
 export declare function getTexturePrompt(mode: ModeConfig, angle: PipelineTextureAngle, userDescription?: string | null, hint?: string): string;
+/**
+ * Generate texture view prompt with color palette hints for consistency
+ * Used when generating texture views after mesh views are complete
+ *
+ * @param mode - The generation mode configuration
+ * @param angle - The view angle to generate
+ * @param colorPalette - Color palette extracted from mesh views for consistency
+ * @param userDescription - Optional user-provided description of the object
+ * @param hint - Optional regeneration hint for adjustments
+ */
+export declare function getTexturePromptWithColors(mode: ModeConfig, angle: PipelineTextureAngle, colorPalette: string[], userDescription?: string | null, hint?: string): string;

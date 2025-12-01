@@ -249,3 +249,46 @@ The output must look like a flat texture map applied to the object, ready for a 
 Generate the actual image, not a description.`;
   }
 }
+
+/**
+ * Generate texture view prompt with color palette hints for consistency
+ * Used when generating texture views after mesh views are complete
+ *
+ * @param mode - The generation mode configuration
+ * @param angle - The view angle to generate
+ * @param colorPalette - Color palette extracted from mesh views for consistency
+ * @param userDescription - Optional user-provided description of the object
+ * @param hint - Optional regeneration hint for adjustments
+ */
+export function getTexturePromptWithColors(
+  mode: ModeConfig,
+  angle: PipelineTextureAngle,
+  colorPalette: string[],
+  userDescription?: string | null,
+  hint?: string
+): string {
+  const basePrompt = getTexturePrompt(mode, angle, userDescription, hint);
+
+  // If no color palette or mode doesn't use simplified mesh, return base prompt
+  if (colorPalette.length === 0) {
+    return basePrompt;
+  }
+
+  // Inject color consistency instruction
+  const colorHint = `
+
+**COLOR CONSISTENCY REQUIREMENT**
+IMPORTANT: To ensure color consistency with the mesh views, use ONLY these colors in your generated image:
+${colorPalette.join(', ')}
+
+These colors have been extracted from the mesh views. Your texture image MUST use the same color palette to ensure visual consistency across all views. Do not introduce new colors.`;
+
+  // Insert color hint before the final "Generate the actual image" line
+  const insertPoint = basePrompt.lastIndexOf('Generate the actual image');
+  if (insertPoint > 0) {
+    return basePrompt.slice(0, insertPoint) + colorHint + '\n\n' + basePrompt.slice(insertPoint);
+  }
+
+  // Fallback: append to end
+  return basePrompt + colorHint;
+}

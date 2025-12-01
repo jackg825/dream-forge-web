@@ -21,12 +21,26 @@ export interface GeneratedViewResult {
     colorPalette?: string[];
 }
 /**
+ * Aggregated color palette from all mesh views
+ * Used to ensure color consistency in texture generation
+ */
+export interface AggregatedColorPalette {
+    byView: Record<PipelineMeshAngle, string[]>;
+    unified: string[];
+    dominantColors: string[];
+}
+/**
  * Result of all 6 views generation
  */
 export interface MultiViewGenerationResult {
     meshViews: Record<PipelineMeshAngle, GeneratedViewResult>;
     textureViews: Record<PipelineTextureAngle, GeneratedViewResult>;
+    aggregatedPalette?: AggregatedColorPalette;
 }
+/**
+ * Callback for progress updates during parallel generation
+ */
+export type ViewProgressCallback = (type: 'mesh' | 'texture', angle: string, completed: number, total: number) => Promise<void>;
 /**
  * Multi-View Generator class
  * Generates 6 images from a reference image for 3D model generation
@@ -50,6 +64,41 @@ export declare class MultiViewGenerator {
      * @returns All 6 generated views (4 mesh + 2 texture)
      */
     generateAllViews(referenceImageBase64: string, mimeType: string): Promise<MultiViewGenerationResult>;
+    /**
+     * Aggregate color palettes from all mesh views
+     * Combines colors from all 4 views, deduplicates, and sorts by frequency
+     */
+    private aggregateColorPalettes;
+    /**
+     * Generate all 6 views using staggered parallel execution
+     *
+     * This method respects the 500ms rate limit while maximizing parallelism:
+     * - Phase 1: Start 4 mesh views with 0, 500, 1000, 1500ms delays
+     * - Aggregate color palette from mesh views
+     * - Phase 2: Start 2 texture views with 0, 500ms delays (with color hints)
+     *
+     * Expected time: ~18s (vs ~50s for sequential)
+     *
+     * @param referenceImageBase64 - Base64 encoded reference image
+     * @param mimeType - MIME type of the input image
+     * @param onProgress - Optional callback for progress updates
+     * @returns All 6 generated views with aggregated color palette
+     */
+    generateAllViewsParallel(referenceImageBase64: string, mimeType: string, onProgress?: ViewProgressCallback): Promise<MultiViewGenerationResult>;
+    /**
+     * Generate a single view with a delay (for staggered parallel execution)
+     */
+    private generateViewWithDelay;
+    /**
+     * Generate a texture view with color hints from mesh views
+     * Used during parallel generation to ensure color consistency
+     */
+    private generateTextureViewWithColorHints;
+    /**
+     * Generate texture views with existing color palette
+     * Used when regenerating mesh views and need to update texture views
+     */
+    generateTextureViewsWithColors(referenceImageBase64: string, mimeType: string, colorPalette: string[]): Promise<Record<PipelineTextureAngle, GeneratedViewResult>>;
     /**
      * Generate a single mesh view
      * @param hint - Optional regeneration hint for adjustments

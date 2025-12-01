@@ -33,6 +33,7 @@ import { useCredits } from '@/hooks/useCredits';
 import { PipelineUploader } from './PipelineUploader';
 import { ModeSelector } from './ModeSelector';
 import { ProcessingModeSelector } from './ProcessingModeSelector';
+import { PrecisionSelector } from './PrecisionSelector';
 import { BatchProgressIndicator } from './BatchProgressIndicator';
 import { PreviousOutputs } from './PreviousOutputs';
 import { RegenerateDialog } from './RegenerateDialog';
@@ -43,8 +44,14 @@ import type {
   PipelineTextureAngle,
   GenerationModeId,
   ProcessingMode,
+  MeshPrecision,
 } from '@/types';
-import { GENERATION_MODE_OPTIONS, DEFAULT_GENERATION_MODE, DEFAULT_PROCESSING_MODE } from '@/types';
+import {
+  GENERATION_MODE_OPTIONS,
+  DEFAULT_GENERATION_MODE,
+  DEFAULT_PROCESSING_MODE,
+  DEFAULT_MESH_PRECISION,
+} from '@/types';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -105,6 +112,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [generationMode, setGenerationMode] = useState<GenerationModeId>(DEFAULT_GENERATION_MODE);
   const [processingMode, setProcessingMode] = useState<ProcessingMode>(DEFAULT_PROCESSING_MODE);
+  const [meshPrecision, setMeshPrecision] = useState<MeshPrecision>(DEFAULT_MESH_PRECISION);
   const [userDescription, setUserDescription] = useState<string>('');
 
   // 3D Viewer state - mesh preview (Step 5)
@@ -202,7 +210,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       const imageUrls = uploadedImages.map((img) => img.url);
       const newPipelineId = await createPipeline(
         imageUrls,
-        undefined,
+        { meshPrecision },  // Pass mesh precision in settings
         generationMode,
         processingMode,
         userDescription.trim() || undefined
@@ -306,6 +314,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             disabled={actionLoading}
           />
 
+          {/* Mesh precision selector - for 3D printing optimization */}
+          <PrecisionSelector
+            value={meshPrecision}
+            onChange={setMeshPrecision}
+            disabled={actionLoading}
+          />
+
           {/* User description input - optional */}
           <div className="space-y-2">
             <Label htmlFor="user-description" className="text-sm font-medium">
@@ -369,9 +384,19 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 2: Processing - shows batch or realtime progress
+  // Step 2: Processing - shows batch or realtime progress with visual grid
   const renderProcessingStep = () => {
     const isBatch = pipeline?.processingMode === 'batch' || isBatchProcessing;
+    const progress = pipeline?.generationProgress;
+
+    // Progress values: mesh (0-4), texture (0-2)
+    const meshCompleted = progress?.meshViewsCompleted ?? 0;
+    const textureCompleted = progress?.textureViewsCompleted ?? 0;
+    const phase = progress?.phase ?? 'mesh-views';
+
+    // View labels for display
+    const meshLabels = ['正面', '背面', '左側', '右側'];
+    const textureLabels = ['正面', '背面'];
 
     return (
       <div className="flex flex-col items-center justify-center py-16">
@@ -385,8 +410,96 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         <p className="text-sm text-muted-foreground mt-2">
           {isBatch
             ? 'AI 正在批次處理您的圖片，您可以離開此頁面稍後回來'
-            : 'AI 正在分析您的圖片並生成多角度視圖，約需 30-60 秒'}
+            : phase === 'mesh-views'
+              ? `正在生成網格用圖片 (${meshCompleted}/4)...`
+              : phase === 'texture-views'
+                ? `正在生成貼圖用圖片 (${textureCompleted}/2)...`
+                : 'AI 正在分析您的圖片並生成多角度視圖'}
         </p>
+
+        {/* Visual progress grid - 6 boxes: 4 green (mesh) + 2 blue (texture) */}
+        {!isBatch && (
+          <div className="w-full max-w-lg mt-8">
+            {/* Mesh views - green theme */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Box className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-medium">網格視圖</span>
+                <span className="text-xs text-muted-foreground">({meshCompleted}/4)</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {meshLabels.map((label, index) => {
+                  const isCompleted = index < meshCompleted;
+                  const isProcessing = index === meshCompleted && phase === 'mesh-views';
+                  return (
+                    <div
+                      key={`mesh-${index}`}
+                      className={`
+                        aspect-square rounded-lg border-2 flex flex-col items-center justify-center
+                        transition-all duration-300
+                        ${isCompleted
+                          ? 'border-green-500 bg-green-500/10'
+                          : isProcessing
+                            ? 'border-green-500/50 bg-green-500/5 animate-pulse'
+                            : 'border-border bg-muted/30'}
+                      `}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle className="h-6 w-6 text-green-500" />
+                      ) : isProcessing ? (
+                        <Loader2 className="h-5 w-5 text-green-500 animate-spin" />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
+                      )}
+                      <span className="text-xs text-muted-foreground mt-1">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Texture views - blue theme */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Palette className="h-4 w-4 text-blue-500" />
+                <span className="text-sm font-medium">貼圖視圖</span>
+                <span className="text-xs text-muted-foreground">({textureCompleted}/2)</span>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {textureLabels.map((label, index) => {
+                  const isCompleted = index < textureCompleted;
+                  const isProcessing = index === textureCompleted && phase === 'texture-views';
+                  return (
+                    <div
+                      key={`texture-${index}`}
+                      className={`
+                        aspect-square rounded-lg border-2 flex flex-col items-center justify-center
+                        transition-all duration-300
+                        ${isCompleted
+                          ? 'border-blue-500 bg-blue-500/10'
+                          : isProcessing
+                            ? 'border-blue-500/50 bg-blue-500/5 animate-pulse'
+                            : 'border-border bg-muted/30'}
+                      `}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle className="h-6 w-6 text-blue-500" />
+                      ) : isProcessing ? (
+                        <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
+                      )}
+                      <span className="text-xs text-muted-foreground mt-1">{label}</span>
+                    </div>
+                  );
+                })}
+                {/* Empty slots to maintain grid alignment */}
+                <div className="aspect-square" />
+                <div className="aspect-square" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Show batch progress indicator for batch mode */}
         {isBatch && pipeline && (

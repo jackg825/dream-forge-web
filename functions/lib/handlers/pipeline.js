@@ -281,13 +281,25 @@ exports.generatePipelineImages = functions
         const referenceImageUrl = pipeline.inputImages[0].url;
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate all 6 views using the pipeline's generation mode and user description
+        // Uses staggered parallel execution for better performance (~18s vs ~50s)
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
         const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription);
-        const views = await generator.generateAllViews(base64, mimeType);
-        functions.logger.info('Using generation mode', {
+        // Create progress callback to update Firestore in real-time
+        const onProgress = async (type, angle, completed, total) => {
+            const progress = type === 'mesh'
+                ? { phase: 'mesh-views', meshViewsCompleted: completed, textureViewsCompleted: 0 }
+                : { phase: 'texture-views', meshViewsCompleted: 4, textureViewsCompleted: completed };
+            await pipelineRef.update({
+                generationProgress: progress,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        };
+        const views = await generator.generateAllViewsParallel(base64, mimeType, onProgress);
+        functions.logger.info('Using generation mode with parallel execution', {
             pipelineId,
             mode: modeId,
             hasUserDescription: !!pipeline.userDescription,
+            dominantColors: views.aggregatedPalette?.dominantColors?.length || 0,
         });
         const now = admin.firestore.FieldValue.serverTimestamp();
         const meshImages = {};
@@ -321,22 +333,37 @@ exports.generatePipelineImages = functions
                 generatedAt: now,
             };
         }
-        // Update pipeline with generated images
+        // Build aggregated color palette for Firestore
+        const aggregatedColorPalette = views.aggregatedPalette
+            ? {
+                unified: views.aggregatedPalette.unified,
+                dominantColors: views.aggregatedPalette.dominantColors,
+            }
+            : undefined;
+        // Update pipeline with generated images and color palette
         await pipelineRef.update({
             status: 'images-ready',
             meshImages,
             textureImages,
+            ...(aggregatedColorPalette && { aggregatedColorPalette }),
+            generationProgress: {
+                phase: 'complete',
+                meshViewsCompleted: 4,
+                textureViewsCompleted: 2,
+            },
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         functions.logger.info('Pipeline images generated', {
             pipelineId,
             meshViewCount: Object.keys(meshImages).length,
             textureViewCount: Object.keys(textureImages).length,
+            dominantColorCount: aggregatedColorPalette?.dominantColors?.length || 0,
         });
         return {
             status: 'images-ready',
             meshImages,
             textureImages,
+            aggregatedColorPalette,
         };
     }
     catch (error) {
@@ -399,37 +426,114 @@ exports.regeneratePipelineImage = functions
         // Pass userDescription from pipeline and optional hint for adjustments
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
         const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription);
-        let view;
+        const now = admin.firestore.FieldValue.serverTimestamp();
         if (viewType === 'mesh') {
-            view = await generator.generateMeshView(base64, mimeType, angle, hint);
+            // Regenerate mesh view
+            const view = await generator.generateMeshView(base64, mimeType, angle, hint);
+            // Upload mesh image
+            const ext = getExtensionFromMimeType(view.mimeType);
+            const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
+            const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+            const processedMeshImage = {
+                url,
+                storagePath,
+                source: 'gemini',
+                generatedAt: now,
+            };
+            if (view.colorPalette && view.colorPalette.length > 0) {
+                processedMeshImage.colorPalette = view.colorPalette;
+            }
+            // Update the mesh image first
+            await pipelineRef.update({
+                [`meshImages.${angle}`]: processedMeshImage,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // Re-aggregate color palette from all mesh views (including the new one)
+            const updatedPipelineDoc = await pipelineRef.get();
+            const updatedPipeline = updatedPipelineDoc.data();
+            // Collect colors from all mesh views
+            const colorFrequency = new Map();
+            const meshAngles = ['front', 'back', 'left', 'right'];
+            for (const meshAngle of meshAngles) {
+                const meshImage = updatedPipeline.meshImages[meshAngle];
+                if (meshImage?.colorPalette) {
+                    for (const color of meshImage.colorPalette) {
+                        const normalizedColor = color.toUpperCase();
+                        colorFrequency.set(normalizedColor, (colorFrequency.get(normalizedColor) || 0) + 1);
+                    }
+                }
+            }
+            const sortedColors = [...colorFrequency.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .map(([color]) => color);
+            const newAggregatedPalette = {
+                unified: sortedColors,
+                dominantColors: sortedColors.slice(0, 7),
+            };
+            // Auto-regenerate ALL texture views with the new color palette
+            functions.logger.info('Auto-regenerating texture views with new color palette', {
+                pipelineId,
+                dominantColors: newAggregatedPalette.dominantColors,
+            });
+            const textureViews = await generator.generateTextureViewsWithColors(base64, mimeType, newAggregatedPalette.dominantColors);
+            // Upload new texture images
+            const textureImages = {};
+            for (const [texAngle, texView] of Object.entries(textureViews)) {
+                const texExt = getExtensionFromMimeType(texView.mimeType);
+                const texStoragePath = `pipelines/${userId}/${pipelineId}/texture_${texAngle}.${texExt}`;
+                const texUrl = await uploadImageToStorage(texView.imageBase64, texView.mimeType, texStoragePath);
+                textureImages[texAngle] = {
+                    url: texUrl,
+                    storagePath: texStoragePath,
+                    source: 'gemini',
+                    generatedAt: now,
+                };
+            }
+            // Update pipeline with new texture images and color palette
+            await pipelineRef.update({
+                textureImages,
+                aggregatedColorPalette: newAggregatedPalette,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            functions.logger.info('Pipeline mesh image regenerated with auto-texture update', {
+                pipelineId,
+                angle,
+                texturesRegenerated: Object.keys(textureImages).length,
+            });
+            return {
+                viewType,
+                angle,
+                image: processedMeshImage,
+                regeneratedTextures: true,
+                textureImages,
+                aggregatedColorPalette: newAggregatedPalette,
+            };
         }
         else {
-            view = await generator.generateTextureView(base64, mimeType, angle, hint);
+            // Regenerate texture view only (no auto-linkage needed)
+            const view = await generator.generateTextureView(base64, mimeType, angle, hint);
+            // Upload texture image
+            const ext = getExtensionFromMimeType(view.mimeType);
+            const storagePath = `pipelines/${userId}/${pipelineId}/texture_${angle}.${ext}`;
+            const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+            const processedImage = {
+                url,
+                storagePath,
+                source: 'gemini',
+                generatedAt: now,
+            };
+            await pipelineRef.update({
+                [`textureImages.${angle}`]: processedImage,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            functions.logger.info('Pipeline texture image regenerated', { pipelineId, angle });
+            return {
+                viewType,
+                angle,
+                image: processedImage,
+                regeneratedTextures: false,
+            };
         }
-        // Upload to storage
-        const ext = getExtensionFromMimeType(view.mimeType);
-        const storagePath = `pipelines/${userId}/${pipelineId}/${viewType}_${angle}.${ext}`;
-        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-        const now = admin.firestore.FieldValue.serverTimestamp();
-        const processedImage = {
-            url,
-            storagePath,
-            source: 'gemini',
-            colorPalette: view.colorPalette,
-            generatedAt: now,
-        };
-        // Update pipeline
-        const updateField = viewType === 'mesh' ? `meshImages.${angle}` : `textureImages.${angle}`;
-        await pipelineRef.update({
-            [updateField]: processedImage,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        functions.logger.info('Pipeline image regenerated', { pipelineId, viewType, angle });
-        return {
-            viewType,
-            angle,
-            image: processedImage,
-        };
     }
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -507,6 +611,7 @@ exports.startPipelineMesh = functions
         const result = await meshyProvider.generateMeshOnly(imageBuffers, {
             quality: pipeline.settings.quality,
             format: pipeline.settings.format,
+            precision: pipeline.settings.meshPrecision || 'standard',
         });
         // Update pipeline with task ID
         await pipelineRef.update({

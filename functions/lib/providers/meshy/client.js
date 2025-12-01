@@ -169,8 +169,12 @@ class MeshyProvider {
      * Used for the new pipeline workflow where texture is generated separately.
      * This costs 5 credits (mesh-only) vs 15 credits (with texture).
      *
+     * Supports mesh precision option for 3D printing optimization:
+     * - 'high' precision: should_remesh=false (preserves original mesh topology)
+     * - 'standard' precision: should_remesh=true (optimizes polycount)
+     *
      * @param imageBuffers - Array of image buffers (max 4)
-     * @param options - Generation options (quality, format)
+     * @param options - Generation options (quality, format, precision)
      * @returns Task ID for polling
      */
     async generateMeshOnly(imageBuffers, options) {
@@ -182,10 +186,17 @@ class MeshyProvider {
                 const base64 = buffer.toString('base64');
                 return `data:image/png;base64,${base64}`;
             });
-            const polycount = types_1.MESHY_QUALITY_POLYCOUNT[options.quality] || 100000;
+            // Determine remesh settings based on precision
+            // 'high' = preserve original mesh (no remesh), 'standard' = optimize polycount
+            const shouldRemesh = options.precision !== 'high';
+            const polycount = shouldRemesh
+                ? (types_1.MESHY_QUALITY_POLYCOUNT[options.quality] || 100000)
+                : undefined;
             functions.logger.info('Starting Meshy mesh-only generation', {
                 imageCount: imageUrls.length,
                 quality: options.quality,
+                precision: options.precision || 'standard',
+                shouldRemesh,
                 polycount,
                 format: options.format,
                 shouldTexture: false, // Key difference: no texture
@@ -199,8 +210,8 @@ class MeshyProvider {
                     image_urls: imageUrls,
                     ai_model: 'meshy-5',
                     topology: 'triangle',
-                    target_polycount: polycount,
-                    should_remesh: true,
+                    ...(polycount && { target_polycount: polycount }),
+                    should_remesh: shouldRemesh,
                     should_texture: false, // KEY: No texture generation
                     enable_pbr: false,
                 }
@@ -208,8 +219,8 @@ class MeshyProvider {
                     image_url: imageUrls[0],
                     ai_model: 'latest',
                     topology: 'triangle',
-                    target_polycount: polycount,
-                    should_remesh: true,
+                    ...(polycount && { target_polycount: polycount }),
+                    should_remesh: shouldRemesh,
                     should_texture: false, // KEY: No texture generation
                     enable_pbr: false,
                 };

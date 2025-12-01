@@ -10,6 +10,7 @@ export type { ProviderType } from '../providers/types';
 export type MeshMode = 'Raw' | 'Quad';
 export type ViewAngle = 'front' | 'back' | 'left' | 'right' | 'top';
 export type PrinterType = 'fdm' | 'sla' | 'resin';
+export type MeshPrecision = 'high' | 'standard';
 export type InputMode = 'single' | 'multi' | 'ai-generated';
 export type MaterialType = 'PBR' | 'Shaded';
 export declare const PRINTER_MATERIAL_MAP: Record<PrinterType, MaterialType>;
@@ -211,6 +212,7 @@ export interface PipelineSettings {
     printerType: PrinterType;
     format: OutputFormat;
     generationMode?: GenerationModeId;
+    meshPrecision?: MeshPrecision;
 }
 /**
  * Pipeline document for new simplified 3D generation workflow
@@ -245,6 +247,15 @@ export interface PipelineDocument {
     }>;
     meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
     textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+    aggregatedColorPalette?: {
+        unified: string[];
+        dominantColors: string[];
+    };
+    generationProgress?: {
+        phase: 'mesh-views' | 'texture-views' | 'complete';
+        meshViewsCompleted: number;
+        textureViewsCompleted: number;
+    };
     meshyMeshTaskId?: string;
     meshUrl?: string;
     meshStoragePath?: string;

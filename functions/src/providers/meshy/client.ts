@@ -18,6 +18,14 @@ import type {
   TaskStatusResult,
   DownloadResult,
 } from '../types';
+import type { MeshPrecision } from '../../rodin/types';
+
+/**
+ * Extended generation options with mesh precision for 3D printing
+ */
+export interface MeshGenerationOptions extends GenerationOptions {
+  precision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
+}
 import type { MeshyTaskResponse, MeshyCreateTaskResponse } from './types';
 import { MESHY_API_BASE, MESHY_QUALITY_POLYCOUNT } from './types';
 import { mapMeshyTaskStatus, extractMeshyDownloads } from './mapper';
@@ -173,13 +181,17 @@ export class MeshyProvider implements I3DProvider {
    * Used for the new pipeline workflow where texture is generated separately.
    * This costs 5 credits (mesh-only) vs 15 credits (with texture).
    *
+   * Supports mesh precision option for 3D printing optimization:
+   * - 'high' precision: should_remesh=false (preserves original mesh topology)
+   * - 'standard' precision: should_remesh=true (optimizes polycount)
+   *
    * @param imageBuffers - Array of image buffers (max 4)
-   * @param options - Generation options (quality, format)
+   * @param options - Generation options (quality, format, precision)
    * @returns Task ID for polling
    */
   async generateMeshOnly(
     imageBuffers: Buffer[],
-    options: GenerationOptions
+    options: MeshGenerationOptions
   ): Promise<GenerationTaskResult> {
     try {
       // Meshy supports max 4 images
@@ -191,11 +203,18 @@ export class MeshyProvider implements I3DProvider {
         return `data:image/png;base64,${base64}`;
       });
 
-      const polycount = MESHY_QUALITY_POLYCOUNT[options.quality] || 100000;
+      // Determine remesh settings based on precision
+      // 'high' = preserve original mesh (no remesh), 'standard' = optimize polycount
+      const shouldRemesh = options.precision !== 'high';
+      const polycount = shouldRemesh
+        ? (MESHY_QUALITY_POLYCOUNT[options.quality] || 100000)
+        : undefined;
 
       functions.logger.info('Starting Meshy mesh-only generation', {
         imageCount: imageUrls.length,
         quality: options.quality,
+        precision: options.precision || 'standard',
+        shouldRemesh,
         polycount,
         format: options.format,
         shouldTexture: false, // Key difference: no texture
@@ -211,8 +230,8 @@ export class MeshyProvider implements I3DProvider {
             image_urls: imageUrls,
             ai_model: 'meshy-5',
             topology: 'triangle',
-            target_polycount: polycount,
-            should_remesh: true,
+            ...(polycount && { target_polycount: polycount }),
+            should_remesh: shouldRemesh,
             should_texture: false, // KEY: No texture generation
             enable_pbr: false,
           }
@@ -220,8 +239,8 @@ export class MeshyProvider implements I3DProvider {
             image_url: imageUrls[0],
             ai_model: 'latest',
             topology: 'triangle',
-            target_polycount: polycount,
-            should_remesh: true,
+            ...(polycount && { target_polycount: polycount }),
+            should_remesh: shouldRemesh,
             should_texture: false, // KEY: No texture generation
             enable_pbr: false,
           };
