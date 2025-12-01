@@ -105,41 +105,42 @@ function getMeshPrompt(mode, angle, userDescription, hint) {
         ? `\n\n**REGENERATION ADJUSTMENT**\nThe user requests the following adjustment: "${hint}"\nApply this adjustment while maintaining all other requirements.\n`
         : '';
     if (mode.mesh.simplified) {
-        // Simplified mode: 7-color, flat lighting, no shadows
-        return `You are an expert at preparing reference images for 3D printing mesh generation.${userDescBlock}${hintBlock}
+        // Simplified mode: ~7-color cel-shaded vinyl toy style
+        return `You are a professional 3D character artist creating a "Turnaround Reference Sheet" for a 3D modeler.${userDescBlock}${hintBlock}
 
-Generate a ${angleDisplay} VIEW of this object optimized for 3D mesh reconstruction.
+Generate a ${angleDisplay} VIEW of this object.
 
-CRITICAL REQUIREMENTS:
-1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly ${angle === 'front' ? 'in front, centered' : angle === 'back' ? 'behind (180° from front)' : angle === 'left' ? 'left side (90° CCW from front)' : 'right side (90° CW from front)'}
-2. NO SHADOWS - Remove ALL shadows completely (no drop shadows, no cast shadows, no ambient occlusion)
-3. FLAT LIGHTING - Use completely uniform, flat lighting with no highlights or shading gradients
-4. Reduce to exactly ${mode.mesh.colorCount} distinct SOLID colors (no gradients, no anti-aliasing, no soft edges)
-5. HARD EDGES - All color boundaries must be pixel-sharp, no blending
-6. Pure white background (#FFFFFF)
-7. Object should fill 80-90% of the frame
-8. Maintain accurate proportions and all structural details
+STYLE & TECHNICAL REQUIREMENTS:
+1. **STYLE**: 3D Cel-Shaded Render. Look like a clean, low-poly game asset or vinyl toy.
+2. **COLOR**: Use "Posterized" coloring. Limit to approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors.
+3. **LIGHTING**: "Flat Shading" or "Unlit". NO cast shadows, NO drop shadows.
+4. **GEOMETRY CUES**: Although flat lit, use distinct color blocks to define distinct 3D volumes (e.g., separate sleeves from arms with a color edge).
+5. **VIEWPORT**: Orthographic Projection (Telephoto lens). No perspective distortion. Show from directly ${angle === 'front' ? 'in front, centered' : angle === 'back' ? 'behind (180° from front)' : angle === 'left' ? 'left side (90° CCW from front)' : 'right side (90° CW from front)'}.
+6. **BOUNDARIES**: Hard, pixel-sharp edges against a Pure White (#FFFFFF) background.
+7. **CONSISTENCY**: The proportions, height, and features MUST match the front view logic.
+8. **COMPOSITION**: Object fills 90% of frame.
 
-The output image will be used by AI to generate a 3D printable mesh. Shadows and lighting variations will cause incorrect geometry.
+Ensure the output looks like a technical design document, not a photograph.
 
-After the image, list the ${mode.mesh.colorCount} colors used: COLORS: ${Array(mode.mesh.colorCount).fill('#RRGGBB').join(', ')}
+After the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 
 Generate the actual image, not a description.`;
     }
     else {
-        // Full color mode: preserve details, soft lighting
-        return `You are an expert at preparing reference images for 3D mesh generation.${userDescBlock}${hintBlock}
+        // Full color mode: photogrammetry style with ambient occlusion
+        return `You are a 3D scanning expert preparing reference data for Photogrammetry.${userDescBlock}${hintBlock}
 
-Generate a ${angleDisplay} VIEW of this object optimized for 3D mesh reconstruction.
+Generate a ${angleDisplay} VIEW of this object optimized for Mesh Reconstruction.
 
 REQUIREMENTS:
-1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly ${angle === 'front' ? 'in front, centered' : angle === 'back' ? 'behind (180° from front)' : angle === 'left' ? 'left side (90° CCW from front)' : 'right side (90° CW from front)'}
-2. NO HARSH SHADOWS - Use soft, diffuse lighting only
-3. PRESERVE COLORS - Keep full color detail and surface textures
-4. Pure white background (#FFFFFF)
-5. Object should fill 80-90% of the frame
-6. High-resolution surface detail
-7. Maintain accurate proportions matching other views
+1. **VIEW**: Strictly Orthographic (Technical drawing view). Camera perfectly level with the object center. Show from directly ${angle === 'front' ? 'in front, centered' : angle === 'back' ? 'behind (180° from front)' : angle === 'left' ? 'left side (90° CCW from front)' : 'right side (90° CW from front)'}.
+2. **LIGHTING**: "Studio Softbox Lighting". Even illumination. IMPORTANT: Include subtle "Ambient Occlusion" in crevices to define shape/depth, but AVOID harsh directional shadows.
+3. **DETAILS**: Hyper-realistic surface definition. We need to see the depth of the texture.
+4. **BACKGROUND**: Pure White (#FFFFFF).
+5. **CONSISTENCY**: Critical. If the object has a tail/backpack/feature in the reference, it MUST appear correctly in this angle.
+6. **FRAMING**: Center the object, fill 85% of the canvas.
+
+Goal: A perfect reference image that interprets the 3D volume of the input image from the ${angleDisplay}.
 
 Generate the actual image, not a description.`;
     }
@@ -162,41 +163,43 @@ function getTexturePrompt(mode, angle, userDescription, hint) {
         ? `\n\n**REGENERATION ADJUSTMENT**\nThe user requests the following adjustment: "${hint}"\nApply this adjustment while maintaining all other requirements.\n`
         : '';
     if (mode.texture.simplified) {
-        // Simplified mode: 6-color, flat lighting, no shadows
-        return `You are an expert at preparing texture reference images for 3D printed models.${userDescBlock}${hintBlock}
+        // Simplified mode: vector art / sticker art style for H2C printing
+        return `You are a vector artist creating a texture map for a multi-color 3D print.${userDescBlock}${hintBlock}
 
-Generate a ${angleDisplay} VIEW of this object optimized for texture mapping.
+Generate a ${angleDisplay} VIEW image designed for Color Mapping.
 
-CRITICAL REQUIREMENTS:
-1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}
-2. NO SHADOWS - Remove ALL shadows completely
-3. FLAT LIGHTING - Uniform lighting with no gradients
-4. Reduce to exactly ${mode.texture.colorCount} distinct SOLID colors (no gradients)
-5. HARD EDGES - All color boundaries must be pixel-sharp
-6. Pure white background (#FFFFFF)
-7. Object should fill 80-90% of the frame
-8. Maintain exact proportions matching mesh views
+CRITICAL CONSTRAINTS:
+1. **STYLE**: Flat Vector Illustration / Sticker Art style.
+2. **PALETTE**: STRICTLY LIMITED PALETTE. Reduce entire image to approximately ${mode.texture.colorCount} solid colors.
+3. **GRADIENTS**: FORBIDDEN. No gradients, no fading, no airbrushing. Solid blocks of color only.
+4. **SHADING**: Zero shading. Pure Albedo color (Unlit).
+5. **EDGES**: Crisp, sharp lines between color zones. No anti-aliasing fuzziness.
+6. **ALIGNMENT**: Must match the silhouette of the 3D mesh perfectly. Show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}.
+7. **BACKGROUND**: Pure White (#FFFFFF).
+8. **COMPOSITION**: Object fills 90% of frame.
 
-After the image, list the ${mode.texture.colorCount} colors used: COLORS: ${Array(mode.texture.colorCount).fill('#RRGGBB').join(', ')}
+Output logic: Think of this as a "Paint-by-numbers" guide. Each color region must be large enough to be 3D printed (avoid tiny pixel noise).
+
+After the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 
 Generate the actual image, not a description.`;
     }
     else {
-        // Full color mode: preserve details for texture mapping
-        return `You are an expert at preparing texture reference images for 3D printed models.${userDescBlock}${hintBlock}
+        // Full color mode: Albedo Map (Base Color) for PBR
+        return `You are a texture artist creating the "Albedo Map" (Base Color) for a 3D model.${userDescBlock}${hintBlock}
 
-Generate a ${angleDisplay} VIEW of this object optimized for texture mapping onto a 3D printed mesh.
+Generate a ${angleDisplay} VIEW Albedo texture reference.
 
 REQUIREMENTS:
-1. ORTHOGRAPHIC VIEW - No perspective distortion, show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}
-2. NO HARSH SHADOWS - Use soft, diffuse lighting only. Shadows would bake incorrectly into the texture
-3. PRESERVE COLORS - Keep full color detail, natural gradients, and surface textures
-4. High-resolution surface detail for quality texture mapping
-5. Pure white background (#FFFFFF)
-6. Object should fill 80-90% of the frame
-7. Maintain exact proportions matching the reference image
+1. **LIGHTING**: "Delit" / "Unlit" / "Flat" lighting. The image should represent the surface color ONLY, without any shadows or highlights caused by light sources.
+2. **DETAIL**: High-frequency texture details (fabric weave, skin pores, metal scratches) should be visible as color information.
+3. **VIEW**: Orthographic. Show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}.
+4. **COLOR**: Full color dynamic range. Natural saturation.
+5. **BACKGROUND**: Pure White (#FFFFFF).
+6. **COMPOSITION**: Object fills 90% of frame.
+7. **CONSISTENCY**: Maintain exact proportions matching the mesh views.
 
-The texture will be applied to a 3D printed model, so accurate colors without lighting artifacts are essential.
+The output must look like a flat texture map applied to the object, ready for a game engine.
 
 Generate the actual image, not a description.`;
     }

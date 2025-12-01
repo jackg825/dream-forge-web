@@ -20,14 +20,55 @@ const MODEL = 'gemini-3-pro-image-preview';
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;
 
-// Prompts for generating different view angles
-// These prompts instruct Gemini to generate consistent views of the same object
+// Prompts for generating different view angles (Turnaround Reference Sheet style)
+// These prompts instruct Gemini to generate consistent views for 3D modeling
 const VIEW_PROMPTS: Record<ViewAngle, string> = {
-  front: 'Generate a front view of this exact object. Show the object from directly in front, centered, maintaining the same style, colors, and details. Use a clean, plain background.',
-  back: 'Generate a back view of this exact object. Rotate the object 180 degrees to show the rear side. Maintain consistent lighting, style, colors, and all details. Use a clean, plain background.',
-  left: 'Generate a left side view of this exact object. Rotate the object 90 degrees counterclockwise to show the left profile. Maintain consistent lighting, style, colors, and all details. Use a clean, plain background.',
-  right: 'Generate a right side view of this exact object. Rotate the object 90 degrees clockwise to show the right profile. Maintain consistent lighting, style, colors, and all details. Use a clean, plain background.',
-  top: 'Generate a top-down view of this exact object. Show the object from directly above, maintaining the same proportions and all details. Use a clean, plain background.',
+  front: `You are creating a "Turnaround Reference Sheet" for 3D modeling.
+Generate a FRONT VIEW of this exact object.
+REQUIREMENTS:
+- Orthographic Projection (Telephoto lens). No perspective distortion.
+- Show from directly in front, centered.
+- Pure white background (#FFFFFF).
+- Maintain exact proportions, style, colors, and all details.
+- Object fills 85% of frame.
+The proportions and features MUST remain consistent across all views.`,
+
+  back: `You are creating a "Turnaround Reference Sheet" for 3D modeling.
+Generate a BACK VIEW of this exact object.
+REQUIREMENTS:
+- Orthographic Projection (Telephoto lens). No perspective distortion.
+- Rotate the object 180 degrees to show the rear side.
+- Pure white background (#FFFFFF).
+- Maintain exact proportions, style, colors, and all details matching the front view.
+- Object fills 85% of frame.
+CONSISTENCY: If the object has a tail/backpack/feature, it MUST appear correctly.`,
+
+  left: `You are creating a "Turnaround Reference Sheet" for 3D modeling.
+Generate a LEFT SIDE VIEW of this exact object.
+REQUIREMENTS:
+- Orthographic Projection (Telephoto lens). No perspective distortion.
+- Rotate the object 90 degrees counterclockwise to show the left profile.
+- Pure white background (#FFFFFF).
+- Maintain exact proportions, style, colors, and all details matching other views.
+- Object fills 85% of frame.`,
+
+  right: `You are creating a "Turnaround Reference Sheet" for 3D modeling.
+Generate a RIGHT SIDE VIEW of this exact object.
+REQUIREMENTS:
+- Orthographic Projection (Telephoto lens). No perspective distortion.
+- Rotate the object 90 degrees clockwise to show the right profile.
+- Pure white background (#FFFFFF).
+- Maintain exact proportions, style, colors, and all details matching other views.
+- Object fills 85% of frame.`,
+
+  top: `You are creating a "Turnaround Reference Sheet" for 3D modeling.
+Generate a TOP-DOWN VIEW of this exact object.
+REQUIREMENTS:
+- Orthographic Projection (Telephoto lens). No perspective distortion.
+- Show from directly above.
+- Pure white background (#FFFFFF).
+- Maintain exact proportions and all details matching other views.
+- Object fills 85% of frame.`,
 };
 
 /**

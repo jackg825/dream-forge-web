@@ -51,25 +51,25 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models
 const MODEL = 'gemini-3-pro-image-preview';
 /**
  * Prompt for H2C 7-color optimization
- * Instructs Gemini to reduce colors while maintaining printability
+ * Uses Vector Art / Sticker Art style for clean color separation
  */
-const H2C_OPTIMIZATION_PROMPT = `You are an expert at preparing images for multi-color 3D printing on a Bambu Lab H2C printer.
+const H2C_OPTIMIZATION_PROMPT = `You are a vector artist preparing images for multi-color 3D printing on a Bambu Lab H2C printer.
 
-Task: Simplify this image to exactly 7 solid colors optimized for FDM multi-color 3D printing.
+Task: Transform this image into a "Paint-by-numbers" style illustration with approximately 7 solid colors.
 
-Requirements:
-1. Reduce the image to exactly 7 distinct solid colors (no gradients, no anti-aliasing between color regions)
-2. Each color region should have clear, well-defined boundaries
-3. Preserve the main subject's recognizable features and overall composition
-4. Optimize for layer adhesion by avoiding very thin color regions (minimum ~2mm width at typical print scales)
-5. Use colors that contrast well for visual appeal
-6. Avoid colors that are too similar - each color should be distinctly different
-7. Keep the image crisp and suitable for conversion to lithophane or color-mapped 3D model
+STYLE REQUIREMENTS:
+1. **STYLE**: Flat Vector Illustration / Sticker Art style. Think of vinyl toy or cel-shaded game art.
+2. **PALETTE**: Reduce to approximately 7 distinct solid colors with high contrast between them.
+3. **GRADIENTS**: FORBIDDEN. No gradients, no fading, no anti-aliasing between color regions.
+4. **REGIONS**: "Chunky design" - each color region must be large and well-defined (minimum ~2mm width at typical print scales). Avoid tiny pixel noise.
+5. **EDGES**: Crisp, pixel-sharp boundaries between color zones.
+6. **COMPOSITION**: Preserve the main subject's recognizable features and overall silhouette.
+7. **CONTRAST**: Each color should be distinctly different from adjacent colors for visual appeal.
 
-Output requirements:
-1. Generate the optimized image with exactly 7 solid colors
-2. After the image, list the 7 colors used in this exact format:
-   COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+Output logic: The final image should look like a clean sticker or decal that could be 3D printed with distinct color changes.
+
+After the image, list the colors used in this exact format:
+COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
 
 Important: Generate the actual optimized image, not a description or placeholder.`;
 /**
