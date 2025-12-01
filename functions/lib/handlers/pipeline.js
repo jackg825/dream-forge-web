@@ -55,6 +55,7 @@ const multi_view_generator_1 = require("../gemini/multi-view-generator");
 const client_1 = require("../providers/meshy/client");
 const retexture_1 = require("../providers/meshy/retexture");
 const credits_1 = require("../utils/credits");
+const mode_configs_1 = require("../gemini/mode-configs");
 const db = admin.firestore();
 const storage = admin.storage();
 // Credit costs
@@ -123,7 +124,7 @@ exports.createPipeline = functions
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to create a pipeline');
     }
     const userId = context.auth.uid;
-    const { imageUrls, settings } = data;
+    const { imageUrls, settings, generationMode } = data;
     if (!imageUrls || imageUrls.length === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'At least one image URL is required');
     }
@@ -133,9 +134,12 @@ exports.createPipeline = functions
     // (Firestore doesn't allow serverTimestamp() inside arrays)
     const now = admin.firestore.FieldValue.serverTimestamp();
     const uploadTime = admin.firestore.Timestamp.now();
+    // Determine generation mode (default to simplified-mesh for backward compatibility)
+    const modeId = generationMode || mode_configs_1.DEFAULT_MODE;
     const pipeline = {
         userId,
         status: 'draft',
+        generationMode: modeId,
         inputImages: imageUrls.map((url) => ({
             url,
             storagePath: '', // Will be extracted from URL if needed
@@ -151,12 +155,18 @@ exports.createPipeline = functions
             quality: settings?.quality || 'standard',
             printerType: settings?.printerType || 'fdm',
             format: settings?.format || 'glb',
+            generationMode: modeId,
         },
         createdAt: now,
         updatedAt: now,
     };
     await pipelineRef.set(pipeline);
-    functions.logger.info('Pipeline created', { pipelineId, userId, imageCount: imageUrls.length });
+    functions.logger.info('Pipeline created', {
+        pipelineId,
+        userId,
+        imageCount: imageUrls.length,
+        generationMode: modeId,
+    });
     return {
         pipelineId,
         status: 'draft',
@@ -267,9 +277,11 @@ exports.generatePipelineImages = functions
         // Download reference image (use first uploaded image)
         const referenceImageUrl = pipeline.inputImages[0].url;
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
-        // Generate all 6 views
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)();
+        // Generate all 6 views using the pipeline's generation mode
+        const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId);
         const views = await generator.generateAllViews(base64, mimeType);
+        functions.logger.info('Using generation mode', { pipelineId, mode: modeId });
         const now = admin.firestore.FieldValue.serverTimestamp();
         const meshImages = {};
         const textureImages = {};
@@ -372,8 +384,9 @@ exports.regeneratePipelineImage = functions
         // Download reference image
         const referenceImageUrl = pipeline.inputImages[0].url;
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
-        // Generate single view
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)();
+        // Generate single view using the pipeline's generation mode
+        const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId);
         let view;
         if (viewType === 'mesh') {
             view = await generator.generateMeshView(base64, mimeType, angle);

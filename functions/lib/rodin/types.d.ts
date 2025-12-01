@@ -194,12 +194,17 @@ export interface PipelineProcessedImage {
 export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
 export type PipelineTextureAngle = 'front' | 'back';
 /**
+ * Generation mode for A/B testing different image processing strategies
+ */
+export type GenerationModeId = 'simplified-mesh' | 'simplified-texture';
+/**
  * Pipeline settings
  */
 export interface PipelineSettings {
     quality: PrintQuality;
     printerType: PrinterType;
     format: OutputFormat;
+    generationMode?: GenerationModeId;
 }
 /**
  * Pipeline document for new simplified 3D generation workflow
@@ -218,6 +223,7 @@ export interface PipelineSettings {
 export interface PipelineDocument {
     userId: string;
     status: PipelineStatus;
+    generationMode: GenerationModeId;
     inputImages: Array<{
         url: string;
         storagePath: string;

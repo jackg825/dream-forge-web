@@ -2,12 +2,16 @@
  * Multi-View Generator for Pipeline Workflow
  *
  * Generates 6 images from a reference image using Gemini:
- * - 4 mesh-optimized views (7-color H2C style) for 3D mesh generation
- * - 2 texture-ready views (full color) for texture mapping
+ * - 4 mesh views for 3D mesh generation
+ * - 2 texture views for texture mapping
+ *
+ * Supports multiple generation modes for A/B testing different
+ * image processing strategies.
  *
  * Uses Gemini 3 Pro Image Preview for consistent multi-view generation
  */
-import type { PipelineMeshAngle, PipelineTextureAngle } from '../rodin/types';
+import type { PipelineMeshAngle, PipelineTextureAngle, GenerationModeId } from '../rodin/types';
+import { type ModeConfig } from './mode-configs';
 /**
  * Result of a single view generation
  */
@@ -26,10 +30,17 @@ export interface MultiViewGenerationResult {
 /**
  * Multi-View Generator class
  * Generates 6 images from a reference image for 3D model generation
+ *
+ * Supports different generation modes for A/B testing
  */
 export declare class MultiViewGenerator {
     private apiKey;
-    constructor(apiKey: string);
+    private modeConfig;
+    constructor(apiKey: string, modeId?: GenerationModeId);
+    /**
+     * Get the current mode configuration
+     */
+    get mode(): ModeConfig;
     /**
      * Generate all 6 views from a reference image
      *
@@ -39,11 +50,11 @@ export declare class MultiViewGenerator {
      */
     generateAllViews(referenceImageBase64: string, mimeType: string): Promise<MultiViewGenerationResult>;
     /**
-     * Generate a single mesh-optimized view (7-color)
+     * Generate a single mesh view
      */
     generateMeshView(referenceImageBase64: string, mimeType: string, angle: PipelineMeshAngle): Promise<GeneratedViewResult>;
     /**
-     * Generate a single texture-ready view (full color)
+     * Generate a single texture view
      */
     generateTextureView(referenceImageBase64: string, mimeType: string, angle: PipelineTextureAngle): Promise<GeneratedViewResult>;
     /**
@@ -53,5 +64,7 @@ export declare class MultiViewGenerator {
 }
 /**
  * Create a MultiViewGenerator instance with the API key from environment
+ *
+ * @param modeId - Generation mode ID (default: 'simplified-mesh')
  */
-export declare function createMultiViewGenerator(): MultiViewGenerator;
+export declare function createMultiViewGenerator(modeId?: GenerationModeId): MultiViewGenerator;

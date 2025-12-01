@@ -502,6 +502,42 @@ export interface H2CUploadEditedResponse {
 // ============================================
 
 /**
+ * Generation mode for A/B testing different image processing strategies
+ */
+export type GenerationModeId = 'simplified-mesh' | 'simplified-texture';
+
+/**
+ * Generation mode options for UI display
+ */
+export const GENERATION_MODE_OPTIONS: Record<GenerationModeId, {
+  id: GenerationModeId;
+  name: string;
+  description: string;
+  meshStyle: string;
+  textureStyle: string;
+}> = {
+  'simplified-mesh': {
+    id: 'simplified-mesh',
+    name: '模式 A: 簡化網格',
+    description: '網格用圖片 7 色簡化，貼圖用圖片保留全彩',
+    meshStyle: '7 色簡化',
+    textureStyle: '全彩',
+  },
+  'simplified-texture': {
+    id: 'simplified-texture',
+    name: '模式 B: 簡化貼圖',
+    description: '網格用圖片保留全彩，貼圖用圖片 6 色簡化',
+    meshStyle: '全彩',
+    textureStyle: '6 色簡化',
+  },
+};
+
+/**
+ * Default generation mode
+ */
+export const DEFAULT_GENERATION_MODE: GenerationModeId = 'simplified-mesh';
+
+/**
  * Pipeline status for new simplified workflow
  * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
  */
@@ -567,6 +603,7 @@ export interface PipelineSettings {
   quality: QualityLevel;
   printerType: PrinterType;
   format: OutputFormat;
+  generationMode?: GenerationModeId;
 }
 
 /**
@@ -576,6 +613,9 @@ export interface Pipeline {
   id: string;
   userId: string;
   status: PipelineStatus;
+
+  // Generation mode for A/B testing
+  generationMode: GenerationModeId;
 
   // Input images
   inputImages: Array<{
@@ -623,6 +663,7 @@ export interface Pipeline {
 export interface CreatePipelineRequest {
   imageUrls: string[];
   settings?: Partial<PipelineSettings>;
+  generationMode?: GenerationModeId;
 }
 
 export interface CreatePipelineResponse {

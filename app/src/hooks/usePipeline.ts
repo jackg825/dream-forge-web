@@ -20,7 +20,7 @@ import type {
   StartPipelineTextureResponse,
   PipelineMeshAngle,
   PipelineTextureAngle,
-  PIPELINE_CREDIT_COSTS,
+  GenerationModeId,
 } from '@/types';
 
 interface UsePipelineReturn {
@@ -30,7 +30,11 @@ interface UsePipelineReturn {
   error: string | null;
 
   // Actions
-  createPipeline: (imageUrls: string[], settings?: Partial<PipelineSettings>) => Promise<string>;
+  createPipeline: (
+    imageUrls: string[],
+    settings?: Partial<PipelineSettings>,
+    generationMode?: GenerationModeId
+  ) => Promise<string>;
   generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
   regenerateImage: (viewType: 'mesh' | 'texture', angle: string) => Promise<void>;
   startMeshGeneration: () => Promise<StartPipelineMeshResponse>;
@@ -144,18 +148,26 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
 
   // Create new pipeline
   const createPipeline = useCallback(
-    async (imageUrls: string[], settings?: Partial<PipelineSettings>): Promise<string> => {
+    async (
+      imageUrls: string[],
+      settings?: Partial<PipelineSettings>,
+      generationMode?: GenerationModeId
+    ): Promise<string> => {
       if (!functions) {
         throw new Error('Firebase not initialized');
       }
 
       try {
         const createPipelineFn = httpsCallable<
-          { imageUrls: string[]; settings?: Partial<PipelineSettings> },
+          {
+            imageUrls: string[];
+            settings?: Partial<PipelineSettings>;
+            generationMode?: GenerationModeId;
+          },
           CreatePipelineResponse
         >(functions, 'createPipeline');
 
-        const result = await createPipelineFn({ imageUrls, settings });
+        const result = await createPipelineFn({ imageUrls, settings, generationMode });
         return result.data.pipelineId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create pipeline';

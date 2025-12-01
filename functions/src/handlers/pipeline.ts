@@ -23,7 +23,9 @@ import type {
   PipelineProcessedImage,
   PipelineMeshAngle,
   PipelineTextureAngle,
+  GenerationModeId,
 } from '../rodin/types';
+import { DEFAULT_MODE } from '../gemini/mode-configs';
 
 const db = admin.firestore();
 const storage = admin.storage();
@@ -41,6 +43,7 @@ const PIPELINE_CREDITS = {
 interface CreatePipelineData {
   imageUrls: string[];  // URLs of uploaded images in Firebase Storage
   settings?: Partial<PipelineSettings>;
+  generationMode?: GenerationModeId;  // A/B testing mode
 }
 
 interface GeneratePipelineImagesData {
@@ -154,7 +157,7 @@ export const createPipeline = functions
     }
 
     const userId = context.auth.uid;
-    const { imageUrls, settings } = data;
+    const { imageUrls, settings, generationMode } = data;
 
     if (!imageUrls || imageUrls.length === 0) {
       throw new functions.https.HttpsError(
@@ -171,12 +174,16 @@ export const createPipeline = functions
     const now = admin.firestore.FieldValue.serverTimestamp();
     const uploadTime = admin.firestore.Timestamp.now();
 
+    // Determine generation mode (default to simplified-mesh for backward compatibility)
+    const modeId: GenerationModeId = generationMode || DEFAULT_MODE;
+
     const pipeline: Omit<PipelineDocument, 'createdAt' | 'updatedAt'> & {
       createdAt: admin.firestore.FieldValue;
       updatedAt: admin.firestore.FieldValue;
     } = {
       userId,
       status: 'draft',
+      generationMode: modeId,
       inputImages: imageUrls.map((url) => ({
         url,
         storagePath: '', // Will be extracted from URL if needed
@@ -192,6 +199,7 @@ export const createPipeline = functions
         quality: settings?.quality || 'standard',
         printerType: settings?.printerType || 'fdm',
         format: settings?.format || 'glb',
+        generationMode: modeId,
       },
       createdAt: now,
       updatedAt: now,
@@ -199,7 +207,12 @@ export const createPipeline = functions
 
     await pipelineRef.set(pipeline);
 
-    functions.logger.info('Pipeline created', { pipelineId, userId, imageCount: imageUrls.length });
+    functions.logger.info('Pipeline created', {
+      pipelineId,
+      userId,
+      imageCount: imageUrls.length,
+      generationMode: modeId,
+    });
 
     return {
       pipelineId,
@@ -337,9 +350,12 @@ export const generatePipelineImages = functions
       const referenceImageUrl = pipeline.inputImages[0].url;
       const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
 
-      // Generate all 6 views
-      const generator = createMultiViewGenerator();
+      // Generate all 6 views using the pipeline's generation mode
+      const modeId = pipeline.generationMode || DEFAULT_MODE;
+      const generator = createMultiViewGenerator(modeId);
       const views = await generator.generateAllViews(base64, mimeType);
+
+      functions.logger.info('Using generation mode', { pipelineId, mode: modeId });
 
       const now = admin.firestore.FieldValue.serverTimestamp();
       const meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>> = {};
@@ -467,8 +483,9 @@ export const regeneratePipelineImage = functions
       const referenceImageUrl = pipeline.inputImages[0].url;
       const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
 
-      // Generate single view
-      const generator = createMultiViewGenerator();
+      // Generate single view using the pipeline's generation mode
+      const modeId = pipeline.generationMode || DEFAULT_MODE;
+      const generator = createMultiViewGenerator(modeId);
       let view;
 
       if (viewType === 'mesh') {

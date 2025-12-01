@@ -57,6 +57,7 @@ export function usePipelines(
             id: doc.id,
             userId: data.userId,
             status: data.status,
+            generationMode: data.generationMode || 'simplified-mesh',
             inputImages: (data.inputImages || []).map((img: any) => ({
               url: img.url,
               storagePath: img.storagePath,

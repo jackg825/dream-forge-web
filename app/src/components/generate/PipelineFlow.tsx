@@ -23,10 +23,13 @@ import { usePipeline } from '@/hooks/usePipeline';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
 import { PipelineUploader } from './PipelineUploader';
+import { ModeSelector } from './ModeSelector';
 import type {
   PipelineMeshAngle,
   PipelineTextureAngle,
+  GenerationModeId,
 } from '@/types';
+import { GENERATION_MODE_OPTIONS, DEFAULT_GENERATION_MODE } from '@/types';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -93,6 +96,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [uploadedImages, setUploadedImages] = useState<Array<{ url: string; file?: File }>>([]);
   const [actionLoading, setActionLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [generationMode, setGenerationMode] = useState<GenerationModeId>(DEFAULT_GENERATION_MODE);
 
   const {
     pipeline,
@@ -155,9 +159,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
     setActionLoading(true);
     try {
-      // Create pipeline with image URLs
+      // Create pipeline with image URLs and generation mode
       const imageUrls = uploadedImages.map((img) => img.url);
-      const newPipelineId = await createPipeline(imageUrls);
+      const newPipelineId = await createPipeline(imageUrls, undefined, generationMode);
       setPipelineId(newPipelineId);
 
       // Update URL with pipeline ID
@@ -296,6 +300,16 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             maxImages={4}
             disabled={actionLoading}
           />
+
+          {/* Mode selector - only show when images are uploaded */}
+          {uploadedImages.length > 0 && (
+            <ModeSelector
+              value={generationMode}
+              onChange={setGenerationMode}
+              disabled={actionLoading}
+            />
+          )}
+
           <div className="flex justify-center">
             <Button
               size="lg"
@@ -352,13 +366,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
     const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
 
+    // Get mode info for display
+    const currentMode = pipeline?.generationMode || generationMode;
+    const modeInfo = GENERATION_MODE_OPTIONS[currentMode];
+
     return (
       <div className="space-y-8">
         {/* Mesh images */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-medium">網格用圖片</h4>
-            <Badge variant="outline" className="text-xs">7色優化</Badge>
+            <Badge variant="outline" className="text-xs">{modeInfo?.meshStyle || '7色優化'}</Badge>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {meshAngles.map((angle) => {
@@ -398,7 +416,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-sm font-medium">貼圖用圖片</h4>
-            <Badge variant="outline" className="text-xs">全彩</Badge>
+            <Badge variant="outline" className="text-xs">{modeInfo?.textureStyle || '全彩'}</Badge>
           </div>
           <div className="grid grid-cols-2 gap-3 max-w-sm">
             {textureAngles.map((angle) => {
