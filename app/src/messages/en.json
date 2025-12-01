@@ -528,6 +528,10 @@
       "title": "Built for Creators",
       "subtitle": "Whether you're a hobbyist or professional, DreamForge helps bring your ideas to life",
       "items": {
+        "creator": {
+          "title": "Creators",
+          "description": "Upload your 3D models and earn from downloads and print orders worldwide"
+        },
         "hobbyist": {
           "title": "Hobbyists",
           "description": "Turn collectibles and keepsakes into 3D models for preservation or recreation"
@@ -633,6 +637,43 @@
       "subtitle": "Join creators who are already using DreamForge to bring their ideas to life in 3D",
       "cta": "Create Your First Model",
       "trust": "No credit card required • 3 free credits to start"
+    },
+    "creatorHub": {
+      "badge": "Coming Soon",
+      "title": "Creator Hub",
+      "subtitle": "Share your creations with the world",
+      "forCreators": {
+        "title": "For Creators",
+        "subtitle": "Turn creativity into income",
+        "upload": {
+          "title": "Upload & Sell",
+          "description": "List your 3D models for digital download or physical printing"
+        },
+        "earn": {
+          "title": "Earn Revenue",
+          "description": "Get paid when users download or print your designs"
+        },
+        "analytics": {
+          "title": "Track Performance",
+          "description": "Monitor downloads, earnings, and audience insights"
+        }
+      },
+      "forCollectors": {
+        "title": "For Collectors",
+        "subtitle": "Discover unique 3D creations",
+        "discover": {
+          "title": "Explore Library",
+          "description": "Browse curated 3D models from talented creators"
+        },
+        "options": {
+          "title": "Free & Premium",
+          "description": "Download free models or unlock premium designs"
+        },
+        "print": {
+          "title": "One-Click Print",
+          "description": "Order physical prints delivered to your door"
+        }
+      }
     },
     "footer": {
       "generate": "Generate",

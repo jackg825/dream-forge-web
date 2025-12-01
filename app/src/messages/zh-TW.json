@@ -528,6 +528,10 @@
       "title": "為創作者打造",
       "subtitle": "無論您是業餘愛好者還是專業人士，DreamForge 都能幫助您實現創意",
       "items": {
+        "creator": {
+          "title": "創作者",
+          "description": "上傳您的 3D 模型，從全球用戶的下載和列印訂單中獲取收益"
+        },
         "hobbyist": {
           "title": "愛好者",
           "description": "將收藏品和紀念品轉換為 3D 模型，用於保存或重製"
@@ -633,6 +637,43 @@
       "subtitle": "加入已在使用 DreamForge 將創意變為 3D 現實的創作者行列",
       "cta": "建立您的第一個模型",
       "trust": "無需信用卡 • 3 點免費開始"
+    },
+    "creatorHub": {
+      "badge": "即將推出",
+      "title": "創作者中心",
+      "subtitle": "分享您的創作，讓全世界看見",
+      "forCreators": {
+        "title": "創作者專區",
+        "subtitle": "將創意轉化為收入",
+        "upload": {
+          "title": "上傳販售",
+          "description": "上架您的 3D 模型，提供數位下載或實體列印"
+        },
+        "earn": {
+          "title": "賺取分潤",
+          "description": "用戶下載或列印時，您即可獲得收益"
+        },
+        "analytics": {
+          "title": "追蹤成效",
+          "description": "查看下載數、收益和受眾分析"
+        }
+      },
+      "forCollectors": {
+        "title": "消費者專區",
+        "subtitle": "探索獨特 3D 創作",
+        "discover": {
+          "title": "瀏覽作品庫",
+          "description": "探索來自優秀創作者的精選 3D 模型"
+        },
+        "options": {
+          "title": "免費與付費",
+          "description": "下載免費模型或解鎖付費精品設計"
+        },
+        "print": {
+          "title": "一鍵列印",
+          "description": "訂購實體列印，直送到府"
+        }
+      }
     },
     "footer": {
       "generate": "生成模型",

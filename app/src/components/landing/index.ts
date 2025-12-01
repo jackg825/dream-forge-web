@@ -4,6 +4,7 @@ export { BeforeAfterSlider } from './BeforeAfterSlider';
 export { ShowcaseSection } from './ShowcaseSection';
 export { HowItWorksSection } from './HowItWorksSection';
 export { FeaturesSection } from './FeaturesSection';
+export { CreatorHubSection } from './CreatorHubSection';
 export { UseCasesSection } from './UseCasesSection';
 export { PricingSection } from './PricingSection';
 export { PrintServiceSection } from './PrintServiceSection';
