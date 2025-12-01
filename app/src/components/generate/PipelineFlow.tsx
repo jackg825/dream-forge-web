@@ -118,7 +118,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const meshViewerRef = useRef<ModelViewerRef>(null);
   const meshContainerRef = useRef<HTMLDivElement>(null);
   const [meshViewMode, setMeshViewMode] = useState<ViewMode>('clay');
-  const [meshBgColor, setMeshBgColor] = useState('#fafafa');
+  const [meshBgColor, setMeshBgColor] = useState('#1f2937');
   const [meshShowGrid, setMeshShowGrid] = useState(true);
   const [meshShowAxes, setMeshShowAxes] = useState(false);
   const [meshAutoRotate, setMeshAutoRotate] = useState(false);
@@ -128,7 +128,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const texturedViewerRef = useRef<ModelViewerRef>(null);
   const texturedContainerRef = useRef<HTMLDivElement>(null);
   const [texturedViewMode, setTexturedViewMode] = useState<ViewMode>('textured');
-  const [texturedBgColor, setTexturedBgColor] = useState('#fafafa');
+  const [texturedBgColor, setTexturedBgColor] = useState('#1f2937');
   const [texturedShowGrid, setTexturedShowGrid] = useState(true);
   const [texturedShowAxes, setTexturedShowAxes] = useState(false);
   const [texturedAutoRotate, setTexturedAutoRotate] = useState(false);
