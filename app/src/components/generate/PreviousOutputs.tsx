@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Images, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ImageLightbox } from '@/components/ui/image-lightbox';
 import type { Pipeline, PipelineMeshAngle, PipelineTextureAngle } from '@/types';
 
 interface PreviousOutputsProps {
   pipeline: Pipeline;
   showImages?: boolean;
   showMesh?: boolean;
+  defaultCollapsed?: boolean;
+  children?: ReactNode; // Slot for action buttons, print service, etc.
 }
 
 /**
@@ -19,9 +22,16 @@ export function PreviousOutputs({
   pipeline,
   showImages = false,
   showMesh = false,
+  defaultCollapsed = false,
+  children,
 }: PreviousOutputsProps) {
-  const [imagesExpanded, setImagesExpanded] = useState(true);
-  const [meshExpanded, setMeshExpanded] = useState(true);
+  const [imagesExpanded, setImagesExpanded] = useState(!defaultCollapsed);
+  const [meshExpanded, setMeshExpanded] = useState(!defaultCollapsed);
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<{ src: string; alt: string }[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
   const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
@@ -30,14 +40,45 @@ export function PreviousOutputs({
   const hasTextureImages = Object.keys(pipeline.textureImages || {}).length > 0;
   const hasMesh = !!pipeline.meshUrl;
 
-  if (!showImages && !showMesh) return null;
-  if (showImages && !hasMeshImages && !hasTextureImages) return null;
-  if (showMesh && !hasMesh) return null;
+  // Build all images for lightbox
+  const allImages: { src: string; alt: string; type: 'mesh' | 'texture' }[] = [];
+
+  if (hasMeshImages) {
+    meshAngles.forEach((angle) => {
+      const image = pipeline.meshImages[angle];
+      if (image) {
+        allImages.push({ src: image.url, alt: `網格 - ${angle}`, type: 'mesh' });
+      }
+    });
+  }
+
+  if (hasTextureImages) {
+    textureAngles.forEach((angle) => {
+      const image = pipeline.textureImages[angle];
+      if (image) {
+        allImages.push({ src: image.url, alt: `貼圖 - ${angle}`, type: 'texture' });
+      }
+    });
+  }
+
+  const handleImageClick = (imageUrl: string) => {
+    const index = allImages.findIndex((img) => img.src === imageUrl);
+    if (index !== -1) {
+      setLightboxImages(allImages);
+      setLightboxIndex(index);
+      setLightboxOpen(true);
+    }
+  };
+
+  const showImagesSection = showImages && (hasMeshImages || hasTextureImages);
+  const showMeshSection = showMesh && hasMesh;
+
+  if (!showImagesSection && !showMeshSection && !children) return null;
 
   return (
     <div className="space-y-4">
       {/* Generated Images Section */}
-      {showImages && (hasMeshImages || hasTextureImages) && (
+      {showImagesSection && (
         <div className="bg-muted/30 rounded-xl border border-border/50 overflow-hidden">
           <Button
             variant="ghost"
@@ -57,7 +98,7 @@ export function PreviousOutputs({
 
           {imagesExpanded && (
             <div className="px-4 pb-4 space-y-3">
-              {/* Mesh images - 2x2 grid */}
+              {/* Mesh images - 4 columns */}
               {hasMeshImages && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">網格用圖片</p>
@@ -65,23 +106,28 @@ export function PreviousOutputs({
                     {meshAngles.map((angle) => {
                       const image = pipeline.meshImages[angle];
                       return image ? (
-                        <div
+                        <button
                           key={angle}
-                          className="relative aspect-square rounded-md overflow-hidden bg-muted"
+                          onClick={() => handleImageClick(image.url)}
+                          className="relative aspect-square rounded-md overflow-hidden bg-muted
+                                     ring-offset-background transition-all
+                                     hover:ring-2 hover:ring-primary hover:ring-offset-2
+                                     focus-visible:outline-none focus-visible:ring-2
+                                     focus-visible:ring-primary focus-visible:ring-offset-2"
                         >
                           <img
                             src={image.url}
                             alt={angle}
                             className="w-full h-full object-cover"
                           />
-                        </div>
+                        </button>
                       ) : null;
                     })}
                   </div>
                 </div>
               )}
 
-              {/* Texture images - 2 images */}
+              {/* Texture images - 2 images in 4 columns grid */}
               {hasTextureImages && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">貼圖用圖片</p>
@@ -89,16 +135,21 @@ export function PreviousOutputs({
                     {textureAngles.map((angle) => {
                       const image = pipeline.textureImages[angle];
                       return image ? (
-                        <div
+                        <button
                           key={angle}
-                          className="relative aspect-square rounded-md overflow-hidden bg-muted"
+                          onClick={() => handleImageClick(image.url)}
+                          className="relative aspect-square rounded-md overflow-hidden bg-muted
+                                     ring-offset-background transition-all
+                                     hover:ring-2 hover:ring-primary hover:ring-offset-2
+                                     focus-visible:outline-none focus-visible:ring-2
+                                     focus-visible:ring-primary focus-visible:ring-offset-2"
                         >
                           <img
                             src={image.url}
                             alt={angle}
                             className="w-full h-full object-cover"
                           />
-                        </div>
+                        </button>
                       ) : null;
                     })}
                   </div>
@@ -110,7 +161,7 @@ export function PreviousOutputs({
       )}
 
       {/* 3D Mesh Section */}
-      {showMesh && hasMesh && (
+      {showMeshSection && (
         <div className="bg-muted/30 rounded-xl border border-border/50 overflow-hidden">
           <Button
             variant="ghost"
@@ -145,6 +196,17 @@ export function PreviousOutputs({
           )}
         </div>
       )}
+
+      {/* Children slot for action buttons, print service promo, etc. */}
+      {children}
+
+      {/* Lightbox for full-screen image viewing */}
+      <ImageLightbox
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+      />
     </div>
   );
 }
