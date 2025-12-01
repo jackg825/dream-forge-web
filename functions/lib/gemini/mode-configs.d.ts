@@ -41,9 +41,17 @@ export declare const GENERATION_MODES: Record<GenerationModeId, ModeConfig>;
 export declare function getMode(id: GenerationModeId): ModeConfig;
 /**
  * Generate mesh view prompt based on mode and angle
+ * @param mode - The generation mode configuration
+ * @param angle - The view angle to generate
+ * @param userDescription - Optional user-provided description of the object
+ * @param hint - Optional regeneration hint for adjustments
  */
-export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle): string;
+export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle, userDescription?: string | null, hint?: string): string;
 /**
  * Generate texture view prompt based on mode and angle
+ * @param mode - The generation mode configuration
+ * @param angle - The view angle to generate
+ * @param userDescription - Optional user-provided description of the object
+ * @param hint - Optional regeneration hint for adjustments
  */
-export declare function getTexturePrompt(mode: ModeConfig, angle: PipelineTextureAngle): string;
+export declare function getTexturePrompt(mode: ModeConfig, angle: PipelineTextureAngle, userDescription?: string | null, hint?: string): string;

@@ -89,12 +89,24 @@ const TEXTURE_ANGLE_PROMPTS = {
 };
 /**
  * Generate mesh view prompt based on mode and angle
+ * @param mode - The generation mode configuration
+ * @param angle - The view angle to generate
+ * @param userDescription - Optional user-provided description of the object
+ * @param hint - Optional regeneration hint for adjustments
  */
-function getMeshPrompt(mode, angle) {
+function getMeshPrompt(mode, angle, userDescription, hint) {
     const angleDisplay = ANGLE_PROMPTS[angle];
+    // Build user description block if provided
+    const userDescBlock = userDescription
+        ? `\n\n**USER DESCRIPTION**\nThe user describes this object as: "${userDescription}"\nUse this description to better understand and preserve the object's key features.\n`
+        : '';
+    // Build regeneration hint block if provided
+    const hintBlock = hint
+        ? `\n\n**REGENERATION ADJUSTMENT**\nThe user requests the following adjustment: "${hint}"\nApply this adjustment while maintaining all other requirements.\n`
+        : '';
     if (mode.mesh.simplified) {
         // Simplified mode: 7-color, flat lighting, no shadows
-        return `You are an expert at preparing reference images for 3D printing mesh generation.
+        return `You are an expert at preparing reference images for 3D printing mesh generation.${userDescBlock}${hintBlock}
 
 Generate a ${angleDisplay} VIEW of this object optimized for 3D mesh reconstruction.
 
@@ -116,7 +128,7 @@ Generate the actual image, not a description.`;
     }
     else {
         // Full color mode: preserve details, soft lighting
-        return `You are an expert at preparing reference images for 3D mesh generation.
+        return `You are an expert at preparing reference images for 3D mesh generation.${userDescBlock}${hintBlock}
 
 Generate a ${angleDisplay} VIEW of this object optimized for 3D mesh reconstruction.
 
@@ -134,12 +146,24 @@ Generate the actual image, not a description.`;
 }
 /**
  * Generate texture view prompt based on mode and angle
+ * @param mode - The generation mode configuration
+ * @param angle - The view angle to generate
+ * @param userDescription - Optional user-provided description of the object
+ * @param hint - Optional regeneration hint for adjustments
  */
-function getTexturePrompt(mode, angle) {
+function getTexturePrompt(mode, angle, userDescription, hint) {
     const angleDisplay = TEXTURE_ANGLE_PROMPTS[angle];
+    // Build user description block if provided
+    const userDescBlock = userDescription
+        ? `\n\n**USER DESCRIPTION**\nThe user describes this object as: "${userDescription}"\nUse this description to better understand and preserve the object's key features.\n`
+        : '';
+    // Build regeneration hint block if provided
+    const hintBlock = hint
+        ? `\n\n**REGENERATION ADJUSTMENT**\nThe user requests the following adjustment: "${hint}"\nApply this adjustment while maintaining all other requirements.\n`
+        : '';
     if (mode.texture.simplified) {
         // Simplified mode: 6-color, flat lighting, no shadows
-        return `You are an expert at preparing texture reference images for 3D printed models.
+        return `You are an expert at preparing texture reference images for 3D printed models.${userDescBlock}${hintBlock}
 
 Generate a ${angleDisplay} VIEW of this object optimized for texture mapping.
 
@@ -159,7 +183,7 @@ Generate the actual image, not a description.`;
     }
     else {
         // Full color mode: preserve details for texture mapping
-        return `You are an expert at preparing texture reference images for 3D printed models.
+        return `You are an expert at preparing texture reference images for 3D printed models.${userDescBlock}${hintBlock}
 
 Generate a ${angleDisplay} VIEW of this object optimized for texture mapping onto a 3D printed mesh.
 

@@ -124,7 +124,7 @@ exports.createPipeline = functions
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to create a pipeline');
     }
     const userId = context.auth.uid;
-    const { imageUrls, settings, generationMode } = data;
+    const { imageUrls, settings, generationMode, userDescription } = data;
     if (!imageUrls || imageUrls.length === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'At least one image URL is required');
     }
@@ -157,6 +157,7 @@ exports.createPipeline = functions
             format: settings?.format || 'glb',
             generationMode: modeId,
         },
+        userDescription: userDescription || null,
         createdAt: now,
         updatedAt: now,
     };
@@ -166,6 +167,7 @@ exports.createPipeline = functions
         userId,
         imageCount: imageUrls.length,
         generationMode: modeId,
+        hasUserDescription: !!userDescription,
     });
     return {
         pipelineId,
@@ -277,11 +279,15 @@ exports.generatePipelineImages = functions
         // Download reference image (use first uploaded image)
         const referenceImageUrl = pipeline.inputImages[0].url;
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
-        // Generate all 6 views using the pipeline's generation mode
+        // Generate all 6 views using the pipeline's generation mode and user description
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId);
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription);
         const views = await generator.generateAllViews(base64, mimeType);
-        functions.logger.info('Using generation mode', { pipelineId, mode: modeId });
+        functions.logger.info('Using generation mode', {
+            pipelineId,
+            mode: modeId,
+            hasUserDescription: !!pipeline.userDescription,
+        });
         const now = admin.firestore.FieldValue.serverTimestamp();
         const meshImages = {};
         const textureImages = {};
@@ -361,7 +367,7 @@ exports.regeneratePipelineImage = functions
         throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
     }
     const userId = context.auth.uid;
-    const { pipelineId, viewType, angle } = data;
+    const { pipelineId, viewType, angle, hint } = data;
     // Validate viewType and angle
     const validMeshAngles = ['front', 'back', 'left', 'right'];
     const validTextureAngles = ['front', 'back'];
@@ -389,14 +395,15 @@ exports.regeneratePipelineImage = functions
         const referenceImageUrl = pipeline.inputImages[0].url;
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate single view using the pipeline's generation mode
+        // Pass userDescription from pipeline and optional hint for adjustments
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId);
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription);
         let view;
         if (viewType === 'mesh') {
-            view = await generator.generateMeshView(base64, mimeType, angle);
+            view = await generator.generateMeshView(base64, mimeType, angle, hint);
         }
         else {
-            view = await generator.generateTextureView(base64, mimeType, angle);
+            view = await generator.generateTextureView(base64, mimeType, angle, hint);
         }
         // Upload to storage
         const ext = getExtensionFromMimeType(view.mimeType);

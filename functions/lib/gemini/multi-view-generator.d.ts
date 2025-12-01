@@ -36,7 +36,8 @@ export interface MultiViewGenerationResult {
 export declare class MultiViewGenerator {
     private apiKey;
     private modeConfig;
-    constructor(apiKey: string, modeId?: GenerationModeId);
+    private userDescription?;
+    constructor(apiKey: string, modeId?: GenerationModeId, userDescription?: string | null);
     /**
      * Get the current mode configuration
      */
@@ -51,12 +52,14 @@ export declare class MultiViewGenerator {
     generateAllViews(referenceImageBase64: string, mimeType: string): Promise<MultiViewGenerationResult>;
     /**
      * Generate a single mesh view
+     * @param hint - Optional regeneration hint for adjustments
      */
-    generateMeshView(referenceImageBase64: string, mimeType: string, angle: PipelineMeshAngle): Promise<GeneratedViewResult>;
+    generateMeshView(referenceImageBase64: string, mimeType: string, angle: PipelineMeshAngle, hint?: string): Promise<GeneratedViewResult>;
     /**
      * Generate a single texture view
+     * @param hint - Optional regeneration hint for adjustments
      */
-    generateTextureView(referenceImageBase64: string, mimeType: string, angle: PipelineTextureAngle): Promise<GeneratedViewResult>;
+    generateTextureView(referenceImageBase64: string, mimeType: string, angle: PipelineTextureAngle, hint?: string): Promise<GeneratedViewResult>;
     /**
      * Generate a single view with the given prompt
      */
@@ -66,5 +69,6 @@ export declare class MultiViewGenerator {
  * Create a MultiViewGenerator instance with the API key from environment
  *
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
+ * @param userDescription - Optional user-provided description of the object
  */
-export declare function createMultiViewGenerator(modeId?: GenerationModeId): MultiViewGenerator;
+export declare function createMultiViewGenerator(modeId?: GenerationModeId, userDescription?: string | null): MultiViewGenerator;

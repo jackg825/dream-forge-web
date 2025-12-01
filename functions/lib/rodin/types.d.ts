@@ -244,6 +244,7 @@ export interface PipelineDocument {
         texture: number;
     };
     settings: PipelineSettings;
+    userDescription?: string | null;
     error?: string;
     errorStep?: PipelineStatus;
     createdAt: FirebaseFirestore.Timestamp;
