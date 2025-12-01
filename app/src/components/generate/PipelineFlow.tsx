@@ -552,7 +552,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 <ModelViewer
                   ref={meshViewerRef}
                   modelUrl={pipeline.meshUrl}
-                  downloadFiles={pipeline.meshDownloadFiles}
                   viewMode={meshViewMode}
                   backgroundColor="#fafafa"
                   showGrid={true}
@@ -696,7 +695,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   <ModelViewer
                     ref={texturedViewerRef}
                     modelUrl={modelUrl}
-                    downloadFiles={downloadFiles}
                     viewMode={texturedViewMode}
                     backgroundColor="#fafafa"
                     showGrid={true}

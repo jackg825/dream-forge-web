@@ -5,7 +5,7 @@ import { Canvas, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, Environment, useGLTF, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
-import type { ViewMode, DownloadFile } from '@/types';
+import type { ViewMode } from '@/types';
 import {
   orientGeometry,
   applyZUpToYUpRotation,
@@ -19,8 +19,7 @@ export interface ModelViewerRef {
 }
 
 interface ModelViewerProps {
-  modelUrl: string;           // Primary model URL (usually STL for download)
-  downloadFiles?: DownloadFile[]; // All available files from Rodin
+  modelUrl: string;           // Primary model URL (Firebase Storage signed URL)
   viewMode?: ViewMode;        // clay | textured | wireframe
   backgroundColor?: string;
   rotation?: ModelRotation;   // User rotation override (degrees)
@@ -32,17 +31,6 @@ interface ModelViewerProps {
 
 // Re-export ModelRotation for convenience
 export type { ModelRotation };
-
-/**
- * Find GLB file URL from download files list
- */
-function findGlbUrl(downloadFiles?: DownloadFile[]): string | null {
-  if (!downloadFiles) return null;
-  const glbFile = downloadFiles.find(
-    (f) => f.name.endsWith('.glb') || f.name.endsWith('.gltf')
-  );
-  return glbFile?.url || null;
-}
 
 /**
  * GLB Model component - loads model with PBR materials
@@ -319,14 +307,13 @@ function CameraControls({
  * - Auto rotate option
  * - Screenshot capability
  *
- * For textured mode, uses GLB file if available (contains PBR materials).
- * For clay/wireframe modes, can use either format.
+ * IMPORTANT: modelUrl must be a Firebase Storage signed URL.
+ * Do not pass external CDN URLs (e.g., Meshy CDN) as they have CORS restrictions.
  */
 export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
   function ModelViewer(
     {
       modelUrl,
-      downloadFiles,
       viewMode = 'clay',
       backgroundColor = '#f3f4f6',
       rotation,
@@ -353,12 +340,10 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
       },
     }));
 
-    // Determine which model to load based on view mode
-    const glbUrl = findGlbUrl(downloadFiles);
-
-    // For textured mode, prefer GLB (has materials). Otherwise use primary URL.
-    const useGlb = viewMode === 'textured' && glbUrl;
-    const effectiveUrl = useGlb ? glbUrl : modelUrl;
+    // Always use modelUrl (Firebase Storage signed URL) for viewing
+    // The downloadFiles array contains Meshy CDN URLs which have CORS restrictions
+    // and cannot be fetched directly from the browser
+    const effectiveUrl = modelUrl;
 
     // Determine file type from URL
     const isGlb = effectiveUrl.includes('.glb') || effectiveUrl.includes('.gltf');

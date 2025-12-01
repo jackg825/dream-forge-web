@@ -276,7 +276,6 @@ function ViewerContentInner() {
                 <ModelViewer
                   ref={modelViewerRef}
                   modelUrl={job.outputModelUrl}
-                  downloadFiles={job.downloadFiles}
                   viewMode={viewMode}
                   backgroundColor={backgroundColor}
                   autoOrient={true}
