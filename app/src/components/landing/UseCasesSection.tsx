@@ -10,7 +10,6 @@ import {
   Palette,
   GraduationCap,
   Store,
-  Heart,
   Printer,
   Brush,
 } from 'lucide-react';
@@ -26,12 +25,6 @@ const useCases = [
     image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
     color: 'var(--accent-violet)',
     comingSoon: true,
-  },
-  {
-    id: 'hobbyist',
-    icon: Heart,
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80',
-    color: 'var(--accent-coral)',
   },
   {
     id: 'maker',
