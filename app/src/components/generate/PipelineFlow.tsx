@@ -667,15 +667,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const renderMeshPreviewStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Main content - 3D viewer */}
-      <div className="lg:col-span-3 space-y-6">
+      <div className="lg:col-span-3 space-y-4">
         {pipeline?.meshUrl ? (
-          <div className="space-y-4">
-            {/* 3D Preview Header */}
-            <div className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">3D 網格預覽</span>
-            </div>
-
+          <>
             {/* 3D Viewer with Toolbar */}
             <div
               ref={meshContainerRef}
@@ -724,7 +718,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 下載 GLB 檔案
               </a>
             </div>
-          </div>
+          </>
         ) : (
           <Skeleton className="aspect-[4/3] rounded-2xl" />
         )}
@@ -732,7 +726,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
       {/* Sidebar - previous outputs + actions */}
       {pipeline && (
-        <div className="lg:col-span-1 lg:pt-10">
+        <div className="lg:col-span-1">
           <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={false}>
             {/* Action buttons in sidebar */}
             <div className="space-y-3 pt-4">
@@ -804,17 +798,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main content - 3D viewer */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-4">
           {modelUrl ? (
-            <div className="space-y-4">
-              {/* 3D Preview Header */}
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">
-                  {hasTexture ? '3D 模型預覽 (含貼圖)' : '3D 網格預覽'}
-                </span>
-              </div>
-
+            <>
               {/* 3D Viewer with Toolbar */}
               <div
                 ref={texturedContainerRef}
@@ -863,7 +849,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   下載 GLB 檔案
                 </a>
               </div>
-            </div>
+            </>
           ) : (
             <div className="aspect-[4/3] bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
               <div className="text-center">
@@ -880,7 +866,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
         {/* Sidebar - previous outputs + print service + actions */}
         {pipeline && (
-          <div className="lg:col-span-1 lg:pt-10">
+          <div className="lg:col-span-1">
             <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={true}>
               {/* Print service coming soon */}
               <div className="bg-muted/30 rounded-xl p-4 text-center border border-border/50">
