@@ -518,17 +518,17 @@ export const GENERATION_MODE_OPTIONS: Record<GenerationModeId, {
 }> = {
   'simplified-mesh': {
     id: 'simplified-mesh',
-    name: '模式 A: 簡化網格',
-    description: '網格用圖片 7 色簡化，貼圖用圖片保留全彩',
-    meshStyle: '7 色簡化',
-    textureStyle: '全彩',
-  },
-  'simplified-texture': {
-    id: 'simplified-texture',
-    name: '模式 B: 簡化貼圖',
+    name: '模式 A: 簡化貼圖',
     description: '網格用圖片保留全彩，貼圖用圖片 6 色簡化',
     meshStyle: '全彩',
     textureStyle: '6 色簡化',
+  },
+  'simplified-texture': {
+    id: 'simplified-texture',
+    name: '模式 B: 簡化網格',
+    description: '網格用圖片 7 色簡化，貼圖用圖片保留全彩',
+    meshStyle: '7 色簡化',
+    textureStyle: '全彩',
   },
 };
 

@@ -38,34 +38,13 @@ export interface ModeConfig {
 export const DEFAULT_MODE: GenerationModeId = 'simplified-mesh';
 
 /**
- * Mode A: Simplified Mesh (Current behavior)
- * - Mesh images: 7-color simplified, no shadows
- * - Texture images: Full color, soft lighting
+ * Mode A: Simplified Texture (Recommended for H2C multi-color printing)
+ * - Mesh images: Full color, soft lighting (for accurate mesh reconstruction)
+ * - Texture images: 6-color simplified (for H2C color mapping)
  */
 const MODE_SIMPLIFIED_MESH: ModeConfig = {
   id: 'simplified-mesh',
-  name: '模式 A: 簡化網格',
-  description: '網格用圖片 7 色簡化，貼圖用圖片保留全彩',
-  mesh: {
-    colorCount: 7,
-    simplified: true,
-    extractColors: true,
-  },
-  texture: {
-    colorCount: 0, // Full color
-    simplified: false,
-    extractColors: false,
-  },
-};
-
-/**
- * Mode B: Simplified Texture (New mode for A/B testing)
- * - Mesh images: Full color, soft lighting
- * - Texture images: 6-color simplified, no shadows
- */
-const MODE_SIMPLIFIED_TEXTURE: ModeConfig = {
-  id: 'simplified-texture',
-  name: '模式 B: 簡化貼圖',
+  name: '模式 A: 簡化貼圖',
   description: '網格用圖片保留全彩，貼圖用圖片 6 色簡化',
   mesh: {
     colorCount: 0, // Full color
@@ -76,6 +55,27 @@ const MODE_SIMPLIFIED_TEXTURE: ModeConfig = {
     colorCount: 6,
     simplified: true,
     extractColors: true,
+  },
+};
+
+/**
+ * Mode B: Simplified Mesh (Alternative mode)
+ * - Mesh images: 7-color simplified, no shadows
+ * - Texture images: Full color, soft lighting
+ */
+const MODE_SIMPLIFIED_TEXTURE: ModeConfig = {
+  id: 'simplified-texture',
+  name: '模式 B: 簡化網格',
+  description: '網格用圖片 7 色簡化，貼圖用圖片保留全彩',
+  mesh: {
+    colorCount: 7,
+    simplified: true,
+    extractColors: true,
+  },
+  texture: {
+    colorCount: 0, // Full color
+    simplified: false,
+    extractColors: false,
   },
 };
 
