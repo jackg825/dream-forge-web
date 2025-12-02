@@ -11,7 +11,7 @@
  * - Material and object type info
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Loader2, Sparkles, RefreshCw, Plus, X, Palette, AlertTriangle, Lightbulb, Package, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -65,7 +65,6 @@ function StarRating({ score }: { score: number }) {
  */
 function ColorSwatch({
   color,
-  index,
   onRemove,
   onUpdate,
   canRemove,
@@ -76,13 +75,15 @@ function ColorSwatch({
   onUpdate: (color: string) => void;
   canRemove: boolean;
 }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(color);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value.toUpperCase();
-    setEditValue(newColor);
     onUpdate(newColor);
+  };
+
+  const handleClick = () => {
+    inputRef.current?.click();
   };
 
   return (
@@ -90,7 +91,7 @@ function ColorSwatch({
       <div
         className="w-14 h-14 rounded-lg border-2 border-gray-200 cursor-pointer transition-all hover:scale-105 hover:shadow-md"
         style={{ backgroundColor: color }}
-        onClick={() => setIsEditing(true)}
+        onClick={handleClick}
       />
       {canRemove && (
         <button
@@ -106,16 +107,13 @@ function ColorSwatch({
       <div className="text-xs text-center mt-1 font-mono text-gray-600">
         {color}
       </div>
-      {isEditing && (
-        <input
-          type="color"
-          value={editValue}
-          onChange={handleColorChange}
-          onBlur={() => setIsEditing(false)}
-          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-          autoFocus
-        />
-      )}
+      <input
+        ref={inputRef}
+        type="color"
+        value={color}
+        onChange={handleColorChange}
+        className="sr-only"
+      />
     </div>
   );
 }
