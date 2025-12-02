@@ -16,7 +16,7 @@ import axios from 'axios';
 import { createMultiViewGenerator } from '../gemini/multi-view-generator';
 import { MeshyProvider } from '../providers/meshy/client';
 import { createMeshyRetextureClient } from '../providers/meshy/retexture';
-import { deductCredits, incrementGenerationCount } from '../utils/credits';
+import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
 import type {
   PipelineDocument,
   PipelineSettings,
@@ -708,11 +708,22 @@ export const startPipelineMesh = functions
       throw new functions.https.HttpsError('permission-denied', 'Not your pipeline');
     }
 
-    if (pipeline.status !== 'images-ready') {
+    // Allow retry from failed state when mesh generation failed
+    const canRetryMesh = pipeline.status === 'failed' && pipeline.errorStep === 'generating-mesh';
+
+    if (pipeline.status !== 'images-ready' && !canRetryMesh) {
       throw new functions.https.HttpsError(
         'failed-precondition',
         `Cannot start mesh generation in status: ${pipeline.status}`
       );
+    }
+
+    // Clear error state when retrying
+    if (canRetryMesh) {
+      await pipelineRef.update({
+        error: admin.firestore.FieldValue.delete(),
+        errorStep: admin.firestore.FieldValue.delete(),
+      });
     }
 
     // Verify we have all 4 mesh images
@@ -787,6 +798,14 @@ export const startPipelineMesh = functions
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Refund credits on failure
+      try {
+        await refundCredits(userId, PIPELINE_CREDITS.MESH, pipelineId);
+        functions.logger.info('Refunded mesh credits after failure', { pipelineId, userId, amount: PIPELINE_CREDITS.MESH });
+      } catch (refundError) {
+        functions.logger.error('Failed to refund mesh credits', { pipelineId, userId, refundError });
+      }
 
       await pipelineRef.update({
         status: 'failed',
@@ -1000,11 +1019,22 @@ export const startPipelineTexture = functions
       throw new functions.https.HttpsError('permission-denied', 'Not your pipeline');
     }
 
-    if (pipeline.status !== 'mesh-ready') {
+    // Allow retry from failed state when texture generation failed
+    const canRetryTexture = pipeline.status === 'failed' && pipeline.errorStep === 'generating-texture';
+
+    if (pipeline.status !== 'mesh-ready' && !canRetryTexture) {
       throw new functions.https.HttpsError(
         'failed-precondition',
         `Cannot start texture generation in status: ${pipeline.status}`
       );
+    }
+
+    // Clear error state when retrying
+    if (canRetryTexture) {
+      await pipelineRef.update({
+        error: admin.firestore.FieldValue.delete(),
+        errorStep: admin.firestore.FieldValue.delete(),
+      });
     }
 
     if (!pipeline.meshyMeshTaskId) {
@@ -1071,6 +1101,14 @@ export const startPipelineTexture = functions
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Refund credits on failure
+      try {
+        await refundCredits(userId, PIPELINE_CREDITS.TEXTURE, pipelineId);
+        functions.logger.info('Refunded texture credits after failure', { pipelineId, userId, amount: PIPELINE_CREDITS.TEXTURE });
+      } catch (refundError) {
+        functions.logger.error('Failed to refund texture credits', { pipelineId, userId, refundError });
+      }
 
       await pipelineRef.update({
         status: 'failed',
