@@ -84,11 +84,11 @@ export function JobCard({ job }: JobCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       {/* Image */}
-      <div className="relative aspect-square bg-muted">
+      <div className="relative aspect-square bg-black">
         <img
           src={job.inputImageUrl}
           alt="Input image"
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
         />
 
         {/* Status badge */}

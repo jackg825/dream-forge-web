@@ -69,12 +69,12 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
       {/* Preview image */}
-      <div className="aspect-square bg-muted relative">
+      <div className="aspect-square bg-black relative">
         {previewImage ? (
           <img
             src={previewImage}
             alt="Pipeline preview"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

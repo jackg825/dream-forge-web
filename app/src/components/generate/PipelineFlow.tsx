@@ -62,8 +62,8 @@ interface PipelineFlowProps {
 // Map pipeline status to step
 const getStepFromStatus = (status: string | undefined, hasId: boolean): number => {
   if (!hasId) return 1;
-  // Show step 2 immediately when pipelineId exists (including draft status during submission)
-  if (status === 'draft') return 2;
+  // Draft stays on step 1 - user can preview analysis and click "Start Generation"
+  if (status === 'draft') return 1;
   if (status === 'batch-queued' || status === 'batch-processing' || status === 'generating-images') return 2;
   if (status === 'images-ready') return 2;
   if (status === 'generating-mesh' || status === 'mesh-ready' || status === 'generating-texture') return 3;
