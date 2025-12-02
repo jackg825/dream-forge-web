@@ -159,9 +159,13 @@ function getViewpointDescription(angle: PipelineMeshAngle): string {
     case 'back':
       return 'behind, showing the back of the object';
     case 'left':
-      return "the object's LEFT side. The camera is positioned to the LEFT of the object, looking at its LEFT profile. We should see: LEFT ear visible, RIGHT ear hidden. The object's nose/face points toward the RIGHT edge of the image";
+      // LEFT view = viewer sees the object's RIGHT side (object's right ear/arm/leg visible)
+      // Think: if object faces you, rotate it 90° clockwise to show its left-facing profile
+      return "the LEFT view (object rotated 90° clockwise from front). The viewer sees the object's profile facing LEFT. The object's RIGHT side features are visible (RIGHT ear, RIGHT arm). The nose/face points toward the LEFT edge of the image";
     case 'right':
-      return "the object's RIGHT side. The camera is positioned to the RIGHT of the object, looking at its RIGHT profile. We should see: RIGHT ear visible, LEFT ear hidden. The object's nose/face points toward the LEFT edge of the image";
+      // RIGHT view = viewer sees the object's LEFT side (object's left ear/arm/leg visible)
+      // Think: if object faces you, rotate it 90° counter-clockwise to show its right-facing profile
+      return "the RIGHT view (object rotated 90° counter-clockwise from front). The viewer sees the object's profile facing RIGHT. The object's LEFT side features are visible (LEFT ear, LEFT arm). The nose/face points toward the RIGHT edge of the image";
   }
 }
 
