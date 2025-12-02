@@ -20,7 +20,6 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Sparkles,
 } from 'lucide-react';
 import type { Job, JobStatus } from '@/types';
 
@@ -116,20 +115,12 @@ function DashboardContent() {
               <p className="text-sm text-indigo-100 mb-4">
                 {t('dashboard.uploadAndTransform')}
               </p>
-              <div className="flex gap-2">
-                <Button asChild variant="secondary">
-                  <Link href="/" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    {t('dashboard.quickGeneration')}
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="border-white/30 text-white hover:bg-white/10 hover:text-white">
-                  <Link href="/create" className="gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    {t('dashboard.advancedFlow')}
-                  </Link>
-                </Button>
-              </div>
+              <Button asChild variant="secondary">
+                <Link href="/generate" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  {t('dashboard.startCreating')}
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </div>

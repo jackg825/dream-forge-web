@@ -413,31 +413,11 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const isFailed = pipeline?.status === 'failed';
 
   // Step 1: Upload - cleaner without card wrapper
+  // NOTE: Selectors moved to renderImagesReadyStep (Step 2)
   const renderUploadStep = () => (
     <div className="space-y-6">
       {user ? (
         <>
-          {/* Processing mode selector - batch (default) or realtime */}
-          <ProcessingModeSelector
-            value={processingMode}
-            onChange={setProcessingMode}
-            disabled={actionLoading}
-          />
-
-          {/* Generation mode selector - show before upload */}
-          <ModeSelector
-            value={generationMode}
-            onChange={setGenerationMode}
-            disabled={actionLoading}
-          />
-
-          {/* Mesh precision selector - for 3D printing optimization */}
-          <PrecisionSelector
-            value={meshPrecision}
-            onChange={setMeshPrecision}
-            disabled={actionLoading}
-          />
-
           <PipelineUploader
             userId={user.uid}
             images={uploadedImages}
@@ -753,6 +733,26 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               })}
             </div>
           </div>
+        </div>
+
+        {/* Generation options - moved from Step 1 */}
+        <div className="space-y-4 border border-border rounded-xl p-4 bg-muted/30">
+          <h4 className="text-sm font-medium">生成選項</h4>
+          <ProcessingModeSelector
+            value={processingMode}
+            onChange={setProcessingMode}
+            disabled={actionLoading}
+          />
+          <ModeSelector
+            value={generationMode}
+            onChange={setGenerationMode}
+            disabled={actionLoading}
+          />
+          <PrecisionSelector
+            value={meshPrecision}
+            onChange={setMeshPrecision}
+            disabled={actionLoading}
+          />
         </div>
 
         {/* Action button - proceed to mesh generation */}
