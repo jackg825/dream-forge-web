@@ -76,18 +76,34 @@ function getMode(id) {
 // Prompt Templates
 // =============================================================================
 /**
- * Angle display names for prompts
+ * Angle display names for prompts (used in title)
  */
 const ANGLE_PROMPTS = {
     front: 'FRONT',
-    back: 'BACK (rotated 180°)',
-    left: 'LEFT SIDE (rotated 90° counterclockwise)',
-    right: 'RIGHT SIDE (rotated 90° clockwise)',
+    back: 'BACK',
+    left: 'LEFT SIDE',
+    right: 'RIGHT SIDE',
 };
 const TEXTURE_ANGLE_PROMPTS = {
     front: 'FRONT',
-    back: 'BACK (rotated 180°)',
+    back: 'BACK',
 };
+/**
+ * Get concrete viewpoint description for better AI understanding
+ * Uses physical feature visibility instead of abstract rotation angles
+ */
+function getViewpointDescription(angle) {
+    switch (angle) {
+        case 'front':
+            return 'in front, facing the camera';
+        case 'back':
+            return 'behind, showing the back of the object';
+        case 'left':
+            return "the object's LEFT side. The camera is positioned to the LEFT of the object, looking at its LEFT profile. We should see: LEFT ear visible, RIGHT ear hidden. The object's nose/face points toward the RIGHT edge of the image";
+        case 'right':
+            return "the object's RIGHT side. The camera is positioned to the RIGHT of the object, looking at its RIGHT profile. We should see: RIGHT ear visible, LEFT ear hidden. The object's nose/face points toward the LEFT edge of the image";
+    }
+}
 /**
  * Generate mesh view prompt based on mode and angle
  * @param mode - The generation mode configuration
@@ -116,7 +132,7 @@ STYLE & TECHNICAL REQUIREMENTS:
 2. **COLOR**: Use "Posterized" coloring. Limit to approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors.
 3. **LIGHTING**: "Flat Shading" or "Unlit". NO cast shadows, NO drop shadows.
 4. **GEOMETRY CUES**: Although flat lit, use distinct color blocks to define distinct 3D volumes (e.g., separate sleeves from arms with a color edge).
-5. **VIEWPORT**: Orthographic Projection (Telephoto lens). No perspective distortion. Show from directly ${angle === 'front' ? 'in front, centered' : angle === 'back' ? 'behind (180° from front)' : angle === 'left' ? 'left side (90° CCW from front)' : 'right side (90° CW from front)'}.
+5. **VIEWPORT**: Orthographic Projection (Telephoto lens). No perspective distortion. Show from directly ${getViewpointDescription(angle)}.
 6. **BOUNDARIES**: Hard, pixel-sharp edges against a Pure White (#FFFFFF) background.
 7. **CONSISTENCY**: The proportions, height, and features MUST match the front view logic.
 8. **COMPOSITION**: Object fills 90% of frame.
@@ -134,7 +150,7 @@ Generate the actual image, not a description.`;
 Generate a ${angleDisplay} VIEW of this object optimized for Mesh Reconstruction.
 
 REQUIREMENTS:
-1. **VIEW**: Strictly Orthographic (Technical drawing view). Camera perfectly level with the object center. Show from directly ${angle === 'front' ? 'in front, centered' : angle === 'back' ? 'behind (180° from front)' : angle === 'left' ? 'left side (90° CCW from front)' : 'right side (90° CW from front)'}.
+1. **VIEW**: Strictly Orthographic (Technical drawing view). Camera perfectly level with the object center. Show from directly ${getViewpointDescription(angle)}.
 2. **LIGHTING**: "Studio Softbox Lighting". Even illumination. IMPORTANT: Include subtle "Ambient Occlusion" in crevices to define shape/depth, but AVOID harsh directional shadows.
 3. **DETAILS**: Hyper-realistic surface definition. We need to see the depth of the texture.
 4. **BACKGROUND**: Pure White (#FFFFFF).
