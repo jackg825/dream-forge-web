@@ -118,6 +118,37 @@ const TEXTURE_ANGLE_PROMPTS: Record<PipelineTextureAngle, string> = {
 };
 
 /**
+ * Get mesh style instructions based on mode
+ * - Simplified mode: Cartoon/vinyl toy style (low-poly, rounded)
+ * - Full color mode: Preserve details but optimize for 3D modeling
+ */
+function getMeshStyleDescription(simplified: boolean): string {
+  if (simplified) {
+    // 卡通公仔化風格
+    return `**3D MODELING OPTIMIZATION - CARTOON FIGURE STYLE**:
+Transform the subject into a collectible vinyl toy / Funko Pop style figure:
+- Round off sharp edges and corners
+- Simplify complex geometry (hair becomes solid mass, fabric folds become smooth)
+- Exaggerate cute features (larger head-to-body ratio for characters)
+- Remove fine details that cannot be 3D printed (individual hairs, tiny patterns)
+- Maintain recognizable silhouette and key identifying features
+- Think "chibi" or "SD (Super Deformed)" style for characters`;
+  } else {
+    // 保留細節但優化建模
+    return `**3D MODELING OPTIMIZATION - DETAIL PRESERVATION**:
+Optimize the subject for accurate 3D reconstruction while preserving details:
+- Maintain original proportions and recognizable features
+- Simplify ONLY elements that are impossible to 3D model:
+  * Hair: Suggest volume/mass instead of individual strands
+  * Fur: Show texture direction without rendering each hair
+  * Transparent parts: Show as solid with surface indication
+  * Very thin elements: Thicken slightly for printability
+- Keep fabric folds, facial features, and textures intact
+- The goal is a detailed figurine, not a cartoon`;
+  }
+}
+
+/**
  * Get concrete viewpoint description for better AI understanding
  * Uses physical feature visibility instead of abstract rotation angles
  */
@@ -165,6 +196,8 @@ export function getMeshPrompt(
 
 Generate a ${angleDisplay} VIEW of this object.
 
+${getMeshStyleDescription(true)}
+
 STYLE & TECHNICAL REQUIREMENTS:
 1. **STYLE**: 3D Cel-Shaded Render. Look like a clean, low-poly game asset or vinyl toy.
 2. **COLOR**: Use "Posterized" coloring. Limit to approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors.
@@ -182,9 +215,11 @@ After the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 Generate the actual image, not a description.`;
   } else {
     // Full color mode: photogrammetry style with ambient occlusion
-    return `You are a 3D scanning expert preparing reference data for Photogrammetry.${userDescBlock}${hintBlock}
+    return `You are a 3D scanning expert preparing reference data for accurate 3D model reconstruction.${userDescBlock}${hintBlock}
 
 Generate a ${angleDisplay} VIEW of this object optimized for Mesh Reconstruction.
+
+${getMeshStyleDescription(false)}
 
 REQUIREMENTS:
 1. **VIEW**: Strictly Orthographic (Technical drawing view). Camera perfectly level with the object center. Show from directly ${getViewpointDescription(angle)}.
@@ -235,7 +270,11 @@ CRITICAL CONSTRAINTS:
 1. **STYLE**: Flat Vector Illustration / Sticker Art style.
 2. **PALETTE**: STRICTLY LIMITED PALETTE. Reduce entire image to approximately ${mode.texture.colorCount} solid colors.
 3. **GRADIENTS**: FORBIDDEN. No gradients, no fading, no airbrushing. Solid blocks of color only.
-4. **SHADING**: Zero shading. Pure Albedo color (Unlit).
+4. **SHADING**: ABSOLUTELY ZERO SHADING. This texture will be used for 3D PRINTING - the printed colors must NOT be affected by any simulated lighting.
+   - NO shadows (not even subtle ones)
+   - NO highlights or specular reflections
+   - NO ambient occlusion
+   - Think of this as a "flat color map" where each color zone represents the exact pigment to be printed.
 5. **EDGES**: Crisp, sharp lines between color zones. No anti-aliasing fuzziness.
 6. **ALIGNMENT**: Must match the silhouette of the 3D mesh perfectly. Show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}.
 7. **BACKGROUND**: Pure White (#FFFFFF).
@@ -253,7 +292,11 @@ Generate the actual image, not a description.`;
 Generate a ${angleDisplay} VIEW Albedo texture reference.
 
 REQUIREMENTS:
-1. **LIGHTING**: "Delit" / "Unlit" / "Flat" lighting. The image should represent the surface color ONLY, without any shadows or highlights caused by light sources.
+1. **LIGHTING**: STRICTLY UNLIT / FLAT. This is for 3D PRINTING - the colors represent the actual pigment to be printed, NOT how the surface appears under lighting.
+   - ZERO shadows of any kind
+   - ZERO highlights or reflections
+   - ZERO ambient occlusion
+   - Each pixel color = the exact print pigment color
 2. **DETAIL**: High-frequency texture details (fabric weave, skin pores, metal scratches) should be visible as color information.
 3. **VIEW**: Orthographic. Show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}.
 4. **COLOR**: Full color dynamic range. Natural saturation.
