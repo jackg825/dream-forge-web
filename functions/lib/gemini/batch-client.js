@@ -96,7 +96,7 @@ class GeminiBatchClient {
      * Uses inline requests format (suitable for <20MB total request size)
      */
     async submitBatch(referenceImageBase64, mimeType, requests) {
-        // Build the batch request payload
+        // Build the batch request payload using camelCase per API spec
         const inlineRequests = requests.map((req) => ({
             contents: [
                 {
@@ -127,7 +127,16 @@ class GeminiBatchClient {
                 viewTypes: requests.map((r) => `${r.viewType}-${r.angle}`),
             });
             const response = await axios_1.default.post(`${GEMINI_API_BASE}/models/${MODEL}:batchGenerateContent`, {
-                requests: inlineRequests,
+                batch: {
+                    model: `models/${MODEL}`,
+                    displayName: `dreamforge-batch-${Date.now()}`,
+                    inputConfig: {
+                        requests: inlineRequests.map((req, idx) => ({
+                            request: req,
+                            metadata: { key: `view-${idx}` },
+                        })),
+                    },
+                },
             }, {
                 headers: {
                     'Content-Type': 'application/json',

@@ -163,7 +163,7 @@ export class GeminiBatchClient {
     mimeType: string,
     requests: BatchRequest[]
   ): Promise<BatchSubmitResponse> {
-    // Build the batch request payload
+    // Build the batch request payload using camelCase per API spec
     const inlineRequests = requests.map((req) => ({
       contents: [
         {
@@ -198,7 +198,16 @@ export class GeminiBatchClient {
       const response = await axios.post<BatchSubmitResponse>(
         `${GEMINI_API_BASE}/models/${MODEL}:batchGenerateContent`,
         {
-          requests: inlineRequests,
+          batch: {
+            model: `models/${MODEL}`,
+            displayName: `dreamforge-batch-${Date.now()}`,
+            inputConfig: {
+              requests: inlineRequests.map((req, idx) => ({
+                request: req,
+                metadata: { key: `view-${idx}` },
+              })),
+            },
+          },
         },
         {
           headers: {
