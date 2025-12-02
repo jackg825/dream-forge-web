@@ -129,7 +129,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [actionLoading, setActionLoading] = useState(false);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [generationMode, setGenerationMode] = useState<GenerationModeId>(DEFAULT_GENERATION_MODE);
-  const [processingMode, setProcessingMode] = useState<ProcessingMode>(DEFAULT_PROCESSING_MODE);
+  // Batch mode temporarily disabled - force realtime
+  const [processingMode, setProcessingMode] = useState<ProcessingMode>('realtime');
   const [meshPrecision, setMeshPrecision] = useState<MeshPrecision>(DEFAULT_MESH_PRECISION);
   const [userDescription, setUserDescription] = useState<string>('');
   const [colorCount, setColorCount] = useState<number>(7);
@@ -738,11 +739,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         {/* Generation options - moved from Step 1 */}
         <div className="space-y-4 border border-border rounded-xl p-4 bg-muted/30">
           <h4 className="text-sm font-medium">生成選項</h4>
+          {/* Batch mode temporarily disabled
           <ProcessingModeSelector
             value={processingMode}
             onChange={setProcessingMode}
             disabled={actionLoading}
           />
+          */}
           <ModeSelector
             value={generationMode}
             onChange={setGenerationMode}

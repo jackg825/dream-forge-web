@@ -230,18 +230,18 @@ export function UnifiedProgressIndicator({
         const pending = total - completed - failed;
         return (
           <div className="flex gap-2 flex-wrap justify-center mt-4">
-            <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600">
+            <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600 dark:text-green-400">
               <CheckCircle className="h-3 w-3" />
               {completed} 完成
             </Badge>
             {pending > 0 && (
-              <Badge variant="outline" className="text-xs gap-1 border-blue-500/50 text-blue-600">
+              <Badge variant="outline" className="text-xs gap-1 border-blue-500/50 text-blue-600 dark:text-blue-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 {pending} 處理中
               </Badge>
             )}
             {failed > 0 && (
-              <Badge variant="outline" className="text-xs gap-1 border-red-500/50 text-red-600">
+              <Badge variant="outline" className="text-xs gap-1 border-red-500/50 text-red-600 dark:text-red-400">
                 <AlertCircle className="h-3 w-3" />
                 {failed} 失敗
               </Badge>
@@ -252,7 +252,7 @@ export function UnifiedProgressIndicator({
 
       {/* Image confirmation for submitting state */}
       {status === 'draft' && (
-        <div className="flex items-center gap-2 mt-4 text-green-600">
+        <div className="flex items-center gap-2 mt-4 text-green-600 dark:text-green-400">
           <CheckCircle className="h-4 w-4" />
           <span className="text-sm">圖片已收到</span>
         </div>

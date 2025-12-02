@@ -65,7 +65,7 @@ export function ProcessingModeSelector({
                 {mode.badge && (
                   <Badge
                     variant="secondary"
-                    className="text-xs px-1.5 py-0 bg-blue-100 text-blue-700"
+                    className="text-xs px-1.5 py-0 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
                   >
                     {mode.badge}
                   </Badge>
@@ -84,20 +84,15 @@ export function ProcessingModeSelector({
                   className={cn(
                     'text-xs',
                     isBatch
-                      ? 'border-blue-500/50 text-blue-600'
-                      : 'border-amber-500/50 text-amber-600'
+                      ? 'border-blue-500/50 text-blue-600 dark:text-blue-400'
+                      : 'border-amber-500/50 text-amber-600 dark:text-amber-400'
                   )}
                 >
                   {mode.estimatedTime}
                 </Badge>
                 <Badge
                   variant="outline"
-                  className={cn(
-                    'text-xs',
-                    isBatch
-                      ? 'border-green-500/50 text-green-600'
-                      : 'border-green-500/50 text-green-600'
-                  )}
+                  className="text-xs border-green-500/50 text-green-600 dark:text-green-400"
                 >
                   {isBatch ? '5 點' : '10 點'}
                 </Badge>

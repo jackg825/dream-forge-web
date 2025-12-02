@@ -51,7 +51,7 @@ function StarRating({ score }: { score: number }) {
     stars.push(
       <span
         key={i}
-        className={i <= score ? 'text-yellow-500' : 'text-gray-300'}
+        className={i <= score ? 'text-yellow-500' : 'text-muted-foreground/50'}
       >
         ★
       </span>
@@ -89,7 +89,7 @@ function ColorSwatch({
   return (
     <div className="relative group">
       <div
-        className="w-14 h-14 rounded-lg border-2 border-gray-200 cursor-pointer transition-all hover:scale-105 hover:shadow-md"
+        className="w-14 h-14 rounded-lg border-2 border-border cursor-pointer transition-all hover:scale-105 hover:shadow-md"
         style={{ backgroundColor: color }}
         onClick={handleClick}
       />
@@ -99,12 +99,12 @@ function ColorSwatch({
             e.stopPropagation();
             onRemove();
           }}
-          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+          className="absolute -top-2 -right-2 w-5 h-5 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
         >
           <X className="w-3 h-3" />
         </button>
       )}
-      <div className="text-xs text-center mt-1 font-mono text-gray-600">
+      <div className="text-xs text-center mt-1 font-mono text-muted-foreground">
         {color}
       </div>
       <input
@@ -140,20 +140,20 @@ export function ImageAnalysisPanel({
   // Before analysis
   if (!analysis && !loading) {
     return (
-      <div className="border border-dashed border-gray-300 rounded-lg p-6 bg-gray-50/50">
+      <div className="border border-dashed border-border rounded-lg p-6 bg-muted/50">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex-1">
-            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-500" />
+            <h3 className="font-medium text-foreground flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
               AI 圖片分析
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               分析圖片以提取色號、物體描述和 3D 列印建議
             </p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">色號數量</span>
+              <span className="text-sm text-muted-foreground">色號數量</span>
               <div className="w-24">
                 <Slider
                   value={[colorCount]}
@@ -169,7 +169,6 @@ export function ImageAnalysisPanel({
             <Button
               onClick={onAnalyze}
               disabled={disabled}
-              className="bg-purple-600 hover:bg-purple-700"
             >
               <Sparkles className="w-4 h-4 mr-2" />
               分析圖片
@@ -177,7 +176,7 @@ export function ImageAnalysisPanel({
           </div>
         </div>
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
@@ -188,14 +187,14 @@ export function ImageAnalysisPanel({
   // Loading state
   if (loading) {
     return (
-      <div className="border border-purple-200 rounded-lg p-6 bg-purple-50/30">
+      <div className="border border-primary/20 rounded-lg p-6 bg-primary/10">
         <div className="flex items-center gap-3">
-          <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
-          <span className="text-purple-700">正在分析圖片...</span>
+          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+          <span className="text-primary">正在分析圖片...</span>
         </div>
         <div className="mt-4 space-y-2">
-          <div className="h-4 bg-purple-200/50 rounded animate-pulse" />
-          <div className="h-4 bg-purple-200/50 rounded animate-pulse w-3/4" />
+          <div className="h-4 bg-primary/20 rounded animate-pulse" />
+          <div className="h-4 bg-primary/20 rounded animate-pulse w-3/4" />
         </div>
       </div>
     );
@@ -203,11 +202,11 @@ export function ImageAnalysisPanel({
 
   // Analysis complete - show editable results
   return (
-    <div className="border border-gray-200 rounded-lg bg-white shadow-sm">
+    <div className="border border-border rounded-lg bg-card shadow-sm">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-purple-500" />
+      <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
+        <h3 className="font-medium text-foreground flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-primary" />
           分析結果
           {hasEdits && (
             <Badge variant="secondary" className="text-xs">
@@ -221,7 +220,7 @@ export function ImageAnalysisPanel({
               variant="ghost"
               size="sm"
               onClick={onReset}
-              className="text-gray-500"
+              className="text-muted-foreground"
             >
               <RotateCcw className="w-4 h-4 mr-1" />
               重置
@@ -242,7 +241,7 @@ export function ImageAnalysisPanel({
       <div className="p-4 space-y-6">
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             物體描述
           </label>
           <Textarea
@@ -258,7 +257,7 @@ export function ImageAnalysisPanel({
         {/* Color Palette */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+            <label className="text-sm font-medium text-foreground flex items-center gap-2">
               <Palette className="w-4 h-4" />
               色板 ({analysis?.colorPalette.length || 0})
             </label>
@@ -286,7 +285,7 @@ export function ImageAnalysisPanel({
               />
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-muted-foreground mt-2">
             點擊色塊可選擇新顏色，hover 可刪除
           </p>
         </div>
@@ -294,16 +293,16 @@ export function ImageAnalysisPanel({
         {/* Print Friendliness Assessment */}
         <Collapsible open={printAssessmentOpen} onOpenChange={setPrintAssessmentOpen}>
           <CollapsibleTrigger asChild>
-            <button className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            <button className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-gray-600" />
-                <span className="font-medium text-gray-700">3D 列印評估</span>
+                <Package className="w-4 h-4 text-muted-foreground" />
+                <span className="font-medium text-foreground">3D 列印評估</span>
                 <StarRating score={analysis?.printFriendliness.score || 0} />
-                <span className="text-sm text-gray-500">
+                <span className="text-sm text-muted-foreground">
                   ({analysis?.printFriendliness.score}/5)
                 </span>
               </div>
-              <span className="text-gray-400">
+              <span className="text-muted-foreground">
                 {printAssessmentOpen ? '▲' : '▼'}
               </span>
             </button>
@@ -312,11 +311,11 @@ export function ImageAnalysisPanel({
             {/* Color Suggestions */}
             {analysis?.printFriendliness.colorSuggestions.length ? (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                  <Palette className="w-4 h-4 text-blue-500" />
+                <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
+                  <Palette className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                   色彩建議
                 </h4>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.colorSuggestions.map((suggestion, i) => (
                     <li key={i}>{suggestion}</li>
                   ))}
@@ -327,11 +326,11 @@ export function ImageAnalysisPanel({
             {/* Structural Concerns */}
             {analysis?.printFriendliness.structuralConcerns.length ? (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />
                   結構問題
                 </h4>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.structuralConcerns.map((concern, i) => (
                     <li key={i}>{concern}</li>
                   ))}
@@ -342,11 +341,11 @@ export function ImageAnalysisPanel({
             {/* Material Recommendations */}
             {analysis?.printFriendliness.materialRecommendations.length ? (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                  <Package className="w-4 h-4 text-green-500" />
+                <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
+                  <Package className="w-4 h-4 text-green-500 dark:text-green-400" />
                   材質推薦
                 </h4>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.materialRecommendations.map((rec, i) => (
                     <li key={i}>{rec}</li>
                   ))}
@@ -357,11 +356,11 @@ export function ImageAnalysisPanel({
             {/* Orientation Tips */}
             {analysis?.printFriendliness.orientationTips.length ? (
               <div>
-                <h4 className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
-                  <Lightbulb className="w-4 h-4 text-purple-500" />
+                <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
+                  <Lightbulb className="w-4 h-4 text-primary" />
                   列印方向
                 </h4>
-                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.orientationTips.map((tip, i) => (
                     <li key={i}>{tip}</li>
                   ))}

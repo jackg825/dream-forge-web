@@ -71,8 +71,8 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
                   className={cn(
                     'text-xs',
                     mode.meshStyle.includes('簡化')
-                      ? 'border-orange-500/50 text-orange-600'
-                      : 'border-green-500/50 text-green-600'
+                      ? 'border-orange-500/50 text-orange-600 dark:text-orange-400'
+                      : 'border-green-500/50 text-green-600 dark:text-green-400'
                   )}
                 >
                   網格: {mode.meshStyle}
@@ -82,8 +82,8 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
                   className={cn(
                     'text-xs',
                     mode.textureStyle.includes('簡化')
-                      ? 'border-orange-500/50 text-orange-600'
-                      : 'border-green-500/50 text-green-600'
+                      ? 'border-orange-500/50 text-orange-600 dark:text-orange-400'
+                      : 'border-green-500/50 text-green-600 dark:text-green-400'
                   )}
                 >
                   貼圖: {mode.textureStyle}
