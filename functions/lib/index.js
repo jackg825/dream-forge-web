@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyzeUploadedImage = exports.pollGeminiBatchJobs = exports.submitGeminiBatch = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getUserPipelines = exports.getPipeline = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.getSession = exports.createSession = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.analyzeUploadedImage = exports.pollGeminiBatchJobs = exports.submitGeminiBatch = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -43,7 +43,6 @@ Object.defineProperty(exports, "onUserCreate", { enumerable: true, get: function
 var generate_1 = require("./handlers/generate");
 Object.defineProperty(exports, "generateModel", { enumerable: true, get: function () { return generate_1.generateModel; } });
 Object.defineProperty(exports, "checkJobStatus", { enumerable: true, get: function () { return generate_1.checkJobStatus; } });
-Object.defineProperty(exports, "generateTexture", { enumerable: true, get: function () { return generate_1.generateTexture; } });
 Object.defineProperty(exports, "retryFailedJob", { enumerable: true, get: function () { return generate_1.retryFailedJob; } });
 var admin_1 = require("./handlers/admin");
 Object.defineProperty(exports, "addCredits", { enumerable: true, get: function () { return admin_1.addCredits; } });
@@ -54,7 +53,6 @@ Object.defineProperty(exports, "listUsers", { enumerable: true, get: function ()
 // Multi-step creation flow (Sessions)
 var sessions_1 = require("./handlers/sessions");
 Object.defineProperty(exports, "createSession", { enumerable: true, get: function () { return sessions_1.createSession; } });
-Object.defineProperty(exports, "getSession", { enumerable: true, get: function () { return sessions_1.getSession; } });
 Object.defineProperty(exports, "updateSession", { enumerable: true, get: function () { return sessions_1.updateSession; } });
 Object.defineProperty(exports, "deleteSession", { enumerable: true, get: function () { return sessions_1.deleteSession; } });
 Object.defineProperty(exports, "getUserSessions", { enumerable: true, get: function () { return sessions_1.getUserSessions; } });
@@ -74,8 +72,6 @@ Object.defineProperty(exports, "uploadEditedH2CImage", { enumerable: true, get: 
 // New simplified pipeline flow (Gemini + Meshy)
 var pipeline_1 = require("./handlers/pipeline");
 Object.defineProperty(exports, "createPipeline", { enumerable: true, get: function () { return pipeline_1.createPipeline; } });
-Object.defineProperty(exports, "getPipeline", { enumerable: true, get: function () { return pipeline_1.getPipeline; } });
-Object.defineProperty(exports, "getUserPipelines", { enumerable: true, get: function () { return pipeline_1.getUserPipelines; } });
 Object.defineProperty(exports, "generatePipelineImages", { enumerable: true, get: function () { return pipeline_1.generatePipelineImages; } });
 Object.defineProperty(exports, "regeneratePipelineImage", { enumerable: true, get: function () { return pipeline_1.regeneratePipelineImage; } });
 Object.defineProperty(exports, "startPipelineMesh", { enumerable: true, get: function () { return pipeline_1.startPipelineMesh; } });

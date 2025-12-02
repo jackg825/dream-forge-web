@@ -1,10 +1,10 @@
 export { onUserCreate } from './handlers/users';
-export { generateModel, checkJobStatus, generateTexture, retryFailedJob } from './handlers/generate';
+export { generateModel, checkJobStatus, retryFailedJob } from './handlers/generate';
 export { addCredits, setUnlimitedCredits, checkRodinBalance, getAdminStats, listUsers, } from './handlers/admin';
-export { createSession, getSession, updateSession, deleteSession, getUserSessions, } from './handlers/sessions';
+export { createSession, updateSession, deleteSession, getUserSessions, } from './handlers/sessions';
 export { generateSessionViews, regenerateView, uploadCustomView, } from './handlers/views';
 export { startSessionModelGeneration, checkSessionModelStatus, } from './handlers/model';
 export { optimizeColorsForH2C, uploadEditedH2CImage, } from './handlers/h2c';
-export { createPipeline, getPipeline, getUserPipelines, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, updatePipelineAnalysis, } from './handlers/pipeline';
+export { createPipeline, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, updatePipelineAnalysis, } from './handlers/pipeline';
 export { submitGeminiBatch, pollGeminiBatchJobs, } from './handlers/gemini-batch';
 export { analyzeUploadedImage } from './handlers/analyze';

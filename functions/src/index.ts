@@ -5,7 +5,7 @@ admin.initializeApp();
 
 // Export all Cloud Functions
 export { onUserCreate } from './handlers/users';
-export { generateModel, checkJobStatus, generateTexture, retryFailedJob } from './handlers/generate';
+export { generateModel, checkJobStatus, retryFailedJob } from './handlers/generate';
 export {
   addCredits,
   setUnlimitedCredits,
@@ -17,7 +17,6 @@ export {
 // Multi-step creation flow (Sessions)
 export {
   createSession,
-  getSession,
   updateSession,
   deleteSession,
   getUserSessions,
@@ -45,8 +44,6 @@ export {
 // New simplified pipeline flow (Gemini + Meshy)
 export {
   createPipeline,
-  getPipeline,
-  getUserPipelines,
   generatePipelineImages,
   regeneratePipelineImage,
   startPipelineMesh,
