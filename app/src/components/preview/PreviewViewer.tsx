@@ -2,7 +2,7 @@
 
 import { Suspense, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Grid } from '@react-three/drei';
+import { OrbitControls, Environment, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ClippingAxis } from './ClippingPlaneControls';
 import type { LightingState } from '@/types/lighting';
@@ -26,6 +26,9 @@ interface PreviewViewerProps {
   rotation?: ModelRotation;   // User rotation override (degrees)
   autoOrient?: boolean;       // Apply Z-up to Y-up conversion (default: true)
   lighting?: LightingState;   // Controllable lighting state (optional)
+  showGrid?: boolean;         // Show reference grid
+  showAxes?: boolean;         // Show XYZ axes gizmo
+  autoRotate?: boolean;       // Auto rotate model
 }
 
 // Re-export ModelRotation for convenience
@@ -272,6 +275,9 @@ export function PreviewViewer({
   rotation,
   autoOrient = true,
   lighting,
+  showGrid = false,
+  showAxes = false,
+  autoRotate = false,
 }: PreviewViewerProps) {
   // Calculate clipping plane
   const clippingPlane = useMemo(() => {
@@ -348,9 +354,10 @@ export function PreviewViewer({
           )}
         </Suspense>
 
-        {/* Grid when no model loaded */}
-        {!hasModel && (
+        {/* Grid - show when no model or when explicitly enabled */}
+        {(!hasModel || showGrid) && (
           <Grid
+            position={[0, -1.2, 0]}
             args={[10, 10]}
             cellSize={0.5}
             cellThickness={0.5}
@@ -365,6 +372,16 @@ export function PreviewViewer({
           />
         )}
 
+        {/* Axes Gizmo */}
+        {showAxes && (
+          <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+            <GizmoViewport
+              axisColors={['#ef4444', '#22c55e', '#3b82f6']}
+              labelColor="white"
+            />
+          </GizmoHelper>
+        )}
+
         {/* Controls */}
         <OrbitControls
           enablePan={true}
@@ -375,11 +392,13 @@ export function PreviewViewer({
           rotateSpeed={0.5}
           enableDamping={true}
           dampingFactor={0.05}
+          autoRotate={autoRotate}
+          autoRotateSpeed={2}
           makeDefault
         />
 
-        {/* Ground plane for shadows */}
-        {hasModel && (
+        {/* Ground plane for shadows (only when grid is off) */}
+        {hasModel && !showGrid && (
           <mesh
             rotation={[-Math.PI / 2, 0, 0]}
             position={[0, -1.2, 0]}

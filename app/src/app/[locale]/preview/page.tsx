@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { Header } from '@/components/layout/Header';
@@ -55,6 +55,36 @@ export default function PreviewPage() {
   const [clippingAxis, setClippingAxis] = useState<ClippingAxis>('y');
   const [clippingPosition, setClippingPosition] = useState(50);
   const [clippingInverted, setClippingInverted] = useState(false);
+
+  // Display toggles state
+  const [showGrid, setShowGrid] = useState(false);
+  const [showAxes, setShowAxes] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Handle fullscreen toggle
+  const handleFullscreen = useCallback(() => {
+    if (!viewerContainerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      viewerContainerRef.current.requestFullscreen().catch((err) => {
+        console.error('Error entering fullscreen:', err);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
 
   const handleFileSelect = useCallback(
     (file: File) => {
@@ -154,6 +184,9 @@ export default function PreviewPage() {
                     boundingBox={model.info?.boundingBox}
                     autoOrient={true}
                     lighting={lighting}
+                    showGrid={showGrid}
+                    showAxes={showAxes}
+                    autoRotate={autoRotate}
                   />
                   {/* Floating Toolbar */}
                   <UnifiedViewerToolbar
@@ -167,7 +200,15 @@ export default function PreviewPage() {
                     onLightingReset={resetLighting}
                     showLightingControls={true}
                     showViewMode={false}
-                    showDisplayToggles={false}
+                    showDisplayToggles={true}
+                    showGrid={showGrid}
+                    onShowGridChange={setShowGrid}
+                    showAxes={showAxes}
+                    onShowAxesChange={setShowAxes}
+                    autoRotate={autoRotate}
+                    onAutoRotateChange={setAutoRotate}
+                    isFullscreen={isFullscreen}
+                    onFullscreen={handleFullscreen}
                     onScreenshot={() => {
                       // TODO: Implement screenshot for preview
                     }}
