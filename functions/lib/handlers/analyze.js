@@ -87,6 +87,7 @@ exports.analyzeUploadedImage = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
+    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     // Verify authentication
