@@ -6,6 +6,8 @@ import { OrbitControls, Environment, useGLTF, Grid, GizmoHelper, GizmoViewport }
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import type { ViewMode } from '@/types';
+import type { LightingState } from '@/types/lighting';
+import { SceneLighting } from './SceneLighting';
 import {
   orientGeometry,
   applyZUpToYUpRotation,
@@ -27,6 +29,7 @@ interface ModelViewerProps {
   showGrid?: boolean;         // Show reference grid
   showAxes?: boolean;         // Show XYZ axes gizmo
   autoRotate?: boolean;       // Auto rotate model
+  lighting?: LightingState;   // Controllable lighting state (optional)
 }
 
 // Re-export ModelRotation for convenience
@@ -321,6 +324,7 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
       showGrid = false,
       showAxes = false,
       autoRotate = false,
+      lighting,
     },
     ref
   ) {
@@ -358,16 +362,8 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
         >
           <CameraSetup />
 
-          {/* Lighting */}
-          <ambientLight intensity={0.5} />
-          <directionalLight
-            position={[5, 5, 5]}
-            intensity={1}
-            castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-          />
-          <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+          {/* Lighting - use SceneLighting if provided, otherwise defaults */}
+          <SceneLighting lighting={lighting} />
 
           {/* Environment for reflections */}
           <Environment preset="studio" />

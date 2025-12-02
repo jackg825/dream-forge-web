@@ -5,6 +5,8 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 import type { ClippingAxis } from './ClippingPlaneControls';
+import type { LightingState } from '@/types/lighting';
+import { SceneLighting } from '@/components/viewer/SceneLighting';
 import {
   orientGeometry,
   applyZUpToYUpRotation,
@@ -23,6 +25,7 @@ interface PreviewViewerProps {
   boundingBox?: { width: number; height: number; depth: number };
   rotation?: ModelRotation;   // User rotation override (degrees)
   autoOrient?: boolean;       // Apply Z-up to Y-up conversion (default: true)
+  lighting?: LightingState;   // Controllable lighting state (optional)
 }
 
 // Re-export ModelRotation for convenience
@@ -268,6 +271,7 @@ export function PreviewViewer({
   boundingBox,
   rotation,
   autoOrient = true,
+  lighting,
 }: PreviewViewerProps) {
   // Calculate clipping plane
   const clippingPlane = useMemo(() => {
@@ -318,16 +322,8 @@ export function PreviewViewer({
         <CameraSetup />
         <ClippingSetup enabled={clippingEnabled} />
 
-        {/* Lighting */}
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          position={[5, 5, 5]}
-          intensity={1}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        <directionalLight position={[-5, 5, -5]} intensity={0.5} />
+        {/* Lighting - use SceneLighting if provided, otherwise defaults */}
+        <SceneLighting lighting={lighting} />
 
         {/* Environment for reflections */}
         <Environment preset="studio" />

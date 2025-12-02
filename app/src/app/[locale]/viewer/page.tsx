@@ -5,8 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
+import { UnifiedViewerToolbar } from '@/components/viewer/UnifiedViewerToolbar';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
+import { useLighting } from '@/hooks/useLighting';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -60,6 +61,16 @@ function ViewerContentInner() {
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Lighting state
+  const {
+    lighting,
+    updateSpotlightPosition,
+    updateSpotlightIntensity,
+    updateSpotlightColor,
+    updateAmbientIntensity,
+    resetLighting,
+  } = useLighting();
 
   // Side panel state
   const [isPanelOpen, setIsPanelOpen] = useState(true);
@@ -326,10 +337,11 @@ function ViewerContentInner() {
                 showGrid={showGrid}
                 showAxes={showAxes}
                 autoRotate={autoRotate}
+                lighting={lighting}
               />
 
               {/* Floating Toolbar */}
-              <ViewerToolbar
+              <UnifiedViewerToolbar
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 hasTextures={hasTextures}
@@ -341,6 +353,13 @@ function ViewerContentInner() {
                 onShowAxesChange={setShowAxes}
                 autoRotate={autoRotate}
                 onAutoRotateChange={setAutoRotate}
+                lighting={lighting}
+                onSpotlightPositionChange={updateSpotlightPosition}
+                onSpotlightIntensityChange={updateSpotlightIntensity}
+                onSpotlightColorChange={updateSpotlightColor}
+                onAmbientIntensityChange={updateAmbientIntensity}
+                onLightingReset={resetLighting}
+                showLightingControls={true}
                 onScreenshot={handleScreenshot}
                 onFullscreen={handleFullscreen}
                 isFullscreen={isFullscreen}

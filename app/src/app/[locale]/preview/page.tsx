@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { Header } from '@/components/layout/Header';
 import { FileDropZone } from '@/components/preview/FileDropZone';
 import { ModelInfoPanel } from '@/components/preview/ModelInfoPanel';
 import { ClippingPlaneControls, type ClippingAxis } from '@/components/preview/ClippingPlaneControls';
-import { PreviewControls } from '@/components/preview/PreviewControls';
+import { UnifiedViewerToolbar } from '@/components/viewer/UnifiedViewerToolbar';
+import { useLighting } from '@/hooks/useLighting';
 import { useModelLoader } from '@/hooks/useModelLoader';
 import { Link } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,9 +35,20 @@ const PreviewViewer = dynamic(
 export default function PreviewPage() {
   const t = useTranslations();
   const { state, model, error, loadFile, reset } = useModelLoader();
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
 
   // Viewer state
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
+
+  // Lighting state
+  const {
+    lighting,
+    updateSpotlightPosition,
+    updateSpotlightIntensity,
+    updateSpotlightColor,
+    updateAmbientIntensity,
+    resetLighting,
+  } = useLighting();
 
   // Clipping plane state
   const [clippingEnabled, setClippingEnabled] = useState(false);
@@ -130,7 +142,7 @@ export default function PreviewPage() {
             {/* 3D Viewer */}
             {hasModel && (
               <Card className="overflow-hidden">
-                <div className="h-[500px]">
+                <div ref={viewerContainerRef} className="relative h-[500px]">
                   <PreviewViewer
                     geometry={model.geometry}
                     group={model.group}
@@ -141,19 +153,29 @@ export default function PreviewPage() {
                     clippingInverted={clippingInverted}
                     boundingBox={model.info?.boundingBox}
                     autoOrient={true}
+                    lighting={lighting}
+                  />
+                  {/* Floating Toolbar */}
+                  <UnifiedViewerToolbar
+                    backgroundColor={backgroundColor}
+                    onBackgroundChange={setBackgroundColor}
+                    lighting={lighting}
+                    onSpotlightPositionChange={updateSpotlightPosition}
+                    onSpotlightIntensityChange={updateSpotlightIntensity}
+                    onSpotlightColorChange={updateSpotlightColor}
+                    onAmbientIntensityChange={updateAmbientIntensity}
+                    onLightingReset={resetLighting}
+                    showLightingControls={true}
+                    showViewMode={false}
+                    showDisplayToggles={false}
+                    onScreenshot={() => {
+                      // TODO: Implement screenshot for preview
+                    }}
+                    onReset={handleReset}
+                    portalContainer={viewerContainerRef.current}
                   />
                 </div>
               </Card>
-            )}
-
-            {/* Viewer Controls */}
-            {(hasModel || isLoading) && (
-              <PreviewControls
-                backgroundColor={backgroundColor}
-                onBackgroundChange={setBackgroundColor}
-                onReset={handleReset}
-                hasModel={!!hasModel}
-              />
             )}
 
             {/* Upload another file hint */}
