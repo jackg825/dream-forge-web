@@ -134,33 +134,30 @@ Transform the subject into a collectible vinyl toy / Funko Pop style figure:
 - Maintain recognizable silhouette and key identifying features
 - Think "chibi" or "SD (Super Deformed)" style for characters`;
   } else {
-    // 印刷優化風格 - 平衡細節與可製造性
-    return `**3D MODELING OPTIMIZATION - PRINT-READY STYLE**:
-Create a 3D-printable representation that balances detail and manufacturability.
-Apply MODERATE SURFACE SMOOTHING (30-50% simplification from photorealistic):
+    // 保留細節但優化建模 - 輕度平滑
+    return `**3D MODELING OPTIMIZATION - DETAIL PRESERVATION with LIGHT SMOOTHING**:
+Optimize the subject for accurate 3D reconstruction while preserving most details.
+Apply LIGHT SURFACE SMOOTHING (10-20% simplification) - preserve textures and patterns:
 
-**FEATURES TO PRESERVE (Critical for Recognition)**:
-- Face/head shape and facial features (eyes, nose, mouth proportions)
-- Accessories and adornments (bows, collars, hats, glasses, jewelry)
-- Overall silhouette and body proportions
-- Large-scale color boundaries and patterns
-- Distinctive anatomical features (ears, tail shape, limb positions)
+**FEATURES TO FULLY PRESERVE**:
+- Face/head shape and all facial features (eyes, nose, mouth, expressions)
+- Accessories and adornments (bows, collars, patterns, decorations)
+- Overall silhouette, body proportions, and pose
+- Surface textures and patterns (fur direction, fabric weave, skin texture)
+- Color boundaries and gradients
 
-**FEATURES TO SMOOTH/SIMPLIFY (Problematic for Printing)**:
-- Fur/hair: Convert to smooth, flowing VOLUMES - no individual strands or texture lines
-- Fabric folds: Reduce to 2-3 major creases maximum, eliminate micro-wrinkles
-- Skin texture: Smooth to matte finish, remove pores and fine wrinkles
-- Surface patterns: Keep only patterns larger than 3mm at print scale
-- Feathers/scales: Suggest with subtle surface undulation, not individual elements
+**FEATURES TO SLIGHTLY SIMPLIFY (Only if impossible to model)**:
+- Individual hair strands → suggest as volume/mass while keeping texture direction visible
+- Transparent parts → show as solid with surface indication
+- Very thin elements (< 1mm) → thicken slightly for printability
 
-**GEOMETRY GUIDELINES**:
-- Minimum feature thickness: 2mm equivalent (avoid thin protrusions)
-- Prefer convex surfaces over concave (reduces support requirements)
-- Round sharp edges to smooth transitions
-- Merge closely-spaced elements where appropriate
+**IMPORTANT - DO NOT OVER-SMOOTH**:
+- Keep fabric folds and wrinkles - they add realism
+- Keep fur/hair texture visible - show the direction and flow
+- Keep surface details like stitching, patterns, and material textures
+- The goal is a DETAILED figurine, NOT a smooth vinyl toy
 
-The result should look like a high-quality collectible figurine or resin kit -
-detailed enough to be recognizable, smooth enough to print cleanly.`;
+The result should look like a high-quality resin figure with preserved surface details.`;
   }
 }
 
@@ -234,22 +231,22 @@ After the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 
 Generate the actual image, not a description.`;
   } else {
-    // Full color mode: print-ready style optimized for 3D printing
-    return `You are a 3D modeling expert preparing reference images for 3D PRINTING.${userDescBlock}${hintBlock}
+    // Full color mode: photogrammetry style with detail preservation
+    return `You are a 3D scanning expert preparing reference data for accurate 3D model reconstruction.${userDescBlock}${hintBlock}
 
-Generate a ${angleDisplay} VIEW of this object optimized for 3D Print Manufacturing.
+Generate a ${angleDisplay} VIEW of this object optimized for Mesh Reconstruction.
 
 ${getMeshStyleDescription(false)}
 
 REQUIREMENTS:
-1. **VIEW**: Strictly Orthographic. Camera perfectly level with the object center. Show from directly ${getViewpointDescription(angle)}.
-2. **LIGHTING**: Studio Softbox Lighting. Even illumination. Include subtle Ambient Occlusion in MAJOR crevices only to define primary shapes. Avoid shadow detail that suggests surface texture.
-3. **SURFACE TREATMENT**: Render smooth, matte surfaces. Show form through SHAPE, not through surface texture rendering. Think "injection-molded plastic" or "resin cast" finish.
+1. **VIEW**: Strictly Orthographic (Technical drawing view). Camera perfectly level with the object center. Show from directly ${getViewpointDescription(angle)}.
+2. **LIGHTING**: "Studio Softbox Lighting". Even illumination. Include subtle "Ambient Occlusion" in crevices to define shape/depth, but AVOID harsh directional shadows.
+3. **DETAILS**: Preserve surface textures and details. Show fur direction, fabric folds, and material textures clearly.
 4. **BACKGROUND**: Pure White (#FFFFFF).
 5. **CONSISTENCY**: Critical. If the object has a tail/backpack/feature in the reference, it MUST appear correctly in this angle.
 6. **FRAMING**: Center the object, fill 85% of the canvas.
 
-Goal: A reference image that clearly defines 3D VOLUMES and SHAPES for mesh reconstruction, without confusing surface detail that the AI might interpret as geometry.
+Goal: A perfect reference image that captures the 3D volume AND surface details of the input image from the ${angleDisplay}.
 
 Generate the actual image, not a description.`;
   }
