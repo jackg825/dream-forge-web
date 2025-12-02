@@ -106,17 +106,33 @@ Transform the subject into a collectible vinyl toy / Funko Pop style figure:
 - Think "chibi" or "SD (Super Deformed)" style for characters`;
     }
     else {
-        // 保留細節但優化建模
-        return `**3D MODELING OPTIMIZATION - DETAIL PRESERVATION**:
-Optimize the subject for accurate 3D reconstruction while preserving details:
-- Maintain original proportions and recognizable features
-- Simplify ONLY elements that are impossible to 3D model:
-  * Hair: Suggest volume/mass instead of individual strands
-  * Fur: Show texture direction without rendering each hair
-  * Transparent parts: Show as solid with surface indication
-  * Very thin elements: Thicken slightly for printability
-- Keep fabric folds, facial features, and textures intact
-- The goal is a detailed figurine, not a cartoon`;
+        // 印刷優化風格 - 平衡細節與可製造性
+        return `**3D MODELING OPTIMIZATION - PRINT-READY STYLE**:
+Create a 3D-printable representation that balances detail and manufacturability.
+Apply MODERATE SURFACE SMOOTHING (30-50% simplification from photorealistic):
+
+**FEATURES TO PRESERVE (Critical for Recognition)**:
+- Face/head shape and facial features (eyes, nose, mouth proportions)
+- Accessories and adornments (bows, collars, hats, glasses, jewelry)
+- Overall silhouette and body proportions
+- Large-scale color boundaries and patterns
+- Distinctive anatomical features (ears, tail shape, limb positions)
+
+**FEATURES TO SMOOTH/SIMPLIFY (Problematic for Printing)**:
+- Fur/hair: Convert to smooth, flowing VOLUMES - no individual strands or texture lines
+- Fabric folds: Reduce to 2-3 major creases maximum, eliminate micro-wrinkles
+- Skin texture: Smooth to matte finish, remove pores and fine wrinkles
+- Surface patterns: Keep only patterns larger than 3mm at print scale
+- Feathers/scales: Suggest with subtle surface undulation, not individual elements
+
+**GEOMETRY GUIDELINES**:
+- Minimum feature thickness: 2mm equivalent (avoid thin protrusions)
+- Prefer convex surfaces over concave (reduces support requirements)
+- Round sharp edges to smooth transitions
+- Merge closely-spaced elements where appropriate
+
+The result should look like a high-quality collectible figurine or resin kit -
+detailed enough to be recognizable, smooth enough to print cleanly.`;
     }
 }
 /**
@@ -181,22 +197,22 @@ After the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 Generate the actual image, not a description.`;
     }
     else {
-        // Full color mode: photogrammetry style with ambient occlusion
-        return `You are a 3D scanning expert preparing reference data for accurate 3D model reconstruction.${userDescBlock}${hintBlock}
+        // Full color mode: print-ready style optimized for 3D printing
+        return `You are a 3D modeling expert preparing reference images for 3D PRINTING.${userDescBlock}${hintBlock}
 
-Generate a ${angleDisplay} VIEW of this object optimized for Mesh Reconstruction.
+Generate a ${angleDisplay} VIEW of this object optimized for 3D Print Manufacturing.
 
 ${getMeshStyleDescription(false)}
 
 REQUIREMENTS:
-1. **VIEW**: Strictly Orthographic (Technical drawing view). Camera perfectly level with the object center. Show from directly ${getViewpointDescription(angle)}.
-2. **LIGHTING**: "Studio Softbox Lighting". Even illumination. IMPORTANT: Include subtle "Ambient Occlusion" in crevices to define shape/depth, but AVOID harsh directional shadows.
-3. **DETAILS**: Hyper-realistic surface definition. We need to see the depth of the texture.
+1. **VIEW**: Strictly Orthographic. Camera perfectly level with the object center. Show from directly ${getViewpointDescription(angle)}.
+2. **LIGHTING**: Studio Softbox Lighting. Even illumination. Include subtle Ambient Occlusion in MAJOR crevices only to define primary shapes. Avoid shadow detail that suggests surface texture.
+3. **SURFACE TREATMENT**: Render smooth, matte surfaces. Show form through SHAPE, not through surface texture rendering. Think "injection-molded plastic" or "resin cast" finish.
 4. **BACKGROUND**: Pure White (#FFFFFF).
 5. **CONSISTENCY**: Critical. If the object has a tail/backpack/feature in the reference, it MUST appear correctly in this angle.
 6. **FRAMING**: Center the object, fill 85% of the canvas.
 
-Goal: A perfect reference image that interprets the 3D volume of the input image from the ${angleDisplay}.
+Goal: A reference image that clearly defines 3D VOLUMES and SHAPES for mesh reconstruction, without confusing surface detail that the AI might interpret as geometry.
 
 Generate the actual image, not a description.`;
     }
