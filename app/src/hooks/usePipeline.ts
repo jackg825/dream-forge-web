@@ -227,7 +227,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       const generateFn = httpsCallable<
         { pipelineId: string },
         GeneratePipelineImagesResponse
-      >(functions, 'generatePipelineImages');
+      >(functions, 'generatePipelineImages', { timeout: 120000 });
 
       const result = await generateFn({ pipelineId: targetPipelineId });
       return result.data;
