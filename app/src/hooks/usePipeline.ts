@@ -22,6 +22,7 @@ import type {
   PipelineTextureAngle,
   GenerationModeId,
   ProcessingMode,
+  ImageAnalysisResult,
 } from '@/types';
 
 interface SubmitBatchResponse {
@@ -42,7 +43,8 @@ interface UsePipelineReturn {
     settings?: Partial<PipelineSettings>,
     generationMode?: GenerationModeId,
     processingMode?: ProcessingMode,
-    userDescription?: string
+    userDescription?: string,
+    imageAnalysis?: ImageAnalysisResult
   ) => Promise<string>;
   generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
   submitBatch: (overridePipelineId?: string) => Promise<SubmitBatchResponse>;
@@ -166,7 +168,8 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       settings?: Partial<PipelineSettings>,
       generationMode?: GenerationModeId,
       processingMode?: ProcessingMode,
-      userDescription?: string
+      userDescription?: string,
+      imageAnalysis?: ImageAnalysisResult
     ): Promise<string> => {
       if (!functions) {
         throw new Error('Firebase not initialized');
@@ -180,6 +183,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
             generationMode?: GenerationModeId;
             processingMode?: ProcessingMode;
             userDescription?: string;
+            imageAnalysis?: ImageAnalysisResult;
           },
           CreatePipelineResponse
         >(functions, 'createPipeline');
@@ -190,6 +194,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
           generationMode,
           processingMode,
           userDescription,
+          imageAnalysis,
         });
         return result.data.pipelineId;
       } catch (err) {

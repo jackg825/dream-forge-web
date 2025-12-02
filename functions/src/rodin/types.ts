@@ -361,6 +361,7 @@ export interface PipelineSettings {
   format: OutputFormat;
   generationMode?: GenerationModeId;
   meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
+  colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
 }
 
 /**
@@ -446,6 +447,9 @@ export interface PipelineDocument {
   // User-provided description for better AI generation
   userDescription?: string | null;
 
+  // Pre-analysis results from Gemini (before view generation)
+  imageAnalysis?: ImageAnalysisResult;
+
   // Error handling
   error?: string;
   errorStep?: PipelineStatus;
@@ -526,4 +530,32 @@ export interface GeminiBatchJobDocument {
   // Retry tracking
   retryCount: number;
   maxRetries: number;
+}
+
+// ============================================
+// Image Analysis Types
+// ============================================
+
+/**
+ * 3D Print friendliness assessment from Gemini analysis
+ */
+export interface PrintFriendlinessAssessment {
+  score: number;                      // 1-5 rating (5 = easiest to print)
+  colorSuggestions: string[];         // Color-related suggestions
+  structuralConcerns: string[];       // Structural issues (thin walls, overhangs)
+  materialRecommendations: string[];  // Material suggestions (PLA, PETG, resin)
+  orientationTips: string[];          // Printing orientation recommendations
+}
+
+/**
+ * Image analysis result from Gemini
+ * Used to optimize view generation and Meshy texture prompts
+ */
+export interface ImageAnalysisResult {
+  description: string;                // AI-generated description (includes all materials)
+  colorPalette: string[];             // Extracted HEX colors (configurable count)
+  detectedMaterials: string[];        // Detected materials (fur, fabric, plastic)
+  objectType: string;                 // Object classification (plush toy, figurine)
+  printFriendliness: PrintFriendlinessAssessment;
+  analyzedAt: FirebaseFirestore.Timestamp;
 }

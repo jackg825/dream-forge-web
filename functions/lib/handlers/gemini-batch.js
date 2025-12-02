@@ -212,8 +212,8 @@ exports.pollGeminiBatchJobs = functions
                     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
                 });
             }
-            // If completed, process results
-            if (status.done && status.response) {
+            // If completed, process results (check for dest.inlined_responses)
+            if (status.done && status.dest?.inlined_responses) {
                 await processCompletedBatchJob(jobDoc.ref, job, status, client);
             }
             // If failed, update pipeline

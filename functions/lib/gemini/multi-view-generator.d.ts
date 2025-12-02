@@ -51,7 +51,8 @@ export declare class MultiViewGenerator {
     private apiKey;
     private modeConfig;
     private userDescription?;
-    constructor(apiKey: string, modeId?: GenerationModeId, userDescription?: string | null);
+    private preAnalyzedColors?;
+    constructor(apiKey: string, modeId?: GenerationModeId, userDescription?: string | null, preAnalyzedColors?: string[]);
     /**
      * Get the current mode configuration
      */
@@ -119,5 +120,6 @@ export declare class MultiViewGenerator {
  *
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
  * @param userDescription - Optional user-provided description of the object
+ * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
  */
-export declare function createMultiViewGenerator(modeId?: GenerationModeId, userDescription?: string | null): MultiViewGenerator;
+export declare function createMultiViewGenerator(modeId?: GenerationModeId, userDescription?: string | null, preAnalyzedColors?: string[]): MultiViewGenerator;

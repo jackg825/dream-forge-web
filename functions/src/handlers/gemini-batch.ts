@@ -245,8 +245,8 @@ export const pollGeminiBatchJobs = functions
           });
         }
 
-        // If completed, process results
-        if (status.done && status.response) {
+        // If completed, process results (check for dest.inlined_responses)
+        if (status.done && status.dest?.inlined_responses) {
           await processCompletedBatchJob(
             jobDoc.ref,
             job,

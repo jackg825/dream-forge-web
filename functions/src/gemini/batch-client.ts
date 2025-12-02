@@ -52,7 +52,34 @@ export interface BatchSubmitResponse {
 }
 
 /**
+ * Individual inline response from batch processing
+ */
+interface InlineResponse {
+  response?: {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{
+          text?: string;
+          inlineData?: {
+            mimeType: string;
+            data: string;
+          };
+        }>;
+      };
+      finishReason?: string;
+    }>;
+  };
+  error?: {
+    code: number;
+    message: string;
+  };
+}
+
+/**
  * Batch job status response
+ *
+ * For inline requests, results are in dest.inlined_responses[]
+ * Reference: https://ai.google.dev/gemini-api/docs/batch-api
  */
 export interface BatchStatusResponse {
   name: string;
@@ -63,29 +90,11 @@ export interface BatchStatusResponse {
     updateTime?: string;
   };
   done?: boolean;
-  response?: {
-    '@type': string;
-    responses: Array<{
-      response?: {
-        candidates?: Array<{
-          content?: {
-            parts?: Array<{
-              text?: string;
-              inlineData?: {
-                mimeType: string;
-                data: string;
-              };
-            }>;
-          };
-          finishReason?: string;
-        }>;
-      };
-      error?: {
-        code: number;
-        message: string;
-      };
-    }>;
+  /** Destination containing inline responses */
+  dest?: {
+    inlined_responses?: InlineResponse[];
   };
+  /** Job-level error (if the entire batch failed) */
   error?: {
     code: number;
     message: string;
@@ -200,12 +209,14 @@ export class GeminiBatchClient {
         {
           batch: {
             model: `models/${MODEL}`,
-            displayName: `dreamforge-batch-${Date.now()}`,
-            inputConfig: {
-              requests: inlineRequests.map((req, idx) => ({
-                request: req,
-                metadata: { key: `view-${idx}` },
-              })),
+            display_name: `dreamforge-batch-${Date.now()}`,
+            input_config: {
+              requests: {
+                requests: inlineRequests.map((req, idx) => ({
+                  request: req,
+                  metadata: { key: `view-${idx}` },
+                })),
+              },
             },
           },
         },
@@ -280,19 +291,28 @@ export class GeminiBatchClient {
 
   /**
    * Parse batch results into individual view results
+   *
+   * For inline requests, results are in dest.inlined_responses[]
    */
   parseResults(
     statusResponse: BatchStatusResponse,
     originalRequests: BatchRequest[]
   ): BatchResult[] {
     const results: BatchResult[] = [];
-    const responses = statusResponse.response?.responses || [];
+    // Use correct path: dest.inlined_responses for inline requests
+    const inlinedResponses = statusResponse.dest?.inlined_responses || [];
+
+    functions.logger.info('Parsing batch results', {
+      hasDest: !!statusResponse.dest,
+      inlinedCount: inlinedResponses.length,
+      requestCount: originalRequests.length,
+    });
 
     for (let i = 0; i < originalRequests.length; i++) {
       const request = originalRequests[i];
-      const response = responses[i];
+      const inlineResponse = inlinedResponses[i];
 
-      if (!response) {
+      if (!inlineResponse) {
         results.push({
           index: i,
           viewType: request.viewType,
@@ -303,20 +323,20 @@ export class GeminiBatchClient {
         continue;
       }
 
-      // Check for error
-      if (response.error) {
+      // Check for error in this specific request
+      if (inlineResponse.error) {
         results.push({
           index: i,
           viewType: request.viewType,
           angle: request.angle,
           success: false,
-          error: `${response.error.code}: ${response.error.message}`,
+          error: `${inlineResponse.error.code}: ${inlineResponse.error.message}`,
         });
         continue;
       }
 
-      // Extract image data
-      const candidate = response.response?.candidates?.[0];
+      // Extract image data from response
+      const candidate = inlineResponse.response?.candidates?.[0];
       const parts = candidate?.content?.parts || [];
       const imagePart = parts.find((p) => p.inlineData?.data);
       const textParts = parts.filter((p) => p.text).map((p) => p.text).join('\n');

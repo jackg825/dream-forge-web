@@ -157,15 +157,18 @@ export class MultiViewGenerator {
   private apiKey: string;
   private modeConfig: ModeConfig;
   private userDescription?: string | null;
+  private preAnalyzedColors?: string[];  // Pre-analyzed colors from image analysis
 
   constructor(
     apiKey: string,
     modeId: GenerationModeId = DEFAULT_MODE,
-    userDescription?: string | null
+    userDescription?: string | null,
+    preAnalyzedColors?: string[]
   ) {
     this.apiKey = apiKey;
     this.modeConfig = getMode(modeId);
     this.userDescription = userDescription;
+    this.preAnalyzedColors = preAnalyzedColors;
   }
 
   /**
@@ -362,10 +365,18 @@ export class MultiViewGenerator {
       meshViews as Record<PipelineMeshAngle, GeneratedViewResult>
     );
 
+    // Use pre-analyzed colors if available, otherwise use aggregated from mesh views
+    // Pre-analyzed colors are user-confirmed and should take priority
+    const colorsForTexture = this.preAnalyzedColors && this.preAnalyzedColors.length > 0
+      ? this.preAnalyzedColors
+      : aggregatedPalette.dominantColors;
+
     functions.logger.info('Mesh views complete, starting texture generation', {
       meshViewCount: meshResults.length,
       dominantColors: aggregatedPalette.dominantColors,
       totalUniqueColors: aggregatedPalette.unified.length,
+      usingPreAnalyzedColors: !!(this.preAnalyzedColors && this.preAnalyzedColors.length > 0),
+      preAnalyzedColorCount: this.preAnalyzedColors?.length || 0,
     });
 
     // Phase 2: Staggered parallel texture view generation (with color hints)
@@ -375,7 +386,7 @@ export class MultiViewGenerator {
         referenceImageBase64,
         mimeType,
         angle,
-        aggregatedPalette.dominantColors,
+        colorsForTexture,
         index * MIN_DELAY_BETWEEN_CALLS_MS  // 0, 500ms
       ).then(async (result) => {
         textureCompleted++;
@@ -692,10 +703,12 @@ export class MultiViewGenerator {
  *
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
  * @param userDescription - Optional user-provided description of the object
+ * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
  */
 export function createMultiViewGenerator(
   modeId: GenerationModeId = DEFAULT_MODE,
-  userDescription?: string | null
+  userDescription?: string | null,
+  preAnalyzedColors?: string[]
 ): MultiViewGenerator {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -706,5 +719,5 @@ export function createMultiViewGenerator(
     );
   }
 
-  return new MultiViewGenerator(apiKey, modeId, userDescription);
+  return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors);
 }

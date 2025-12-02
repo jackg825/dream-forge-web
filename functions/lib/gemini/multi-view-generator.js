@@ -134,10 +134,12 @@ class MultiViewGenerator {
     apiKey;
     modeConfig;
     userDescription;
-    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription) {
+    preAnalyzedColors; // Pre-analyzed colors from image analysis
+    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors) {
         this.apiKey = apiKey;
         this.modeConfig = (0, mode_configs_1.getMode)(modeId);
         this.userDescription = userDescription;
+        this.preAnalyzedColors = preAnalyzedColors;
     }
     /**
      * Get the current mode configuration
@@ -277,14 +279,21 @@ class MultiViewGenerator {
         }
         // Aggregate color palettes from all mesh views
         const aggregatedPalette = this.aggregateColorPalettes(meshViews);
+        // Use pre-analyzed colors if available, otherwise use aggregated from mesh views
+        // Pre-analyzed colors are user-confirmed and should take priority
+        const colorsForTexture = this.preAnalyzedColors && this.preAnalyzedColors.length > 0
+            ? this.preAnalyzedColors
+            : aggregatedPalette.dominantColors;
         functions.logger.info('Mesh views complete, starting texture generation', {
             meshViewCount: meshResults.length,
             dominantColors: aggregatedPalette.dominantColors,
             totalUniqueColors: aggregatedPalette.unified.length,
+            usingPreAnalyzedColors: !!(this.preAnalyzedColors && this.preAnalyzedColors.length > 0),
+            preAnalyzedColorCount: this.preAnalyzedColors?.length || 0,
         });
         // Phase 2: Staggered parallel texture view generation (with color hints)
         let textureCompleted = 0;
-        const texturePromises = textureAngles.map((angle, index) => this.generateTextureViewWithColorHints(referenceImageBase64, mimeType, angle, aggregatedPalette.dominantColors, index * MIN_DELAY_BETWEEN_CALLS_MS // 0, 500ms
+        const texturePromises = textureAngles.map((angle, index) => this.generateTextureViewWithColorHints(referenceImageBase64, mimeType, angle, colorsForTexture, index * MIN_DELAY_BETWEEN_CALLS_MS // 0, 500ms
         ).then(async (result) => {
             textureCompleted++;
             if (onProgress) {
@@ -482,12 +491,13 @@ exports.MultiViewGenerator = MultiViewGenerator;
  *
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
  * @param userDescription - Optional user-provided description of the object
+ * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
  */
-function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription) {
+function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new functions.https.HttpsError('failed-precondition', 'Gemini API key not configured');
     }
-    return new MultiViewGenerator(apiKey, modeId, userDescription);
+    return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors);
 }
 //# sourceMappingURL=multi-view-generator.js.map

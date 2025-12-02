@@ -34,11 +34,13 @@ import { PipelineUploader } from './PipelineUploader';
 import { ModeSelector } from './ModeSelector';
 import { ProcessingModeSelector } from './ProcessingModeSelector';
 import { PrecisionSelector } from './PrecisionSelector';
-import { BatchProgressIndicator } from './BatchProgressIndicator';
 import { PreviousOutputs } from './PreviousOutputs';
 import { RegenerateDialog } from './RegenerateDialog';
 import { PipelineErrorState } from './PipelineErrorState';
 import { PipelineProgressBar } from './PipelineProgressBar';
+import { UnifiedProgressIndicator } from './UnifiedProgressIndicator';
+import { ImageAnalysisPanel } from './ImageAnalysisPanel';
+import { useImageAnalysis } from '@/hooks/useImageAnalysis';
 import type {
   PipelineMeshAngle,
   PipelineTextureAngle,
@@ -60,6 +62,8 @@ interface PipelineFlowProps {
 // Map pipeline status to step
 const getStepFromStatus = (status: string | undefined, hasId: boolean): number => {
   if (!hasId) return 1;
+  // Show step 2 immediately when pipelineId exists (including draft status during submission)
+  if (status === 'draft') return 2;
   if (status === 'batch-queued' || status === 'batch-processing' || status === 'generating-images') return 2;
   if (status === 'images-ready') return 2;
   if (status === 'generating-mesh' || status === 'mesh-ready' || status === 'generating-texture') return 3;
@@ -114,6 +118,22 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [processingMode, setProcessingMode] = useState<ProcessingMode>(DEFAULT_PROCESSING_MODE);
   const [meshPrecision, setMeshPrecision] = useState<MeshPrecision>(DEFAULT_MESH_PRECISION);
   const [userDescription, setUserDescription] = useState<string>('');
+  const [colorCount, setColorCount] = useState<number>(7);
+
+  // Image analysis hook
+  const {
+    analysis: imageAnalysis,
+    loading: analysisLoading,
+    error: analysisError,
+    analyzeImage,
+    updateDescription,
+    updateColors,
+    addColor,
+    removeColor,
+    updateColor,
+    reset: resetAnalysis,
+    hasEdits: analysisHasEdits,
+  } = useImageAnalysis();
 
   // 3D Viewer state - mesh preview (Step 5)
   const meshViewerRef = useRef<ModelViewerRef>(null);
@@ -194,6 +214,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   }, [pipeline?.status, checkStatus]);
 
   // Handle image upload and pipeline creation
+  // Uses fire-and-forget pattern: release UI immediately after createPipeline,
+  // let Firestore subscription handle updates from submitBatch/generateImages
   const handleStartPipeline = async () => {
     if (!user) {
       router.push('/auth');
@@ -206,31 +228,43 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
     setActionLoading(true);
     try {
-      // Create pipeline with image URLs, generation mode, processing mode, and optional description
+      // Create pipeline with image URLs, generation mode, processing mode, description, and analysis
       const imageUrls = uploadedImages.map((img) => img.url);
+      // Use analysis description if available, otherwise use manual input
+      const finalDescription = imageAnalysis?.description || userDescription.trim() || undefined;
       const newPipelineId = await createPipeline(
         imageUrls,
-        { meshPrecision },  // Pass mesh precision in settings
+        { meshPrecision, colorCount },  // Pass mesh precision and color count in settings
         generationMode,
         processingMode,
-        userDescription.trim() || undefined
+        finalDescription,
+        imageAnalysis || undefined  // Pass full analysis if available
       );
       setPipelineId(newPipelineId);
 
       // Update URL with pipeline ID
       router.push(`?id=${newPipelineId}`, { scroll: false });
 
-      // Start image generation based on processing mode
+      // Release button immediately - Firestore subscription handles updates
+      setActionLoading(false);
+
+      // Fire-and-forget: Start image generation based on processing mode
+      // UI updates automatically via Firestore onSnapshot subscription in usePipeline
       if (processingMode === 'batch') {
         // Batch mode: submit to Gemini Batch API for async processing
-        await submitBatch(newPipelineId);
+        submitBatch(newPipelineId).catch((err) => {
+          console.error('Batch submission failed:', err);
+          // Error state will be reflected via Firestore status update to 'failed'
+        });
       } else {
         // Realtime mode: generate images immediately
-        await generateImages(newPipelineId);
+        generateImages(newPipelineId).catch((err) => {
+          console.error('Image generation failed:', err);
+          // Error state will be reflected via Firestore status update to 'failed'
+        });
       }
     } catch (err) {
-      console.error('Failed to start pipeline:', err);
-    } finally {
+      console.error('Failed to create pipeline:', err);
       setActionLoading(false);
     }
   };
@@ -321,26 +355,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             disabled={actionLoading}
           />
 
-          {/* User description input - optional */}
-          <div className="space-y-2">
-            <Label htmlFor="user-description" className="text-sm font-medium">
-              物件描述（可選）
-            </Label>
-            <Textarea
-              id="user-description"
-              placeholder="描述物件的特徵，幫助 AI 更準確地生成多角度視圖。例如：「藍色貓咪玩偶，有大眼睛、長尾巴和粉色蝴蝶結」"
-              value={userDescription}
-              onChange={(e) => setUserDescription(e.target.value)}
-              maxLength={300}
-              disabled={actionLoading}
-              className="resize-none"
-              rows={3}
-            />
-            <p className="text-xs text-muted-foreground text-right">
-              {userDescription.length}/300 字元
-            </p>
-          </div>
-
           <PipelineUploader
             userId={user.uid}
             images={uploadedImages}
@@ -348,6 +362,33 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             maxImages={4}
             disabled={actionLoading}
           />
+
+          {/* Image Analysis Panel - shows after images uploaded */}
+          {uploadedImages.length > 0 && (
+            <ImageAnalysisPanel
+              analysis={imageAnalysis}
+              loading={analysisLoading}
+              error={analysisError}
+              colorCount={colorCount}
+              onColorCountChange={setColorCount}
+              onDescriptionChange={(desc) => {
+                updateDescription(desc);
+                setUserDescription(desc);
+              }}
+              onColorsChange={updateColors}
+              onColorAdd={addColor}
+              onColorRemove={removeColor}
+              onColorUpdate={updateColor}
+              onAnalyze={() => {
+                if (uploadedImages.length > 0) {
+                  analyzeImage(uploadedImages[0].url, colorCount, 'fdm');
+                }
+              }}
+              onReset={resetAnalysis}
+              hasEdits={analysisHasEdits}
+              disabled={actionLoading}
+            />
+          )}
 
           <div className="flex justify-center">
             <Button
@@ -384,7 +425,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 2: Processing - shows batch or realtime progress with visual grid
+  // Step 2: Processing - shows batch or realtime progress
+  // Uses UnifiedProgressIndicator for consistent UX across all processing states
   const renderProcessingStep = () => {
     const isBatch = pipeline?.processingMode === 'batch' || isBatchProcessing;
     const progress = pipeline?.generationProgress;
@@ -394,10 +436,31 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const textureCompleted = progress?.textureViewsCompleted ?? 0;
     const phase = progress?.phase ?? 'mesh-views';
 
-    // View labels for display
+    // View labels for display (used in realtime mode grid)
     const meshLabels = ['正面', '背面', '左側', '右側'];
     const textureLabels = ['正面', '背面'];
 
+    // For submitting (draft) and batch modes, use the unified indicator
+    if (pipeline?.status === 'draft' || isBatch) {
+      return (
+        <div className="py-16">
+          <UnifiedProgressIndicator
+            status={pipeline?.status || 'batch-queued'}
+            processingMode={pipeline?.processingMode || 'batch'}
+            progress={{
+              meshViewsCompleted: meshCompleted,
+              textureViewsCompleted: textureCompleted,
+              phase,
+              batchProgress: pipeline?.batchProgress,
+            }}
+            estimatedCompletionTime={pipeline?.estimatedCompletionTime}
+            onViewHistory={() => router.push('/dashboard/history')}
+          />
+        </div>
+      );
+    }
+
+    // Realtime mode: show detailed visual grid for granular progress
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <div className="relative">
@@ -408,120 +471,94 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         </div>
         <p className="text-lg font-medium mt-6">正在生成視角圖片</p>
         <p className="text-sm text-muted-foreground mt-2">
-          {isBatch
-            ? 'AI 正在批次處理您的圖片，您可以離開此頁面稍後回來'
-            : phase === 'mesh-views'
-              ? `正在生成網格用圖片 (${meshCompleted}/4)...`
-              : phase === 'texture-views'
-                ? `正在生成貼圖用圖片 (${textureCompleted}/2)...`
-                : 'AI 正在分析您的圖片並生成多角度視圖'}
+          {phase === 'mesh-views'
+            ? `正在生成網格用圖片 (${meshCompleted}/4)...`
+            : phase === 'texture-views'
+              ? `正在生成貼圖用圖片 (${textureCompleted}/2)...`
+              : 'AI 正在分析您的圖片並生成多角度視圖'}
         </p>
 
         {/* Visual progress grid - 6 boxes: 4 green (mesh) + 2 blue (texture) */}
-        {!isBatch && (
-          <div className="w-full max-w-lg mt-8">
-            {/* Mesh views - green theme */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Box className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">網格視圖</span>
-                <span className="text-xs text-muted-foreground">({meshCompleted}/4)</span>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {meshLabels.map((label, index) => {
-                  const isCompleted = index < meshCompleted;
-                  const isProcessing = index === meshCompleted && phase === 'mesh-views';
-                  return (
-                    <div
-                      key={`mesh-${index}`}
-                      className={`
-                        aspect-square rounded-lg border-2 flex flex-col items-center justify-center
-                        transition-all duration-300
-                        ${isCompleted
-                          ? 'border-green-500 bg-green-500/10'
-                          : isProcessing
-                            ? 'border-green-500/50 bg-green-500/5 animate-pulse'
-                            : 'border-border bg-muted/30'}
-                      `}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle className="h-6 w-6 text-green-500" />
-                      ) : isProcessing ? (
-                        <Loader2 className="h-5 w-5 text-green-500 animate-spin" />
-                      ) : (
-                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
-                      )}
-                      <span className="text-xs text-muted-foreground mt-1">{label}</span>
-                    </div>
-                  );
-                })}
-              </div>
+        <div className="w-full max-w-lg mt-8">
+          {/* Mesh views - green theme */}
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Box className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium">網格視圖</span>
+              <span className="text-xs text-muted-foreground">({meshCompleted}/4)</span>
             </div>
-
-            {/* Texture views - blue theme */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Palette className="h-4 w-4 text-blue-500" />
-                <span className="text-sm font-medium">貼圖視圖</span>
-                <span className="text-xs text-muted-foreground">({textureCompleted}/2)</span>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {textureLabels.map((label, index) => {
-                  const isCompleted = index < textureCompleted;
-                  const isProcessing = index === textureCompleted && phase === 'texture-views';
-                  return (
-                    <div
-                      key={`texture-${index}`}
-                      className={`
-                        aspect-square rounded-lg border-2 flex flex-col items-center justify-center
-                        transition-all duration-300
-                        ${isCompleted
-                          ? 'border-blue-500 bg-blue-500/10'
-                          : isProcessing
-                            ? 'border-blue-500/50 bg-blue-500/5 animate-pulse'
-                            : 'border-border bg-muted/30'}
-                      `}
-                    >
-                      {isCompleted ? (
-                        <CheckCircle className="h-6 w-6 text-blue-500" />
-                      ) : isProcessing ? (
-                        <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                      ) : (
-                        <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
-                      )}
-                      <span className="text-xs text-muted-foreground mt-1">{label}</span>
-                    </div>
-                  );
-                })}
-                {/* Empty slots to maintain grid alignment */}
-                <div className="aspect-square" />
-                <div className="aspect-square" />
-              </div>
+            <div className="grid grid-cols-4 gap-2">
+              {meshLabels.map((label, index) => {
+                const isCompleted = index < meshCompleted;
+                const isProcessingView = index === meshCompleted && phase === 'mesh-views';
+                return (
+                  <div
+                    key={`mesh-${index}`}
+                    className={`
+                      aspect-square rounded-lg border-2 flex flex-col items-center justify-center
+                      transition-all duration-300
+                      ${isCompleted
+                        ? 'border-green-500 bg-green-500/10'
+                        : isProcessingView
+                          ? 'border-green-500/50 bg-green-500/5 animate-pulse'
+                          : 'border-border bg-muted/30'}
+                    `}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle className="h-6 w-6 text-green-500" />
+                    ) : isProcessingView ? (
+                      <Loader2 className="h-5 w-5 text-green-500 animate-spin" />
+                    ) : (
+                      <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
+                    )}
+                    <span className="text-xs text-muted-foreground mt-1">{label}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        )}
 
-        {/* Show batch progress indicator for batch mode */}
-        {isBatch && pipeline && (
-          <div className="w-full max-w-md mt-6">
-            <BatchProgressIndicator
-              status={pipeline.status}
-              progress={pipeline.batchProgress}
-              estimatedCompletionTime={pipeline.estimatedCompletionTime}
-            />
+          {/* Texture views - blue theme */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Palette className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-medium">貼圖視圖</span>
+              <span className="text-xs text-muted-foreground">({textureCompleted}/2)</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {textureLabels.map((label, index) => {
+                const isCompleted = index < textureCompleted;
+                const isProcessingView = index === textureCompleted && phase === 'texture-views';
+                return (
+                  <div
+                    key={`texture-${index}`}
+                    className={`
+                      aspect-square rounded-lg border-2 flex flex-col items-center justify-center
+                      transition-all duration-300
+                      ${isCompleted
+                        ? 'border-blue-500 bg-blue-500/10'
+                        : isProcessingView
+                          ? 'border-blue-500/50 bg-blue-500/5 animate-pulse'
+                          : 'border-border bg-muted/30'}
+                    `}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle className="h-6 w-6 text-blue-500" />
+                    ) : isProcessingView ? (
+                      <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+                    ) : (
+                      <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
+                    )}
+                    <span className="text-xs text-muted-foreground mt-1">{label}</span>
+                  </div>
+                );
+              })}
+              {/* Empty slots to maintain grid alignment */}
+              <div className="aspect-square" />
+              <div className="aspect-square" />
+            </div>
           </div>
-        )}
-
-        {/* Show link to history for batch mode */}
-        {isBatch && (
-          <Button
-            variant="outline"
-            className="mt-6"
-            onClick={() => router.push('/dashboard/history')}
-          >
-            前往歷史記錄查看
-          </Button>
-        )}
+        </div>
       </div>
     );
   };
@@ -637,21 +674,15 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   };
 
   // Step 4: Mesh generation - with previous outputs sidebar
+  // Uses UnifiedProgressIndicator for consistent progress display
   const renderMeshGeneratingStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Main content - loading indicator */}
-      <div className="lg:col-span-2 flex flex-col items-center justify-center py-16">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-          <div className="relative bg-primary/10 p-6 rounded-full">
-            <Box className="h-10 w-10 text-primary animate-pulse" />
-          </div>
-        </div>
-        <p className="text-lg font-medium mt-6">正在生成 3D 網格</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Meshy AI 正在將您的圖片轉換為 3D 模型，約需 2-5 分鐘
-        </p>
-        <Progress className="w-full max-w-xs mt-6" value={50} />
+      {/* Main content - unified progress indicator */}
+      <div className="lg:col-span-2 py-16">
+        <UnifiedProgressIndicator
+          status="generating-mesh"
+          processingMode={pipeline?.processingMode || 'batch'}
+        />
       </div>
 
       {/* Sidebar - previous outputs */}
@@ -808,21 +839,15 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   );
 
   // Step 6: Texture generation - with previous outputs sidebar
+  // Uses UnifiedProgressIndicator for consistent progress display
   const renderTextureGeneratingStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Main content - loading indicator */}
-      <div className="lg:col-span-2 flex flex-col items-center justify-center py-16">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-          <div className="relative bg-primary/10 p-6 rounded-full">
-            <Palette className="h-10 w-10 text-primary animate-pulse" />
-          </div>
-        </div>
-        <p className="text-lg font-medium mt-6">正在生成貼圖</p>
-        <p className="text-sm text-muted-foreground mt-2">
-          正在為您的 3D 模型添加精美貼圖，約需 2-5 分鐘
-        </p>
-        <Progress className="w-full max-w-xs mt-6" value={50} />
+      {/* Main content - unified progress indicator */}
+      <div className="lg:col-span-2 py-16">
+        <UnifiedProgressIndicator
+          status="generating-texture"
+          processingMode={pipeline?.processingMode || 'batch'}
+        />
       </div>
 
       {/* Sidebar - previous outputs (images + mesh) */}
@@ -1037,10 +1062,11 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     );
   }
 
-  // Check if currently processing
+  // Check if currently processing (includes draft when pipelineId exists for submitting state)
   const isProcessing = pipeline?.status?.includes('generating') ||
     pipeline?.status === 'batch-queued' ||
-    pipeline?.status === 'batch-processing';
+    pipeline?.status === 'batch-processing' ||
+    (!!pipelineId && pipeline?.status === 'draft');
 
   return (
     <div className="space-y-6">
@@ -1066,7 +1092,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         />
       ) : !pipelineId ? (
         renderUploadStep()
-      ) : pipeline?.status === 'batch-queued' || pipeline?.status === 'batch-processing' || pipeline?.status === 'generating-images' ? (
+      ) : pipeline?.status === 'draft' || pipeline?.status === 'batch-queued' || pipeline?.status === 'batch-processing' || pipeline?.status === 'generating-images' ? (
         renderProcessingStep()
       ) : pipeline?.status === 'images-ready' ? (
         renderImagePreviewStep()

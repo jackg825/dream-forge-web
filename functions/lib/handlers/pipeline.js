@@ -124,7 +124,7 @@ exports.createPipeline = functions
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to create a pipeline');
     }
     const userId = context.auth.uid;
-    const { imageUrls, settings, generationMode, userDescription } = data;
+    const { imageUrls, settings, generationMode, userDescription, imageAnalysis } = data;
     if (!imageUrls || imageUrls.length === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'At least one image URL is required');
     }
@@ -157,8 +157,10 @@ exports.createPipeline = functions
             printerType: settings?.printerType || 'fdm',
             format: settings?.format || 'glb',
             generationMode: modeId,
+            colorCount: settings?.colorCount,
         },
         userDescription: userDescription || null,
+        imageAnalysis: imageAnalysis || undefined,
         createdAt: now,
         updatedAt: now,
     };
@@ -169,6 +171,8 @@ exports.createPipeline = functions
         imageCount: imageUrls.length,
         generationMode: modeId,
         hasUserDescription: !!userDescription,
+        hasImageAnalysis: !!imageAnalysis,
+        analysisColorCount: imageAnalysis?.colorPalette?.length,
     });
     return {
         pipelineId,
@@ -282,8 +286,10 @@ exports.generatePipelineImages = functions
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate all 6 views using the pipeline's generation mode and user description
         // Uses staggered parallel execution for better performance (~18s vs ~50s)
+        // If imageAnalysis exists, use its color palette for consistency
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription);
+        const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors);
         // Create progress callback to update Firestore in real-time
         const onProgress = async (type, angle, completed, total) => {
             const progress = type === 'mesh'
@@ -860,10 +866,20 @@ exports.startPipelineTexture = functions
     try {
         // Use front texture image as style reference
         const styleImageUrl = pipeline.textureImages.front.url;
+        // Build texture prompt from image analysis (if available)
+        // This enhances Meshy's texture generation with material context
+        let textStylePrompt;
+        if (pipeline.imageAnalysis) {
+            const materials = pipeline.imageAnalysis.detectedMaterials.join(', ');
+            textStylePrompt = pipeline.userDescription
+                ? `${pipeline.userDescription}. Materials: ${materials}`
+                : `Materials: ${materials}`;
+        }
         // Create retexture task
         const retextureClient = (0, retexture_1.createMeshyRetextureClient)();
         const taskId = await retextureClient.createFromMeshTask(pipeline.meshyMeshTaskId, {
             imageStyleUrl: styleImageUrl,
+            textStylePrompt, // Enhanced with image analysis
             enablePBR: pipeline.settings.printerType !== 'fdm', // PBR for SLA/resin
         });
         // Update pipeline

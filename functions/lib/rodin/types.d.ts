@@ -213,6 +213,7 @@ export interface PipelineSettings {
     format: OutputFormat;
     generationMode?: GenerationModeId;
     meshPrecision?: MeshPrecision;
+    colorCount?: number;
 }
 /**
  * Pipeline document for new simplified 3D generation workflow
@@ -270,6 +271,7 @@ export interface PipelineDocument {
     };
     settings: PipelineSettings;
     userDescription?: string | null;
+    imageAnalysis?: ImageAnalysisResult;
     error?: string;
     errorStep?: PipelineStatus;
     createdAt: FirebaseFirestore.Timestamp;
@@ -326,4 +328,26 @@ export interface GeminiBatchJobDocument {
     failedRequestCount: number;
     retryCount: number;
     maxRetries: number;
+}
+/**
+ * 3D Print friendliness assessment from Gemini analysis
+ */
+export interface PrintFriendlinessAssessment {
+    score: number;
+    colorSuggestions: string[];
+    structuralConcerns: string[];
+    materialRecommendations: string[];
+    orientationTips: string[];
+}
+/**
+ * Image analysis result from Gemini
+ * Used to optimize view generation and Meshy texture prompts
+ */
+export interface ImageAnalysisResult {
+    description: string;
+    colorPalette: string[];
+    detectedMaterials: string[];
+    objectType: string;
+    printFriendliness: PrintFriendlinessAssessment;
+    analyzedAt: FirebaseFirestore.Timestamp;
 }

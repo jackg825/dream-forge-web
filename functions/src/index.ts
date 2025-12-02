@@ -59,3 +59,6 @@ export {
   submitGeminiBatch,
   pollGeminiBatchJobs,
 } from './handlers/gemini-batch';
+
+// Image analysis (pre-upload Gemini analysis)
+export { analyzeUploadedImage } from './handlers/analyze';
