@@ -40,6 +40,7 @@ import { PipelineErrorState } from './PipelineErrorState';
 import { PipelineProgressBar } from './PipelineProgressBar';
 import { UnifiedProgressIndicator } from './UnifiedProgressIndicator';
 import { ImageAnalysisPanel } from './ImageAnalysisPanel';
+import { MultiViewGrid } from './MultiViewGrid';
 import { useImageAnalysis } from '@/hooks/useImageAnalysis';
 import type {
   PipelineMeshAngle,
@@ -59,16 +60,29 @@ interface PipelineFlowProps {
   onNoCredits: () => void;
 }
 
-// Map pipeline status to step
+// Map pipeline status to step (new 4-step flow)
+// Step 1: 準備圖片 (draft → images-ready)
+// Step 2: 生成網格 (generating-mesh → mesh-ready)
+// Step 3: 生成貼圖 (generating-texture → completed)
+// Step 4: 打印配送 (Coming Soon - no status maps here)
 const getStepFromStatus = (status: string | undefined, hasId: boolean): number => {
   if (!hasId) return 1;
-  // Draft stays on step 1 - user can preview analysis and click "Start Generation"
-  if (status === 'draft') return 1;
-  if (status === 'batch-queued' || status === 'batch-processing' || status === 'generating-images') return 2;
-  if (status === 'images-ready') return 2;
-  if (status === 'generating-mesh' || status === 'mesh-ready' || status === 'generating-texture') return 3;
-  if (status === 'completed') return 4;
-  return 1;
+  switch (status) {
+    case 'draft':
+    case 'generating-images':
+    case 'batch-queued':
+    case 'batch-processing':
+    case 'images-ready':
+      return 1; // 準備多視角圖片
+    case 'generating-mesh':
+    case 'mesh-ready':
+      return 2; // 生成 3D 網格
+    case 'generating-texture':
+    case 'completed':
+      return 3; // 生成貼圖 (completed 也停在 step 3，顯示 step 4 Coming Soon)
+    default:
+      return 1;
+  }
 };
 
 // Loading fallback for Suspense
@@ -490,7 +504,278 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 2: Processing - shows batch or realtime progress
+  // Step 1b: Draft with analysis - preview analysis results and multi-view grid
+  // User can edit description/colors, view/upload multi-view images, then proceed
+  const renderDraftWithAnalysis = () => {
+    const hasAllMeshImages = pipeline?.meshImages &&
+      Object.keys(pipeline.meshImages).length === 4;
+    const hasAllTextureImages = pipeline?.textureImages &&
+      Object.keys(pipeline.textureImages).length === 2;
+    const hasAllImages = hasAllMeshImages && hasAllTextureImages;
+
+    // Check if any multi-view images exist
+    const hasSomeImages = (pipeline?.meshImages && Object.keys(pipeline.meshImages).length > 0) ||
+      (pipeline?.textureImages && Object.keys(pipeline.textureImages).length > 0);
+
+    return (
+      <div className="space-y-6">
+        {/* Reference image preview */}
+        {pipeline?.inputImages && pipeline.inputImages.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">參考圖片</h3>
+            <div className="flex gap-3">
+              {pipeline.inputImages.map((img, idx) => (
+                <div key={idx} className="w-24 h-24 rounded-lg overflow-hidden bg-black">
+                  <img
+                    src={img.url}
+                    alt={`Reference ${idx + 1}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Image Analysis Panel - editable */}
+        <ImageAnalysisPanel
+          analysis={imageAnalysis}
+          loading={analysisLoading}
+          error={analysisError}
+          colorCount={colorCount}
+          onColorCountChange={setColorCount}
+          onDescriptionChange={(desc) => {
+            updateDescription(desc);
+            setUserDescription(desc);
+          }}
+          onColorsChange={updateColors}
+          onColorAdd={addColor}
+          onColorRemove={removeColor}
+          onColorUpdate={updateColor}
+          onAnalyze={handleAnalyze}
+          onReset={resetAnalysis}
+          hasEdits={analysisHasEdits}
+          disabled={actionLoading}
+        />
+
+        {/* Multi-view grid (if images exist) */}
+        {hasSomeImages && (
+          <MultiViewGrid
+            meshImages={pipeline?.meshImages || {}}
+            textureImages={pipeline?.textureImages || {}}
+            isGenerating={false}
+            onUploadView={(viewType, angle, file) => {
+              // TODO: Implement view upload
+              console.log('Upload view:', viewType, angle, file);
+            }}
+            onRegenerateView={(viewType, angle) => openRegenerateDialog(viewType, angle)}
+            disabled={actionLoading}
+          />
+        )}
+
+        {/* Action buttons */}
+        <div className="flex justify-center gap-4 pt-4">
+          {!hasSomeImages ? (
+            // No multi-view images yet - show "Generate views" button
+            <Button
+              size="lg"
+              onClick={handleStartPipeline}
+              disabled={actionLoading}
+              className="px-8"
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  處理中...
+                </>
+              ) : (
+                <>
+                  <Images className="mr-2 h-4 w-4" />
+                  生成多視角圖片
+                </>
+              )}
+            </Button>
+          ) : hasAllImages ? (
+            // All 6 images ready - proceed to mesh generation
+            <Button
+              size="lg"
+              onClick={handleStartMesh}
+              disabled={actionLoading}
+              className="px-8"
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  處理中...
+                </>
+              ) : (
+                <>
+                  <Box className="mr-2 h-4 w-4" />
+                  下一步: 生成 3D 網格 ({MESH_COST} 點)
+                </>
+              )}
+            </Button>
+          ) : (
+            // Some images exist but not all - show both options
+            <>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleStartPipeline}
+                disabled={actionLoading}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                重新生成全部視角
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleStartMesh}
+                disabled={actionLoading || !hasAllMeshImages}
+                className="px-8"
+              >
+                <Box className="mr-2 h-4 w-4" />
+                下一步: 生成 3D 網格 ({MESH_COST} 點)
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Step 1c: Images ready - preview all 6 views, can replace individual, then proceed to mesh
+  const renderImagesReadyStep = () => {
+    const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
+    const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
+
+    // Get mode info for display
+    const currentMode = pipeline?.generationMode || generationMode;
+    const modeInfo = GENERATION_MODE_OPTIONS[currentMode];
+
+    return (
+      <div className="space-y-6">
+        {/* Reference images - collapsed */}
+        {pipeline?.inputImages && pipeline.inputImages.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium text-muted-foreground">參考圖片</h3>
+            <div className="flex gap-2">
+              {pipeline.inputImages.map((img, idx) => (
+                <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden bg-black">
+                  <img
+                    src={img.url}
+                    alt={`Reference ${idx + 1}`}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Multi-view grid with replace functionality */}
+        <div className="space-y-8">
+          {/* Mesh images */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-medium">網格用圖片</h4>
+              <Badge variant="outline" className="text-xs">{modeInfo?.meshStyle || '7色優化'}</Badge>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {meshAngles.map((angle) => {
+                const image = pipeline?.meshImages[angle];
+                return (
+                  <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
+                    {image ? (
+                      <img
+                        src={image.url}
+                        alt={`${angle} view`}
+                        className="w-full aspect-square object-cover"
+                      />
+                    ) : (
+                      <Skeleton className="w-full aspect-square" />
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openRegenerateDialog('mesh', angle)}
+                        disabled={actionLoading || regenerateLoading}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                        重新生成
+                      </Button>
+                    </div>
+                    <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
+                      {angle === 'front' ? '正面' : angle === 'back' ? '背面' : angle === 'left' ? '左側' : '右側'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Texture images */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-medium">貼圖用圖片</h4>
+              <Badge variant="outline" className="text-xs">{modeInfo?.textureStyle || '全彩'}</Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-3 max-w-sm">
+              {textureAngles.map((angle) => {
+                const image = pipeline?.textureImages[angle];
+                return (
+                  <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
+                    {image ? (
+                      <img
+                        src={image.url}
+                        alt={`${angle} texture view`}
+                        className="w-full aspect-square object-cover"
+                      />
+                    ) : (
+                      <Skeleton className="w-full aspect-square" />
+                    )}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => openRegenerateDialog('texture', angle)}
+                        disabled={actionLoading || regenerateLoading}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                        重新生成
+                      </Button>
+                    </div>
+                    <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
+                      {angle === 'front' ? '正面' : '背面'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Action button - proceed to mesh generation */}
+        <div className="flex justify-center pt-4">
+          <Button size="lg" onClick={handleStartMesh} disabled={actionLoading} className="px-8">
+            {actionLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                處理中...
+              </>
+            ) : (
+              <>
+                <Box className="mr-2 h-4 w-4" />
+                下一步: 生成 3D 網格 ({MESH_COST} 點)
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Step 2: Processing - shows batch or realtime progress (image generation)
   // Uses UnifiedProgressIndicator for consistent UX across all processing states
   const renderProcessingStep = () => {
     const isBatch = pipeline?.processingMode === 'batch' || isBatchProcessing;
@@ -628,117 +913,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     );
   };
 
-  // Step 3: Image Preview - cleaner grid layout
-  const renderImagePreviewStep = () => {
-    const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
-    const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
-
-    // Get mode info for display
-    const currentMode = pipeline?.generationMode || generationMode;
-    const modeInfo = GENERATION_MODE_OPTIONS[currentMode];
-
-    return (
-      <div className="space-y-8">
-        {/* Mesh images */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-medium">網格用圖片</h4>
-            <Badge variant="outline" className="text-xs">{modeInfo?.meshStyle || '7色優化'}</Badge>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {meshAngles.map((angle) => {
-              const image = pipeline?.meshImages[angle];
-              return (
-                <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
-                  {image ? (
-                    <img
-                      src={image.url}
-                      alt={`${angle} view`}
-                      className="w-full aspect-square object-cover"
-                    />
-                  ) : (
-                    <Skeleton className="w-full aspect-square" />
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => openRegenerateDialog('mesh', angle)}
-                      disabled={actionLoading || regenerateLoading}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-1" />
-                      重新生成
-                    </Button>
-                  </div>
-                  <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
-                    {angle === 'front' ? '正面' : angle === 'back' ? '背面' : angle === 'left' ? '左側' : '右側'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Texture images */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-medium">貼圖用圖片</h4>
-            <Badge variant="outline" className="text-xs">{modeInfo?.textureStyle || '全彩'}</Badge>
-          </div>
-          <div className="grid grid-cols-2 gap-3 max-w-sm">
-            {textureAngles.map((angle) => {
-              const image = pipeline?.textureImages[angle];
-              return (
-                <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
-                  {image ? (
-                    <img
-                      src={image.url}
-                      alt={`${angle} texture view`}
-                      className="w-full aspect-square object-cover"
-                    />
-                  ) : (
-                    <Skeleton className="w-full aspect-square" />
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => openRegenerateDialog('texture', angle)}
-                      disabled={actionLoading || regenerateLoading}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-1" />
-                      重新生成
-                    </Button>
-                  </div>
-                  <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
-                    {angle === 'front' ? '正面' : '背面'}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex justify-center pt-4">
-          <Button size="lg" onClick={handleStartMesh} disabled={actionLoading} className="px-8">
-            {actionLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                處理中...
-              </>
-            ) : (
-              <>
-                <Box className="mr-2 h-4 w-4" />
-                生成 3D 網格 ({MESH_COST} 點)
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Step 4: Mesh generation - with previous outputs sidebar
+  // Step 2: Mesh generation - with previous outputs sidebar
   // Uses UnifiedProgressIndicator for consistent progress display
   const renderMeshGeneratingStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -803,7 +978,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   };
 
-  // Step 5: Mesh preview - with 3D viewer and sidebar
+  // Step 2 complete: Mesh preview - user can add texture or finish with mesh only
   const renderMeshPreviewStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Main content - 3D viewer */}
@@ -903,7 +1078,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 6: Texture generation - with previous outputs sidebar
+  // Step 3: Texture generation in progress
   // Uses UnifiedProgressIndicator for consistent progress display
   const renderTextureGeneratingStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -924,7 +1099,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     </div>
   );
 
-  // Step 7: Complete - with 3D viewer and sidebar
+  // Step 3 complete: Show completed model + Step 4 Coming Soon
+  // User stays on Step 3, with Step 4 (Print & Delivery) shown as Coming Soon
   const renderCompleteStep = () => {
     const modelUrl = pipeline?.texturedModelUrl || pipeline?.meshUrl;
     const hasTexture = !!pipeline?.texturedModelUrl;
@@ -1002,11 +1178,20 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         {pipeline && (
           <div className="lg:col-span-1">
             <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={true}>
-              {/* Print service coming soon */}
-              <div className="bg-muted/30 rounded-xl p-4 text-center border border-border/50">
-                <Printer className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-                <h4 className="text-sm font-medium">3D 列印服務即將推出</h4>
-                <p className="text-xs text-muted-foreground mt-1">
+              {/* Step 4: Print & Delivery - Coming Soon */}
+              <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-primary/10 p-1.5 rounded-full">
+                    <Printer className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium">步驟 4: 打印配送</h4>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5">
+                      Coming Soon
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
                   很快你就可以直接訂購 3D 列印成品並寄送到府
                 </p>
               </div>
@@ -1127,11 +1312,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     );
   }
 
-  // Check if currently processing (includes draft when pipelineId exists for submitting state)
+  // Check if currently processing (image generation in progress)
+  // Draft with analysis is NOT processing - user is previewing
+  const isDraftWithAnalysis = pipeline?.status === 'draft' && pipeline?.imageAnalysis;
   const isProcessing = pipeline?.status?.includes('generating') ||
     pipeline?.status === 'batch-queued' ||
-    pipeline?.status === 'batch-processing' ||
-    (!!pipelineId && pipeline?.status === 'draft');
+    pipeline?.status === 'batch-processing';
 
   return (
     <div className="space-y-6">
@@ -1156,18 +1342,28 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           isRetrying={actionLoading}
         />
       ) : !pipelineId ? (
+        // No pipeline yet - initial upload
         renderUploadStep()
-      ) : pipeline?.status === 'draft' || pipeline?.status === 'batch-queued' || pipeline?.status === 'batch-processing' || pipeline?.status === 'generating-images' ? (
+      ) : isDraftWithAnalysis ? (
+        // Draft with analysis - show analysis preview, let user edit and proceed
+        renderDraftWithAnalysis()
+      ) : pipeline?.status === 'batch-queued' || pipeline?.status === 'batch-processing' || pipeline?.status === 'generating-images' ? (
+        // Image generation in progress
         renderProcessingStep()
       ) : pipeline?.status === 'images-ready' ? (
-        renderImagePreviewStep()
+        // All 6 images ready - preview and proceed to mesh (Step 1 complete)
+        renderImagesReadyStep()
       ) : pipeline?.status === 'generating-mesh' ? (
+        // Step 2: Mesh generation in progress
         renderMeshGeneratingStep()
       ) : pipeline?.status === 'mesh-ready' ? (
+        // Step 2 complete: Mesh preview, proceed to texture
         renderMeshPreviewStep()
       ) : pipeline?.status === 'generating-texture' ? (
+        // Step 3: Texture generation in progress
         renderTextureGeneratingStep()
       ) : pipeline?.status === 'completed' ? (
+        // Step 3 complete: Show completed model + Step 4 Coming Soon
         renderCompleteStep()
       ) : (
         renderUploadStep()

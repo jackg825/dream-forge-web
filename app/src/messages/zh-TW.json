@@ -421,6 +421,66 @@
     "title": "建立 3D 模型",
     "subtitle": "上傳照片，將其轉換為精美的 3D 模型"
   },
+  "pipeline": {
+    "steps": {
+      "prepareImages": "準備圖片",
+      "generateMesh": "生成網格",
+      "generateTexture": "生成貼圖",
+      "printDelivery": "打印配送"
+    },
+    "step1": {
+      "title": "準備多視角圖片",
+      "referenceImages": "參考圖片",
+      "analysisPanel": "AI 圖片分析",
+      "multiViewGrid": "多視角圖片",
+      "meshViews": "網格視角",
+      "textureViews": "貼圖視角",
+      "generateViews": "生成多視角圖片",
+      "regenerateAll": "重新生成全部視角",
+      "nextStep": "下一步: 生成 3D 網格",
+      "replaceImage": "替換",
+      "regenerate": "重新生成",
+      "aiGenerated": "AI",
+      "manualUpload": "手動",
+      "uploadHint": "點擊空格上傳圖片，或 hover 已有圖片進行替換"
+    },
+    "step2": {
+      "title": "生成 3D 網格",
+      "meshPreview": "網格預覽",
+      "addTexture": "添加貼圖",
+      "finishMeshOnly": "完成 (僅網格)",
+      "downloadGlb": "下載 GLB 檔案"
+    },
+    "step3": {
+      "title": "生成貼圖",
+      "texturePreview": "貼圖預覽",
+      "completed": "模型已完成",
+      "createNew": "創建新作品",
+      "viewHistory": "查看我的作品"
+    },
+    "step4": {
+      "title": "打印配送",
+      "comingSoon": "即將推出",
+      "description": "很快你就可以直接訂購 3D 列印成品並寄送到府"
+    },
+    "credits": {
+      "points": "點",
+      "meshCost": "5 點",
+      "textureCost": "10 點"
+    },
+    "status": {
+      "draft": "草稿",
+      "batchQueued": "排隊中",
+      "batchProcessing": "批次處理中",
+      "generatingImages": "生成圖片中",
+      "imagesReady": "圖片就緒",
+      "generatingMesh": "生成網格中",
+      "meshReady": "網格就緒",
+      "generatingTexture": "生成貼圖中",
+      "completed": "已完成",
+      "failed": "失敗"
+    }
+  },
   "landing": {
     "hero": {
       "badge": "AI 驅動 · 全球配送",

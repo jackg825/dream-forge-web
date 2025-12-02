@@ -421,6 +421,66 @@
     "title": "Create 3D Model",
     "subtitle": "Upload a photo and transform it into a stunning 3D model"
   },
+  "pipeline": {
+    "steps": {
+      "prepareImages": "Prepare Images",
+      "generateMesh": "Generate Mesh",
+      "generateTexture": "Generate Texture",
+      "printDelivery": "Print & Delivery"
+    },
+    "step1": {
+      "title": "Prepare Multi-View Images",
+      "referenceImages": "Reference Images",
+      "analysisPanel": "AI Image Analysis",
+      "multiViewGrid": "Multi-View Images",
+      "meshViews": "Mesh Views",
+      "textureViews": "Texture Views",
+      "generateViews": "Generate Multi-View Images",
+      "regenerateAll": "Regenerate All Views",
+      "nextStep": "Next: Generate 3D Mesh",
+      "replaceImage": "Replace",
+      "regenerate": "Regenerate",
+      "aiGenerated": "AI",
+      "manualUpload": "Manual",
+      "uploadHint": "Click to upload or hover over existing images to replace"
+    },
+    "step2": {
+      "title": "Generate 3D Mesh",
+      "meshPreview": "Mesh Preview",
+      "addTexture": "Add Texture",
+      "finishMeshOnly": "Finish (Mesh Only)",
+      "downloadGlb": "Download GLB File"
+    },
+    "step3": {
+      "title": "Generate Texture",
+      "texturePreview": "Texture Preview",
+      "completed": "Model Completed",
+      "createNew": "Create New",
+      "viewHistory": "View My Work"
+    },
+    "step4": {
+      "title": "Print & Delivery",
+      "comingSoon": "Coming Soon",
+      "description": "Soon you can order 3D printed models and have them delivered to your door"
+    },
+    "credits": {
+      "points": "credits",
+      "meshCost": "5 credits",
+      "textureCost": "10 credits"
+    },
+    "status": {
+      "draft": "Draft",
+      "batchQueued": "Queued",
+      "batchProcessing": "Batch Processing",
+      "generatingImages": "Generating Images",
+      "imagesReady": "Images Ready",
+      "generatingMesh": "Generating Mesh",
+      "meshReady": "Mesh Ready",
+      "generatingTexture": "Generating Texture",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
+  },
   "landing": {
     "hero": {
       "badge": "AI-Powered · Worldwide Delivery",

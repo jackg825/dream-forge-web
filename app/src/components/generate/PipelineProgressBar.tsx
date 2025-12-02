@@ -1,13 +1,14 @@
 'use client';
 
-import { CheckCircle, Circle, Loader2, Coins } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Coins, Image, Box, Palette, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 const STEPS = [
-  { id: 1, label: '上傳' },
-  { id: 2, label: '視角圖片' },
-  { id: 3, label: '3D 網格' },
-  { id: 4, label: '完成' },
+  { id: 1, label: '準備圖片', icon: Image },
+  { id: 2, label: '生成網格', icon: Box },
+  { id: 3, label: '生成貼圖', icon: Palette },
+  { id: 4, label: '打印配送', icon: Truck, comingSoon: true },
 ] as const;
 
 interface PipelineProgressBarProps {
@@ -34,6 +35,8 @@ export function PipelineProgressBar({
             const isCompleted = currentStep > step.id;
             const isActive = currentStep === step.id;
             const isPending = currentStep < step.id;
+            const isComingSoon = 'comingSoon' in step && step.comingSoon;
+            const StepIcon = step.icon;
 
             return (
               <div key={step.id} className="flex items-center min-w-0">
@@ -42,22 +45,26 @@ export function PipelineProgressBar({
                   className={cn(
                     'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all',
                     'whitespace-nowrap',
-                    isCompleted && 'bg-green-500/20 text-green-500',
-                    isActive && !isFailed && 'bg-primary/20 text-primary',
+                    isComingSoon && 'opacity-50',
+                    isCompleted && !isComingSoon && 'bg-green-500/20 text-green-500',
+                    isActive && !isFailed && !isComingSoon && 'bg-primary/20 text-primary',
                     isActive && isFailed && 'bg-destructive/20 text-destructive',
                     isPending && 'text-muted-foreground'
                   )}
                 >
-                  {isCompleted ? (
+                  {isCompleted && !isComingSoon ? (
                     <CheckCircle className="h-3.5 w-3.5 shrink-0" />
                   ) : isActive && isProcessing ? (
                     <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                  ) : isActive ? (
-                    <Circle className="h-3.5 w-3.5 shrink-0 fill-current" />
                   ) : (
-                    <Circle className="h-3.5 w-3.5 shrink-0" />
+                    <StepIcon className="h-3.5 w-3.5 shrink-0" />
                   )}
                   <span className="hidden sm:inline">{step.label}</span>
+                  {isComingSoon && (
+                    <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0 h-4 hidden md:inline-flex">
+                      Soon
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Connector */}
