@@ -73,9 +73,9 @@ export function Header() {
   }, [pathname]);
 
   const navItems = [
+    { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, requireAuth: true },
     { href: '/generate', labelKey: 'nav.generate', icon: Wand2, showAlways: true },
     { href: '/preview', labelKey: 'nav.previewTool', icon: Eye, showAlways: true },
-    { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, requireAuth: true },
     { href: '/dashboard/history', labelKey: 'nav.history', icon: History, requireAuth: true },
   ];
 
@@ -109,7 +109,19 @@ export function Header() {
 
   // Check if current path matches (without locale prefix)
   const isActivePath = (href: string) => {
+    // Special case: /generate should match all /generate/* paths
+    if (href === '/generate') {
+      return pathname === '/generate' || pathname.startsWith('/generate/');
+    }
     return pathname === href;
+  };
+
+  // Handle nav click - reset to base path when clicking on active parent route
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    if (href === '/generate' && pathname.startsWith('/generate/') && pathname !== '/generate') {
+      e.preventDefault();
+      router.push('/generate');
+    }
   };
 
   // Filter nav items based on auth state
@@ -182,7 +194,10 @@ export function Header() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
+                      onClick={(e) => {
+                        handleNavClick(e, item.href);
+                        setMobileMenuOpen(false);
+                      }}
                       className={cn(
                         'flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition-colors',
                         'min-h-[48px]', // Touch target
@@ -320,6 +335,7 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
                 className={cn(
                   'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
                   isActive
