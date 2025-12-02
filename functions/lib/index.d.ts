@@ -5,6 +5,6 @@ export { createSession, getSession, updateSession, deleteSession, getUserSession
 export { generateSessionViews, regenerateView, uploadCustomView, } from './handlers/views';
 export { startSessionModelGeneration, checkSessionModelStatus, } from './handlers/model';
 export { optimizeColorsForH2C, uploadEditedH2CImage, } from './handlers/h2c';
-export { createPipeline, getPipeline, getUserPipelines, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, } from './handlers/pipeline';
+export { createPipeline, getPipeline, getUserPipelines, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, updatePipelineAnalysis, } from './handlers/pipeline';
 export { submitGeminiBatch, pollGeminiBatchJobs, } from './handlers/gemini-batch';
 export { analyzeUploadedImage } from './handlers/analyze';

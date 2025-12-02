@@ -47,7 +47,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getUserPipelines = exports.getPipeline = exports.createPipeline = void 0;
+exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getUserPipelines = exports.getPipeline = exports.createPipeline = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -916,5 +916,62 @@ exports.startPipelineTexture = functions
         functions.logger.error('Pipeline texture generation failed', { pipelineId, error: errorMessage });
         throw new functions.https.HttpsError('internal', `Texture generation failed: ${errorMessage}`);
     }
+});
+/**
+ * Update pipeline analysis results
+ *
+ * Allows users to update the image analysis and description
+ * for a draft pipeline before starting generation.
+ * Only works for pipelines in 'draft' status.
+ */
+exports.updatePipelineAnalysis = functions
+    .region('asia-east1')
+    .runWith({ timeoutSeconds: 30 })
+    .https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to update a pipeline');
+    }
+    const userId = context.auth.uid;
+    const { pipelineId, imageAnalysis, userDescription } = data;
+    if (!pipelineId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Pipeline ID is required');
+    }
+    if (!imageAnalysis) {
+        throw new functions.https.HttpsError('invalid-argument', 'Image analysis data is required');
+    }
+    const pipelineRef = db.collection('pipelines').doc(pipelineId);
+    const pipelineSnap = await pipelineRef.get();
+    if (!pipelineSnap.exists) {
+        throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+    const pipeline = pipelineSnap.data();
+    // Verify ownership
+    if (pipeline.userId !== userId) {
+        throw new functions.https.HttpsError('permission-denied', 'You do not have permission to update this pipeline');
+    }
+    // Only allow updates for draft pipelines
+    if (pipeline.status !== 'draft') {
+        throw new functions.https.HttpsError('failed-precondition', `Cannot update analysis for pipeline in '${pipeline.status}' status. Only draft pipelines can be updated.`);
+    }
+    // Update the pipeline with new analysis
+    const updateData = {
+        imageAnalysis,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    // Also update userDescription if provided
+    if (userDescription !== undefined) {
+        updateData.userDescription = userDescription || null;
+    }
+    await pipelineRef.update(updateData);
+    functions.logger.info('Pipeline analysis updated', {
+        pipelineId,
+        userId,
+        colorCount: imageAnalysis.colorPalette?.length,
+        hasDescription: !!userDescription,
+    });
+    return {
+        success: true,
+        pipelineId,
+    };
 });
 //# sourceMappingURL=pipeline.js.map

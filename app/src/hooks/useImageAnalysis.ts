@@ -26,6 +26,7 @@ interface UseImageAnalysisReturn {
     colorCount?: number,
     printerType?: PrinterType
   ) => Promise<ImageAnalysisResult>;
+  setAnalysis: (analysis: ImageAnalysisResult | null) => void;
   updateDescription: (description: string) => void;
   updateColors: (colors: string[]) => void;
   addColor: (color: string) => void;
@@ -93,6 +94,16 @@ export function useImageAnalysis(): UseImageAnalysisReturn {
     },
     []
   );
+
+  /**
+   * Set analysis from external source (e.g., loaded from Firestore)
+   * This is used to restore analysis when loading a draft pipeline
+   */
+  const setAnalysisExternal = useCallback((newAnalysis: ImageAnalysisResult | null) => {
+    setAnalysis(newAnalysis);
+    setOriginalAnalysis(newAnalysis);
+    setError(null);
+  }, []);
 
   /**
    * Update the description
@@ -178,6 +189,7 @@ export function useImageAnalysis(): UseImageAnalysisReturn {
     loading,
     error,
     analyzeImage,
+    setAnalysis: setAnalysisExternal,
     updateDescription,
     updateColors,
     addColor,

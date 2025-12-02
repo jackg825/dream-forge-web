@@ -31,6 +31,11 @@ interface SubmitBatchResponse {
   status: PipelineStatus;
 }
 
+interface UpdatePipelineAnalysisResponse {
+  success: boolean;
+  pipelineId: string;
+}
+
 interface UsePipelineReturn {
   // Pipeline state
   pipeline: Pipeline | null;
@@ -52,6 +57,7 @@ interface UsePipelineReturn {
   startMeshGeneration: () => Promise<StartPipelineMeshResponse>;
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
   startTextureGeneration: () => Promise<StartPipelineTextureResponse>;
+  updateAnalysis: (imageAnalysis: ImageAnalysisResult, userDescription?: string) => Promise<void>;
 
   // Navigation helpers
   currentStep: number;
@@ -356,6 +362,32 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     }
   }, [pipelineId]);
 
+  // Update pipeline analysis (for draft pipelines)
+  const updateAnalysis = useCallback(async (
+    imageAnalysis: ImageAnalysisResult,
+    userDescription?: string
+  ): Promise<void> => {
+    if (!pipelineId) {
+      throw new Error('No pipeline ID');
+    }
+    if (!functions) {
+      throw new Error('Firebase not initialized');
+    }
+
+    try {
+      const updateFn = httpsCallable<
+        { pipelineId: string; imageAnalysis: ImageAnalysisResult; userDescription?: string },
+        UpdatePipelineAnalysisResponse
+      >(functions, 'updatePipelineAnalysis');
+
+      await updateFn({ pipelineId, imageAnalysis, userDescription });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update analysis';
+      setError(message);
+      throw err;
+    }
+  }, [pipelineId]);
+
   // Computed values
   const currentStep = pipeline ? getStepFromStatus(pipeline.status) : 0;
 
@@ -381,6 +413,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     startMeshGeneration,
     checkStatus,
     startTextureGeneration,
+    updateAnalysis,
     currentStep,
     canProceed,
     isBatchProcessing,

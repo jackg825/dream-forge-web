@@ -126,6 +126,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     loading: analysisLoading,
     error: analysisError,
     analyzeImage,
+    setAnalysis,
     updateDescription,
     updateColors,
     addColor,
@@ -174,6 +175,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     startMeshGeneration,
     checkStatus,
     startTextureGeneration,
+    updateAnalysis,
     currentStep,
     isBatchProcessing,
   } = usePipeline(pipelineId);
@@ -190,6 +192,28 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       }
     };
   }, [pollingInterval]);
+
+  // Restore analysis when loading a draft pipeline
+  useEffect(() => {
+    if (pipeline?.status === 'draft' && pipeline.imageAnalysis && !imageAnalysis) {
+      // Convert Firestore timestamp to Date if needed
+      const analysis = {
+        ...pipeline.imageAnalysis,
+        analyzedAt: pipeline.imageAnalysis.analyzedAt instanceof Date
+          ? pipeline.imageAnalysis.analyzedAt
+          : new Date((pipeline.imageAnalysis.analyzedAt as unknown as { seconds: number }).seconds * 1000),
+      };
+      setAnalysis(analysis);
+      // Also restore userDescription if present
+      if (pipeline.userDescription) {
+        setUserDescription(pipeline.userDescription);
+      }
+      // Restore uploaded images from pipeline
+      if (pipeline.inputImages && pipeline.inputImages.length > 0 && uploadedImages.length === 0) {
+        setUploadedImages(pipeline.inputImages.map(img => ({ url: img.url })));
+      }
+    }
+  }, [pipeline, imageAnalysis, setAnalysis, uploadedImages.length]);
 
   // Start polling when generating
   useEffect(() => {
@@ -228,17 +252,39 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
     setActionLoading(true);
     try {
-      // Create pipeline with image URLs, generation mode, processing mode, description, and analysis
+      // Check if we already have a draft pipeline (from analysis)
+      if (pipelineId && pipeline?.status === 'draft') {
+        // Update analysis if user made edits
+        if (analysisHasEdits && imageAnalysis) {
+          await updateAnalysis(imageAnalysis, imageAnalysis.description);
+        }
+
+        // Release button immediately - Firestore subscription handles updates
+        setActionLoading(false);
+
+        // Start generation on existing pipeline
+        if (processingMode === 'batch') {
+          submitBatch(pipelineId).catch((err) => {
+            console.error('Batch submission failed:', err);
+          });
+        } else {
+          generateImages(pipelineId).catch((err) => {
+            console.error('Image generation failed:', err);
+          });
+        }
+        return;
+      }
+
+      // Create new pipeline (no prior analysis)
       const imageUrls = uploadedImages.map((img) => img.url);
-      // Use analysis description if available, otherwise use manual input
       const finalDescription = imageAnalysis?.description || userDescription.trim() || undefined;
       const newPipelineId = await createPipeline(
         imageUrls,
-        { meshPrecision, colorCount },  // Pass mesh precision and color count in settings
+        { meshPrecision, colorCount },
         generationMode,
         processingMode,
         finalDescription,
-        imageAnalysis || undefined  // Pass full analysis if available
+        imageAnalysis || undefined
       );
       setPipelineId(newPipelineId);
 
@@ -249,23 +295,46 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       setActionLoading(false);
 
       // Fire-and-forget: Start image generation based on processing mode
-      // UI updates automatically via Firestore onSnapshot subscription in usePipeline
       if (processingMode === 'batch') {
-        // Batch mode: submit to Gemini Batch API for async processing
         submitBatch(newPipelineId).catch((err) => {
           console.error('Batch submission failed:', err);
-          // Error state will be reflected via Firestore status update to 'failed'
         });
       } else {
-        // Realtime mode: generate images immediately
         generateImages(newPipelineId).catch((err) => {
           console.error('Image generation failed:', err);
-          // Error state will be reflected via Firestore status update to 'failed'
         });
       }
     } catch (err) {
       console.error('Failed to create pipeline:', err);
       setActionLoading(false);
+    }
+  };
+
+  // Handle image analysis - creates draft pipeline after analysis completes
+  const handleAnalyze = async () => {
+    if (!user || uploadedImages.length === 0) return;
+
+    try {
+      // Run analysis
+      const result = await analyzeImage(uploadedImages[0].url, colorCount, 'fdm');
+
+      // Create draft pipeline with analysis results
+      const imageUrls = uploadedImages.map((img) => img.url);
+      const newPipelineId = await createPipeline(
+        imageUrls,
+        { meshPrecision, colorCount },
+        generationMode,
+        processingMode,
+        result.description,
+        result
+      );
+
+      // Update state and URL so user can return to this draft
+      setPipelineId(newPipelineId);
+      router.push(`?id=${newPipelineId}`, { scroll: false });
+    } catch (err) {
+      console.error('Analysis failed:', err);
+      // Error is handled by useImageAnalysis hook
     }
   };
 
@@ -379,11 +448,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               onColorAdd={addColor}
               onColorRemove={removeColor}
               onColorUpdate={updateColor}
-              onAnalyze={() => {
-                if (uploadedImages.length > 0) {
-                  analyzeImage(uploadedImages[0].url, colorCount, 'fdm');
-                }
-              }}
+              onAnalyze={handleAnalyze}
               onReset={resetAnalysis}
               hasEdits={analysisHasEdits}
               disabled={actionLoading}

@@ -59,3 +59,11 @@ export declare const checkPipelineStatus: functions.HttpsFunction & functions.Ru
  * Uses Meshy Retexture API with texture reference images
  */
 export declare const startPipelineTexture: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Update pipeline analysis results
+ *
+ * Allows users to update the image analysis and description
+ * for a draft pipeline before starting generation.
+ * Only works for pipelines in 'draft' status.
+ */
+export declare const updatePipelineAnalysis: functions.HttpsFunction & functions.Runnable<any>;
