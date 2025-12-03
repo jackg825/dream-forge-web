@@ -98,7 +98,7 @@ export const PROVIDER_OPTIONS: Record<ModelProvider, ProviderCapability> = {
     badgeVariant: 'secondary',
     estimatedTime: '約 2-4 分鐘',
     creditCost: 5,  // API: ~$0.16 (estimated) → Total: $0.41
-    capabilities: { maxPolygons: '200K', multiview: true },
+    capabilities: { maxPolygons: '200K', multiview: true, texturedMesh: true },
   },
 };
 
