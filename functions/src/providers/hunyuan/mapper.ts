@@ -67,8 +67,8 @@ export function mapHunyuanTaskStatus(response: SDKQueryResponse): TaskStatusResu
 export function extractHunyuanDownloads(response: SDKQueryResponse): DownloadResult {
   const files = response.ResultFile3Ds?.map((file) => ({
     url: file.Url || '',
-    name: file.Type ? `model.${file.Type}` : 'model',
-    format: file.Type || 'unknown',
+    name: file.Type ? `model.${file.Type.toLowerCase()}` : 'model',
+    format: file.Type?.toLowerCase() || 'unknown',  // Normalize to lowercase for consistency
   })) || [];
 
   // Find thumbnail from first file's preview
