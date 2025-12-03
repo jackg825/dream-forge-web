@@ -1,9 +1,9 @@
 /**
  * Multi-View Generator for Pipeline Workflow
  *
- * Generates 6 images from a reference image using Gemini:
- * - 4 mesh views for 3D mesh generation
- * - 2 texture views for texture mapping
+ * Generates images from a reference image using Gemini:
+ * - 4 mesh views for 3D mesh generation (always generated)
+ * - 2 texture views for texture mapping (controlled by ENABLE_TEXTURE_VIEWS flag)
  *
  * Supports multiple generation modes for A/B testing different
  * image processing strategies.

@@ -9,7 +9,7 @@ const STEPS = [
   { id: 1, label: '準備圖片', icon: Image, resetTarget: 'images-ready' as ResetTargetStep },
   { id: 2, label: '生成網格', icon: Box, resetTarget: 'mesh-ready' as ResetTargetStep },
   { id: 3, label: '生成貼圖', icon: Palette, resetTarget: null },
-  { id: 4, label: '打印配送', icon: Truck, comingSoon: true, resetTarget: null },
+  { id: 4, label: '列印&配送', icon: Truck, comingSoon: true, resetTarget: null },
 ] as const;
 
 interface PipelineProgressBarProps {

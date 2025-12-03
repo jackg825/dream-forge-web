@@ -427,7 +427,7 @@
       "prepareImages": "準備圖片",
       "generateMesh": "生成網格",
       "generateTexture": "生成貼圖",
-      "printDelivery": "打印配送"
+      "printDelivery": "列印&配送"
     },
     "step1": {
       "title": "準備多視角圖片",
@@ -460,7 +460,7 @@
       "viewHistory": "查看我的作品"
     },
     "step4": {
-      "title": "打印配送",
+      "title": "列印&配送",
       "comingSoon": "即將推出",
       "description": "很快你就可以直接訂購 3D 列印成品並寄送到府"
     },
@@ -497,7 +497,7 @@
       "journey": {
         "photo": "上傳照片",
         "model": "生成模型",
-        "deliver": "列印配送"
+        "deliver": "列印&配送"
       }
     },
     "showcase": {

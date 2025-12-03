@@ -1264,7 +1264,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                     <Printer className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium">步驟 4: 打印配送</h4>
+                    <h4 className="text-sm font-medium">步驟 4: 列印&配送</h4>
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5">
                       Coming Soon
                     </Badge>

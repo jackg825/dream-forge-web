@@ -1,9 +1,9 @@
 /**
  * Multi-View Generator for Pipeline Workflow
  *
- * Generates 6 images from a reference image using Gemini:
- * - 4 mesh views for 3D mesh generation
- * - 2 texture views for texture mapping
+ * Generates images from a reference image using Gemini:
+ * - 4 mesh views for 3D mesh generation (always generated)
+ * - 2 texture views for texture mapping (controlled by ENABLE_TEXTURE_VIEWS flag)
  *
  * Supports multiple generation modes for A/B testing different
  * image processing strategies.
@@ -29,6 +29,10 @@ const MODEL = 'gemini-3-pro-image-preview';
 
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;
+
+// Feature flag to enable/disable texture view generation
+// When false, only 4 mesh views are generated (no texture views)
+const ENABLE_TEXTURE_VIEWS = false;
 
 /**
  * Result of a single view generation
@@ -234,28 +238,32 @@ export class MultiViewGenerator {
       viewIndex++;
     }
 
-    // Generate texture views
-    for (const angle of textureAngles) {
-      await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_BETWEEN_CALLS_MS));
+    // Generate texture views (if enabled)
+    if (ENABLE_TEXTURE_VIEWS) {
+      for (const angle of textureAngles) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_DELAY_BETWEEN_CALLS_MS));
 
-      functions.logger.info(`Generating texture view: ${angle}`, {
-        viewIndex,
-        type: 'texture',
-        simplified: this.modeConfig.texture.simplified,
-        hasUserDescription: !!this.userDescription,
-      });
+        functions.logger.info(`Generating texture view: ${angle}`, {
+          viewIndex,
+          type: 'texture',
+          simplified: this.modeConfig.texture.simplified,
+          hasUserDescription: !!this.userDescription,
+        });
 
-      const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription);
-      const result = await this.generateSingleView(
-        referenceImageBase64,
-        mimeType,
-        prompt,
-        this.modeConfig.texture.extractColors,
-        this.modeConfig.texture.colorCount
-      );
+        const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription);
+        const result = await this.generateSingleView(
+          referenceImageBase64,
+          mimeType,
+          prompt,
+          this.modeConfig.texture.extractColors,
+          this.modeConfig.texture.colorCount
+        );
 
-      textureViews[angle] = result;
-      viewIndex++;
+        textureViews[angle] = result;
+        viewIndex++;
+      }
+    } else {
+      functions.logger.info('Texture view generation skipped (ENABLE_TEXTURE_VIEWS=false)');
     }
 
     functions.logger.info('Multi-view generation complete', {
@@ -371,38 +379,44 @@ export class MultiViewGenerator {
       ? this.preAnalyzedColors
       : aggregatedPalette.dominantColors;
 
-    functions.logger.info('Mesh views complete, starting texture generation', {
+    functions.logger.info('Mesh views complete', {
       meshViewCount: meshResults.length,
       dominantColors: aggregatedPalette.dominantColors,
       totalUniqueColors: aggregatedPalette.unified.length,
       usingPreAnalyzedColors: !!(this.preAnalyzedColors && this.preAnalyzedColors.length > 0),
       preAnalyzedColorCount: this.preAnalyzedColors?.length || 0,
+      textureViewsEnabled: ENABLE_TEXTURE_VIEWS,
     });
-
-    // Phase 2: Staggered parallel texture view generation (with color hints)
-    let textureCompleted = 0;
-    const texturePromises = textureAngles.map((angle, index) =>
-      this.generateTextureViewWithColorHints(
-        referenceImageBase64,
-        mimeType,
-        angle,
-        colorsForTexture,
-        index * MIN_DELAY_BETWEEN_CALLS_MS  // 0, 500ms
-      ).then(async (result) => {
-        textureCompleted++;
-        if (onProgress) {
-          await onProgress('texture', angle, textureCompleted, 2);
-        }
-        return { angle, result };
-      })
-    );
-
-    const textureResults = await Promise.all(texturePromises);
 
     // Build textureViews record
     const textureViews: Partial<Record<PipelineTextureAngle, GeneratedViewResult>> = {};
-    for (const { angle, result } of textureResults) {
-      textureViews[angle as PipelineTextureAngle] = result;
+
+    // Phase 2: Staggered parallel texture view generation (with color hints) - if enabled
+    if (ENABLE_TEXTURE_VIEWS) {
+      let textureCompleted = 0;
+      const texturePromises = textureAngles.map((angle, index) =>
+        this.generateTextureViewWithColorHints(
+          referenceImageBase64,
+          mimeType,
+          angle,
+          colorsForTexture,
+          index * MIN_DELAY_BETWEEN_CALLS_MS  // 0, 500ms
+        ).then(async (result) => {
+          textureCompleted++;
+          if (onProgress) {
+            await onProgress('texture', angle, textureCompleted, 2);
+          }
+          return { angle, result };
+        })
+      );
+
+      const textureResults = await Promise.all(texturePromises);
+
+      for (const { angle, result } of textureResults) {
+        textureViews[angle as PipelineTextureAngle] = result;
+      }
+    } else {
+      functions.logger.info('Texture view generation skipped (ENABLE_TEXTURE_VIEWS=false)');
     }
 
     functions.logger.info('Parallel multi-view generation complete', {
