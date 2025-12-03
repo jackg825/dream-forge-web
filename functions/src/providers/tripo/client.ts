@@ -90,6 +90,7 @@ export class TripoProvider implements I3DProvider {
         },
         texture: true,
         pbr: true,
+        texture_quality: 'detailed',  // High-resolution textures for better quality
       };
 
       const response = await this.createTask(request);
@@ -153,6 +154,7 @@ export class TripoProvider implements I3DProvider {
           files,
           texture: true,
           pbr: true,
+          texture_quality: 'detailed',  // High-resolution textures for better quality
           model_version: 'v3.0-20250812',
         };
 

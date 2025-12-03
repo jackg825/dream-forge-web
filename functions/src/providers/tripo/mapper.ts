@@ -58,23 +58,11 @@ export function extractTripoDownloads(response: TripoTaskStatusResponse): Downlo
 
   const output = response.data.output;
   if (output) {
-    // Main model - handle both object {url, type} and string URL formats
-    if (output.model) {
-      const modelUrl = typeof output.model === 'string' ? output.model : output.model.url;
-      const modelType = typeof output.model === 'string'
-        ? getFormatFromUrl(output.model)
-        : (output.model.type || getFormatFromUrl(output.model.url));
+    // Priority: pbr_model > model > base_model
+    // pbr_model contains textures, model may be untextured base mesh
+    let hasPrimaryModel = false;
 
-      if (modelUrl) {
-        files.push({
-          url: modelUrl,
-          name: `model.${modelType}`,
-          format: modelType,
-        });
-      }
-    }
-
-    // PBR model if available
+    // PBR model (with textures) - use as primary if available
     if (output.pbr_model) {
       const pbrUrl = typeof output.pbr_model === 'string' ? output.pbr_model : output.pbr_model.url;
       const pbrType = typeof output.pbr_model === 'string'
@@ -84,13 +72,31 @@ export function extractTripoDownloads(response: TripoTaskStatusResponse): Downlo
       if (pbrUrl) {
         files.push({
           url: pbrUrl,
-          name: `model_pbr.${pbrType}`,
+          name: `model.${pbrType}`,  // Primary model name for download
           format: pbrType,
         });
+        hasPrimaryModel = true;
       }
     }
 
-    // Base model if available
+    // Main model - use as primary only if no pbr_model, otherwise as backup
+    if (output.model) {
+      const modelUrl = typeof output.model === 'string' ? output.model : output.model.url;
+      const modelType = typeof output.model === 'string'
+        ? getFormatFromUrl(output.model)
+        : (output.model.type || getFormatFromUrl(output.model.url));
+
+      if (modelUrl) {
+        files.push({
+          url: modelUrl,
+          name: hasPrimaryModel ? `model_base.${modelType}` : `model.${modelType}`,
+          format: modelType,
+        });
+        if (!hasPrimaryModel) hasPrimaryModel = true;
+      }
+    }
+
+    // Base model if available (always as backup)
     if (output.base_model) {
       const baseUrl = typeof output.base_model === 'string' ? output.base_model : output.base_model.url;
       const baseType = typeof output.base_model === 'string'
@@ -100,7 +106,7 @@ export function extractTripoDownloads(response: TripoTaskStatusResponse): Downlo
       if (baseUrl) {
         files.push({
           url: baseUrl,
-          name: `model_base.${baseType}`,
+          name: hasPrimaryModel ? `model_untextured.${baseType}` : `model.${baseType}`,
           format: baseType,
         });
       }

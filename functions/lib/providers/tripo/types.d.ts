@@ -35,6 +35,7 @@ export interface TripoImageToModelRequest {
     model_version?: string;
     texture?: boolean;
     pbr?: boolean;
+    texture_quality?: 'standard' | 'detailed';
 }
 /**
  * Create task request (multiview to model)

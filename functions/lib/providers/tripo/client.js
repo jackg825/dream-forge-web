@@ -94,6 +94,7 @@ class TripoProvider {
                 },
                 texture: true,
                 pbr: true,
+                texture_quality: 'detailed', // High-resolution textures for better quality
             };
             const response = await this.createTask(request);
             functions.logger.info('Tripo generation started', {
@@ -147,6 +148,7 @@ class TripoProvider {
                     files,
                     texture: true,
                     pbr: true,
+                    texture_quality: 'detailed', // High-resolution textures for better quality
                     model_version: 'v3.0-20250812',
                 };
                 const response = await this.createTask(request);
