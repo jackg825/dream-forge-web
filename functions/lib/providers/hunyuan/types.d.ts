@@ -23,12 +23,11 @@ export interface HunyuanSubmitRequest {
     GenerateType?: 'Normal' | 'LowPoly' | 'Geometry' | 'Sketch';
     /** Polygon type for LowPoly mode: triangle or quad */
     PolygonType?: 'triangle' | 'quad';
-    /** Multi-view images (left, right, back views) */
-    MultiViewImages?: {
-        Left?: string;
-        Right?: string;
-        Back?: string;
-    };
+    /** Multi-view images array (left, right, back views) */
+    MultiViewImages?: Array<{
+        ViewType: 'left' | 'right' | 'back';
+        ImageBase64: string;
+    }>;
 }
 /**
  * Submit job response

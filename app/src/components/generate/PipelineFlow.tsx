@@ -1260,7 +1260,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       if (pipeline.errorStep === 'generating-images') {
         await generateImages(pipelineId);
       } else if (pipeline.errorStep === 'generating-mesh') {
-        await startMeshGeneration();
+        // Use the provider from pipeline settings (what was originally selected)
+        await startMeshGeneration(pipeline.settings.provider, pipeline.settings.providerOptions);
       } else if (pipeline.errorStep === 'generating-texture') {
         await startTextureGeneration();
       }

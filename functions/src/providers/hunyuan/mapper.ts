@@ -1,24 +1,49 @@
 /**
  * Hunyuan Status Mapper
  *
- * Maps Hunyuan API responses to unified provider types.
+ * Maps Hunyuan SDK responses to unified provider types.
  */
 
 import type { ProviderTaskStatus, TaskStatusResult, DownloadResult } from '../types';
-import type { HunyuanTaskStatus, HunyuanQueryResponse } from './types';
 
 /**
- * Map Hunyuan task status to unified ProviderTaskStatus
+ * SDK response status values
+ * WAIT = waiting, RUN = executing, FAIL = failed, DONE = completed
  */
-export function mapHunyuanStatus(status: HunyuanTaskStatus): ProviderTaskStatus {
+type HunyuanSDKStatus = 'WAIT' | 'RUN' | 'FAIL' | 'DONE' | string;
+
+/**
+ * SDK File3D structure
+ */
+interface SDKFile3D {
+  Type?: string;
+  Url?: string;
+  PreviewImageUrl?: string;
+}
+
+/**
+ * SDK QueryHunyuanTo3DProJobResponse structure
+ */
+export interface SDKQueryResponse {
+  Status?: HunyuanSDKStatus;
+  ErrorCode?: string;
+  ErrorMessage?: string;
+  ResultFile3Ds?: SDKFile3D[];
+  RequestId?: string;
+}
+
+/**
+ * Map SDK status to unified ProviderTaskStatus
+ */
+export function mapHunyuanStatus(status?: string): ProviderTaskStatus {
   switch (status) {
-    case 'QUEUED':
+    case 'WAIT':
       return 'pending';
-    case 'PROCESSING':
+    case 'RUN':
       return 'processing';
-    case 'SUCCEEDED':
+    case 'DONE':
       return 'completed';
-    case 'FAILED':
+    case 'FAIL':
       return 'failed';
     default:
       return 'pending';
@@ -26,34 +51,31 @@ export function mapHunyuanStatus(status: HunyuanTaskStatus): ProviderTaskStatus 
 }
 
 /**
- * Map Hunyuan query response to TaskStatusResult
+ * Map SDK query response to TaskStatusResult
  */
-export function mapHunyuanTaskStatus(response: HunyuanQueryResponse): TaskStatusResult {
+export function mapHunyuanTaskStatus(response: SDKQueryResponse): TaskStatusResult {
   return {
     status: mapHunyuanStatus(response.Status),
-    progress: response.Progress,
-    error: response.ErrorMessage,
+    progress: response.Status === 'RUN' ? 50 : response.Status === 'DONE' ? 100 : 0,
+    error: response.ErrorMessage || response.ErrorCode,
   };
 }
 
 /**
- * Extract download URLs from Hunyuan query response
+ * Extract download URLs from SDK query response
  */
-export function extractHunyuanDownloads(response: HunyuanQueryResponse): DownloadResult {
-  const files = response.ModelFiles?.map((file) => ({
-    url: file.Url,
-    name: file.Name,
-    format: file.Format,
+export function extractHunyuanDownloads(response: SDKQueryResponse): DownloadResult {
+  const files = response.ResultFile3Ds?.map((file) => ({
+    url: file.Url || '',
+    name: file.Type ? `model.${file.Type}` : 'model',
+    format: file.Type || 'unknown',
   })) || [];
+
+  // Find thumbnail from first file's preview
+  const thumbnailUrl = response.ResultFile3Ds?.[0]?.PreviewImageUrl;
 
   return {
     files,
-    thumbnailUrl: response.ThumbnailUrl,
-    textureUrls: response.TextureUrls ? {
-      baseColor: response.TextureUrls.BaseColor,
-      metallic: response.TextureUrls.Metallic,
-      normal: response.TextureUrls.Normal,
-      roughness: response.TextureUrls.Roughness,
-    } : undefined,
+    thumbnailUrl,
   };
 }

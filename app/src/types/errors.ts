@@ -70,6 +70,8 @@ export const ERROR_CODES = {
   // Rate limit errors
   GEMINI_RATE_LIMIT: 'GEMINI_RATE_LIMIT',
   MESHY_RATE_LIMIT: 'MESHY_RATE_LIMIT',
+  HUNYUAN_RATE_LIMIT: 'HUNYUAN_RATE_LIMIT',
+  TRIPO_RATE_LIMIT: 'TRIPO_RATE_LIMIT',
 
   // Safety errors
   CONTENT_FILTERED: 'CONTENT_FILTERED',
@@ -87,6 +89,8 @@ export const ERROR_CODES = {
   // Service errors
   GEMINI_SERVICE_ERROR: 'GEMINI_SERVICE_ERROR',
   MESHY_SERVICE_ERROR: 'MESHY_SERVICE_ERROR',
+  HUNYUAN_SERVICE_ERROR: 'HUNYUAN_SERVICE_ERROR',
+  TRIPO_SERVICE_ERROR: 'TRIPO_SERVICE_ERROR',
   STORAGE_ERROR: 'STORAGE_ERROR',
 
   // Internal errors
@@ -277,7 +281,35 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     suggestedRetryDelayMs: 5000,
   },
 
-  // Rate limit errors
+  // Rate limit errors - provider specific patterns first
+  {
+    pattern: /hunyuan.*rate.?limit|tencent.*rate.?limit/i,
+    category: 'rate_limit',
+    code: 'HUNYUAN_RATE_LIMIT',
+    severity: 'warning',
+    userMessage: 'Hunyuan 3D 服務繁忙，請稍後重試',
+    retryable: true,
+    suggestedRetryDelayMs: 60000,
+  },
+  {
+    pattern: /tripo.*rate.?limit/i,
+    category: 'rate_limit',
+    code: 'TRIPO_RATE_LIMIT',
+    severity: 'warning',
+    userMessage: 'Tripo3D 服務繁忙，請稍後重試',
+    retryable: true,
+    suggestedRetryDelayMs: 60000,
+  },
+  {
+    pattern: /meshy.*rate.?limit/i,
+    category: 'rate_limit',
+    code: 'MESHY_RATE_LIMIT',
+    severity: 'warning',
+    userMessage: 'Meshy 服務繁忙，請稍後重試',
+    retryable: true,
+    suggestedRetryDelayMs: 60000,
+  },
+  // Generic rate limit (fallback)
   {
     pattern: /rate.?limit|429|too many requests|quota/i,
     category: 'rate_limit',
@@ -344,12 +376,33 @@ export const ERROR_PATTERNS: ErrorPattern[] = [
     retryable: true,
     suggestedRetryDelayMs: 10000,
   },
+  // Hunyuan service errors (must be before generic mesh error)
   {
-    pattern: /meshy.*(error|fail)|mesh.*(generation|processing).*(fail|error)/i,
+    pattern: /hunyuan.*(error|fail)|tencent.*(cloud)?.*(error|fail)|ai3d.*(error|fail)|AuthFailure/i,
+    category: 'service',
+    code: 'HUNYUAN_SERVICE_ERROR',
+    severity: 'error',
+    userMessage: 'Hunyuan 3D 服務暫時異常',
+    retryable: true,
+    suggestedRetryDelayMs: 10000,
+  },
+  // Tripo service errors (must be before generic mesh error)
+  {
+    pattern: /tripo.*(error|fail)|tripo3d.*(error|fail)/i,
+    category: 'service',
+    code: 'TRIPO_SERVICE_ERROR',
+    severity: 'error',
+    userMessage: 'Tripo3D 服務暫時異常',
+    retryable: true,
+    suggestedRetryDelayMs: 10000,
+  },
+  // Meshy service errors (only matches explicit "meshy" keyword)
+  {
+    pattern: /meshy.*(error|fail)/i,
     category: 'service',
     code: 'MESHY_SERVICE_ERROR',
     severity: 'error',
-    userMessage: '3D 模型生成服務暫時異常',
+    userMessage: 'Meshy 3D 服務暫時異常',
     retryable: true,
     suggestedRetryDelayMs: 10000,
   },

@@ -3,7 +3,7 @@
  * Tripo3D Provider
  *
  * Implements I3DProvider interface for Tripo3D v3.0 API.
- * Features: Native multi-view support, fast generation.
+ * Features: Native multi-view support, fast generation, texture + PBR.
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -45,6 +45,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TripoProvider = void 0;
 const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
+const form_data_1 = __importDefault(require("form-data"));
 const types_1 = require("./types");
 const mapper_1 = require("./mapper");
 class TripoProvider {
@@ -54,21 +55,45 @@ class TripoProvider {
         this.apiKey = apiKey;
     }
     /**
+     * Upload image to Tripo and get file_token
+     */
+    async uploadImage(imageBuffer) {
+        const formData = new form_data_1.default();
+        formData.append('file', imageBuffer, {
+            filename: 'image.png',
+            contentType: 'image/png',
+        });
+        const response = await axios_1.default.post(`${types_1.TRIPO_API_BASE}/upload`, formData, {
+            headers: {
+                Authorization: `Bearer ${this.apiKey}`,
+                ...formData.getHeaders(),
+            },
+            timeout: 60000, // 1 minute for upload
+        });
+        if (response.data.code !== 0) {
+            throw new Error(`Tripo upload error: code ${response.data.code}`);
+        }
+        return response.data.data.image_token;
+    }
+    /**
      * Generate 3D model from single image
      */
     async generateFromImage(imageBuffer, options) {
         try {
-            const base64 = imageBuffer.toString('base64');
             functions.logger.info('Starting Tripo single-image generation', {
                 quality: options.quality,
                 format: options.format,
             });
+            // Upload image first
+            const fileToken = await this.uploadImage(imageBuffer);
             const request = {
                 type: 'image_to_model',
                 file: {
                     type: 'png',
-                    data: base64,
+                    file_token: fileToken,
                 },
+                texture: true,
+                pbr: true,
             };
             const response = await this.createTask(request);
             functions.logger.info('Tripo generation started', {
@@ -83,8 +108,9 @@ class TripoProvider {
     /**
      * Generate 3D model from multiple images
      *
-     * Uses multiview_to_model when 4 images are provided.
-     * Order: front, left, right, back
+     * Uses multiview_to_model when 2+ images are provided.
+     * Pipeline order: [front, back, left, right]
+     * Tripo order: [front, left, back, right]
      */
     async generateFromMultipleImages(imageBuffers, options) {
         try {
@@ -93,41 +119,41 @@ class TripoProvider {
                 quality: options.quality,
                 format: options.format,
             });
-            // Use multiview if we have enough images (at least front + one other)
+            // Use multiview if we have enough images
             if (imageBuffers.length >= 2) {
+                // Upload all images in parallel
+                const uploadPromises = [];
+                // Pipeline order: [front, back, left, right]
+                // We need to map to Tripo order: [front, left, back, right]
+                for (let i = 0; i < 4; i++) {
+                    const pipelineIndex = i === 1 ? 2 : i === 2 ? 1 : i; // Swap left(2) and back(1)
+                    if (imageBuffers[pipelineIndex]) {
+                        uploadPromises.push(this.uploadImage(imageBuffers[pipelineIndex]));
+                    }
+                    else {
+                        uploadPromises.push(Promise.resolve(null));
+                    }
+                }
+                const fileTokens = await Promise.all(uploadPromises);
+                // Build files array in Tripo order: [front, left, back, right]
+                const files = [
+                    fileTokens[0] ? { type: 'png', file_token: fileTokens[0] } : {}, // front
+                    fileTokens[1] ? { type: 'png', file_token: fileTokens[1] } : {}, // left (from pipeline[2])
+                    fileTokens[2] ? { type: 'png', file_token: fileTokens[2] } : {}, // back (from pipeline[1])
+                    fileTokens[3] ? { type: 'png', file_token: fileTokens[3] } : {}, // right
+                ];
                 const request = {
                     type: 'multiview_to_model',
-                    files: {
-                        front: {
-                            type: 'png',
-                            data: imageBuffers[0].toString('base64'),
-                        },
-                    },
+                    files,
+                    texture: true,
+                    pbr: true,
+                    model_version: 'v3.0-20250812',
                 };
-                // Add additional views if available
-                // Order: front, back, left, right (matching pipeline angles)
-                if (imageBuffers[1]) {
-                    request.files.back = {
-                        type: 'png',
-                        data: imageBuffers[1].toString('base64'),
-                    };
-                }
-                if (imageBuffers[2]) {
-                    request.files.left = {
-                        type: 'png',
-                        data: imageBuffers[2].toString('base64'),
-                    };
-                }
-                if (imageBuffers[3]) {
-                    request.files.right = {
-                        type: 'png',
-                        data: imageBuffers[3].toString('base64'),
-                    };
-                }
                 const response = await this.createTask(request);
                 functions.logger.info('Tripo multiview generation started', {
                     taskId: response.data.task_id,
                     imageCount: imageBuffers.length,
+                    uploadedCount: fileTokens.filter(t => t !== null).length,
                 });
                 return { taskId: response.data.task_id };
             }
@@ -236,7 +262,7 @@ class TripoProvider {
                 Authorization: `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json',
             },
-            timeout: 60000,
+            timeout: 120000, // 2 minute timeout for task creation
         });
         if (response.data.code !== 0) {
             throw new Error(`Tripo API error: code ${response.data.code}`);

@@ -19,7 +19,8 @@
     "axios": "^1.6.0",
     "firebase-admin": "^12.0.0",
     "firebase-functions": "^7.0.0",
-    "form-data": "^4.0.5"
+    "form-data": "^4.0.5",
+    "tencentcloud-sdk-nodejs": "^4.1.152"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

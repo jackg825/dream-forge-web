@@ -2,10 +2,12 @@
  * Hunyuan 3D Provider
  *
  * Implements I3DProvider interface for Tencent Cloud Hunyuan 3D v3.0 API.
+ * Uses official tencentcloud-sdk-nodejs for API calls.
  * Features: High polygon count control (40K-1.5M), PBR materials, multi-view support.
  */
 
-import axios, { AxiosError } from 'axios';
+import * as tencentcloud from 'tencentcloud-sdk-nodejs';
+import axios from 'axios';
 import * as functions from 'firebase-functions';
 import type {
   I3DProvider,
@@ -18,30 +20,30 @@ import type {
   DownloadResult,
   HunyuanOptions,
 } from '../types';
-import {
-  HUNYUAN_API_HOST,
-  HUNYUAN_API_VERSION,
-  HUNYUAN_SERVICE,
-  HUNYUAN_QUALITY_FACE_COUNT,
-  type HunyuanSubmitRequest,
-  type HunyuanSubmitResponse,
-  type HunyuanQueryRequest,
-  type HunyuanQueryResponse,
-  type TencentCloudError,
-} from './types';
-import { signRequest } from './auth';
-import { mapHunyuanTaskStatus, extractHunyuanDownloads } from './mapper';
+import { HUNYUAN_QUALITY_FACE_COUNT } from './types';
+import { mapHunyuanTaskStatus, extractHunyuanDownloads, type SDKQueryResponse } from './mapper';
+
+// Get the AI3D client from SDK
+const Ai3dClient = tencentcloud.ai3d.v20250513.Client;
 
 export class HunyuanProvider implements I3DProvider {
   readonly providerType: ProviderType = 'hunyuan';
-  private secretId: string;
-  private secretKey: string;
-  private region: string;
+  private client: InstanceType<typeof Ai3dClient>;
 
   constructor(secretId: string, secretKey: string, region: string = 'ap-guangzhou') {
-    this.secretId = secretId;
-    this.secretKey = secretKey;
-    this.region = region;
+    this.client = new Ai3dClient({
+      credential: {
+        secretId,
+        secretKey,
+      },
+      region,
+      profile: {
+        httpProfile: {
+          endpoint: 'ai3d.tencentcloudapi.com',
+          reqTimeout: 120, // 2 minute timeout
+        },
+      },
+    });
   }
 
   /**
@@ -62,24 +64,19 @@ export class HunyuanProvider implements I3DProvider {
         enablePBR: options.enablePBR,
       });
 
-      const request: HunyuanSubmitRequest = {
+      const response = await this.client.SubmitHunyuanTo3DProJob({
         ImageBase64: base64,
         EnablePBR: options.enablePBR ?? false,
         FaceCount: faceCount,
         GenerateType: 'Normal',
-      };
-
-      const response = await this.callAPI<HunyuanSubmitResponse>(
-        'SubmitHunyuanTo3DProJob',
-        request
-      );
+      });
 
       functions.logger.info('Hunyuan generation started', {
         jobId: response.JobId,
         requestId: response.RequestId,
       });
 
-      return { taskId: response.JobId };
+      return { taskId: response.JobId! };
     } catch (error) {
       this.handleError(error, 'generateFromImage');
     }
@@ -104,38 +101,47 @@ export class HunyuanProvider implements I3DProvider {
         format: options.format,
       });
 
-      const request: HunyuanSubmitRequest = {
+      // Build multi-view images array (SDK format)
+      // Pipeline image order: [front, back, left, right]
+      const multiViewImages: Array<{
+        ViewType: string;
+        ViewImageBase64: string;
+      }> = [];
+
+      if (imageBuffers[1]) {
+        multiViewImages.push({
+          ViewType: 'back',
+          ViewImageBase64: imageBuffers[1].toString('base64'),
+        });
+      }
+      if (imageBuffers[2]) {
+        multiViewImages.push({
+          ViewType: 'left',
+          ViewImageBase64: imageBuffers[2].toString('base64'),
+        });
+      }
+      if (imageBuffers[3]) {
+        multiViewImages.push({
+          ViewType: 'right',
+          ViewImageBase64: imageBuffers[3].toString('base64'),
+        });
+      }
+
+      const response = await this.client.SubmitHunyuanTo3DProJob({
         ImageBase64: primaryBase64,
         EnablePBR: options.enablePBR ?? false,
         FaceCount: faceCount,
         GenerateType: 'Normal',
-      };
-
-      // Add multi-view images if available
-      if (imageBuffers.length > 1) {
-        request.MultiViewImages = {};
-        if (imageBuffers[1]) {
-          request.MultiViewImages.Left = imageBuffers[1].toString('base64');
-        }
-        if (imageBuffers[2]) {
-          request.MultiViewImages.Right = imageBuffers[2].toString('base64');
-        }
-        if (imageBuffers[3]) {
-          request.MultiViewImages.Back = imageBuffers[3].toString('base64');
-        }
-      }
-
-      const response = await this.callAPI<HunyuanSubmitResponse>(
-        'SubmitHunyuanTo3DProJob',
-        request
-      );
+        MultiViewImages: multiViewImages.length > 0 ? multiViewImages : undefined,
+      });
 
       functions.logger.info('Hunyuan multi-image generation started', {
         jobId: response.JobId,
         imageCount: imageBuffers.length,
+        multiViewCount: multiViewImages.length,
       });
 
-      return { taskId: response.JobId };
+      return { taskId: response.JobId! };
     } catch (error) {
       this.handleError(error, 'generateFromMultipleImages');
     }
@@ -146,13 +152,12 @@ export class HunyuanProvider implements I3DProvider {
    */
   async checkStatus(taskId: string): Promise<TaskStatusResult> {
     try {
-      const request: HunyuanQueryRequest = { JobId: taskId };
-      const response = await this.callAPI<HunyuanQueryResponse>(
-        'QueryHunyuanTo3DProJob',
-        request
-      );
+      const response = await this.client.QueryHunyuanTo3DProJob({
+        JobId: taskId,
+      });
 
-      const result = mapHunyuanTaskStatus(response);
+      // Map SDK response to our internal format
+      const result = mapHunyuanTaskStatus(response as SDKQueryResponse);
 
       functions.logger.info('Hunyuan status check', {
         jobId: taskId,
@@ -174,17 +179,15 @@ export class HunyuanProvider implements I3DProvider {
     requiredFormat?: string
   ): Promise<DownloadResult> {
     try {
-      const request: HunyuanQueryRequest = { JobId: taskId };
-      const response = await this.callAPI<HunyuanQueryResponse>(
-        'QueryHunyuanTo3DProJob',
-        request
-      );
+      const response = await this.client.QueryHunyuanTo3DProJob({
+        JobId: taskId,
+      });
 
-      if (response.Status !== 'SUCCEEDED') {
+      if (response.Status !== 'DONE') {
         throw new Error(`Task not completed: ${response.Status}`);
       }
 
-      const result = extractHunyuanDownloads(response);
+      const result = extractHunyuanDownloads(response as SDKQueryResponse);
 
       // Check for required format
       if (requiredFormat) {
@@ -269,105 +272,38 @@ export class HunyuanProvider implements I3DProvider {
   }
 
   /**
-   * Call Tencent Cloud API with TC3 signature
-   */
-  private async callAPI<T>(action: string, body: object): Promise<T> {
-    const payload = JSON.stringify(body);
-
-    const headers = signRequest({
-      secretId: this.secretId,
-      secretKey: this.secretKey,
-      service: HUNYUAN_SERVICE,
-      host: HUNYUAN_API_HOST,
-      action,
-      version: HUNYUAN_API_VERSION,
-      region: this.region,
-      payload,
-    });
-
-    try {
-      const response = await axios.post(
-        `https://${HUNYUAN_API_HOST}`,
-        payload,
-        {
-          headers,
-          timeout: 60000,
-        }
-      );
-
-      // Tencent Cloud wraps response in Response object
-      if (response.data.Response?.Error) {
-        const tcError = response.data as TencentCloudError;
-        throw new Error(
-          `Tencent Cloud API Error [${tcError.Response.Error.Code}]: ${tcError.Response.Error.Message}`
-        );
-      }
-
-      return response.data.Response as T;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const axiosError = error as AxiosError;
-        // Check for Tencent Cloud error in response
-        const tcError = axiosError.response?.data as TencentCloudError | undefined;
-        if (tcError?.Response?.Error) {
-          throw new Error(
-            `Tencent Cloud API Error [${tcError.Response.Error.Code}]: ${tcError.Response.Error.Message}`
-          );
-        }
-      }
-      throw error;
-    }
-  }
-
-  /**
    * Handle and log API errors
    */
   private handleError(error: unknown, operation: string): never {
-    if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError;
-      const status = axiosError.response?.status;
-      const data = axiosError.response?.data;
-
-      functions.logger.error(`Hunyuan API error in ${operation}`, {
-        status,
-        data: JSON.stringify(data),
-        message: axiosError.message,
-      });
-
-      if (status === 401 || status === 403) {
-        throw new functions.https.HttpsError(
-          'unauthenticated',
-          'Invalid Tencent Cloud credentials'
-        );
-      }
-
-      if (status === 429) {
-        throw new functions.https.HttpsError(
-          'resource-exhausted',
-          'Hunyuan API rate limit exceeded. Please try again later.'
-        );
-      }
-
-      if (status === 400) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          `Invalid request to Hunyuan API: ${JSON.stringify(data)}`
-        );
-      }
-
-      throw new functions.https.HttpsError(
-        'internal',
-        `Hunyuan API error: ${axiosError.message}`
-      );
-    }
-
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
 
-    functions.logger.error(`Unknown error in ${operation}`, {
+    functions.logger.error(`Hunyuan API error in ${operation}`, {
       error: errorMessage,
       stack: errorStack,
     });
+
+    // Check for specific Tencent Cloud error codes in message
+    if (errorMessage.includes('AuthFailure')) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Invalid Tencent Cloud credentials'
+      );
+    }
+
+    if (errorMessage.includes('RequestLimitExceeded') || errorMessage.includes('RateLimitExceeded')) {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        'Hunyuan API rate limit exceeded. Please try again later.'
+      );
+    }
+
+    if (errorMessage.includes('InvalidParameter')) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        `Invalid request to Hunyuan API: ${errorMessage}`
+      );
+    }
 
     throw new functions.https.HttpsError(
       'internal',

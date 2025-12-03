@@ -1,19 +1,42 @@
 /**
  * Hunyuan Status Mapper
  *
- * Maps Hunyuan API responses to unified provider types.
+ * Maps Hunyuan SDK responses to unified provider types.
  */
 import type { ProviderTaskStatus, TaskStatusResult, DownloadResult } from '../types';
-import type { HunyuanTaskStatus, HunyuanQueryResponse } from './types';
 /**
- * Map Hunyuan task status to unified ProviderTaskStatus
+ * SDK response status values
+ * WAIT = waiting, RUN = executing, FAIL = failed, DONE = completed
  */
-export declare function mapHunyuanStatus(status: HunyuanTaskStatus): ProviderTaskStatus;
+type HunyuanSDKStatus = 'WAIT' | 'RUN' | 'FAIL' | 'DONE' | string;
 /**
- * Map Hunyuan query response to TaskStatusResult
+ * SDK File3D structure
  */
-export declare function mapHunyuanTaskStatus(response: HunyuanQueryResponse): TaskStatusResult;
+interface SDKFile3D {
+    Type?: string;
+    Url?: string;
+    PreviewImageUrl?: string;
+}
 /**
- * Extract download URLs from Hunyuan query response
+ * SDK QueryHunyuanTo3DProJobResponse structure
  */
-export declare function extractHunyuanDownloads(response: HunyuanQueryResponse): DownloadResult;
+export interface SDKQueryResponse {
+    Status?: HunyuanSDKStatus;
+    ErrorCode?: string;
+    ErrorMessage?: string;
+    ResultFile3Ds?: SDKFile3D[];
+    RequestId?: string;
+}
+/**
+ * Map SDK status to unified ProviderTaskStatus
+ */
+export declare function mapHunyuanStatus(status?: string): ProviderTaskStatus;
+/**
+ * Map SDK query response to TaskStatusResult
+ */
+export declare function mapHunyuanTaskStatus(response: SDKQueryResponse): TaskStatusResult;
+/**
+ * Extract download URLs from SDK query response
+ */
+export declare function extractHunyuanDownloads(response: SDKQueryResponse): DownloadResult;
+export {};

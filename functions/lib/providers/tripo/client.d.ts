@@ -2,7 +2,7 @@
  * Tripo3D Provider
  *
  * Implements I3DProvider interface for Tripo3D v3.0 API.
- * Features: Native multi-view support, fast generation.
+ * Features: Native multi-view support, fast generation, texture + PBR.
  */
 import type { I3DProvider, ProviderType, ProviderOutputFormat, ProviderCapabilities, GenerationOptions, GenerationTaskResult, TaskStatusResult, DownloadResult } from '../types';
 export declare class TripoProvider implements I3DProvider {
@@ -10,14 +10,19 @@ export declare class TripoProvider implements I3DProvider {
     private apiKey;
     constructor(apiKey: string);
     /**
+     * Upload image to Tripo and get file_token
+     */
+    private uploadImage;
+    /**
      * Generate 3D model from single image
      */
     generateFromImage(imageBuffer: Buffer, options: GenerationOptions): Promise<GenerationTaskResult>;
     /**
      * Generate 3D model from multiple images
      *
-     * Uses multiview_to_model when 4 images are provided.
-     * Order: front, left, right, back
+     * Uses multiview_to_model when 2+ images are provided.
+     * Pipeline order: [front, back, left, right]
+     * Tripo order: [front, left, back, right]
      */
     generateFromMultipleImages(imageBuffers: Buffer[], options: GenerationOptions): Promise<GenerationTaskResult>;
     /**

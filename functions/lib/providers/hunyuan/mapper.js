@@ -2,57 +2,53 @@
 /**
  * Hunyuan Status Mapper
  *
- * Maps Hunyuan API responses to unified provider types.
+ * Maps Hunyuan SDK responses to unified provider types.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mapHunyuanStatus = mapHunyuanStatus;
 exports.mapHunyuanTaskStatus = mapHunyuanTaskStatus;
 exports.extractHunyuanDownloads = extractHunyuanDownloads;
 /**
- * Map Hunyuan task status to unified ProviderTaskStatus
+ * Map SDK status to unified ProviderTaskStatus
  */
 function mapHunyuanStatus(status) {
     switch (status) {
-        case 'QUEUED':
+        case 'WAIT':
             return 'pending';
-        case 'PROCESSING':
+        case 'RUN':
             return 'processing';
-        case 'SUCCEEDED':
+        case 'DONE':
             return 'completed';
-        case 'FAILED':
+        case 'FAIL':
             return 'failed';
         default:
             return 'pending';
     }
 }
 /**
- * Map Hunyuan query response to TaskStatusResult
+ * Map SDK query response to TaskStatusResult
  */
 function mapHunyuanTaskStatus(response) {
     return {
         status: mapHunyuanStatus(response.Status),
-        progress: response.Progress,
-        error: response.ErrorMessage,
+        progress: response.Status === 'RUN' ? 50 : response.Status === 'DONE' ? 100 : 0,
+        error: response.ErrorMessage || response.ErrorCode,
     };
 }
 /**
- * Extract download URLs from Hunyuan query response
+ * Extract download URLs from SDK query response
  */
 function extractHunyuanDownloads(response) {
-    const files = response.ModelFiles?.map((file) => ({
-        url: file.Url,
-        name: file.Name,
-        format: file.Format,
+    const files = response.ResultFile3Ds?.map((file) => ({
+        url: file.Url || '',
+        name: file.Type ? `model.${file.Type}` : 'model',
+        format: file.Type || 'unknown',
     })) || [];
+    // Find thumbnail from first file's preview
+    const thumbnailUrl = response.ResultFile3Ds?.[0]?.PreviewImageUrl;
     return {
         files,
-        thumbnailUrl: response.ThumbnailUrl,
-        textureUrls: response.TextureUrls ? {
-            baseColor: response.TextureUrls.BaseColor,
-            metallic: response.TextureUrls.Metallic,
-            normal: response.TextureUrls.Normal,
-            roughness: response.TextureUrls.Roughness,
-        } : undefined,
+        thumbnailUrl,
     };
 }
 //# sourceMappingURL=mapper.js.map

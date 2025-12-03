@@ -3,6 +3,7 @@
  * Hunyuan 3D Provider
  *
  * Implements I3DProvider interface for Tencent Cloud Hunyuan 3D v3.0 API.
+ * Uses official tencentcloud-sdk-nodejs for API calls.
  * Features: High polygon count control (40K-1.5M), PBR materials, multi-view support.
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -43,20 +44,30 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HunyuanProvider = void 0;
+const tencentcloud = __importStar(require("tencentcloud-sdk-nodejs"));
 const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
 const types_1 = require("./types");
-const auth_1 = require("./auth");
 const mapper_1 = require("./mapper");
+// Get the AI3D client from SDK
+const Ai3dClient = tencentcloud.ai3d.v20250513.Client;
 class HunyuanProvider {
     providerType = 'hunyuan';
-    secretId;
-    secretKey;
-    region;
+    client;
     constructor(secretId, secretKey, region = 'ap-guangzhou') {
-        this.secretId = secretId;
-        this.secretKey = secretKey;
-        this.region = region;
+        this.client = new Ai3dClient({
+            credential: {
+                secretId,
+                secretKey,
+            },
+            region,
+            profile: {
+                httpProfile: {
+                    endpoint: 'ai3d.tencentcloudapi.com',
+                    reqTimeout: 120, // 2 minute timeout
+                },
+            },
+        });
     }
     /**
      * Generate 3D model from single image
@@ -71,13 +82,12 @@ class HunyuanProvider {
                 format: options.format,
                 enablePBR: options.enablePBR,
             });
-            const request = {
+            const response = await this.client.SubmitHunyuanTo3DProJob({
                 ImageBase64: base64,
                 EnablePBR: options.enablePBR ?? false,
                 FaceCount: faceCount,
                 GenerateType: 'Normal',
-            };
-            const response = await this.callAPI('SubmitHunyuanTo3DProJob', request);
+            });
             functions.logger.info('Hunyuan generation started', {
                 jobId: response.JobId,
                 requestId: response.RequestId,
@@ -102,29 +112,38 @@ class HunyuanProvider {
                 faceCount,
                 format: options.format,
             });
-            const request = {
+            // Build multi-view images array (SDK format)
+            // Pipeline image order: [front, back, left, right]
+            const multiViewImages = [];
+            if (imageBuffers[1]) {
+                multiViewImages.push({
+                    ViewType: 'back',
+                    ViewImageBase64: imageBuffers[1].toString('base64'),
+                });
+            }
+            if (imageBuffers[2]) {
+                multiViewImages.push({
+                    ViewType: 'left',
+                    ViewImageBase64: imageBuffers[2].toString('base64'),
+                });
+            }
+            if (imageBuffers[3]) {
+                multiViewImages.push({
+                    ViewType: 'right',
+                    ViewImageBase64: imageBuffers[3].toString('base64'),
+                });
+            }
+            const response = await this.client.SubmitHunyuanTo3DProJob({
                 ImageBase64: primaryBase64,
                 EnablePBR: options.enablePBR ?? false,
                 FaceCount: faceCount,
                 GenerateType: 'Normal',
-            };
-            // Add multi-view images if available
-            if (imageBuffers.length > 1) {
-                request.MultiViewImages = {};
-                if (imageBuffers[1]) {
-                    request.MultiViewImages.Left = imageBuffers[1].toString('base64');
-                }
-                if (imageBuffers[2]) {
-                    request.MultiViewImages.Right = imageBuffers[2].toString('base64');
-                }
-                if (imageBuffers[3]) {
-                    request.MultiViewImages.Back = imageBuffers[3].toString('base64');
-                }
-            }
-            const response = await this.callAPI('SubmitHunyuanTo3DProJob', request);
+                MultiViewImages: multiViewImages.length > 0 ? multiViewImages : undefined,
+            });
             functions.logger.info('Hunyuan multi-image generation started', {
                 jobId: response.JobId,
                 imageCount: imageBuffers.length,
+                multiViewCount: multiViewImages.length,
             });
             return { taskId: response.JobId };
         }
@@ -137,8 +156,10 @@ class HunyuanProvider {
      */
     async checkStatus(taskId) {
         try {
-            const request = { JobId: taskId };
-            const response = await this.callAPI('QueryHunyuanTo3DProJob', request);
+            const response = await this.client.QueryHunyuanTo3DProJob({
+                JobId: taskId,
+            });
+            // Map SDK response to our internal format
             const result = (0, mapper_1.mapHunyuanTaskStatus)(response);
             functions.logger.info('Hunyuan status check', {
                 jobId: taskId,
@@ -156,9 +177,10 @@ class HunyuanProvider {
      */
     async getDownloadUrls(taskId, requiredFormat) {
         try {
-            const request = { JobId: taskId };
-            const response = await this.callAPI('QueryHunyuanTo3DProJob', request);
-            if (response.Status !== 'SUCCEEDED') {
+            const response = await this.client.QueryHunyuanTo3DProJob({
+                JobId: taskId,
+            });
+            if (response.Status !== 'DONE') {
                 throw new Error(`Task not completed: ${response.Status}`);
             }
             const result = (0, mapper_1.extractHunyuanDownloads)(response);
@@ -238,74 +260,25 @@ class HunyuanProvider {
         return types_1.HUNYUAN_QUALITY_FACE_COUNT[options.quality] ?? 200000;
     }
     /**
-     * Call Tencent Cloud API with TC3 signature
-     */
-    async callAPI(action, body) {
-        const payload = JSON.stringify(body);
-        const headers = (0, auth_1.signRequest)({
-            secretId: this.secretId,
-            secretKey: this.secretKey,
-            service: types_1.HUNYUAN_SERVICE,
-            host: types_1.HUNYUAN_API_HOST,
-            action,
-            version: types_1.HUNYUAN_API_VERSION,
-            region: this.region,
-            payload,
-        });
-        try {
-            const response = await axios_1.default.post(`https://${types_1.HUNYUAN_API_HOST}`, payload, {
-                headers,
-                timeout: 60000,
-            });
-            // Tencent Cloud wraps response in Response object
-            if (response.data.Response?.Error) {
-                const tcError = response.data;
-                throw new Error(`Tencent Cloud API Error [${tcError.Response.Error.Code}]: ${tcError.Response.Error.Message}`);
-            }
-            return response.data.Response;
-        }
-        catch (error) {
-            if (axios_1.default.isAxiosError(error)) {
-                const axiosError = error;
-                // Check for Tencent Cloud error in response
-                const tcError = axiosError.response?.data;
-                if (tcError?.Response?.Error) {
-                    throw new Error(`Tencent Cloud API Error [${tcError.Response.Error.Code}]: ${tcError.Response.Error.Message}`);
-                }
-            }
-            throw error;
-        }
-    }
-    /**
      * Handle and log API errors
      */
     handleError(error, operation) {
-        if (axios_1.default.isAxiosError(error)) {
-            const axiosError = error;
-            const status = axiosError.response?.status;
-            const data = axiosError.response?.data;
-            functions.logger.error(`Hunyuan API error in ${operation}`, {
-                status,
-                data: JSON.stringify(data),
-                message: axiosError.message,
-            });
-            if (status === 401 || status === 403) {
-                throw new functions.https.HttpsError('unauthenticated', 'Invalid Tencent Cloud credentials');
-            }
-            if (status === 429) {
-                throw new functions.https.HttpsError('resource-exhausted', 'Hunyuan API rate limit exceeded. Please try again later.');
-            }
-            if (status === 400) {
-                throw new functions.https.HttpsError('invalid-argument', `Invalid request to Hunyuan API: ${JSON.stringify(data)}`);
-            }
-            throw new functions.https.HttpsError('internal', `Hunyuan API error: ${axiosError.message}`);
-        }
         const errorMessage = error instanceof Error ? error.message : String(error);
         const errorStack = error instanceof Error ? error.stack : undefined;
-        functions.logger.error(`Unknown error in ${operation}`, {
+        functions.logger.error(`Hunyuan API error in ${operation}`, {
             error: errorMessage,
             stack: errorStack,
         });
+        // Check for specific Tencent Cloud error codes in message
+        if (errorMessage.includes('AuthFailure')) {
+            throw new functions.https.HttpsError('unauthenticated', 'Invalid Tencent Cloud credentials');
+        }
+        if (errorMessage.includes('RequestLimitExceeded') || errorMessage.includes('RateLimitExceeded')) {
+            throw new functions.https.HttpsError('resource-exhausted', 'Hunyuan API rate limit exceeded. Please try again later.');
+        }
+        if (errorMessage.includes('InvalidParameter')) {
+            throw new functions.https.HttpsError('invalid-argument', `Invalid request to Hunyuan API: ${errorMessage}`);
+        }
         throw new functions.https.HttpsError('internal', `Unexpected error in ${operation}: ${errorMessage}`);
     }
 }

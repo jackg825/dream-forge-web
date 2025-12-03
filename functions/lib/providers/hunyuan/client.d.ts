@@ -2,14 +2,13 @@
  * Hunyuan 3D Provider
  *
  * Implements I3DProvider interface for Tencent Cloud Hunyuan 3D v3.0 API.
+ * Uses official tencentcloud-sdk-nodejs for API calls.
  * Features: High polygon count control (40K-1.5M), PBR materials, multi-view support.
  */
 import type { I3DProvider, ProviderType, ProviderOutputFormat, ProviderCapabilities, GenerationOptions, GenerationTaskResult, TaskStatusResult, DownloadResult } from '../types';
 export declare class HunyuanProvider implements I3DProvider {
     readonly providerType: ProviderType;
-    private secretId;
-    private secretKey;
-    private region;
+    private client;
     constructor(secretId: string, secretKey: string, region?: string);
     /**
      * Generate 3D model from single image
@@ -43,10 +42,6 @@ export declare class HunyuanProvider implements I3DProvider {
      * Get face count from options
      */
     private getFaceCount;
-    /**
-     * Call Tencent Cloud API with TC3 signature
-     */
-    private callAPI;
     /**
      * Handle and log API errors
      */

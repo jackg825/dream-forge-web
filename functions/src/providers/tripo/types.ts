@@ -2,11 +2,11 @@
  * Tripo3D API Types
  *
  * Tripo3D v3.0 API type definitions.
- * API Base URL: https://api.tripo3d.ai/v2
+ * API Base URL: https://api.tripo3d.ai/v2/openapi
  */
 
 // API base configuration
-export const TRIPO_API_BASE = 'https://api.tripo3d.ai/v2';
+export const TRIPO_API_BASE = 'https://api.tripo3d.ai/v2/openapi';
 
 /**
  * Task type for creation
@@ -14,41 +14,63 @@ export const TRIPO_API_BASE = 'https://api.tripo3d.ai/v2';
 export type TripoTaskType = 'image_to_model' | 'multiview_to_model' | 'text_to_model';
 
 /**
+ * File input for single image (supports base64 data)
+ */
+export interface TripoFileInput {
+  type: 'png' | 'jpg' | 'jpeg' | 'webp';
+  data?: string;        // Base64 encoded
+  file_token?: string;  // From upload API
+  url?: string;         // Direct URL
+}
+
+/**
+ * Multiview file input (one of file_token, url, or empty object to skip)
+ */
+export interface TripoMultiviewFileInput {
+  type?: 'png' | 'jpg' | 'jpeg' | 'webp';
+  file_token?: string;
+  url?: string;
+}
+
+/**
  * Create task request (image to model)
  */
 export interface TripoImageToModelRequest {
   type: 'image_to_model';
-  file: {
-    type: 'png' | 'jpg' | 'jpeg' | 'webp';
-    data: string; // Base64 encoded
-  };
+  file: TripoFileInput;
   model_version?: string;
+  texture?: boolean;
+  pbr?: boolean;
 }
 
 /**
  * Create task request (multiview to model)
+ * files must be array of exactly 4 items: [front, left, back, right]
  */
 export interface TripoMultiviewToModelRequest {
   type: 'multiview_to_model';
-  files: {
-    front: {
-      type: 'png' | 'jpg' | 'jpeg' | 'webp';
-      data: string;
-    };
-    left?: {
-      type: 'png' | 'jpg' | 'jpeg' | 'webp';
-      data: string;
-    };
-    right?: {
-      type: 'png' | 'jpg' | 'jpeg' | 'webp';
-      data: string;
-    };
-    back?: {
-      type: 'png' | 'jpg' | 'jpeg' | 'webp';
-      data: string;
-    };
-  };
+  files: [
+    TripoMultiviewFileInput,  // front (required)
+    TripoMultiviewFileInput,  // left
+    TripoMultiviewFileInput,  // back
+    TripoMultiviewFileInput   // right
+  ];
   model_version?: string;
+  texture?: boolean;
+  pbr?: boolean;
+  face_limit?: number;
+  texture_quality?: 'standard' | 'detailed';
+  auto_size?: boolean;
+}
+
+/**
+ * Upload image response
+ */
+export interface TripoUploadResponse {
+  code: number;
+  data: {
+    image_token: string;
+  };
 }
 
 /**
@@ -85,25 +107,12 @@ export interface TripoTaskStatusResponse {
     status: TripoTaskStatus;
     progress: number; // 0-100
     output?: {
-      model: TripoModelOutput;
+      model?: TripoModelOutput;
       rendered_image?: string;
       pbr_model?: TripoModelOutput;
       base_model?: TripoModelOutput;
     };
     create_time: number;
-  };
-}
-
-/**
- * Download task models response
- */
-export interface TripoDownloadResponse {
-  code: number;
-  data: {
-    model: {
-      type: string;
-      url: string;
-    };
   };
 }
 
@@ -114,12 +123,3 @@ export interface TripoError {
   code: number;
   message: string;
 }
-
-/**
- * Quality to model version mapping (if needed)
- */
-export const TRIPO_MODEL_VERSIONS: Record<string, string> = {
-  draft: 'default',
-  standard: 'default',
-  fine: 'default',
-};
