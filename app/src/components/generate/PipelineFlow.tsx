@@ -52,16 +52,17 @@ import type {
   MeshPrecision,
   ModelProvider,
   ProviderOptions,
+  GeminiModelId,
 } from '@/types';
 import {
   GENERATION_MODE_OPTIONS,
   DEFAULT_GENERATION_MODE,
   DEFAULT_PROCESSING_MODE,
   DEFAULT_MESH_PRECISION,
+  DEFAULT_GEMINI_MODEL,
   PROVIDER_OPTIONS,
 } from '@/types';
-import { ProviderSelector } from './ProviderSelector';
-import { ProviderOptionsPanel } from './ProviderOptionsPanel';
+import { GeminiModelSelector } from './GeminiModelSelector';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -142,9 +143,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [userDescription, setUserDescription] = useState<string>('');
   const [colorCount, setColorCount] = useState<number>(7);
 
-  // Provider selection state
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('meshy');
+  // Provider selection state - default to Tripo for 3D printing optimization
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('tripo');
   const [providerOptions, setProviderOptions] = useState<ProviderOptions>({});
+
+  // Gemini model selection state
+  const [geminiModel, setGeminiModel] = useState<GeminiModelId>(DEFAULT_GEMINI_MODEL);
 
   // Image analysis hook
   const {
@@ -549,6 +553,11 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const hasSomeImages = (pipeline?.meshImages && Object.keys(pipeline.meshImages).length > 0) ||
       (pipeline?.textureImages && Object.keys(pipeline.textureImages).length > 0);
 
+    // Check if image generation is in progress (prevents double-click)
+    const isGeneratingImages = pipeline?.status === 'generating-images' ||
+      pipeline?.status === 'batch-queued' ||
+      pipeline?.status === 'batch-processing';
+
     return (
       <div className="space-y-6">
         {/* Reference image preview */}
@@ -590,11 +599,11 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           disabled={actionLoading}
         />
 
-        {/* Multi-view grid (if images exist) */}
+        {/* Multi-view grid (if images exist) - only show mesh images for 3D printing */}
         {hasSomeImages && (
           <MultiViewGrid
             meshImages={pipeline?.meshImages || {}}
-            textureImages={pipeline?.textureImages || {}}
+            textureImages={{}} // Hide texture images for simplified 3D printing workflow
             isGenerating={false}
             onUploadView={(viewType, angle, file) => {
               // TODO: Implement view upload
@@ -605,6 +614,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           />
         )}
 
+        {/* Gemini model selection */}
+        <GeminiModelSelector
+          value={geminiModel}
+          onChange={setGeminiModel}
+          disabled={actionLoading || isGeneratingImages}
+        />
+
         {/* Action buttons */}
         <div className="flex justify-center gap-4 pt-4">
           {!hasSomeImages ? (
@@ -612,13 +628,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <Button
               size="lg"
               onClick={handleStartPipeline}
-              disabled={actionLoading}
+              disabled={actionLoading || isGeneratingImages}
               className="px-8"
             >
-              {actionLoading ? (
+              {actionLoading || isGeneratingImages ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  處理中...
+                  生成中...
                 </>
               ) : (
                 <>
@@ -654,10 +670,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 variant="outline"
                 size="lg"
                 onClick={handleStartPipeline}
-                disabled={actionLoading}
+                disabled={actionLoading || isGeneratingImages}
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                重新生成全部視角
+                {actionLoading || isGeneratingImages ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {actionLoading || isGeneratingImages ? '生成中...' : '重新生成全部視角'}
               </Button>
               <Button
                 size="lg"
@@ -746,8 +766,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             </div>
           </div>
 
-          {/* Texture images */}
-          <div>
+          {/* Texture images - hidden for simplified 3D printing workflow */}
+          {/* <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-sm font-medium">貼圖用圖片</h4>
               <Badge variant="outline" className="text-xs">{modeInfo?.textureStyle || '全彩'}</Badge>
@@ -784,35 +804,40 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 );
               })}
             </div>
-          </div>
+          </div> */}
         </div>
 
-        {/* Provider selection */}
-        <ProviderSelector
+        {/* Gemini model selection for image generation */}
+        <GeminiModelSelector
+          value={geminiModel}
+          onChange={setGeminiModel}
+          disabled={actionLoading}
+        />
+
+        {/* Provider selection - hidden, defaulting to Tripo3D v3.0 for 3D printing */}
+        {/* <ProviderSelector
           value={selectedProvider}
           onChange={setSelectedProvider}
           disabled={actionLoading}
           showCredits={true}
-        />
+        /> */}
 
-        {/* Provider-specific options (e.g., Hunyuan face count) */}
-        <ProviderOptionsPanel
+        {/* Provider-specific options - hidden */}
+        {/* <ProviderOptionsPanel
           provider={selectedProvider}
           options={providerOptions}
           onChange={setProviderOptions}
           disabled={actionLoading}
-        />
+        /> */}
 
-        {/* Generation options - moved from Step 1 */}
-        <div className="space-y-4 border border-border rounded-xl p-4 bg-muted/30">
+        {/* Generation options - hidden for simplified workflow */}
+        {/* Best settings for 3D printing are applied automatically:
+            - Mode: simplified-mesh (全彩網格, 6色簡化貼圖)
+            - Precision: standard (optimized mesh density)
+            - Provider: Tripo3D v3.0 with Standard Texture (20 credits)
+        */}
+        {/* <div className="space-y-4 border border-border rounded-xl p-4 bg-muted/30">
           <h4 className="text-sm font-medium">生成選項</h4>
-          {/* Batch mode temporarily disabled
-          <ProcessingModeSelector
-            value={processingMode}
-            onChange={setProcessingMode}
-            disabled={actionLoading}
-          />
-          */}
           <ModeSelector
             value={generationMode}
             onChange={setGenerationMode}
@@ -823,7 +848,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             onChange={setMeshPrecision}
             disabled={actionLoading}
           />
-        </div>
+        </div> */}
 
         {/* Action button - proceed to mesh generation */}
         <div className="flex justify-center pt-4">

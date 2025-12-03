@@ -82,6 +82,8 @@ export class TripoProvider implements I3DProvider {
       // Upload image first
       const fileToken = await this.uploadImage(imageBuffer);
 
+      // Standard texture configuration for 3D printing (20 credits)
+      // Uses standard quality for cost-efficiency while maintaining good print quality
       const request: TripoImageToModelRequest = {
         type: 'image_to_model',
         file: {
@@ -90,7 +92,9 @@ export class TripoProvider implements I3DProvider {
         },
         texture: true,
         pbr: true,
-        texture_quality: 'detailed',  // High-resolution textures for better quality
+        texture_quality: 'standard',  // Standard texture (20 credits vs 30 for detailed)
+        texture_alignment: 'original_image',  // Align textures to original image for better color fidelity
+        geometry_quality: 'detailed',  // Keep detailed geometry for 3D printing accuracy
       };
 
       const response = await this.createTask(request);
@@ -149,13 +153,18 @@ export class TripoProvider implements I3DProvider {
           fileTokens[3] ? { type: 'png', file_token: fileTokens[3] } : {},  // right
         ];
 
+        // Standard texture configuration for 3D printing (20 credits)
+        // Uses standard texture quality for cost-efficiency while maintaining good print quality
         const request: TripoMultiviewToModelRequest = {
           type: 'multiview_to_model',
           files,
           texture: true,
           pbr: true,
-          texture_quality: 'detailed',  // High-resolution textures for better quality
+          texture_quality: 'standard',  // Standard texture (20 credits vs 30 for detailed)
+          texture_alignment: 'original_image',  // Align textures to original image for better color fidelity
+          geometry_quality: 'detailed',  // Keep detailed geometry for 3D printing accuracy
           model_version: 'v3.0-20250812',
+          auto_size: true,
         };
 
         const response = await this.createTask(request);

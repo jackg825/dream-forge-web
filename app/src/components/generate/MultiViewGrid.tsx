@@ -198,8 +198,13 @@ export function MultiViewGrid({
   // Count completed images
   const meshCount = Object.keys(meshImages).length;
   const textureCount = Object.keys(textureImages).length;
-  const totalCount = meshCount + textureCount;
-  const allComplete = meshCount === 4 && textureCount === 2;
+  // Show texture section only if textureImages is not empty (for simplified 3D printing workflow)
+  const showTextureSection = textureCount > 0 || (generatingPhase === 'texture-views' && isGenerating);
+  const totalRequired = showTextureSection ? 6 : 4;
+  const totalCount = meshCount + (showTextureSection ? textureCount : 0);
+  const allComplete = showTextureSection
+    ? (meshCount === 4 && textureCount === 2)
+    : (meshCount === 4);
 
   return (
     <div className="space-y-4">
@@ -209,7 +214,7 @@ export function MultiViewGrid({
           <ImageIcon className="h-4 w-4" />
           多視角圖片
           <Badge variant={allComplete ? 'default' : 'secondary'} className="ml-1">
-            {totalCount}/6
+            {totalCount}/{totalRequired}
           </Badge>
         </h3>
         {isGenerating && (
@@ -222,7 +227,7 @@ export function MultiViewGrid({
 
       {/* Mesh Views (4 columns) */}
       <div>
-        <h4 className="text-sm text-muted-foreground mb-2">網格視角 (4 張)</h4>
+        <h4 className="text-sm text-muted-foreground mb-2">網格用圖片</h4>
         <div className="grid grid-cols-4 gap-3">
           {MESH_VIEWS.map(({ angle, label }) => (
             <ViewSlot
@@ -240,27 +245,29 @@ export function MultiViewGrid({
         </div>
       </div>
 
-      {/* Texture Views (2 columns, centered) */}
-      <div>
-        <h4 className="text-sm text-muted-foreground mb-2">貼圖視角 (2 張)</h4>
-        <div className="grid grid-cols-4 gap-3">
-          <div /> {/* Empty for centering */}
-          {TEXTURE_VIEWS.map(({ angle, label }) => (
-            <ViewSlot
-              key={`texture-${angle}`}
-              angle={angle}
-              label={label}
-              image={textureImages[angle]}
-              isGenerating={isGenerating && generatingPhase === 'texture-views' && !textureImages[angle]}
-              onUpload={(file) => onUploadView('texture', angle, file)}
-              onRegenerate={onRegenerateView ? () => onRegenerateView('texture', angle) : undefined}
-              disabled={disabled}
-              uploadingAngle={uploadingView?.type === 'texture' ? uploadingView.angle : undefined}
-            />
-          ))}
-          <div /> {/* Empty for centering */}
+      {/* Texture Views (2 columns, centered) - only show if textureImages is provided */}
+      {showTextureSection && (
+        <div>
+          <h4 className="text-sm text-muted-foreground mb-2">貼圖用圖片</h4>
+          <div className="grid grid-cols-4 gap-3">
+            <div /> {/* Empty for centering */}
+            {TEXTURE_VIEWS.map(({ angle, label }) => (
+              <ViewSlot
+                key={`texture-${angle}`}
+                angle={angle}
+                label={label}
+                image={textureImages[angle]}
+                isGenerating={isGenerating && generatingPhase === 'texture-views' && !textureImages[angle]}
+                onUpload={(file) => onUploadView('texture', angle, file)}
+                onRegenerate={onRegenerateView ? () => onRegenerateView('texture', angle) : undefined}
+                disabled={disabled}
+                uploadingAngle={uploadingView?.type === 'texture' ? uploadingView.angle : undefined}
+              />
+            ))}
+            <div /> {/* Empty for centering */}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Help text */}
       <p className="text-xs text-muted-foreground">

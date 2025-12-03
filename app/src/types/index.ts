@@ -599,6 +599,43 @@ export const GENERATION_MODE_OPTIONS: Record<GenerationModeId, {
 export const DEFAULT_GENERATION_MODE: GenerationModeId = 'simplified-mesh';
 
 /**
+ * Gemini model selection for image generation
+ * - gemini-3-pro: Higher quality, slower, more expensive
+ * - gemini-2.5-flash: Faster, cheaper, good for testing
+ */
+export type GeminiModelId = 'gemini-3-pro' | 'gemini-2.5-flash';
+
+/**
+ * Gemini model options for UI display
+ */
+export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
+  id: GeminiModelId;
+  name: string;
+  description: string;
+  badge?: string;
+  estimatedTime: string;
+}> = {
+  'gemini-3-pro': {
+    id: 'gemini-3-pro',
+    name: 'Gemini 3.0 Pro',
+    description: '高品質圖片生成，適合細節要求高的物件',
+    badge: '推薦',
+    estimatedTime: '約 2-3 分鐘',
+  },
+  'gemini-2.5-flash': {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    description: '快速生成，適合快速測試',
+    estimatedTime: '約 1-2 分鐘',
+  },
+};
+
+/**
+ * Default Gemini model
+ */
+export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-3-pro';
+
+/**
  * Pipeline status for new simplified workflow
  * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
  */
