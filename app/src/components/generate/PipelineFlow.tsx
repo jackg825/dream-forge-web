@@ -58,6 +58,7 @@ import {
   DEFAULT_GENERATION_MODE,
   DEFAULT_PROCESSING_MODE,
   DEFAULT_MESH_PRECISION,
+  PROVIDER_OPTIONS,
 } from '@/types';
 import { ProviderSelector } from './ProviderSelector';
 import { ProviderOptionsPanel } from './ProviderOptionsPanel';
@@ -1037,7 +1038,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   };
 
   // Step 2 complete: Mesh preview - user can add texture or finish with mesh only
-  const renderMeshPreviewStep = () => (
+  const renderMeshPreviewStep = () => {
+    // Check if provider outputs textured mesh (e.g., Hunyuan 3D Pro)
+    const provider = pipeline?.settings?.provider;
+    const providerHasTexturedMesh = provider
+      ? PROVIDER_OPTIONS[provider]?.capabilities?.texturedMesh === true
+      : false;
+
+    return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Main content - 3D viewer */}
       <div className="lg:col-span-3 space-y-4">
@@ -1062,7 +1070,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               <ViewerToolbar
                 viewMode={meshViewMode}
                 onViewModeChange={setMeshViewMode}
-                hasTextures={false}
+                hasTextures={providerHasTexturedMesh}
                 backgroundColor={meshBgColor}
                 onBackgroundChange={setMeshBgColor}
                 showGrid={meshShowGrid}
@@ -1135,6 +1143,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       )}
     </div>
   );
+  };
 
   // Step 3: Texture generation in progress
   // Uses UnifiedProgressIndicator for consistent progress display

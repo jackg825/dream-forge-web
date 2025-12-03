@@ -54,6 +54,7 @@ export interface ProviderCapability {
     maxPolygons?: string;
     faceCountControl?: boolean;
     multiview?: boolean;
+    texturedMesh?: boolean;  // Provider outputs mesh with embedded textures
   };
 }
 
@@ -79,7 +80,7 @@ export const PROVIDER_OPTIONS: Record<ModelProvider, ProviderCapability> = {
     badgeVariant: 'secondary',
     estimatedTime: '約 3-6 分鐘',
     creditCost: 6,  // API: ¥2.40 (~$0.33) → Total: $0.58
-    capabilities: { maxPolygons: '1.5M', faceCountControl: true },
+    capabilities: { maxPolygons: '1.5M', faceCountControl: true, texturedMesh: true },
   },
   rodin: {
     id: 'rodin',

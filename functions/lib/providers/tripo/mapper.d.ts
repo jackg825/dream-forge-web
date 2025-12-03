@@ -13,7 +13,4 @@ export declare function mapTripoStatus(status: TripoTaskStatus): ProviderTaskSta
  * Map Tripo task status response to TaskStatusResult
  */
 export declare function mapTripoTaskStatus(response: TripoTaskStatusResponse): TaskStatusResult;
-/**
- * Extract download URLs from Tripo task status response
- */
 export declare function extractTripoDownloads(response: TripoTaskStatusResponse): DownloadResult;

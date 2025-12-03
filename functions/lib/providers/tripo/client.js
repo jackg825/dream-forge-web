@@ -207,6 +207,7 @@ class TripoProvider {
                 taskId,
                 fileCount: result.files.length,
                 files: result.files.map((f) => f.format),
+                rawOutput: JSON.stringify(response.data.output), // Debug: capture actual response structure
             });
             return result;
         }

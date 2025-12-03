@@ -41,8 +41,8 @@ function mapHunyuanTaskStatus(response) {
 function extractHunyuanDownloads(response) {
     const files = response.ResultFile3Ds?.map((file) => ({
         url: file.Url || '',
-        name: file.Type ? `model.${file.Type}` : 'model',
-        format: file.Type || 'unknown',
+        name: file.Type ? `model.${file.Type.toLowerCase()}` : 'model',
+        format: file.Type?.toLowerCase() || 'unknown', // Normalize to lowercase for consistency
     })) || [];
     // Find thumbnail from first file's preview
     const thumbnailUrl = response.ResultFile3Ds?.[0]?.PreviewImageUrl;
