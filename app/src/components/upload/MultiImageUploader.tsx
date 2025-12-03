@@ -56,7 +56,7 @@ export function MultiImageUploader({ userId, onImagesChange, onError }: MultiIma
       setError(null);
       setUploadingAngle(angle);
 
-      // Validate image
+      // Validate and auto-compress image
       const validation = await validateImage(file);
       if (!validation.valid) {
         setError(validation.error || 'Invalid image');
@@ -65,19 +65,19 @@ export function MultiImageUploader({ userId, onImagesChange, onError }: MultiIma
         return;
       }
 
-      // Create preview
-      const previewUrl = URL.createObjectURL(file);
+      // Use the processed file (may be compressed/converted)
+      const processedFile = validation.file || file;
 
       // Upload
       try {
-        const result = await uploadImage(file, userId, (p) => {
+        const result = await uploadImage(processedFile, userId, (p) => {
           setProgress(p);
         });
 
         const uploadedImage: UploadedImage = {
           url: result.downloadUrl,
           angle,
-          file,
+          file: processedFile,
           isAiGenerated: false,
         };
 
@@ -266,7 +266,7 @@ export function MultiImageUploader({ userId, onImagesChange, onError }: MultiIma
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
         onChange={handleFileInput}
         className="hidden"
       />

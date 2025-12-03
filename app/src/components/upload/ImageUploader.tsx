@@ -25,7 +25,7 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
       setError(null);
       setState('validating');
 
-      // Validate image
+      // Validate and auto-compress image
       const validation = await validateImage(file);
       if (!validation.valid) {
         setError(validation.error || 'Invalid image');
@@ -34,14 +34,17 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
         return;
       }
 
+      // Use the processed file (may be compressed/converted)
+      const processedFile = validation.file || file;
+
       // Create preview
-      const previewUrl = URL.createObjectURL(file);
+      const previewUrl = URL.createObjectURL(processedFile);
       setPreview(previewUrl);
 
       // Upload
       setState('uploading');
       try {
-        const result = await uploadImage(file, userId, (p) => {
+        const result = await uploadImage(processedFile, userId, (p) => {
           setProgress(p);
         });
         setState('complete');
@@ -181,7 +184,7 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
         onChange={handleFileInput}
         className="hidden"
       />

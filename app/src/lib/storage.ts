@@ -5,6 +5,7 @@ import {
   UploadTask,
 } from 'firebase/storage';
 import { storage } from './firebase';
+import { compressImage, type CompressionResult } from './imageCompression';
 
 export interface UploadProgress {
   progress: number; // 0-100
@@ -77,54 +78,73 @@ export async function uploadImage(
 export interface ValidationResult {
   valid: boolean;
   error?: string;
+  file?: File;
+  compressionResult?: CompressionResult;
+}
+
+/**
+ * Check if a file type is supported (including HEIC for auto-conversion)
+ */
+function isHeicFormat(file: File): boolean {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  return (
+    type === 'image/heic' ||
+    type === 'image/heif' ||
+    name.endsWith('.heic') ||
+    name.endsWith('.heif')
+  );
 }
 
 export async function validateImage(file: File): Promise<ValidationResult> {
-  // Check file type
+  // Check file type (now including HEIC/HEIF for auto-conversion)
   const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!validTypes.includes(file.type)) {
+  const isHeic = isHeicFormat(file);
+
+  if (!validTypes.includes(file.type) && !isHeic) {
     return {
       valid: false,
-      error: 'Please upload a JPG, PNG, or WEBP image.',
+      error: 'Please upload a JPG, PNG, WEBP, or HEIC image.',
     };
   }
 
-  // Check file size (max 10MB)
-  const maxSize = 10 * 1024 * 1024;
-  if (file.size > maxSize) {
-    return {
-      valid: false,
-      error: `File is too large. Maximum size is 10MB.`,
-    };
-  }
-
-  // Check image dimensions
+  // Auto-compress the image (handles HEIC conversion, resizing, and WebP output)
   try {
-    const dimensions = await getImageDimensions(file);
-    const minDim = 512;
-    const maxDim = 4096;
+    const compressionResult = await compressImage(file);
+    const processedFile = compressionResult.file;
 
-    if (dimensions.width < minDim || dimensions.height < minDim) {
+    // Check file size after compression
+    const maxSize = 10 * 1024 * 1024;
+    if (processedFile.size > maxSize) {
+      return {
+        valid: false,
+        error: 'Image could not be compressed below 10MB. Please try a smaller image.',
+      };
+    }
+
+    // Check dimensions after compression
+    const minDim = 512;
+    const { width, height } = compressionResult.finalDimensions;
+
+    if (width < minDim || height < minDim) {
       return {
         valid: false,
         error: `Image is too small. Minimum size is ${minDim}x${minDim} pixels.`,
       };
     }
 
-    if (dimensions.width > maxDim || dimensions.height > maxDim) {
-      return {
-        valid: false,
-        error: `Image is too large. Maximum size is ${maxDim}x${maxDim} pixels.`,
-      };
-    }
-  } catch {
+    return {
+      valid: true,
+      file: processedFile,
+      compressionResult,
+    };
+  } catch (error) {
+    console.error('Image processing error:', error);
     return {
       valid: false,
-      error: 'Could not read image dimensions.',
+      error: error instanceof Error ? error.message : 'Could not process image.',
     };
   }
-
-  return { valid: true };
 }
 
 /**

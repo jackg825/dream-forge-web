@@ -52,26 +52,29 @@ export function PipelineUploader({
       }
 
       for (const file of fileArray) {
-        // Validate
+        // Validate and auto-compress
         const validation = await validateImage(file);
         if (!validation.valid) {
           setError(validation.error || '圖片格式不正確');
           continue;
         }
 
+        // Use the processed file (may be compressed/converted)
+        const processedFile = validation.file || file;
+
         // Create preview
-        const previewUrl = URL.createObjectURL(file);
+        const previewUrl = URL.createObjectURL(processedFile);
 
         // Upload
         try {
           setUploadProgress(0);
-          const result = await uploadImage(file, userId, (p) => {
+          const result = await uploadImage(processedFile, userId, (p) => {
             setUploadProgress(p.progress);
           });
 
           const newImage: UploadedImage = {
             url: result.downloadUrl,
-            file,
+            file: processedFile,
             previewUrl,
           };
 
@@ -142,7 +145,7 @@ export function PipelineUploader({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
         multiple
         onChange={handleFileInput}
         className="hidden"
