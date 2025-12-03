@@ -979,6 +979,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         <UnifiedProgressIndicator
           status="generating-mesh"
           processingMode={pipeline?.processingMode || 'batch'}
+          provider={pipeline?.settings?.provider}
         />
       </div>
 

@@ -5,7 +5,7 @@
  * across all pipeline steps for a coherent user experience.
  */
 
-import type { PipelineStatus } from './index';
+import type { PipelineStatus, ModelProvider, PROVIDER_OPTIONS } from './index';
 
 /**
  * Progress message configuration for each pipeline status
@@ -64,7 +64,7 @@ export const PIPELINE_PROGRESS_MESSAGES: Record<PipelineStatus, ProgressMessage>
   },
   'generating-mesh': {
     title: '生成 3D 網格',
-    subtitle: 'Meshy AI 正在將圖片轉換為 3D 模型',
+    subtitle: '正在將圖片轉換為 3D 模型', // Dynamic subtitle - use getProgressMessage with provider
     estimatedTime: '2-5 分鐘',
     canLeave: false,
     icon: 'box',
@@ -126,11 +126,32 @@ export const PIPELINE_NEXT_STEP: Partial<Record<PipelineStatus, NextStepInfo>> =
   },
 };
 
+/** Provider display names for progress messages */
+const PROVIDER_DISPLAY_NAMES: Record<ModelProvider, string> = {
+  meshy: 'Meshy AI',
+  hunyuan: 'Hunyuan 3D',
+  rodin: 'Rodin',
+  tripo: 'Tripo3D',
+};
+
 /**
  * Helper to get progress message for a status
+ * @param status - Pipeline status
+ * @param provider - Optional provider for dynamic subtitles (used for generating-mesh)
  */
-export function getProgressMessage(status: PipelineStatus): ProgressMessage {
-  return PIPELINE_PROGRESS_MESSAGES[status];
+export function getProgressMessage(status: PipelineStatus, provider?: ModelProvider): ProgressMessage {
+  const message = PIPELINE_PROGRESS_MESSAGES[status];
+
+  // For generating-mesh, include provider name in subtitle
+  if (status === 'generating-mesh' && provider) {
+    const providerName = PROVIDER_DISPLAY_NAMES[provider] || provider;
+    return {
+      ...message,
+      subtitle: `${providerName} 正在將圖片轉換為 3D 模型`,
+    };
+  }
+
+  return message;
 }
 
 /**

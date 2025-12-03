@@ -15,7 +15,7 @@ import {
   Clock,
   Info,
 } from 'lucide-react';
-import type { PipelineStatus, BatchProgress, ProcessingMode } from '@/types';
+import type { PipelineStatus, BatchProgress, ProcessingMode, ModelProvider } from '@/types';
 import { PIPELINE_PROGRESS_MESSAGES, getProgressMessage, getNextStepInfo } from '@/types/progress';
 
 /**
@@ -45,6 +45,8 @@ interface UnifiedProgressIndicatorProps {
   progress?: ProgressData;
   /** Estimated completion time from backend */
   estimatedCompletionTime?: Date;
+  /** Provider for dynamic progress messages (e.g., 'meshy', 'tripo') */
+  provider?: ModelProvider;
   /** Display variant */
   variant?: 'inline' | 'full';
   /** Optional click handler for history navigation */
@@ -143,11 +145,12 @@ export function UnifiedProgressIndicator({
   processingMode = 'batch',
   progress,
   estimatedCompletionTime,
+  provider,
   variant = 'full',
   onViewHistory,
   className,
 }: UnifiedProgressIndicatorProps) {
-  const message = getProgressMessage(status);
+  const message = getProgressMessage(status, provider);
   const nextStep = getNextStepInfo(status);
   const progressValue = calculateProgress(status, progress);
   const isBatch = processingMode === 'batch';
