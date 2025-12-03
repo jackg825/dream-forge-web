@@ -67,3 +67,4 @@ export declare const startPipelineTexture: functions.HttpsFunction & functions.R
  * Only works for pipelines in 'draft' status.
  */
 export declare const updatePipelineAnalysis: functions.HttpsFunction & functions.Runnable<any>;
+export declare const resetPipelineStep: functions.HttpsFunction & functions.Runnable<any>;

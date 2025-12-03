@@ -36,8 +36,10 @@ import { ProcessingModeSelector } from './ProcessingModeSelector';
 import { PrecisionSelector } from './PrecisionSelector';
 import { PreviousOutputs } from './PreviousOutputs';
 import { RegenerateDialog } from './RegenerateDialog';
+import { ResetStepDialog } from './ResetStepDialog';
 import { PipelineErrorState } from './PipelineErrorState';
 import { PipelineProgressBar } from './PipelineProgressBar';
+import type { ResetTargetStep } from '@/hooks/usePipeline';
 import { UnifiedProgressIndicator } from './UnifiedProgressIndicator';
 import { ImageAnalysisPanel } from './ImageAnalysisPanel';
 import { MultiViewGrid } from './MultiViewGrid';
@@ -187,6 +189,11 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   } | null>(null);
   const [regenerateLoading, setRegenerateLoading] = useState(false);
 
+  // Reset step dialog state
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetTargetStep, setResetTargetStep] = useState<ResetTargetStep | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
+
   const {
     pipeline,
     loading: pipelineLoading,
@@ -199,6 +206,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     checkStatus,
     startTextureGeneration,
     updateAnalysis,
+    resetStep,
     currentStep,
     isBatchProcessing,
   } = usePipeline(pipelineId);
@@ -414,6 +422,28 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       console.error('Failed to regenerate image:', err);
     } finally {
       setRegenerateLoading(false);
+    }
+  };
+
+  // Handle step click for navigation back
+  const handleStepClick = (targetStep: ResetTargetStep) => {
+    setResetTargetStep(targetStep);
+    setResetDialogOpen(true);
+  };
+
+  // Handle reset step confirmation
+  const handleResetStepConfirm = async (keepResults: boolean) => {
+    if (!resetTargetStep) return;
+
+    setResetLoading(true);
+    try {
+      await resetStep(resetTargetStep, keepResults);
+      setResetDialogOpen(false);
+      setResetTargetStep(null);
+    } catch (err) {
+      console.error('Failed to reset step:', err);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -1355,6 +1385,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         isProcessing={isProcessing}
         credits={credits}
         creditsLoading={creditsLoading}
+        onStepClick={handleStepClick}
       />
 
       {pipeline?.status === 'failed' || error ? (
@@ -1408,6 +1439,18 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         angle={regenerateTarget?.angle || 'front'}
         onConfirm={handleRegenerateConfirm}
         loading={regenerateLoading}
+      />
+
+      <ResetStepDialog
+        open={resetDialogOpen}
+        onOpenChange={(open) => {
+          setResetDialogOpen(open);
+          if (!open) setResetTargetStep(null);
+        }}
+        targetStep={resetTargetStep || 'images-ready'}
+        currentStep={pipeline?.status || 'draft'}
+        onConfirm={handleResetStepConfirm}
+        loading={resetLoading}
       />
     </div>
   );

@@ -50,6 +50,7 @@ export {
   checkPipelineStatus,
   startPipelineTexture,
   updatePipelineAnalysis,
+  resetPipelineStep,
 } from './handlers/pipeline';
 
 // Gemini Batch API handlers

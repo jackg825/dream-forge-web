@@ -47,7 +47,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getUserPipelines = exports.getPipeline = exports.createPipeline = void 0;
+exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.getUserPipelines = exports.getPipeline = exports.createPipeline = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -612,10 +612,13 @@ exports.startPipelineMesh = functions
     catch (error) {
         throw new functions.https.HttpsError('resource-exhausted', `Insufficient credits for mesh generation (${meshCredits} credits required for ${providerType})`);
     }
-    // Update status
+    // Update status and save provider settings BEFORE API call
+    // This ensures retry uses the correct provider even if API fails
     await pipelineRef.update({
         status: 'generating-mesh',
         'creditsCharged.mesh': meshCredits,
+        'settings.provider': providerType,
+        'settings.providerOptions': providerOptions || {},
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     try {
@@ -659,18 +662,14 @@ exports.startPipelineMesh = functions
                 } : undefined,
             });
         }
-        // Update pipeline with task ID (store both generic and provider-specific)
+        // Update pipeline with task ID (provider settings already saved above)
         const updateData = {
             providerTaskId: result.taskId,
-            'settings.provider': providerType,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
         // Also store in legacy field for backwards compatibility
         if (providerType === 'meshy') {
             updateData.meshyMeshTaskId = result.taskId;
-        }
-        if (providerOptions) {
-            updateData['settings.providerOptions'] = providerOptions;
         }
         await pipelineRef.update(updateData);
         functions.logger.info('Pipeline mesh generation started', {
@@ -1014,6 +1013,105 @@ exports.updatePipelineAnalysis = functions
     return {
         success: true,
         pipelineId,
+    };
+});
+exports.resetPipelineStep = functions
+    .region('asia-east1')
+    .runWith({
+    timeoutSeconds: 30,
+    memory: '256MB',
+})
+    .https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+    const userId = context.auth.uid;
+    const { pipelineId, targetStep, keepResults } = data;
+    if (!pipelineId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Pipeline ID is required');
+    }
+    const validTargetSteps = ['draft', 'images-ready', 'mesh-ready'];
+    if (!validTargetSteps.includes(targetStep)) {
+        throw new functions.https.HttpsError('invalid-argument', `Invalid target step: ${targetStep}. Must be one of: ${validTargetSteps.join(', ')}`);
+    }
+    // Get pipeline
+    const pipelineRef = db.collection('pipelines').doc(pipelineId);
+    const pipelineDoc = await pipelineRef.get();
+    if (!pipelineDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+    const pipeline = pipelineDoc.data();
+    if (pipeline.userId !== userId) {
+        throw new functions.https.HttpsError('permission-denied', 'Not your pipeline');
+    }
+    // Cannot reset if pipeline is currently generating
+    const generatingStatuses = [
+        'generating-images',
+        'batch-queued',
+        'batch-processing',
+        'generating-mesh',
+        'generating-texture',
+    ];
+    if (generatingStatuses.includes(pipeline.status)) {
+        throw new functions.https.HttpsError('failed-precondition', `Cannot reset pipeline while in ${pipeline.status} status`);
+    }
+    // Prepare update data
+    const updateData = {
+        status: targetStep,
+        error: admin.firestore.FieldValue.delete(),
+        errorStep: admin.firestore.FieldValue.delete(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    // Clear fields based on target step and keepResults flag
+    if (!keepResults) {
+        switch (targetStep) {
+            case 'draft':
+                // Clear all generated content
+                updateData.meshImages = {};
+                updateData.textureImages = {};
+                updateData.aggregatedColorPalette = admin.firestore.FieldValue.delete();
+                updateData.generationProgress = admin.firestore.FieldValue.delete();
+            /* falls through */
+            case 'images-ready':
+                // Clear mesh generation results
+                updateData.providerTaskId = admin.firestore.FieldValue.delete();
+                updateData.meshyMeshTaskId = admin.firestore.FieldValue.delete();
+                updateData.meshUrl = admin.firestore.FieldValue.delete();
+                updateData.meshStoragePath = admin.firestore.FieldValue.delete();
+                updateData.meshDownloadFiles = admin.firestore.FieldValue.delete();
+                // Reset mesh credits (generation hasn't happened in reset state)
+                updateData['creditsCharged.mesh'] = 0;
+            /* falls through */
+            case 'mesh-ready':
+                // Clear texture generation results
+                updateData.meshyTextureTaskId = admin.firestore.FieldValue.delete();
+                updateData.texturedModelUrl = admin.firestore.FieldValue.delete();
+                updateData.texturedModelStoragePath = admin.firestore.FieldValue.delete();
+                updateData.texturedDownloadFiles = admin.firestore.FieldValue.delete();
+                // Reset texture credits
+                updateData['creditsCharged.texture'] = 0;
+                updateData.completedAt = admin.firestore.FieldValue.delete();
+                break;
+        }
+    }
+    else {
+        // keepResults = true: Only clear error state
+        // For mesh-ready, we might need to ensure mesh data is preserved
+        // For images-ready, we need to ensure image data is preserved
+        // The status change is the main action here
+    }
+    await pipelineRef.update(updateData);
+    functions.logger.info('Pipeline reset to step', {
+        pipelineId,
+        targetStep,
+        keepResults,
+        userId,
+        previousStatus: pipeline.status,
+    });
+    return {
+        success: true,
+        pipelineId,
+        newStatus: targetStep,
     };
 });
 //# sourceMappingURL=pipeline.js.map

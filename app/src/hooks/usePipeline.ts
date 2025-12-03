@@ -38,6 +38,14 @@ interface UpdatePipelineAnalysisResponse {
   pipelineId: string;
 }
 
+interface ResetPipelineStepResponse {
+  success: boolean;
+  pipelineId: string;
+  newStatus: 'draft' | 'images-ready' | 'mesh-ready';
+}
+
+export type ResetTargetStep = 'draft' | 'images-ready' | 'mesh-ready';
+
 interface UsePipelineReturn {
   // Pipeline state
   pipeline: Pipeline | null;
@@ -60,6 +68,7 @@ interface UsePipelineReturn {
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
   startTextureGeneration: () => Promise<StartPipelineTextureResponse>;
   updateAnalysis: (imageAnalysis: ImageAnalysisResult, userDescription?: string) => Promise<void>;
+  resetStep: (targetStep: ResetTargetStep, keepResults: boolean) => Promise<void>;
 
   // Navigation helpers
   currentStep: number;
@@ -393,6 +402,32 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     }
   }, [pipelineId]);
 
+  // Reset pipeline to a previous step
+  const resetStep = useCallback(async (
+    targetStep: ResetTargetStep,
+    keepResults: boolean
+  ): Promise<void> => {
+    if (!pipelineId) {
+      throw new Error('No pipeline ID');
+    }
+    if (!functions) {
+      throw new Error('Firebase not initialized');
+    }
+
+    try {
+      const resetFn = httpsCallable<
+        { pipelineId: string; targetStep: ResetTargetStep; keepResults: boolean },
+        ResetPipelineStepResponse
+      >(functions, 'resetPipelineStep');
+
+      await resetFn({ pipelineId, targetStep, keepResults });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to reset step';
+      setError(message);
+      throw err;
+    }
+  }, [pipelineId]);
+
   // Computed values
   const currentStep = pipeline ? getStepFromStatus(pipeline.status) : 0;
 
@@ -419,6 +454,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     checkStatus,
     startTextureGeneration,
     updateAnalysis,
+    resetStep,
     currentStep,
     canProceed,
     isBatchProcessing,
