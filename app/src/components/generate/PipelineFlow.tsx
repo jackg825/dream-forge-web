@@ -171,6 +171,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [meshShowAxes, setMeshShowAxes] = useState(false);
   const [meshAutoRotate, setMeshAutoRotate] = useState(false);
   const [meshFullscreen, setMeshFullscreen] = useState(false);
+  const [meshViewModeInitialized, setMeshViewModeInitialized] = useState(false);
 
   // 3D Viewer state - textured/complete preview (Step 7)
   const texturedViewerRef = useRef<ModelViewerRef>(null);
@@ -224,6 +225,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       }
     };
   }, [pollingInterval]);
+
+  // Set initial mesh view mode based on provider capabilities
+  useEffect(() => {
+    if (!meshViewModeInitialized && pipeline?.settings?.provider) {
+      const provider = pipeline.settings.provider;
+      if (PROVIDER_OPTIONS[provider]?.capabilities?.texturedMesh) {
+        setMeshViewMode('textured');
+      }
+      setMeshViewModeInitialized(true);
+    }
+  }, [pipeline?.settings?.provider, meshViewModeInitialized]);
 
   // Restore analysis when loading a draft pipeline
   useEffect(() => {

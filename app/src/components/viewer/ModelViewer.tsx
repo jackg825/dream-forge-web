@@ -38,6 +38,17 @@ export type { ModelRotation };
 /**
  * GLB Model component - loads model with PBR materials
  */
+// Store original material properties for restoration
+interface OriginalMaterialProps {
+  map: THREE.Texture | null;
+  normalMap: THREE.Texture | null;
+  roughnessMap: THREE.Texture | null;
+  metalnessMap: THREE.Texture | null;
+  color: THREE.Color;
+  metalness: number;
+  roughness: number;
+}
+
 function GLBModel({
   url,
   viewMode,
@@ -51,9 +62,37 @@ function GLBModel({
 }) {
   const { scene } = useGLTF(url);
   const groupRef = useRef<THREE.Group>(null);
+  const originalMaterialsRef = useRef<Map<THREE.MeshStandardMaterial, OriginalMaterialProps>>(new Map());
 
   // Clone scene to avoid modifying original
   const clonedScene = useMemo(() => scene.clone(), [scene]);
+
+  // Store original material properties on first render
+  useEffect(() => {
+    if (originalMaterialsRef.current.size === 0) {
+      clonedScene.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+
+          materials.forEach((mat) => {
+            if (mat instanceof THREE.MeshStandardMaterial && !originalMaterialsRef.current.has(mat)) {
+              originalMaterialsRef.current.set(mat, {
+                map: mat.map,
+                normalMap: mat.normalMap,
+                roughnessMap: mat.roughnessMap,
+                metalnessMap: mat.metalnessMap,
+                color: mat.color.clone(),
+                metalness: mat.metalness,
+                roughness: mat.roughness,
+              });
+            }
+          });
+        }
+      });
+    }
+  }, [clonedScene]);
 
   useEffect(() => {
     if (!groupRef.current) return;
@@ -123,8 +162,19 @@ function GLBModel({
               mat.roughness = 0.6;
               mat.needsUpdate = true;
             } else {
-              // textured - use original materials
+              // textured - restore original materials
               mat.wireframe = false;
+              const original = originalMaterialsRef.current.get(mat);
+              if (original) {
+                mat.map = original.map;
+                mat.normalMap = original.normalMap;
+                mat.roughnessMap = original.roughnessMap;
+                mat.metalnessMap = original.metalnessMap;
+                mat.color.copy(original.color);
+                mat.metalness = original.metalness;
+                mat.roughness = original.roughness;
+                mat.needsUpdate = true;
+              }
             }
           }
         });
