@@ -4,6 +4,7 @@
  * Maps Tripo API responses to unified provider types.
  */
 
+import * as functions from 'firebase-functions';
 import type { ProviderTaskStatus, TaskStatusResult, DownloadResult } from '../types';
 import type { TripoTaskStatus, TripoTaskStatusResponse } from './types';
 
@@ -42,12 +43,27 @@ export function mapTripoTaskStatus(response: TripoTaskStatusResponse): TaskStatu
  */
 /**
  * Helper to extract file extension from URL
+ * Handles various URL formats including signed URLs with query parameters
  */
 function getFormatFromUrl(url: string): string {
   try {
-    const pathname = new URL(url).pathname;
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+
+    // Try to extract extension from pathname
     const ext = pathname.split('.').pop()?.toLowerCase();
-    return ext || 'glb';  // Default to glb if can't determine
+    if (ext && ['glb', 'gltf', 'obj', 'fbx', 'stl'].includes(ext)) {
+      return ext;
+    }
+
+    // Fallback: check if URL contains format string anywhere
+    if (url.includes('.glb')) return 'glb';
+    if (url.includes('.gltf')) return 'gltf';
+    if (url.includes('.obj')) return 'obj';
+    if (url.includes('.fbx')) return 'fbx';
+    if (url.includes('.stl')) return 'stl';
+
+    return 'glb';  // Default to glb
   } catch {
     return 'glb';
   }
@@ -57,6 +73,21 @@ export function extractTripoDownloads(response: TripoTaskStatusResponse): Downlo
   const files: Array<{ url: string; name: string; format: string }> = [];
 
   const output = response.data.output;
+
+  // Debug: Log the actual API response structure
+  functions.logger.info('Tripo output structure', {
+    hasOutput: !!output,
+    hasModel: !!output?.model,
+    hasPbrModel: !!output?.pbr_model,
+    hasBaseModel: !!output?.base_model,
+    modelType: typeof output?.model,
+    pbrModelType: typeof output?.pbr_model,
+    baseModelType: typeof output?.base_model,
+    rawModel: output?.model ? JSON.stringify(output.model).substring(0, 300) : null,
+    rawPbrModel: output?.pbr_model ? JSON.stringify(output.pbr_model).substring(0, 300) : null,
+    rawBaseModel: output?.base_model ? JSON.stringify(output.base_model).substring(0, 300) : null,
+  });
+
   if (output) {
     // Priority: pbr_model > model > base_model
     // pbr_model contains textures, model may be untextured base mesh

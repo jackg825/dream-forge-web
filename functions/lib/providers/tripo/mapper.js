@@ -4,10 +4,44 @@
  *
  * Maps Tripo API responses to unified provider types.
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mapTripoStatus = mapTripoStatus;
 exports.mapTripoTaskStatus = mapTripoTaskStatus;
 exports.extractTripoDownloads = extractTripoDownloads;
+const functions = __importStar(require("firebase-functions"));
 /**
  * Map Tripo task status to unified ProviderTaskStatus
  */
@@ -41,12 +75,29 @@ function mapTripoTaskStatus(response) {
  */
 /**
  * Helper to extract file extension from URL
+ * Handles various URL formats including signed URLs with query parameters
  */
 function getFormatFromUrl(url) {
     try {
-        const pathname = new URL(url).pathname;
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+        // Try to extract extension from pathname
         const ext = pathname.split('.').pop()?.toLowerCase();
-        return ext || 'glb'; // Default to glb if can't determine
+        if (ext && ['glb', 'gltf', 'obj', 'fbx', 'stl'].includes(ext)) {
+            return ext;
+        }
+        // Fallback: check if URL contains format string anywhere
+        if (url.includes('.glb'))
+            return 'glb';
+        if (url.includes('.gltf'))
+            return 'gltf';
+        if (url.includes('.obj'))
+            return 'obj';
+        if (url.includes('.fbx'))
+            return 'fbx';
+        if (url.includes('.stl'))
+            return 'stl';
+        return 'glb'; // Default to glb
     }
     catch {
         return 'glb';
@@ -55,6 +106,19 @@ function getFormatFromUrl(url) {
 function extractTripoDownloads(response) {
     const files = [];
     const output = response.data.output;
+    // Debug: Log the actual API response structure
+    functions.logger.info('Tripo output structure', {
+        hasOutput: !!output,
+        hasModel: !!output?.model,
+        hasPbrModel: !!output?.pbr_model,
+        hasBaseModel: !!output?.base_model,
+        modelType: typeof output?.model,
+        pbrModelType: typeof output?.pbr_model,
+        baseModelType: typeof output?.base_model,
+        rawModel: output?.model ? JSON.stringify(output.model).substring(0, 300) : null,
+        rawPbrModel: output?.pbr_model ? JSON.stringify(output.pbr_model).substring(0, 300) : null,
+        rawBaseModel: output?.base_model ? JSON.stringify(output.base_model).substring(0, 300) : null,
+    });
     if (output) {
         // Priority: pbr_model > model > base_model
         // pbr_model contains textures, model may be untextured base mesh
