@@ -16,6 +16,7 @@ import {
   Eye,
   RefreshCw,
 } from 'lucide-react';
+import { ProviderBadge } from '@/components/ui/provider-badge';
 
 interface JobCardProps {
   job: Job;
@@ -102,6 +103,7 @@ export function JobCard({ job }: JobCardProps) {
       <CardContent className="p-4">
         {/* Settings */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <ProviderBadge provider={job.provider ?? job.settings.provider} size="sm" />
           <span className="capitalize">{job.settings.quality}</span>
           <span className="text-muted-foreground/50">•</span>
           <span className="uppercase">{job.settings.format}</span>

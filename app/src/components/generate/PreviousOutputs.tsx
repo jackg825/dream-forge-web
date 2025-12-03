@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Images, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import type { Pipeline, PipelineMeshAngle, PipelineTextureAngle } from '@/types';
+import { ProviderBadge } from '@/components/ui/provider-badge';
 
 interface PreviousOutputsProps {
   pipeline: Pipeline;
@@ -77,6 +78,14 @@ export function PreviousOutputs({
 
   return (
     <div className="space-y-4">
+      {/* Provider context */}
+      {pipeline.settings.provider && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>生成自:</span>
+          <ProviderBadge provider={pipeline.settings.provider} />
+        </div>
+      )}
+
       {/* Generated Images Section */}
       {showImagesSection && (
         <div className="bg-muted/30 rounded-xl border border-border/50 overflow-hidden">

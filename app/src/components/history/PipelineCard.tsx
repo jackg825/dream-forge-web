@@ -14,6 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import type { Pipeline, PipelineStatus } from '@/types';
+import { ProviderBadge } from '@/components/ui/provider-badge';
 
 interface PipelineCardProps {
   pipeline: Pipeline;
@@ -81,6 +82,11 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
             <Box className="h-12 w-12 text-muted-foreground/30" />
           </div>
         )}
+
+        {/* Provider badge - top-left */}
+        <div className="absolute top-2 left-2">
+          <ProviderBadge provider={pipeline.settings.provider} />
+        </div>
 
         {/* Status badge overlay */}
         <div className="absolute top-2 right-2">
