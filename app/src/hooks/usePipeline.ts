@@ -23,6 +23,8 @@ import type {
   GenerationModeId,
   ProcessingMode,
   ImageAnalysisResult,
+  ModelProvider,
+  ProviderOptions,
 } from '@/types';
 
 interface SubmitBatchResponse {
@@ -54,7 +56,7 @@ interface UsePipelineReturn {
   generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
   submitBatch: (overridePipelineId?: string) => Promise<SubmitBatchResponse>;
   regenerateImage: (viewType: 'mesh' | 'texture', angle: string, hint?: string) => Promise<void>;
-  startMeshGeneration: () => Promise<StartPipelineMeshResponse>;
+  startMeshGeneration: (provider?: ModelProvider, providerOptions?: ProviderOptions) => Promise<StartPipelineMeshResponse>;
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
   startTextureGeneration: () => Promise<StartPipelineTextureResponse>;
   updateAnalysis: (imageAnalysis: ImageAnalysisResult, userDescription?: string) => Promise<void>;
@@ -290,8 +292,11 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     [pipelineId]
   );
 
-  // Start mesh generation
-  const startMeshGeneration = useCallback(async (): Promise<StartPipelineMeshResponse> => {
+  // Start mesh generation with optional provider selection
+  const startMeshGeneration = useCallback(async (
+    provider?: ModelProvider,
+    providerOptions?: ProviderOptions
+  ): Promise<StartPipelineMeshResponse> => {
     if (!pipelineId) {
       throw new Error('No pipeline ID');
     }
@@ -301,11 +306,11 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
 
     try {
       const startMeshFn = httpsCallable<
-        { pipelineId: string },
+        { pipelineId: string; provider?: ModelProvider; providerOptions?: ProviderOptions },
         StartPipelineMeshResponse
       >(functions, 'startPipelineMesh');
 
-      const result = await startMeshFn({ pipelineId });
+      const result = await startMeshFn({ pipelineId, provider, providerOptions });
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start mesh generation';

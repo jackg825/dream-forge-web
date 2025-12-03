@@ -107,6 +107,21 @@ class RodinProvider {
         return ['glb', 'obj', 'fbx', 'stl', 'usdz'];
     }
     /**
+     * Get provider capabilities for UI introspection
+     */
+    getCapabilities() {
+        return {
+            supportsMultiView: true,
+            supportsPBR: true,
+            supportedFormats: ['glb', 'obj', 'fbx', 'stl', 'usdz'],
+            estimatedTime: {
+                draft: '~2 min',
+                standard: '~3 min',
+                fine: '~5 min',
+            },
+        };
+    }
+    /**
      * Check API credit balance
      */
     async checkBalance() {

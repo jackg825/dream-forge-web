@@ -6,7 +6,7 @@
  *
  * API Docs: https://docs.meshy.ai/en/api/image-to-3d
  */
-import type { I3DProvider, ProviderType, ProviderOutputFormat, GenerationOptions, GenerationTaskResult, TaskStatusResult, DownloadResult } from '../types';
+import type { I3DProvider, ProviderType, ProviderOutputFormat, ProviderCapabilities, GenerationOptions, GenerationTaskResult, TaskStatusResult, DownloadResult } from '../types';
 import type { MeshPrecision } from '../../rodin/types';
 /**
  * Extended generation options with mesh precision for 3D printing
@@ -60,6 +60,10 @@ export declare class MeshyProvider implements I3DProvider {
      * Get supported output formats
      */
     getSupportedFormats(): ProviderOutputFormat[];
+    /**
+     * Get provider capabilities for UI introspection
+     */
+    getCapabilities(): ProviderCapabilities;
     /**
      * Handle and log API errors
      */

@@ -3,6 +3,7 @@
  *
  * Factory pattern for creating 3D generation provider instances.
  * Uses singleton pattern to reuse provider instances.
+ * Supports: Rodin, Meshy, Hunyuan 3D, Tripo3D
  */
 import type { I3DProvider, ProviderType } from './types';
 /**
@@ -20,6 +21,8 @@ export declare class ProviderFactory {
     private static createProvider;
     private static createRodinProvider;
     private static createMeshyProvider;
+    private static createHunyuanProvider;
+    private static createTripoProvider;
     /**
      * Clear cached instances (for testing)
      */

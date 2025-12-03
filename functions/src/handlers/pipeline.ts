@@ -16,6 +16,7 @@ import axios from 'axios';
 import { createMultiViewGenerator } from '../gemini/multi-view-generator';
 import { MeshyProvider } from '../providers/meshy/client';
 import { createMeshyRetextureClient } from '../providers/meshy/retexture';
+import { ProviderFactory, isValidProvider } from '../providers/factory';
 import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
 import type {
   PipelineDocument,
@@ -24,16 +25,26 @@ import type {
   PipelineMeshAngle,
   PipelineTextureAngle,
   GenerationModeId,
+  ProviderType,
+  ProviderOptions,
 } from '../rodin/types';
 import { DEFAULT_MODE } from '../gemini/mode-configs';
 
 const db = admin.firestore();
 const storage = admin.storage();
 
-// Credit costs
+// Credit costs per provider
+// See docs/cost-analysis.md for detailed breakdown
+const PROVIDER_CREDIT_COSTS: Record<ProviderType, number> = {
+  meshy: 5,    // API: $0.10 → Total: $0.35
+  hunyuan: 6,  // API: ¥2.40 (~$0.33) → Total: $0.58
+  rodin: 8,    // API: $0.50 → Total: $0.75
+  tripo: 5,    // API: ~$0.16 → Total: $0.41
+};
+
 const PIPELINE_CREDITS = {
-  MESH: 5,
-  TEXTURE: 10,
+  MESH: 5,      // Default (overridden by provider)
+  TEXTURE: 10,  // Meshy Retexture only
 } as const;
 
 // ============================================
@@ -61,6 +72,8 @@ interface RegeneratePipelineImageData {
 
 interface StartPipelineMeshData {
   pipelineId: string;
+  provider?: ProviderType;        // 3D generation provider (default: 'meshy')
+  providerOptions?: ProviderOptions;
 }
 
 interface CheckPipelineStatusData {
@@ -691,7 +704,7 @@ export const startPipelineMesh = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
-    secrets: ['MESHY_API_KEY'],
+    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY'],
   })
   .https.onCall(async (data: StartPipelineMeshData, context) => {
     if (!context.auth) {
@@ -699,7 +712,12 @@ export const startPipelineMesh = functions
     }
 
     const userId = context.auth.uid;
-    const { pipelineId } = data;
+    const { pipelineId, provider: requestedProvider, providerOptions } = data;
+
+    // Validate provider if specified
+    const providerType: ProviderType = requestedProvider && isValidProvider(requestedProvider)
+      ? requestedProvider
+      : 'meshy';
 
     // Get pipeline
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
@@ -744,20 +762,21 @@ export const startPipelineMesh = functions
       );
     }
 
-    // Deduct credits
+    // Deduct credits (provider-specific)
+    const meshCredits = PROVIDER_CREDIT_COSTS[providerType];
     try {
-      await deductCredits(userId, PIPELINE_CREDITS.MESH, pipelineId);
+      await deductCredits(userId, meshCredits, pipelineId);
     } catch (error) {
       throw new functions.https.HttpsError(
         'resource-exhausted',
-        'Insufficient credits for mesh generation (5 credits required)'
+        `Insufficient credits for mesh generation (${meshCredits} credits required for ${providerType})`
       );
     }
 
     // Update status
     await pipelineRef.update({
       status: 'generating-mesh',
-      'creditsCharged.mesh': PIPELINE_CREDITS.MESH,
+      'creditsCharged.mesh': meshCredits,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
@@ -774,42 +793,76 @@ export const startPipelineMesh = functions
         imageBuffers.push(Buffer.from(response.data));
       }
 
-      // Create Meshy provider and generate mesh only
-      const meshyApiKey = process.env.MESHY_API_KEY;
-      if (!meshyApiKey) {
-        throw new Error('Meshy API key not configured');
+      // Get provider via factory pattern
+      const provider = ProviderFactory.getProvider(providerType);
+
+      functions.logger.info('Starting mesh generation with provider', {
+        pipelineId,
+        provider: providerType,
+        providerOptions,
+      });
+
+      // For Meshy, use generateMeshOnly if available (mesh-only costs 5 credits vs 15 with texture)
+      let result;
+      if (providerType === 'meshy' && 'generateMeshOnly' in provider) {
+        const meshyProvider = provider as MeshyProvider;
+        result = await meshyProvider.generateMeshOnly(imageBuffers, {
+          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          precision: pipeline.settings.meshPrecision || 'standard',
+        });
+      } else {
+        // For other providers, use standard generateFromMultipleImages
+        result = await provider.generateFromMultipleImages(imageBuffers, {
+          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          enableTexture: false,
+          enablePBR: false,
+          providerOptions: providerOptions ? {
+            hunyuan: providerOptions.faceCount ? { faceCount: providerOptions.faceCount } : undefined,
+            tripo: providerOptions.tripoMode ? { mode: providerOptions.tripoMode } : undefined,
+          } : undefined,
+        });
       }
 
-      const meshyProvider = new MeshyProvider(meshyApiKey);
-      const result = await meshyProvider.generateMeshOnly(imageBuffers, {
-        quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
-        format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
-        precision: pipeline.settings.meshPrecision || 'standard',
-      });
-
-      // Update pipeline with task ID
-      await pipelineRef.update({
-        meshyMeshTaskId: result.taskId,
+      // Update pipeline with task ID (store both generic and provider-specific)
+      const updateData: Record<string, any> = {
+        providerTaskId: result.taskId,
+        'settings.provider': providerType,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Also store in legacy field for backwards compatibility
+      if (providerType === 'meshy') {
+        updateData.meshyMeshTaskId = result.taskId;
+      }
+
+      if (providerOptions) {
+        updateData['settings.providerOptions'] = providerOptions;
+      }
+
+      await pipelineRef.update(updateData);
 
       functions.logger.info('Pipeline mesh generation started', {
         pipelineId,
-        meshyTaskId: result.taskId,
+        provider: providerType,
+        taskId: result.taskId,
       });
 
       return {
         status: 'generating-mesh',
-        meshyTaskId: result.taskId,
-        creditsCharged: PIPELINE_CREDITS.MESH,
+        meshyTaskId: result.taskId,  // Legacy field for backwards compatibility
+        taskId: result.taskId,       // Generic field
+        provider: providerType,
+        creditsCharged: meshCredits,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
       // Refund credits on failure
       try {
-        await refundCredits(userId, PIPELINE_CREDITS.MESH, pipelineId);
-        functions.logger.info('Refunded mesh credits after failure', { pipelineId, userId, amount: PIPELINE_CREDITS.MESH });
+        await refundCredits(userId, meshCredits, pipelineId);
+        functions.logger.info('Refunded mesh credits after failure', { pipelineId, userId, provider: providerType, amount: meshCredits });
       } catch (refundError) {
         functions.logger.error('Failed to refund mesh credits', { pipelineId, userId, refundError });
       }
@@ -836,7 +889,7 @@ export const checkPipelineStatus = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: ['MESHY_API_KEY'],
+    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY'],
   })
   .https.onCall(async (data: CheckPipelineStatusData, context) => {
     if (!context.auth) {
@@ -869,25 +922,23 @@ export const checkPipelineStatus = functions
       };
     }
 
-    // Check Meshy status
-    const meshyApiKey = process.env.MESHY_API_KEY;
-    if (!meshyApiKey) {
-      throw new functions.https.HttpsError('internal', 'Meshy API key not configured');
-    }
-
-    const meshyProvider = new MeshyProvider(meshyApiKey);
+    // Get the provider type from settings, default to meshy for backwards compatibility
+    const providerType: ProviderType = pipeline.settings.provider || 'meshy';
 
     try {
-      if (pipeline.status === 'generating-mesh' && pipeline.meshyMeshTaskId) {
-        const status = await meshyProvider.checkStatus(pipeline.meshyMeshTaskId);
+      // Check mesh generation status
+      const taskId = pipeline.providerTaskId || pipeline.meshyMeshTaskId;
+      if (pipeline.status === 'generating-mesh' && taskId) {
+        const provider = ProviderFactory.getProvider(providerType);
+        const status = await provider.checkStatus(taskId);
 
         if (status.status === 'completed') {
           // Download and store mesh
-          const downloadResult = await meshyProvider.getDownloadUrls(pipeline.meshyMeshTaskId);
+          const downloadResult = await provider.getDownloadUrls(taskId);
           const glbFile = downloadResult.files.find((f) => f.format === 'glb');
 
           if (glbFile) {
-            const modelBuffer = await meshyProvider.downloadModel(glbFile.url);
+            const modelBuffer = await provider.downloadModel(glbFile.url);
             const storagePath = `pipelines/${userId}/${pipelineId}/mesh.glb`;
             const bucket = storage.bucket();
             const file = bucket.file(storagePath);

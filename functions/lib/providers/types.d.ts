@@ -2,12 +2,41 @@
  * Provider Abstraction Layer Types
  *
  * Defines common interfaces for 3D model generation providers.
- * Currently supports: Rodin Gen-2, Meshy AI
+ * Supports: Rodin Gen-2, Meshy AI, Hunyuan 3D, Tripo3D
  */
-export type ProviderType = 'rodin' | 'meshy';
+export type ProviderType = 'rodin' | 'meshy' | 'hunyuan' | 'tripo';
 export type ProviderTaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type ProviderQuality = 'draft' | 'standard' | 'fine';
 export type ProviderOutputFormat = 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz';
+/**
+ * Provider-specific options for Hunyuan 3D
+ */
+export interface HunyuanOptions {
+    faceCount?: number;
+    generateType?: 'image' | 'multiview';
+}
+/**
+ * Provider-specific options for Tripo3D
+ */
+export interface TripoOptions {
+    mode?: 'image_to_model' | 'multiview_to_model';
+}
+/**
+ * Container for all provider-specific options (nested format for API calls)
+ */
+export interface ProviderSpecificOptions {
+    hunyuan?: HunyuanOptions;
+    tripo?: TripoOptions;
+}
+/**
+ * Flat provider options (user-facing format from frontend)
+ */
+export interface ProviderOptions {
+    /** Hunyuan: Face count (40000-1500000) */
+    faceCount?: number;
+    /** Tripo: Generation mode */
+    tripoMode?: 'image_to_model' | 'multiview_to_model';
+}
 /**
  * Unified generation options (provider-agnostic)
  */
@@ -17,6 +46,22 @@ export interface GenerationOptions {
     enableTexture?: boolean;
     enablePBR?: boolean;
     prompt?: string;
+    providerOptions?: ProviderSpecificOptions;
+}
+/**
+ * @deprecated Use GenerationOptions instead (now includes providerOptions)
+ */
+export type ExtendedGenerationOptions = GenerationOptions;
+/**
+ * Provider capabilities for UI introspection
+ */
+export interface ProviderCapabilities {
+    supportsMultiView: boolean;
+    supportsPBR: boolean;
+    minFaceCount?: number;
+    maxFaceCount?: number;
+    supportedFormats: ProviderOutputFormat[];
+    estimatedTime: Record<ProviderQuality, string>;
 }
 /**
  * Result of starting a generation task
@@ -89,6 +134,10 @@ export interface I3DProvider {
      * Get supported output formats
      */
     getSupportedFormats(): ProviderOutputFormat[];
+    /**
+     * Get provider capabilities for UI introspection
+     */
+    getCapabilities(): ProviderCapabilities;
     /**
      * Check API credit balance (optional)
      */

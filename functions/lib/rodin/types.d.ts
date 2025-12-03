@@ -6,7 +6,10 @@
  * - mesh_mode: 'Raw' for triangle meshes (required by slicers)
  * - format: 'stl' as the standard 3D printing format
  */
-export type { ProviderType } from '../providers/types';
+import type { ProviderType as _ProviderType, ProviderOptions as _ProviderOptions } from '../providers/types';
+export type { ProviderType, ProviderOptions } from '../providers/types';
+type ProviderType = _ProviderType;
+type ProviderOptions = _ProviderOptions;
 export type MeshMode = 'Raw' | 'Quad';
 export type ViewAngle = 'front' | 'back' | 'left' | 'right' | 'top';
 export type PrinterType = 'fdm' | 'sla' | 'resin';
@@ -214,6 +217,8 @@ export interface PipelineSettings {
     generationMode?: GenerationModeId;
     meshPrecision?: MeshPrecision;
     colorCount?: number;
+    provider?: ProviderType;
+    providerOptions?: ProviderOptions;
 }
 /**
  * Pipeline document for new simplified 3D generation workflow
@@ -257,6 +262,7 @@ export interface PipelineDocument {
         meshViewsCompleted: number;
         textureViewsCompleted: number;
     };
+    providerTaskId?: string;
     meshyMeshTaskId?: string;
     meshUrl?: string;
     meshStoragePath?: string;

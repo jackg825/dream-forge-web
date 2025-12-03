@@ -13,6 +13,7 @@ import type {
   I3DProvider,
   ProviderType,
   ProviderOutputFormat,
+  ProviderCapabilities,
   GenerationOptions,
   GenerationTaskResult,
   TaskStatusResult,
@@ -413,6 +414,22 @@ export class MeshyProvider implements I3DProvider {
    */
   getSupportedFormats(): ProviderOutputFormat[] {
     return ['glb', 'fbx', 'obj', 'usdz'];
+  }
+
+  /**
+   * Get provider capabilities for UI introspection
+   */
+  getCapabilities(): ProviderCapabilities {
+    return {
+      supportsMultiView: true,
+      supportsPBR: true,
+      supportedFormats: ['glb', 'fbx', 'obj', 'usdz'],
+      estimatedTime: {
+        draft: '~1 min',
+        standard: '~2 min',
+        fine: '~3 min',
+      },
+    };
   }
 
   /**

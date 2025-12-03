@@ -48,6 +48,8 @@ import type {
   GenerationModeId,
   ProcessingMode,
   MeshPrecision,
+  ModelProvider,
+  ProviderOptions,
 } from '@/types';
 import {
   GENERATION_MODE_OPTIONS,
@@ -55,6 +57,8 @@ import {
   DEFAULT_PROCESSING_MODE,
   DEFAULT_MESH_PRECISION,
 } from '@/types';
+import { ProviderSelector } from './ProviderSelector';
+import { ProviderOptionsPanel } from './ProviderOptionsPanel';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -134,6 +138,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [meshPrecision, setMeshPrecision] = useState<MeshPrecision>(DEFAULT_MESH_PRECISION);
   const [userDescription, setUserDescription] = useState<string>('');
   const [colorCount, setColorCount] = useState<number>(7);
+
+  // Provider selection state
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('meshy');
+  const [providerOptions, setProviderOptions] = useState<ProviderOptions>({});
 
   // Image analysis hook
   const {
@@ -353,7 +361,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   };
 
-  // Handle mesh generation
+  // Handle mesh generation with provider selection
   const handleStartMesh = async () => {
     if (credits < MESH_COST) {
       onNoCredits();
@@ -362,7 +370,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
     setActionLoading(true);
     try {
-      await startMeshGeneration();
+      await startMeshGeneration(selectedProvider, providerOptions);
     } catch (err) {
       console.error('Failed to start mesh generation:', err);
     } finally {
@@ -735,6 +743,22 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             </div>
           </div>
         </div>
+
+        {/* Provider selection */}
+        <ProviderSelector
+          value={selectedProvider}
+          onChange={setSelectedProvider}
+          disabled={actionLoading}
+          showCredits={true}
+        />
+
+        {/* Provider-specific options (e.g., Hunyuan face count) */}
+        <ProviderOptionsPanel
+          provider={selectedProvider}
+          options={providerOptions}
+          onChange={setProviderOptions}
+          disabled={actionLoading}
+        />
 
         {/* Generation options - moved from Step 1 */}
         <div className="space-y-4 border border-border rounded-xl p-4 bg-muted/30">

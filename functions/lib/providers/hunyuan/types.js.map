@@ -1,0 +1,1 @@
+{"version":3,"file":"types.js","sourceRoot":"","sources":["../../../src/providers/hunyuan/types.ts"],"names":[],"mappings":";AAAA;;;;;GAKG;;;AAEH,yBAAyB;AACZ,QAAA,gBAAgB,GAAG,0BAA0B,CAAC;AAC9C,QAAA,mBAAmB,GAAG,YAAY,CAAC;AACnC,QAAA,eAAe,GAAG,MAAM,CAAC;AAmGtC;;GAEG;AACU,QAAA,0BAA0B,GAA2B;IAChE,KAAK,EAAE,KAAK;IACZ,QAAQ,EAAE,MAAM;IAChB,IAAI,EAAE,MAAM;CACb,CAAC"}

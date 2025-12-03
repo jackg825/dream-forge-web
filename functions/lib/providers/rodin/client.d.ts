@@ -4,7 +4,7 @@
  * Wraps existing RodinClient to implement I3DProvider interface.
  * Delegates to the original implementation for API calls.
  */
-import type { I3DProvider, ProviderType, ProviderOutputFormat, GenerationOptions, GenerationTaskResult, TaskStatusResult, DownloadResult } from '../types';
+import type { I3DProvider, ProviderType, ProviderOutputFormat, ProviderCapabilities, GenerationOptions, GenerationTaskResult, TaskStatusResult, DownloadResult } from '../types';
 export declare class RodinProvider implements I3DProvider {
     readonly providerType: ProviderType;
     private client;
@@ -35,6 +35,10 @@ export declare class RodinProvider implements I3DProvider {
      * Get supported output formats
      */
     getSupportedFormats(): ProviderOutputFormat[];
+    /**
+     * Get provider capabilities for UI introspection
+     */
+    getCapabilities(): ProviderCapabilities;
     /**
      * Check API credit balance
      */

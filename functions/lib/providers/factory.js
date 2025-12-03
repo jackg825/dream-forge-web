@@ -4,6 +4,7 @@
  *
  * Factory pattern for creating 3D generation provider instances.
  * Uses singleton pattern to reuse provider instances.
+ * Supports: Rodin, Meshy, Hunyuan 3D, Tripo3D
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -45,6 +46,9 @@ exports.isValidProvider = isValidProvider;
 const functions = __importStar(require("firebase-functions"));
 const client_1 = require("./rodin/client");
 const client_2 = require("./meshy/client");
+// New providers - will be implemented
+const client_3 = require("./hunyuan/client");
+const client_4 = require("./tripo/client");
 /**
  * Factory for creating provider instances
  */
@@ -68,6 +72,10 @@ class ProviderFactory {
                 return this.createRodinProvider();
             case 'meshy':
                 return this.createMeshyProvider();
+            case 'hunyuan':
+                return this.createHunyuanProvider();
+            case 'tripo':
+                return this.createTripoProvider();
             default:
                 throw new functions.https.HttpsError('invalid-argument', `Unknown provider type: ${type}`);
         }
@@ -86,6 +94,22 @@ class ProviderFactory {
         }
         return new client_2.MeshyProvider(apiKey);
     }
+    static createHunyuanProvider() {
+        const secretId = process.env.TENCENT_SECRET_ID;
+        const secretKey = process.env.TENCENT_SECRET_KEY;
+        const region = process.env.TENCENT_REGION || 'ap-guangzhou';
+        if (!secretId || !secretKey) {
+            throw new functions.https.HttpsError('failed-precondition', 'Tencent Cloud credentials not configured (TENCENT_SECRET_ID, TENCENT_SECRET_KEY)');
+        }
+        return new client_3.HunyuanProvider(secretId, secretKey, region);
+    }
+    static createTripoProvider() {
+        const apiKey = process.env.TRIPO_API_KEY;
+        if (!apiKey) {
+            throw new functions.https.HttpsError('failed-precondition', 'Tripo API key not configured');
+        }
+        return new client_4.TripoProvider(apiKey);
+    }
     /**
      * Clear cached instances (for testing)
      */
@@ -101,9 +125,13 @@ function createProvider(type = 'meshy') {
     return ProviderFactory.getProvider(type);
 }
 /**
+ * All valid provider types
+ */
+const VALID_PROVIDERS = ['rodin', 'meshy', 'hunyuan', 'tripo'];
+/**
  * Validate provider type
  */
 function isValidProvider(provider) {
-    return provider === 'rodin' || provider === 'meshy';
+    return VALID_PROVIDERS.includes(provider);
 }
 //# sourceMappingURL=factory.js.map

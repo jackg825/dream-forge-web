@@ -364,6 +364,21 @@ class MeshyProvider {
         return ['glb', 'fbx', 'obj', 'usdz'];
     }
     /**
+     * Get provider capabilities for UI introspection
+     */
+    getCapabilities() {
+        return {
+            supportsMultiView: true,
+            supportsPBR: true,
+            supportedFormats: ['glb', 'fbx', 'obj', 'usdz'],
+            estimatedTime: {
+                draft: '~1 min',
+                standard: '~2 min',
+                fine: '~3 min',
+            },
+        };
+    }
+    /**
      * Handle and log API errors
      */
     handleError(error, operation) {

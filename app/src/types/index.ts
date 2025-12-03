@@ -24,7 +24,15 @@ export type PrinterType = 'fdm' | 'sla' | 'resin';
 export type InputMode = 'single' | 'multi' | 'ai-generated';
 
 // 3D Model Generation Provider
-export type ModelProvider = 'rodin' | 'meshy';
+export type ModelProvider = 'rodin' | 'meshy' | 'hunyuan' | 'tripo';
+
+// Provider-specific options
+export interface ProviderOptions {
+  /** Hunyuan: Face count (40000-1500000) */
+  faceCount?: number;
+  /** Tripo: Generation mode */
+  tripoMode?: 'image_to_model' | 'multiview_to_model';
+}
 
 // Credit costs based on input mode
 export const CREDIT_COSTS: Record<InputMode, number> = {
@@ -33,22 +41,74 @@ export const CREDIT_COSTS: Record<InputMode, number> = {
   'ai-generated': 2,
 };
 
-// Provider options for UI
-export const PROVIDER_OPTIONS: Record<ModelProvider, {
+// Provider capability metadata
+export interface ProviderCapability {
+  id: ModelProvider;
   label: string;
   description: string;
   badge?: string;
-}> = {
-  rodin: {
-    label: 'Rodin Gen-2',
-    description: 'Hyper3D - 高品質 3D 模型',
-  },
+  badgeVariant?: 'default' | 'secondary' | 'destructive' | 'outline';
+  estimatedTime: string;
+  creditCost: number;
+  capabilities: {
+    maxPolygons?: string;
+    faceCountControl?: boolean;
+    multiview?: boolean;
+  };
+}
+
+// Provider options for UI (extended with capabilities)
+// Credit costs based on: Storage ($0.007) + Gemini ($0.24) + Provider API + 30% margin
+// See docs/cost-analysis.md for detailed breakdown
+export const PROVIDER_OPTIONS: Record<ModelProvider, ProviderCapability> = {
   meshy: {
+    id: 'meshy',
     label: 'Meshy 6',
-    description: 'Meshy AI - 快速逼真 3D 模型',
+    description: '快速逼真的 3D 模型',
     badge: '推薦',
+    badgeVariant: 'default',
+    estimatedTime: '約 2-3 分鐘',
+    creditCost: 5,  // API: $0.10 (5 credits) → Total: $0.35
+    capabilities: { maxPolygons: '150K', multiview: true },
+  },
+  hunyuan: {
+    id: 'hunyuan',
+    label: 'Hunyuan 3D',
+    description: '騰訊雲精細多邊形控制',
+    badge: '新功能',
+    badgeVariant: 'secondary',
+    estimatedTime: '約 3-6 分鐘',
+    creditCost: 6,  // API: ¥2.40 (~$0.33) → Total: $0.58
+    capabilities: { maxPolygons: '1.5M', faceCountControl: true },
+  },
+  rodin: {
+    id: 'rodin',
+    label: 'Rodin Gen-2',
+    description: 'Hyper3D 高品質模型',
+    estimatedTime: '約 3-5 分鐘',
+    creditCost: 8,  // API: $0.50 (0.5 credits) → Total: $0.75
+    capabilities: { maxPolygons: '300K' },
+  },
+  tripo: {
+    id: 'tripo',
+    label: 'Tripo3D v3.0',
+    description: '原生多視角支援',
+    badge: '新功能',
+    badgeVariant: 'secondary',
+    estimatedTime: '約 2-4 分鐘',
+    creditCost: 5,  // API: ~$0.16 (estimated) → Total: $0.41
+    capabilities: { maxPolygons: '200K', multiview: true },
   },
 };
+
+// Hunyuan face count presets for slider UI
+export const HUNYUAN_FACE_COUNT_PRESETS = {
+  low: { value: 40000, label: '40K', description: '快速預覽' },
+  medium: { value: 200000, label: '200K', description: '標準品質' },
+  high: { value: 500000, label: '500K', description: '高品質' },
+  ultra: { value: 1000000, label: '1M', description: '超精細' },
+  max: { value: 1500000, label: '1.5M', description: '最高品質' },
+} as const;
 
 // View angle display labels
 export const VIEW_ANGLE_LABELS: Record<ViewAngle, string> = {
@@ -681,6 +741,8 @@ export interface PipelineSettings {
   generationMode?: GenerationModeId;
   meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
   colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
+  provider?: ModelProvider;       // 3D generation provider (default: 'meshy')
+  providerOptions?: ProviderOptions;
 }
 
 /**

@@ -9,6 +9,7 @@ import type {
   I3DProvider,
   ProviderType,
   ProviderOutputFormat,
+  ProviderCapabilities,
   GenerationOptions,
   GenerationTaskResult,
   TaskStatusResult,
@@ -142,6 +143,22 @@ export class RodinProvider implements I3DProvider {
    */
   getSupportedFormats(): ProviderOutputFormat[] {
     return ['glb', 'obj', 'fbx', 'stl', 'usdz'];
+  }
+
+  /**
+   * Get provider capabilities for UI introspection
+   */
+  getCapabilities(): ProviderCapabilities {
+    return {
+      supportsMultiView: true,
+      supportsPBR: true,
+      supportedFormats: ['glb', 'obj', 'fbx', 'stl', 'usdz'],
+      estimatedTime: {
+        draft: '~2 min',
+        standard: '~3 min',
+        fine: '~5 min',
+      },
+    };
   }
 
   /**

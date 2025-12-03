@@ -7,8 +7,13 @@
  * - format: 'stl' as the standard 3D printing format
  */
 
-// Re-export provider type for convenience
-export type { ProviderType } from '../providers/types';
+// Import and re-export provider types for convenience
+import type { ProviderType as _ProviderType, ProviderOptions as _ProviderOptions } from '../providers/types';
+export type { ProviderType, ProviderOptions } from '../providers/types';
+
+// Local type aliases for internal use
+type ProviderType = _ProviderType;
+type ProviderOptions = _ProviderOptions;
 
 // Mesh mode determines face type
 export type MeshMode = 'Raw' | 'Quad';
@@ -352,6 +357,8 @@ export type PipelineTextureAngle = 'front' | 'back';
  */
 export type GenerationModeId = 'simplified-mesh' | 'simplified-texture';
 
+// ProviderType and ProviderOptions are re-exported from '../providers/types' at the top of this file
+
 /**
  * Pipeline settings
  */
@@ -362,6 +369,8 @@ export interface PipelineSettings {
   generationMode?: GenerationModeId;
   meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
   colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
+  provider?: ProviderType;        // 3D generation provider (default: 'meshy')
+  providerOptions?: ProviderOptions;
 }
 
 /**
@@ -423,8 +432,9 @@ export interface PipelineDocument {
     textureViewsCompleted: number;  // 0-2
   };
 
-  // Step 4-5: Meshy mesh generation
-  meshyMeshTaskId?: string;
+  // Step 4-5: Mesh generation (provider-agnostic)
+  providerTaskId?: string;         // Generic task ID for any provider
+  meshyMeshTaskId?: string;        // Legacy: Meshy-specific task ID
   meshUrl?: string;
   meshStoragePath?: string;
   meshDownloadFiles?: DownloadFile[];
