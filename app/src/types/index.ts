@@ -74,7 +74,7 @@ export const PROVIDER_OPTIONS: Record<ModelProvider, ProviderCapability> = {
   },
   hunyuan: {
     id: 'hunyuan',
-    label: 'Hunyuan 3D',
+    label: 'Hunyuan3D v3.0',
     description: '騰訊雲精細多邊形控制',
     badge: '新功能',
     badgeVariant: 'secondary',
@@ -94,8 +94,8 @@ export const PROVIDER_OPTIONS: Record<ModelProvider, ProviderCapability> = {
     id: 'tripo',
     label: 'Tripo3D v3.0',
     description: '原生多視角支援',
-    badge: '新功能',
-    badgeVariant: 'secondary',
+    badge: '推薦',
+    badgeVariant: 'default',
     estimatedTime: '約 2-4 分鐘',
     creditCost: 5,  // API: ~$0.16 (estimated) → Total: $0.41
     capabilities: { maxPolygons: '200K', multiview: true, texturedMesh: true },
@@ -614,6 +614,7 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
   description: string;
   badge?: string;
   estimatedTime: string;
+  creditCost: number;
 }> = {
   'gemini-3-pro': {
     id: 'gemini-3-pro',
@@ -621,12 +622,14 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
     description: '高品質圖片生成，適合細節要求高的物件',
     badge: '推薦',
     estimatedTime: '約 2-3 分鐘',
+    creditCost: 10,
   },
   'gemini-2.5-flash': {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     description: '快速生成，適合快速測試',
     estimatedTime: '約 1-2 分鐘',
+    creditCost: 3,
   },
 };
 

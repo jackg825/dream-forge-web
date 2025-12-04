@@ -13,24 +13,27 @@ interface ProviderSelectorProps {
   onChange: (provider: ModelProvider) => void;
   disabled?: boolean;
   showCredits?: boolean;
+  /** Optional filter to show only specific providers */
+  providers?: ModelProvider[];
 }
 
 /**
  * ProviderSelector - 3D generation provider selector
  *
- * Displays four provider options:
- * - Meshy 6 (recommended)
- * - Hunyuan 3D (new, face count control)
- * - Rodin Gen-2
- * - Tripo3D v3.0 (new, multiview support)
+ * Displays provider options for 3D mesh generation.
+ * Use the `providers` prop to filter which providers are shown.
  */
 export function ProviderSelector({
   value,
   onChange,
   disabled,
   showCredits = true,
+  providers: providerFilter,
 }: ProviderSelectorProps) {
-  const providers = Object.values(PROVIDER_OPTIONS);
+  // Filter providers if specified, otherwise show all
+  const providers = providerFilter
+    ? providerFilter.map(id => PROVIDER_OPTIONS[id])
+    : Object.values(PROVIDER_OPTIONS);
 
   return (
     <div className="space-y-2">

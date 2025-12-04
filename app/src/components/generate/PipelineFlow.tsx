@@ -61,8 +61,10 @@ import {
   DEFAULT_MESH_PRECISION,
   DEFAULT_GEMINI_MODEL,
   PROVIDER_OPTIONS,
+  GEMINI_MODEL_OPTIONS,
 } from '@/types';
 import { GeminiModelSelector } from './GeminiModelSelector';
+import { ProviderSelector } from './ProviderSelector';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -505,26 +507,40 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             />
           )}
 
-          <div className="flex justify-center">
-            <Button
-              size="lg"
-              onClick={handleStartPipeline}
-              disabled={uploadedImages.length === 0 || actionLoading || authLoading}
-              className="px-8"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  處理中...
-                </>
-              ) : (
-                <>
-                  開始生成
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
+          {/* Provider selector and Start button - only show after analysis completes */}
+          {imageAnalysis && (
+            <>
+              {/* 3D Provider selector (Hunyuan3D + Tripo3D only) */}
+              <ProviderSelector
+                value={selectedProvider}
+                onChange={setSelectedProvider}
+                disabled={actionLoading}
+                showCredits={true}
+                providers={['hunyuan', 'tripo']}
+              />
+
+              <div className="flex justify-center">
+                <Button
+                  size="lg"
+                  onClick={handleStartPipeline}
+                  disabled={uploadedImages.length === 0 || actionLoading || authLoading}
+                  className="px-8"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      處理中...
+                    </>
+                  ) : (
+                    <>
+                      開始生成 ({GEMINI_MODEL_OPTIONS[geminiModel].creditCost} 點)
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </>
       ) : (
         <Card>
@@ -614,11 +630,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           />
         )}
 
-        {/* Gemini model selection */}
-        <GeminiModelSelector
-          value={geminiModel}
-          onChange={setGeminiModel}
+        {/* 3D Provider selection (Hunyuan3D + Tripo3D only) */}
+        <ProviderSelector
+          value={selectedProvider}
+          onChange={setSelectedProvider}
           disabled={actionLoading || isGeneratingImages}
+          showCredits={true}
+          providers={['hunyuan', 'tripo']}
         />
 
         {/* Action buttons */}
@@ -639,7 +657,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               ) : (
                 <>
                   <Images className="mr-2 h-4 w-4" />
-                  生成多視角圖片
+                  生成多視角圖片 ({GEMINI_MODEL_OPTIONS[geminiModel].creditCost} 點)
                 </>
               )}
             </Button>
@@ -659,7 +677,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               ) : (
                 <>
                   <Box className="mr-2 h-4 w-4" />
-                  下一步: 生成 3D 網格 ({MESH_COST} 點)
+                  下一步: 生成 3D 網格 ({PROVIDER_OPTIONS[selectedProvider].creditCost} 點)
                 </>
               )}
             </Button>
@@ -686,7 +704,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 className="px-8"
               >
                 <Box className="mr-2 h-4 w-4" />
-                下一步: 生成 3D 網格 ({MESH_COST} 點)
+                下一步: 生成 3D 網格 ({PROVIDER_OPTIONS[selectedProvider].creditCost} 點)
               </Button>
             </>
           )}
@@ -807,48 +825,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           </div> */}
         </div>
 
-        {/* Gemini model selection for image generation */}
-        <GeminiModelSelector
-          value={geminiModel}
-          onChange={setGeminiModel}
-          disabled={actionLoading}
-        />
-
-        {/* Provider selection - hidden, defaulting to Tripo3D v3.0 for 3D printing */}
-        {/* <ProviderSelector
+        {/* 3D Provider selection (Hunyuan3D + Tripo3D only) */}
+        <ProviderSelector
           value={selectedProvider}
           onChange={setSelectedProvider}
           disabled={actionLoading}
           showCredits={true}
-        /> */}
-
-        {/* Provider-specific options - hidden */}
-        {/* <ProviderOptionsPanel
-          provider={selectedProvider}
-          options={providerOptions}
-          onChange={setProviderOptions}
-          disabled={actionLoading}
-        /> */}
-
-        {/* Generation options - hidden for simplified workflow */}
-        {/* Best settings for 3D printing are applied automatically:
-            - Mode: simplified-mesh (全彩網格, 6色簡化貼圖)
-            - Precision: standard (optimized mesh density)
-            - Provider: Tripo3D v3.0 with Standard Texture (20 credits)
-        */}
-        {/* <div className="space-y-4 border border-border rounded-xl p-4 bg-muted/30">
-          <h4 className="text-sm font-medium">生成選項</h4>
-          <ModeSelector
-            value={generationMode}
-            onChange={setGenerationMode}
-            disabled={actionLoading}
-          />
-          <PrecisionSelector
-            value={meshPrecision}
-            onChange={setMeshPrecision}
-            disabled={actionLoading}
-          />
-        </div> */}
+          providers={['hunyuan', 'tripo']}
+        />
 
         {/* Action button - proceed to mesh generation */}
         <div className="flex justify-center pt-4">
@@ -861,7 +845,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             ) : (
               <>
                 <Box className="mr-2 h-4 w-4" />
-                下一步: 生成 3D 網格 ({MESH_COST} 點)
+                下一步: 生成 3D 網格 ({PROVIDER_OPTIONS[selectedProvider].creditCost} 點)
               </>
             )}
           </Button>

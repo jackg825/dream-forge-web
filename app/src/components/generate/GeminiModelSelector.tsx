@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Sparkles, Zap } from 'lucide-react';
+import { Clock, Coins, Sparkles, Zap } from 'lucide-react';
 import {
   type GeminiModelId,
   GEMINI_MODEL_OPTIONS,
@@ -72,10 +72,16 @@ export function GeminiModelSelector({
                 {model.description}
               </p>
 
-              {/* Estimated time */}
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                <Clock className="h-3 w-3" />
-                {model.estimatedTime}
+              {/* Estimated time and credits */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {model.estimatedTime}
+                </span>
+                <span className="flex items-center gap-1 text-primary font-medium">
+                  <Coins className="h-3 w-3" />
+                  {model.creditCost} 點
+                </span>
               </div>
 
               {/* Selection indicator */}
