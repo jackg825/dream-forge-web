@@ -13,7 +13,7 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
-import { createMultiViewGenerator } from '../gemini/multi-view-generator';
+import { createMultiViewGenerator, type GeminiImageModel } from '../gemini/multi-view-generator';
 import { MeshyProvider } from '../providers/meshy/client';
 import { createMeshyRetextureClient } from '../providers/meshy/retexture';
 import { ProviderFactory, isValidProvider } from '../providers/factory';
@@ -385,7 +385,8 @@ export const generatePipelineImages = functions
       // If imageAnalysis exists, use its color palette and key features for consistency
       const modeId = pipeline.generationMode || DEFAULT_MODE;
       const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
-      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis);
+      const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
+      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
 
       // Create progress callback to update Firestore in real-time
       const onProgress = async (
@@ -570,9 +571,11 @@ export const regeneratePipelineImage = functions
 
       // Generate single view using the pipeline's generation mode
       // Pass userDescription from pipeline, color palette, imageAnalysis, and optional hint for adjustments
+      // Use the same geminiModel that was selected when creating the pipeline
       const modeId = pipeline.generationMode || DEFAULT_MODE;
       const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
-      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis);
+      const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
+      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
       const now = admin.firestore.FieldValue.serverTimestamp();
 
       if (viewType === 'mesh') {

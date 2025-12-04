@@ -25,7 +25,16 @@ import {
 } from './mode-configs';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-3-pro-image-preview';
+
+// Gemini model options for image generation
+export type GeminiImageModel = 'gemini-3-pro' | 'gemini-2.5-flash';
+
+const GEMINI_MODEL_IDS: Record<GeminiImageModel, string> = {
+  'gemini-3-pro': 'gemini-3-pro-image-preview',
+  'gemini-2.5-flash': 'gemini-2.5-flash-preview-05-20',
+};
+
+const DEFAULT_GEMINI_MODEL: GeminiImageModel = 'gemini-2.5-flash';
 
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;
@@ -163,19 +172,22 @@ export class MultiViewGenerator {
   private userDescription?: string | null;
   private preAnalyzedColors?: string[];  // Pre-analyzed colors from image analysis
   private imageAnalysis?: ImageAnalysisResult | null;  // Full image analysis for feature extraction
+  private geminiModel: GeminiImageModel;  // Selected Gemini model for image generation
 
   constructor(
     apiKey: string,
     modeId: GenerationModeId = DEFAULT_MODE,
     userDescription?: string | null,
     preAnalyzedColors?: string[],
-    imageAnalysis?: ImageAnalysisResult | null
+    imageAnalysis?: ImageAnalysisResult | null,
+    geminiModel: GeminiImageModel = DEFAULT_GEMINI_MODEL
   ) {
     this.apiKey = apiKey;
     this.modeConfig = getMode(modeId);
     this.userDescription = userDescription;
     this.preAnalyzedColors = preAnalyzedColors;
     this.imageAnalysis = imageAnalysis;
+    this.geminiModel = geminiModel;
   }
 
   /**
@@ -197,7 +209,8 @@ export class MultiViewGenerator {
     mimeType: string
   ): Promise<MultiViewGenerationResult> {
     functions.logger.info('Starting multi-view generation', {
-      model: MODEL,
+      model: GEMINI_MODEL_IDS[this.geminiModel],
+      geminiModel: this.geminiModel,
       mode: this.modeConfig.id,
       modeName: this.modeConfig.name,
       totalViews: 6,
@@ -338,7 +351,8 @@ export class MultiViewGenerator {
     const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
 
     functions.logger.info('Starting parallel multi-view generation', {
-      model: MODEL,
+      model: GEMINI_MODEL_IDS[this.geminiModel],
+      geminiModel: this.geminiModel,
       mode: this.modeConfig.id,
       modeName: this.modeConfig.name,
       strategy: 'staggered-parallel',
@@ -601,8 +615,9 @@ export class MultiViewGenerator {
     extractColors: boolean,
     expectedColorCount: number
   ): Promise<GeneratedViewResult> {
+    const modelId = GEMINI_MODEL_IDS[this.geminiModel];
     const response = await axios.post<GeminiResponse>(
-      `${GEMINI_API_BASE}/${MODEL}:generateContent`,
+      `${GEMINI_API_BASE}/${modelId}:generateContent`,
       {
         contents: [
           {
@@ -641,6 +656,7 @@ export class MultiViewGenerator {
     const analysis = analyzeGeminiResponse(response.data);
 
     functions.logger.info('View generation response', {
+      model: modelId,
       extractColors,
       hasImage: analysis.hasImage,
       hasText: !!analysis.textContent,
@@ -722,12 +738,14 @@ export class MultiViewGenerator {
  * @param userDescription - Optional user-provided description of the object
  * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
  * @param imageAnalysis - Optional full image analysis result with key features
+ * @param geminiModel - Gemini model for image generation (default: 'gemini-2.5-flash')
  */
 export function createMultiViewGenerator(
   modeId: GenerationModeId = DEFAULT_MODE,
   userDescription?: string | null,
   preAnalyzedColors?: string[],
-  imageAnalysis?: ImageAnalysisResult | null
+  imageAnalysis?: ImageAnalysisResult | null,
+  geminiModel: GeminiImageModel = DEFAULT_GEMINI_MODEL
 ): MultiViewGenerator {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -738,5 +756,5 @@ export function createMultiViewGenerator(
     );
   }
 
-  return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis);
+  return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis, geminiModel);
 }

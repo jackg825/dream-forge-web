@@ -54,7 +54,11 @@ const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
 const mode_configs_1 = require("./mode-configs");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-3-pro-image-preview';
+const GEMINI_MODEL_IDS = {
+    'gemini-3-pro': 'gemini-3-pro-image-preview',
+    'gemini-2.5-flash': 'gemini-2.5-flash-preview-05-20',
+};
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;
 // Feature flag to enable/disable texture view generation
@@ -139,12 +143,14 @@ class MultiViewGenerator {
     userDescription;
     preAnalyzedColors; // Pre-analyzed colors from image analysis
     imageAnalysis; // Full image analysis for feature extraction
-    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors, imageAnalysis) {
+    geminiModel; // Selected Gemini model for image generation
+    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors, imageAnalysis, geminiModel = DEFAULT_GEMINI_MODEL) {
         this.apiKey = apiKey;
         this.modeConfig = (0, mode_configs_1.getMode)(modeId);
         this.userDescription = userDescription;
         this.preAnalyzedColors = preAnalyzedColors;
         this.imageAnalysis = imageAnalysis;
+        this.geminiModel = geminiModel;
     }
     /**
      * Get the current mode configuration
@@ -161,7 +167,8 @@ class MultiViewGenerator {
      */
     async generateAllViews(referenceImageBase64, mimeType) {
         functions.logger.info('Starting multi-view generation', {
-            model: MODEL,
+            model: GEMINI_MODEL_IDS[this.geminiModel],
+            geminiModel: this.geminiModel,
             mode: this.modeConfig.id,
             modeName: this.modeConfig.name,
             totalViews: 6,
@@ -265,7 +272,8 @@ class MultiViewGenerator {
         const meshAngles = ['front', 'back', 'left', 'right'];
         const textureAngles = ['front', 'back'];
         functions.logger.info('Starting parallel multi-view generation', {
-            model: MODEL,
+            model: GEMINI_MODEL_IDS[this.geminiModel],
+            geminiModel: this.geminiModel,
             mode: this.modeConfig.id,
             modeName: this.modeConfig.name,
             strategy: 'staggered-parallel',
@@ -416,7 +424,8 @@ class MultiViewGenerator {
      * Generate a single view with the given prompt
      */
     async generateSingleView(referenceImageBase64, mimeType, prompt, extractColors, expectedColorCount) {
-        const response = await axios_1.default.post(`${GEMINI_API_BASE}/${MODEL}:generateContent`, {
+        const modelId = GEMINI_MODEL_IDS[this.geminiModel];
+        const response = await axios_1.default.post(`${GEMINI_API_BASE}/${modelId}:generateContent`, {
             contents: [
                 {
                     parts: [
@@ -450,6 +459,7 @@ class MultiViewGenerator {
         });
         const analysis = analyzeGeminiResponse(response.data);
         functions.logger.info('View generation response', {
+            model: modelId,
             extractColors,
             hasImage: analysis.hasImage,
             hasText: !!analysis.textContent,
@@ -509,12 +519,13 @@ exports.MultiViewGenerator = MultiViewGenerator;
  * @param userDescription - Optional user-provided description of the object
  * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
  * @param imageAnalysis - Optional full image analysis result with key features
+ * @param geminiModel - Gemini model for image generation (default: 'gemini-2.5-flash')
  */
-function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors, imageAnalysis) {
+function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors, imageAnalysis, geminiModel = DEFAULT_GEMINI_MODEL) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new functions.https.HttpsError('failed-precondition', 'Gemini API key not configured');
     }
-    return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis);
+    return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis, geminiModel);
 }
 //# sourceMappingURL=multi-view-generator.js.map
