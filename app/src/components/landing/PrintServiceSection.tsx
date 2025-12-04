@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Check,
 } from 'lucide-react';
+import { ShowcaseViewer } from './ShowcaseViewer';
 
 interface PrintServiceSectionProps {
   className?: string;
@@ -75,24 +76,21 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
           <div className="relative order-2 lg:order-1">
             <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl">
               <CardContent className="p-0">
-                {/* Mockup image area - shorter on mobile */}
-                <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center relative">
-                  {/* 3D printer illustration placeholder */}
-                  <div className="text-center p-4 sm:p-8">
-                    <div className="w-20 h-20 sm:w-32 sm:h-32 mx-auto mb-4 sm:mb-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[var(--accent-violet)] to-[var(--accent-coral)] flex items-center justify-center">
-                      <Printer className="w-10 h-10 sm:w-16 sm:h-16 text-white" />
-                    </div>
-                    <p className="text-sm sm:text-lg font-medium text-muted-foreground">
-                      {t('printService.visualCaption')}
-                    </p>
-                  </div>
+                {/* 3D Model showcase - hover to interact */}
+                <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-br from-muted to-muted/50 relative group">
+                  <ShowcaseViewer
+                    previewImage="/showcase/model-1/preview.webp"
+                    animatedImage="/showcase/model-1/rotate.gif"
+                    alt={t('printService.visualCaption')}
+                    className="w-full h-full"
+                  />
 
                   {/* Floating badges - smaller on mobile */}
-                  <div className="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2">
+                  <div className="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 z-10">
                     <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
                     {t('printService.statusReady')}
                   </div>
-                  <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium">
+                  <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium z-10">
                     🌍 {t('printService.worldwide')}
                   </div>
                 </div>
