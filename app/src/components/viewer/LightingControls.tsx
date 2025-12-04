@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Sun, SunDim, RotateCcw, Check, ChevronDown } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Slider } from '@/components/ui/slider';
 import {
   Popover,
@@ -64,6 +65,7 @@ export function LightingControls({
   disabled = false,
   variant = 'default',
 }: LightingControlsProps) {
+  const t = useTranslations('viewer.lighting');
   const [colorOpen, setColorOpen] = useState(false);
 
   const isCompact = variant === 'compact';
@@ -113,7 +115,7 @@ export function LightingControls({
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-1.5 text-xs text-white/70">
               <Sun className="w-3.5 h-3.5" />
-              聚光燈
+              {t('spotlight')}
             </label>
             <span className="text-xs text-white/50 font-mono">
               {lighting.spotlight.intensity.toFixed(1)}x
@@ -135,7 +137,7 @@ export function LightingControls({
           <div className="flex items-center justify-between">
             <label className="flex items-center gap-1.5 text-xs text-white/70">
               <SunDim className="w-3.5 h-3.5" />
-              環境光
+              {t('ambient')}
             </label>
             <span className="text-xs text-white/50 font-mono">
               {lighting.ambient.intensity.toFixed(1)}x
@@ -167,7 +169,7 @@ export function LightingControls({
                   className="w-4 h-4 rounded-full ring-1 ring-white/30"
                   style={{ backgroundColor: lighting.spotlight.color }}
                 />
-                <span className="text-xs">色彩</span>
+                <span className="text-xs">{t('color')}</span>
                 <ChevronDown className="w-3 h-3 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -176,7 +178,7 @@ export function LightingControls({
               align="start"
             >
               <div className="space-y-2">
-                <p className="text-xs text-white/50 mb-2">預設色彩</p>
+                <p className="text-xs text-white/50 mb-2">{t('presetColors')}</p>
                 <div className="flex gap-2">
                   {LIGHT_COLOR_PRESETS.map((preset) => (
                     <button
@@ -203,7 +205,7 @@ export function LightingControls({
 
                 {/* Custom color input */}
                 <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-                  <span className="text-xs text-white/50">自訂:</span>
+                  <span className="text-xs text-white/50">{t('custom')}</span>
                   <input
                     type="color"
                     value={lighting.spotlight.color}
@@ -230,7 +232,7 @@ export function LightingControls({
             `}
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span className="text-xs">重設</span>
+            <span className="text-xs">{t('reset')}</span>
           </Button>
         </div>
       </div>

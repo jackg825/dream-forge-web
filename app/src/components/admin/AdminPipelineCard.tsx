@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { AdminPipeline, PipelineStatus } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
 
@@ -19,21 +20,21 @@ interface AdminPipelineCardProps {
   onClick?: () => void;
 }
 
-// Status display configuration
+// Status icon and variant configuration (labels come from translations)
 const STATUS_CONFIG: Record<
   PipelineStatus,
-  { label: string; icon: typeof Box; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+  { labelKey: string; icon: typeof Box; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
-  draft: { label: '草稿', icon: Clock, variant: 'secondary' },
-  'batch-queued': { label: '排隊中', icon: Clock, variant: 'secondary' },
-  'batch-processing': { label: '批次處理中', icon: Loader2, variant: 'default' },
-  'generating-images': { label: '生成圖片中', icon: Loader2, variant: 'default' },
-  'images-ready': { label: '圖片就緒', icon: CheckCircle, variant: 'secondary' },
-  'generating-mesh': { label: '生成網格中', icon: Loader2, variant: 'default' },
-  'mesh-ready': { label: '網格就緒', icon: Box, variant: 'secondary' },
-  'generating-texture': { label: '生成貼圖中', icon: Loader2, variant: 'default' },
-  completed: { label: '完成', icon: CheckCircle, variant: 'default' },
-  failed: { label: '失敗', icon: AlertCircle, variant: 'destructive' },
+  draft: { labelKey: 'draft', icon: Clock, variant: 'secondary' },
+  'batch-queued': { labelKey: 'batchQueued', icon: Clock, variant: 'secondary' },
+  'batch-processing': { labelKey: 'batchProcessing', icon: Loader2, variant: 'default' },
+  'generating-images': { labelKey: 'generatingImages', icon: Loader2, variant: 'default' },
+  'images-ready': { labelKey: 'imagesReady', icon: CheckCircle, variant: 'secondary' },
+  'generating-mesh': { labelKey: 'generatingMesh', icon: Loader2, variant: 'default' },
+  'mesh-ready': { labelKey: 'meshReady', icon: Box, variant: 'secondary' },
+  'generating-texture': { labelKey: 'generatingTexture', icon: Loader2, variant: 'default' },
+  completed: { labelKey: 'completed', icon: CheckCircle, variant: 'default' },
+  failed: { labelKey: 'failed', icon: AlertCircle, variant: 'destructive' },
 };
 
 function formatDate(dateStr: string | null): string {
@@ -47,8 +48,10 @@ function formatDate(dateStr: string | null): string {
 }
 
 export function AdminPipelineCard({ pipeline, onClick }: AdminPipelineCardProps) {
+  const t = useTranslations();
   const statusConfig = STATUS_CONFIG[pipeline.status] || STATUS_CONFIG.draft;
   const StatusIcon = statusConfig.icon;
+  const statusLabel = t(`adminStatus.${statusConfig.labelKey}`);
 
   // Get preview image (first input image or first generated mesh image)
   const previewImage =
@@ -97,7 +100,7 @@ export function AdminPipelineCard({ pipeline, onClick }: AdminPipelineCardProps)
             <StatusIcon
               className={`h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`}
             />
-            {statusConfig.label}
+            {statusLabel}
           </Badge>
         </div>
 
@@ -106,13 +109,13 @@ export function AdminPipelineCard({ pipeline, onClick }: AdminPipelineCardProps)
           {pipeline.meshUrl && (
             <Badge variant="secondary" className="gap-1 text-xs">
               <Box className="h-3 w-3" />
-              網格
+              {t('selectors.mesh')}
             </Badge>
           )}
           {pipeline.texturedModelUrl && (
             <Badge variant="secondary" className="gap-1 text-xs">
               <Palette className="h-3 w-3" />
-              貼圖
+              {t('selectors.texture')}
             </Badge>
           )}
         </div>
@@ -137,7 +140,7 @@ export function AdminPipelineCard({ pipeline, onClick }: AdminPipelineCardProps)
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>{formatDate(pipeline.createdAt)}</span>
           {totalCredits > 0 && (
-            <span>{totalCredits} 點</span>
+            <span>{totalCredits} {t('pipeline.credits.points')}</span>
           )}
         </div>
 

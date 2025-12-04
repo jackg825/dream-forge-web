@@ -3,13 +3,15 @@
 import { CheckCircle, Circle, Loader2, Coins, Image, Box, Palette, Truck, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations } from 'next-intl';
 import type { ResetTargetStep } from '@/hooks/usePipeline';
 
-const STEPS = [
-  { id: 1, label: '準備圖片', icon: Image, resetTarget: 'images-ready' as ResetTargetStep },
-  { id: 2, label: '生成網格', icon: Box, resetTarget: 'mesh-ready' as ResetTargetStep },
-  { id: 3, label: '生成貼圖', icon: Palette, resetTarget: null },
-  { id: 4, label: '列印&配送', icon: Truck, comingSoon: true, resetTarget: null },
+// Step icons and reset targets (labels come from translations)
+const STEP_CONFIG = [
+  { id: 1, labelKey: 'prepareImages', icon: Image, resetTarget: 'images-ready' as ResetTargetStep },
+  { id: 2, labelKey: 'generateMesh', icon: Box, resetTarget: 'mesh-ready' as ResetTargetStep },
+  { id: 3, labelKey: 'generateTexture', icon: Palette, resetTarget: null },
+  { id: 4, labelKey: 'printDelivery', icon: Truck, comingSoon: true, resetTarget: null },
 ] as const;
 
 interface PipelineProgressBarProps {
@@ -29,12 +31,15 @@ export function PipelineProgressBar({
   creditsLoading,
   onStepClick,
 }: PipelineProgressBarProps) {
+  const t = useTranslations();
+
   return (
     <div className="bg-muted/30 rounded-xl border border-border/50 p-4 mb-6">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Step Progress */}
         <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
-          {STEPS.map((step, index) => {
+          {STEP_CONFIG.map((step, index) => {
+            const stepLabel = t(`pipeline.steps.${step.labelKey}`);
             const isCompleted = currentStep > step.id;
             const isActive = currentStep === step.id;
             const isPending = currentStep < step.id;
@@ -68,7 +73,7 @@ export function PipelineProgressBar({
                     isClickable && 'cursor-pointer hover:bg-green-500/30 hover:ring-2 hover:ring-green-500/30 group',
                     !isClickable && 'cursor-default'
                   )}
-                  title={isClickable ? `返回「${step.label}」步驟` : undefined}
+                  title={isClickable ? t('pipeline.progressBar.returnToStep', { step: stepLabel }) : undefined}
                 >
                   {isCompleted && !isComingSoon ? (
                     isClickable ? (
@@ -81,16 +86,16 @@ export function PipelineProgressBar({
                   ) : (
                     <StepIcon className="h-3.5 w-3.5 shrink-0" />
                   )}
-                  <span className="hidden sm:inline">{step.label}</span>
+                  <span className="hidden sm:inline">{stepLabel}</span>
                   {isComingSoon && (
                     <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0 h-4 hidden md:inline-flex">
-                      Soon
+                      {t('pipeline.progressBar.soon')}
                     </Badge>
                   )}
                 </button>
 
                 {/* Connector */}
-                {index < STEPS.length - 1 && (
+                {index < STEP_CONFIG.length - 1 && (
                   <div
                     className={cn(
                       'w-4 sm:w-6 h-0.5 mx-1',
@@ -114,7 +119,7 @@ export function PipelineProgressBar({
             <span className="text-base font-semibold">
               {creditsLoading ? '...' : credits ?? 0}
             </span>
-            <span className="text-xs text-muted-foreground">點</span>
+            <span className="text-xs text-muted-foreground">{t('pipeline.credits.points')}</span>
           </div>
         </div>
       </div>
@@ -126,7 +131,7 @@ export function PipelineProgressBar({
             'h-full rounded-full transition-all duration-500',
             isFailed ? 'bg-destructive' : 'bg-green-500'
           )}
-          style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
+          style={{ width: `${((currentStep - 1) / (STEP_CONFIG.length - 1)) * 100}%` }}
         />
       </div>
     </div>

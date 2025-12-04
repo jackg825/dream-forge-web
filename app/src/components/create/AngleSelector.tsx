@@ -26,6 +26,7 @@ export function AngleSelector({
   disabled = false,
 }: AngleSelectorProps) {
   const t = useTranslations('upload.viewAngles');
+  const tUpload = useTranslations('create.upload');
 
   const handleToggle = (angle: ViewAngle) => {
     if (selectedAngles.includes(angle)) {
@@ -68,7 +69,7 @@ export function AngleSelector({
 
       {selectedAngles.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          請至少選擇一個視角
+          {tUpload('selectAtLeastOne')}
         </p>
       )}
     </div>

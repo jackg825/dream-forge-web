@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Position3D } from '@/types/lighting';
 
 interface AngleSphereWidgetProps {
@@ -39,6 +40,7 @@ export function AngleSphereWidget({
   size = 120,
   disabled = false,
 }: AngleSphereWidgetProps) {
+  const t = useTranslations('viewer.angleSphere');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
@@ -294,7 +296,7 @@ export function AngleSphereWidget({
         style={{ touchAction: 'none' }}
       />
       <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[10px] text-white/40 whitespace-nowrap">
-        拖曳調整角度
+        {t('dragToAdjust')}
       </div>
     </div>
   );

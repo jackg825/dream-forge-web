@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Zap } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   type ProcessingMode,
   PROCESSING_MODE_OPTIONS,
@@ -26,12 +27,13 @@ export function ProcessingModeSelector({
   onChange,
   disabled,
 }: ProcessingModeSelectorProps) {
+  const t = useTranslations();
   const modes = Object.values(PROCESSING_MODE_OPTIONS);
 
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium text-muted-foreground">
-        處理模式
+        {t('selectors.processingMode')}
       </div>
       <div className="grid grid-cols-2 gap-3">
         {modes.map((mode) => {
@@ -94,7 +96,7 @@ export function ProcessingModeSelector({
                   variant="outline"
                   className="text-xs border-green-500/50 text-green-600 dark:text-green-400"
                 >
-                  {isBatch ? '5 點' : '10 點'}
+                  {isBatch ? `5 ${t('pipeline.credits.points')}` : `10 ${t('pipeline.credits.points')}`}
                 </Badge>
               </div>
 

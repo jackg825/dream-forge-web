@@ -109,7 +109,7 @@ export function ViewCard({
             </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-              <span className="text-sm">No image</span>
+              <span className="text-sm">{tPreview('noImage')}</span>
             </div>
           )}
 
@@ -164,7 +164,7 @@ export function ViewCard({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Download</p>
+                  <p>{tPreview('download')}</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -186,7 +186,7 @@ export function ViewCard({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{tPreview('replaceButton')} (Free)</p>
+                  <p>{tPreview('replaceButton')} ({tPreview('free')})</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -209,7 +209,7 @@ export function ViewCard({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{tPreview('regenerateButton')} (1 credit)</p>
+                    <p>{tPreview('regenerateButton')} ({tPreview('oneCredit')})</p>
                   </TooltipContent>
                 </Tooltip>
               )}

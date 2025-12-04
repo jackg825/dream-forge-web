@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations } from 'next-intl';
 import {
   type GenerationModeId,
   GENERATION_MODE_OPTIONS,
@@ -22,12 +23,13 @@ interface ModeSelectorProps {
  * - Mode B: Simplified texture (full color mesh, 6-color texture)
  */
 export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
+  const t = useTranslations();
   const modes = Object.values(GENERATION_MODE_OPTIONS);
 
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium text-muted-foreground">
-        圖片處理模式
+        {t('selectors.imageProcessingMode')}
       </div>
       <div className="grid grid-cols-2 gap-3">
         {modes.map((mode) => {
@@ -54,7 +56,7 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
                 <span className="text-sm font-medium">{mode.name}</span>
                 {isDefault && (
                   <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                    預設
+                    {t('selectors.default')}
                   </Badge>
                 )}
               </div>
@@ -75,7 +77,7 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
                       : 'border-green-500/50 text-green-600 dark:text-green-400'
                   )}
                 >
-                  網格: {mode.meshStyle}
+                  {t('selectors.mesh')}: {mode.meshStyle}
                 </Badge>
                 <Badge
                   variant="outline"
@@ -86,7 +88,7 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
                       : 'border-green-500/50 text-green-600 dark:text-green-400'
                   )}
                 >
-                  貼圖: {mode.textureStyle}
+                  {t('selectors.texture')}: {mode.textureStyle}
                 </Badge>
               </div>
 

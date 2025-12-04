@@ -13,6 +13,7 @@ import {
   Loader2,
   ExternalLink,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { Pipeline, PipelineStatus } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
 
@@ -20,21 +21,21 @@ interface PipelineCardProps {
   pipeline: Pipeline;
 }
 
-// Status display configuration
+// Status icon and variant configuration (labels come from translations)
 const STATUS_CONFIG: Record<
   PipelineStatus,
-  { label: string; icon: typeof Box; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+  { labelKey: string; icon: typeof Box; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
-  draft: { label: '草稿', icon: Clock, variant: 'secondary' },
-  'batch-queued': { label: '排隊中', icon: Clock, variant: 'secondary' },
-  'batch-processing': { label: '批次處理中', icon: Loader2, variant: 'default' },
-  'generating-images': { label: '生成圖片中', icon: Loader2, variant: 'default' },
-  'images-ready': { label: '圖片就緒', icon: CheckCircle, variant: 'secondary' },
-  'generating-mesh': { label: '生成網格中', icon: Loader2, variant: 'default' },
-  'mesh-ready': { label: '網格就緒', icon: Box, variant: 'secondary' },
-  'generating-texture': { label: '生成貼圖中', icon: Loader2, variant: 'default' },
-  completed: { label: '完成', icon: CheckCircle, variant: 'default' },
-  failed: { label: '失敗', icon: AlertCircle, variant: 'destructive' },
+  draft: { labelKey: 'draft', icon: Clock, variant: 'secondary' },
+  'batch-queued': { labelKey: 'batchQueued', icon: Clock, variant: 'secondary' },
+  'batch-processing': { labelKey: 'batchProcessing', icon: Loader2, variant: 'default' },
+  'generating-images': { labelKey: 'generatingImages', icon: Loader2, variant: 'default' },
+  'images-ready': { labelKey: 'imagesReady', icon: CheckCircle, variant: 'secondary' },
+  'generating-mesh': { labelKey: 'generatingMesh', icon: Loader2, variant: 'default' },
+  'mesh-ready': { labelKey: 'meshReady', icon: Box, variant: 'secondary' },
+  'generating-texture': { labelKey: 'generatingTexture', icon: Loader2, variant: 'default' },
+  completed: { labelKey: 'completed', icon: CheckCircle, variant: 'default' },
+  failed: { labelKey: 'failed', icon: AlertCircle, variant: 'destructive' },
 };
 
 function formatDate(date: Date): string {
@@ -47,8 +48,10 @@ function formatDate(date: Date): string {
 }
 
 export function PipelineCard({ pipeline }: PipelineCardProps) {
+  const t = useTranslations();
   const statusConfig = STATUS_CONFIG[pipeline.status] || STATUS_CONFIG.draft;
   const StatusIcon = statusConfig.icon;
+  const statusLabel = t(`adminStatus.${statusConfig.labelKey}`);
 
   // Get preview image (first input image or first generated mesh image)
   const previewImage =
@@ -94,7 +97,7 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
             <StatusIcon
               className={`h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`}
             />
-            {statusConfig.label}
+            {statusLabel}
           </Badge>
         </div>
 
@@ -103,13 +106,13 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
           {pipeline.meshUrl && (
             <Badge variant="secondary" className="gap-1 text-xs">
               <Box className="h-3 w-3" />
-              網格
+              {t('selectors.mesh')}
             </Badge>
           )}
           {pipeline.texturedModelUrl && (
             <Badge variant="secondary" className="gap-1 text-xs">
               <Palette className="h-3 w-3" />
-              貼圖
+              {t('selectors.texture')}
             </Badge>
           )}
         </div>
@@ -120,7 +123,7 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
           <span>{formatDate(pipeline.createdAt)}</span>
           {totalCredits > 0 && (
-            <span>{totalCredits} 點</span>
+            <span>{totalCredits} {t('pipeline.credits.points')}</span>
           )}
         </div>
 
@@ -137,22 +140,22 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
             {pipeline.status === 'completed' ? (
               <>
                 <ExternalLink className="h-4 w-4" />
-                查看結果
+                {t('pipelineCard.viewResult')}
               </>
             ) : pipeline.status === 'failed' ? (
               <>
                 <AlertCircle className="h-4 w-4" />
-                重試
+                {t('pipelineCard.retry')}
               </>
             ) : isProcessing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                查看進度
+                {t('pipelineCard.viewProgress')}
               </>
             ) : (
               <>
                 <ExternalLink className="h-4 w-4" />
-                繼續
+                {t('pipelineCard.continue')}
               </>
             )}
           </Link>

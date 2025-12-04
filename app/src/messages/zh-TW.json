@@ -446,6 +446,58 @@
       "generateTexture": "生成貼圖",
       "printDelivery": "列印&配送"
     },
+    "progressBar": {
+      "returnToStep": "返回「{step}」步驟",
+      "soon": "Soon"
+    },
+    "error": {
+      "title": "處理失敗",
+      "defaultMessage": "發生錯誤，請重試",
+      "failedStep": "失敗步驟",
+      "steps": {
+        "generatingImages": "生成視角圖片",
+        "generatingMesh": "生成 3D 網格",
+        "generatingTexture": "生成貼圖"
+      },
+      "retrying": "重試中...",
+      "retry": "重試",
+      "restart": "重新開始",
+      "occurred": "發生錯誤",
+      "tryAgain": "請重試或重新開始"
+    },
+    "completion": {
+      "createNew": "創建新作品",
+      "viewHistory": "查看我的作品"
+    },
+    "processing": {
+      "generatingViews": "正在生成視角圖片",
+      "meshViews": "正在生成網格用圖片",
+      "textureViews": "正在生成貼圖用圖片",
+      "aiAnalyzing": "AI 正在分析您的圖片並生成多角度視圖",
+      "processing": "處理中...",
+      "meshViewsLabel": "網格視圖",
+      "textureViewsLabel": "貼圖視圖"
+    },
+    "images": {
+      "meshImages": "網格用圖片",
+      "textureImages": "貼圖用圖片",
+      "referenceImages": "參考圖片",
+      "regenerate": "重新生成",
+      "remaining": "剩餘 {count} 次",
+      "limitReached": "已達上限"
+    },
+    "angles": {
+      "front": "正面",
+      "back": "背面",
+      "left": "左側",
+      "right": "右側",
+      "top": "俯視"
+    },
+    "source": {
+      "ai": "AI",
+      "manual": "手動"
+    },
+    "nextStep": "下一步: 生成 3D 網格",
     "step1": {
       "title": "準備多視角圖片",
       "referenceImages": "參考圖片",
@@ -498,6 +550,110 @@
       "completed": "已完成",
       "failed": "失敗"
     }
+  },
+  "selectors": {
+    "imageProcessingMode": "圖片處理模式",
+    "meshPrecision": "網格精度",
+    "imageGenModel": "圖片生成模型",
+    "processingMode": "處理模式",
+    "default": "預設",
+    "recommended": "推薦",
+    "mesh": "網格",
+    "texture": "貼圖"
+  },
+  "regenerate": {
+    "dialog": {
+      "title": "重新生成 {angle} {type} 視圖",
+      "description": "您可以提供額外指示來調整生成結果，或留空直接重新生成。",
+      "hintLabel": "額外指示（可選）",
+      "hintPlaceholder": "例如：「耳朵要更明顯」或「保持原本的顏色」",
+      "charCount": "{count}/100 字元",
+      "generating": "生成中..."
+    }
+  },
+  "uploadModes": {
+    "single": {
+      "label": "單張圖片",
+      "description": "上傳一張照片"
+    },
+    "multi": {
+      "label": "多角度上傳",
+      "description": "上傳 2-5 張不同角度的照片"
+    },
+    "aiGenerated": {
+      "label": "AI 生成視角",
+      "description": "AI 自動生成其他角度"
+    },
+    "credits": "({count} 點)",
+    "clickOrDrag": "點擊或拖放上傳",
+    "selectAiAngles": "選擇 AI 生成的角度 (最多 4 個)",
+    "selectedAngles": "已選擇 {count} 個角度，AI 將生成這些視角的圖片",
+    "imagesUploaded": "已上傳 {count} 張圖片",
+    "aiGenerating": "+ AI 生成 {count} 張",
+    "creditsConsumed": "消耗 {count} 點",
+    "removeImage": "移除圖片"
+  },
+  "imageUploader": {
+    "uploadedPreview": "已上傳預覽",
+    "removeImage": "移除圖片",
+    "readyToGenerate": "準備生成",
+    "uploadingPreview": "上傳預覽中",
+    "uploading": "上傳中... {progress}%",
+    "validating": "驗證圖片中...",
+    "clickToUpload": "點擊上傳",
+    "supportedFormats": "JPG、PNG 或 WEBP（最大 10MB）"
+  },
+  "adminStatus": {
+    "draft": "草稿",
+    "batchQueued": "排隊中",
+    "batchProcessing": "批次處理中",
+    "generatingImages": "生成圖片中",
+    "imagesReady": "圖片就緒",
+    "generatingMesh": "生成網格中",
+    "meshReady": "網格就緒",
+    "generatingTexture": "生成貼圖中",
+    "completed": "完成",
+    "failed": "失敗"
+  },
+  "viewer": {
+    "errorBoundary": {
+      "cannotLoadModel": "無法載入 3D 模型",
+      "urlExpired": "模型連結已過期，請重新整理頁面",
+      "loadError": "載入時發生錯誤，請稍後再試",
+      "retry": "重試"
+    },
+    "lighting": {
+      "spotlight": "聚光燈",
+      "ambient": "環境光",
+      "color": "色彩",
+      "presetColors": "預設色彩",
+      "custom": "自訂:",
+      "reset": "重設"
+    },
+    "angleSphere": {
+      "dragToAdjust": "拖曳調整角度"
+    }
+  },
+  "resetDialog": {
+    "clearAndRestart": "清除並重新開始"
+  },
+  "photoTips": {
+    "title": "最佳拍攝建議",
+    "frontView": "正面視角",
+    "frontViewDesc": "主體正面朝向鏡頭，如同面對面看著它",
+    "clearComplete": "清晰完整",
+    "clearCompleteDesc": "確保主體完整入鏡、光線均勻",
+    "simpleBackground": "簡潔背景",
+    "simpleBackgroundDesc": "純色或簡單背景效果最佳"
+  },
+  "creatorHub": {
+    "connector": "創作者 ↔ 消費者"
+  },
+  "pipelineCard": {
+    "viewResult": "查看結果",
+    "retry": "重試",
+    "viewProgress": "查看進度",
+    "continue": "繼續"
   },
   "landing": {
     "hero": {
@@ -721,6 +877,7 @@
       "badge": "即將推出",
       "title": "創作者中心",
       "subtitle": "分享您的創作，讓全世界看見",
+      "connector": "創作者 ↔ 消費者",
       "forCreators": {
         "title": "創作者專區",
         "subtitle": "將創意轉化為收入",
@@ -782,6 +939,7 @@
       "title": "上傳原始圖片",
       "description": "上傳物件的正面照片作為起點",
       "selectAngles": "選擇要 AI 生成的視角",
+      "selectAtLeastOne": "請至少選擇一個視角",
       "anglesHelp": "AI 將根據您上傳的正面圖生成其他視角",
       "settingsTitle": "生成設定",
       "proceedButton": "生成視角",
@@ -824,6 +982,10 @@
       "uploaded": "已上傳",
       "replaceButton": "替換",
       "downloadAll": "下載所有視角",
+      "download": "下載",
+      "noImage": "尚無圖片",
+      "free": "免費",
+      "oneCredit": "1 點",
       "regenerateButton": "重新生成視角",
       "regenerateCost": "將使用 1 點數",
       "proceedButton": "生成 3D 模型",

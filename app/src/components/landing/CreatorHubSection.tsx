@@ -181,7 +181,7 @@ export function CreatorHubSection({ className }: CreatorHubSectionProps) {
         <div className="hidden lg:flex justify-center -mt-4 relative z-20">
           <div className="px-4 py-2 rounded-full bg-background border shadow-sm">
             <span className="text-xs text-muted-foreground">
-              創作者 ↔ 消費者
+              {t('creatorHub.connector')}
             </span>
           </div>
         </div>

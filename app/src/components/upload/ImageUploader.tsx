@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { uploadImage, validateImage, type UploadProgress } from '@/lib/storage';
+import { useTranslations } from 'next-intl';
 
 interface ImageUploaderProps {
   userId: string;
@@ -12,6 +13,7 @@ interface ImageUploaderProps {
 type UploadState = 'idle' | 'validating' | 'uploading' | 'complete';
 
 export function ImageUploader({ userId, onUploadComplete, onError }: ImageUploaderProps) {
+  const t = useTranslations();
   const [state, setState] = useState<UploadState>('idle');
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -113,14 +115,14 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
       <div className="relative rounded-lg overflow-hidden border-2 border-green-500 bg-gray-50">
         <img
           src={preview}
-          alt="Uploaded preview"
+          alt={t('imageUploader.uploadedPreview')}
           className="w-full h-64 object-contain"
         />
         <button
           type="button"
           onClick={handleRemove}
           className="absolute top-2 right-2 p-1 bg-white rounded-full shadow hover:bg-gray-100"
-          aria-label="Remove image"
+          aria-label={t('imageUploader.removeImage')}
         >
           <svg
             className="w-5 h-5 text-gray-600"
@@ -137,7 +139,7 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
           </svg>
         </button>
         <div className="absolute bottom-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
-          Ready to generate
+          {t('imageUploader.readyToGenerate')}
         </div>
       </div>
     );
@@ -149,7 +151,7 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
       <div className="relative rounded-lg overflow-hidden border-2 border-indigo-500 bg-gray-50">
         <img
           src={preview}
-          alt="Uploading preview"
+          alt={t('imageUploader.uploadingPreview')}
           className="w-full h-64 object-contain opacity-50"
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30">
@@ -160,7 +162,7 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
             />
           </div>
           <p className="mt-2 text-white text-sm">
-            Uploading... {Math.round(progress?.progress || 0)}%
+            {t('imageUploader.uploading', { progress: Math.round(progress?.progress || 0) })}
           </p>
         </div>
       </div>
@@ -213,14 +215,14 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
         </div>
 
         {state === 'validating' ? (
-          <p className="text-gray-600">Validating image...</p>
+          <p className="text-gray-600">{t('imageUploader.validating')}</p>
         ) : (
           <>
             <p className="text-gray-600">
-              <span className="text-indigo-600 font-medium">Click to upload</span> or drag and drop
+              <span className="text-indigo-600 font-medium">{t('imageUploader.clickToUpload')}</span>
             </p>
             <p className="mt-1 text-sm text-gray-500">
-              JPG, PNG, or WEBP (512px - 4096px, max 10MB)
+              {t('imageUploader.supportedFormats')}
             </p>
           </>
         )}

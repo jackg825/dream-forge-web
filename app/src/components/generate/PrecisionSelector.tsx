@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { useTranslations } from 'next-intl';
 import {
   type MeshPrecision,
   MESH_PRECISION_OPTIONS,
@@ -22,12 +23,13 @@ interface PrecisionSelectorProps {
  * - High: Preserves original mesh topology, for high-detail requirements
  */
 export function PrecisionSelector({ value, onChange, disabled }: PrecisionSelectorProps) {
+  const t = useTranslations();
   const precisions = Object.values(MESH_PRECISION_OPTIONS);
 
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium text-muted-foreground">
-        網格精度
+        {t('selectors.meshPrecision')}
       </div>
       <div className="grid grid-cols-2 gap-3">
         {precisions.map((precision) => {

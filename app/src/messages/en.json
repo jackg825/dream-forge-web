@@ -446,6 +446,58 @@
       "generateTexture": "Generate Texture",
       "printDelivery": "Print & Delivery"
     },
+    "progressBar": {
+      "returnToStep": "Return to \"{step}\"",
+      "soon": "Soon"
+    },
+    "error": {
+      "title": "Processing Failed",
+      "defaultMessage": "An error occurred, please retry",
+      "failedStep": "Failed step",
+      "steps": {
+        "generatingImages": "Generating view images",
+        "generatingMesh": "Generating 3D mesh",
+        "generatingTexture": "Generating texture"
+      },
+      "retrying": "Retrying...",
+      "retry": "Retry",
+      "restart": "Start Over",
+      "occurred": "An error occurred",
+      "tryAgain": "Please retry or start over"
+    },
+    "completion": {
+      "createNew": "Create New",
+      "viewHistory": "View My Work"
+    },
+    "processing": {
+      "generatingViews": "Generating view images",
+      "meshViews": "Generating mesh view images",
+      "textureViews": "Generating texture view images",
+      "aiAnalyzing": "AI is analyzing your image and generating multiple views",
+      "processing": "Processing...",
+      "meshViewsLabel": "Mesh Views",
+      "textureViewsLabel": "Texture Views"
+    },
+    "images": {
+      "meshImages": "Mesh Images",
+      "textureImages": "Texture Images",
+      "referenceImages": "Reference Images",
+      "regenerate": "Regenerate",
+      "remaining": "{count} remaining",
+      "limitReached": "Limit reached"
+    },
+    "angles": {
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right",
+      "top": "Top"
+    },
+    "source": {
+      "ai": "AI",
+      "manual": "Manual"
+    },
+    "nextStep": "Next: Generate 3D Mesh",
     "step1": {
       "title": "Prepare Multi-View Images",
       "referenceImages": "Reference Images",
@@ -498,6 +550,110 @@
       "completed": "Completed",
       "failed": "Failed"
     }
+  },
+  "selectors": {
+    "imageProcessingMode": "Image Processing Mode",
+    "meshPrecision": "Mesh Precision",
+    "imageGenModel": "Image Generation Model",
+    "processingMode": "Processing Mode",
+    "default": "Default",
+    "recommended": "Recommended",
+    "mesh": "Mesh",
+    "texture": "Texture"
+  },
+  "regenerate": {
+    "dialog": {
+      "title": "Regenerate {angle} {type} View",
+      "description": "You can provide additional instructions to adjust the result, or leave empty to regenerate directly.",
+      "hintLabel": "Additional Instructions (optional)",
+      "hintPlaceholder": "e.g., \"Make the ears more visible\" or \"Keep the original colors\"",
+      "charCount": "{count}/100 characters",
+      "generating": "Generating..."
+    }
+  },
+  "uploadModes": {
+    "single": {
+      "label": "Single Image",
+      "description": "Upload one photo"
+    },
+    "multi": {
+      "label": "Multi-Angle Upload",
+      "description": "Upload 2-5 photos from different angles"
+    },
+    "aiGenerated": {
+      "label": "AI Generated Views",
+      "description": "AI generates other angles automatically"
+    },
+    "credits": "({count} credits)",
+    "clickOrDrag": "Click or drag to upload",
+    "selectAiAngles": "Select angles for AI to generate (max 4)",
+    "selectedAngles": "Selected {count} angles, AI will generate these views",
+    "imagesUploaded": "Uploaded {count} images",
+    "aiGenerating": "+ AI generating {count}",
+    "creditsConsumed": "Uses {count} credits",
+    "removeImage": "Remove image"
+  },
+  "imageUploader": {
+    "uploadedPreview": "Uploaded preview",
+    "removeImage": "Remove image",
+    "readyToGenerate": "Ready to generate",
+    "uploadingPreview": "Uploading preview",
+    "uploading": "Uploading... {progress}%",
+    "validating": "Validating image...",
+    "clickToUpload": "Click to upload",
+    "supportedFormats": "JPG, PNG, or WEBP (max 10MB)"
+  },
+  "adminStatus": {
+    "draft": "Draft",
+    "batchQueued": "Queued",
+    "batchProcessing": "Batch Processing",
+    "generatingImages": "Generating Images",
+    "imagesReady": "Images Ready",
+    "generatingMesh": "Generating Mesh",
+    "meshReady": "Mesh Ready",
+    "generatingTexture": "Generating Texture",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "viewer": {
+    "errorBoundary": {
+      "cannotLoadModel": "Could not load 3D model",
+      "urlExpired": "Model link has expired, please refresh the page",
+      "loadError": "An error occurred while loading, please try again later",
+      "retry": "Retry"
+    },
+    "lighting": {
+      "spotlight": "Spotlight",
+      "ambient": "Ambient",
+      "color": "Color",
+      "presetColors": "Preset Colors",
+      "custom": "Custom:",
+      "reset": "Reset"
+    },
+    "angleSphere": {
+      "dragToAdjust": "Drag to adjust angle"
+    }
+  },
+  "resetDialog": {
+    "clearAndRestart": "Clear and Start Over"
+  },
+  "photoTips": {
+    "title": "Photo Tips",
+    "frontView": "Front View",
+    "frontViewDesc": "Subject facing the camera directly, as if looking at it face-to-face",
+    "clearComplete": "Clear & Complete",
+    "clearCompleteDesc": "Ensure the subject is fully visible with even lighting",
+    "simpleBackground": "Simple Background",
+    "simpleBackgroundDesc": "Solid colors or simple backgrounds work best"
+  },
+  "creatorHub": {
+    "connector": "Creators ↔ Collectors"
+  },
+  "pipelineCard": {
+    "viewResult": "View Result",
+    "retry": "Retry",
+    "viewProgress": "View Progress",
+    "continue": "Continue"
   },
   "landing": {
     "hero": {
@@ -721,6 +877,7 @@
       "badge": "Coming Soon",
       "title": "Creator Hub",
       "subtitle": "Share your creations with the world",
+      "connector": "Creators ↔ Collectors",
       "forCreators": {
         "title": "For Creators",
         "subtitle": "Turn creativity into income",
@@ -782,6 +939,7 @@
       "title": "Upload Original Image",
       "description": "Upload a front view photo of your object as the starting point",
       "selectAngles": "Select angles to generate with AI",
+      "selectAtLeastOne": "Please select at least one angle",
       "anglesHelp": "AI will generate other views based on your uploaded front image",
       "settingsTitle": "Generation Settings",
       "proceedButton": "Generate Views",
@@ -824,6 +982,10 @@
       "uploaded": "Uploaded",
       "replaceButton": "Replace",
       "downloadAll": "Download All Views",
+      "download": "Download",
+      "noImage": "No image",
+      "free": "Free",
+      "oneCredit": "1 credit",
       "regenerateButton": "Regenerate Views",
       "regenerateCost": "Uses 1 credit",
       "proceedButton": "Generate 3D Model",

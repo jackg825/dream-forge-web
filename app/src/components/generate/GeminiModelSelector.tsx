@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Coins, Sparkles, Zap } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import {
   type GeminiModelId,
   GEMINI_MODEL_OPTIONS,
@@ -26,12 +27,13 @@ export function GeminiModelSelector({
   onChange,
   disabled,
 }: GeminiModelSelectorProps) {
+  const t = useTranslations();
   const models = Object.values(GEMINI_MODEL_OPTIONS);
 
   return (
     <div className="space-y-2">
       <div className="text-sm font-medium text-muted-foreground">
-        圖片生成模型
+        {t('selectors.imageGenModel')}
       </div>
       <div className="grid grid-cols-2 gap-3">
         {models.map((model) => {
@@ -80,7 +82,7 @@ export function GeminiModelSelector({
                 </span>
                 <span className="flex items-center gap-1 text-primary font-medium">
                   <Coins className="h-3 w-3" />
-                  {model.creditCost} 點
+                  {model.creditCost} {t('pipeline.credits.points')}
                 </span>
               </div>
 

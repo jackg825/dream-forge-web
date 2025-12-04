@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 interface Props {
   children: ReactNode;
   fallbackMessage?: string;
+  urlExpiredMessage?: string;
+  loadErrorMessage?: string;
+  retryLabel?: string;
   onRetry?: () => void;
 }
 
@@ -44,6 +47,13 @@ export class ModelViewerErrorBoundary extends Component<Props, State> {
       const isExpiredUrl = this.state.error?.message?.includes('Failed to fetch') ||
                           this.state.error?.message?.includes('Could not load');
 
+      const {
+        fallbackMessage = '無法載入 3D 模型',
+        urlExpiredMessage = '模型連結已過期，請重新整理頁面',
+        loadErrorMessage = '載入時發生錯誤，請稍後再試',
+        retryLabel = '重試',
+      } = this.props;
+
       return (
         <div className="w-full h-full min-h-[400px] rounded-lg overflow-hidden bg-muted/30 flex items-center justify-center border border-border/50">
           <div className="text-center p-6 max-w-sm">
@@ -51,12 +61,10 @@ export class ModelViewerErrorBoundary extends Component<Props, State> {
               <AlertCircle className="h-8 w-8 text-destructive" />
             </div>
             <p className="font-medium mb-2">
-              {this.props.fallbackMessage || '無法載入 3D 模型'}
+              {fallbackMessage}
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              {isExpiredUrl
-                ? '模型連結已過期，請重新整理頁面'
-                : '載入時發生錯誤，請稍後再試'}
+              {isExpiredUrl ? urlExpiredMessage : loadErrorMessage}
             </p>
             <Button
               variant="outline"
@@ -64,7 +72,7 @@ export class ModelViewerErrorBoundary extends Component<Props, State> {
               onClick={this.handleRetry}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              重試
+              {retryLabel}
             </Button>
           </div>
         </div>
