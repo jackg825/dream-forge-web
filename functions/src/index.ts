@@ -12,6 +12,9 @@ export {
   checkRodinBalance,
   getAdminStats,
   listUsers,
+  listAllPipelines,
+  deductCredits,
+  getUserTransactions,
 } from './handlers/admin';
 
 // Multi-step creation flow (Sessions)

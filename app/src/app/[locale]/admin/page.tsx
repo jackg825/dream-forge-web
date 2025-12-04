@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { AdminGuard } from '@/components/auth/AdminGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
+import { UserDetailModal } from '@/components/admin/UserDetailModal';
 import { Link } from '@/i18n/navigation';
 import type { AdminUser } from '@/types';
 
@@ -24,15 +25,19 @@ function AdminDashboardContent() {
     fetchUsers,
     addCredits,
     addingCredits,
+    deductCredits,
+    deductingCredits,
+    transactions,
+    transactionsLoading,
+    transactionsPagination,
+    fetchUserTransactions,
     error,
     clearError,
   } = useAdmin();
 
-  // Add credits modal state
-  const [showAddCreditsModal, setShowAddCreditsModal] = useState(false);
+  // User detail modal state
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-  const [creditAmount, setCreditAmount] = useState('10');
-  const [creditReason, setCreditReason] = useState('');
+  const [showUserDetail, setShowUserDetail] = useState(false);
 
   // Fetch data on mount
   useEffect(() => {
@@ -41,26 +46,14 @@ function AdminDashboardContent() {
     fetchUsers();
   }, [fetchRodinBalance, fetchStats, fetchUsers]);
 
-  const handleAddCredits = async () => {
-    if (!selectedUser) return;
-
-    const amount = parseInt(creditAmount, 10);
-    if (isNaN(amount) || amount <= 0) {
-      return;
-    }
-
-    const success = await addCredits(selectedUser.uid, amount, creditReason || undefined);
-    if (success) {
-      setShowAddCreditsModal(false);
-      setSelectedUser(null);
-      setCreditAmount('10');
-      setCreditReason('');
-    }
+  const openUserDetail = (targetUser: AdminUser) => {
+    setSelectedUser(targetUser);
+    setShowUserDetail(true);
   };
 
-  const openAddCreditsModal = (targetUser: AdminUser) => {
-    setSelectedUser(targetUser);
-    setShowAddCreditsModal(true);
+  const closeUserDetail = () => {
+    setShowUserDetail(false);
+    setSelectedUser(null);
   };
 
   return (
@@ -78,6 +71,9 @@ function AdminDashboardContent() {
               </span>
             </div>
             <div className="flex items-center gap-4">
+              <Link href="/admin/pipelines" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                Pipeline 管理
+              </Link>
               <Link href="/dashboard" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                 {t('nav.dashboard')}
               </Link>
@@ -364,10 +360,10 @@ function AdminDashboardContent() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
-                          onClick={() => openAddCreditsModal(targetUser)}
+                          onClick={() => openUserDetail(targetUser)}
                           className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
                         >
-                          Add Credits
+                          管理
                         </button>
                       </td>
                     </tr>
@@ -396,71 +392,20 @@ function AdminDashboardContent() {
         </div>
       </main>
 
-      {/* Add Credits Modal */}
-      {showAddCreditsModal && selectedUser && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4">
-            <div
-              className="fixed inset-0 bg-black bg-opacity-30"
-              onClick={() => setShowAddCreditsModal(false)}
-            />
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                Add Credits
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Adding credits to{' '}
-                <span className="font-medium">{selectedUser.displayName}</span> (
-                {selectedUser.email})
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Amount
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={creditAmount}
-                    onChange={(e) => setCreditAmount(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Reason (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={creditReason}
-                    onChange={(e) => setCreditReason(e.target.value)}
-                    placeholder="e.g., Bug compensation, Promotion"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setShowAddCreditsModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-                >
-                  {t('common.cancel')}
-                </button>
-                <button
-                  onClick={handleAddCredits}
-                  disabled={addingCredits}
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {addingCredits ? t('common.loading') : 'Add Credits'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* User Detail Modal */}
+      <UserDetailModal
+        user={selectedUser}
+        open={showUserDetail}
+        onClose={closeUserDetail}
+        transactions={transactions}
+        transactionsLoading={transactionsLoading}
+        transactionsPagination={transactionsPagination}
+        onFetchTransactions={fetchUserTransactions}
+        onAddCredits={addCredits}
+        onDeductCredits={deductCredits}
+        addingCredits={addingCredits}
+        deductingCredits={deductingCredits}
+      />
     </div>
   );
 }

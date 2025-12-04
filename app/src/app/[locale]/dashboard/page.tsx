@@ -3,10 +3,9 @@
 import { useTranslations } from 'next-intl';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { Header } from '@/components/layout/Header';
-import { CreditBadge } from '@/components/credits/CreditBadge';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
-import { useJobs } from '@/hooks/useJobs';
+import { usePipelines } from '@/hooks/usePipelines';
 import { Link } from '@/i18n/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,26 +19,30 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  Palette,
 } from 'lucide-react';
-import type { Job, JobStatus } from '@/types';
+import type { Pipeline, PipelineStatus } from '@/types';
 
 function DashboardContent() {
   const t = useTranslations();
   const { user } = useAuth();
   const { credits, loading: creditsLoading } = useCredits(user?.uid);
-  const { jobs, loading: jobsLoading } = useJobs(user?.uid);
+  const { pipelines, loading: pipelinesLoading } = usePipelines(user?.uid);
 
-  // Get recent jobs (last 3)
-  const recentJobs = jobs.slice(0, 3);
+  // Get recent pipelines (last 3)
+  const recentPipelines = pipelines.slice(0, 3);
 
   // Get translated status message
-  const getStatusMessage = (status: JobStatus): string => {
-    const statusMap: Record<JobStatus, string> = {
-      'pending': t('status.pending'),
-      'generating-views': t('status.generatingViews'),
-      'generating-model': t('status.generatingModel'),
-      'downloading-model': t('status.downloadingModel'),
-      'uploading-storage': t('status.uploadingStorage'),
+  const getStatusMessage = (status: PipelineStatus): string => {
+    const statusMap: Record<PipelineStatus, string> = {
+      'draft': '草稿',
+      'batch-queued': '排隊中',
+      'batch-processing': '批次處理中',
+      'generating-images': '生成圖片中',
+      'images-ready': '圖片就緒',
+      'generating-mesh': '生成網格中',
+      'mesh-ready': '網格就緒',
+      'generating-texture': '生成貼圖中',
       'completed': t('status.completed'),
       'failed': t('status.failed'),
     };
@@ -141,11 +144,11 @@ function DashboardContent() {
           </CardHeader>
 
           <CardContent>
-            {jobsLoading ? (
+            {pipelinesLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : recentJobs.length === 0 ? (
+            ) : recentPipelines.length === 0 ? (
               <div className="text-center py-8">
                 <Box className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                 <p className="text-muted-foreground mb-2">{t('dashboard.noGenerationsYet')}</p>
@@ -155,8 +158,8 @@ function DashboardContent() {
               </div>
             ) : (
               <div className="space-y-4">
-                {recentJobs.map((job) => (
-                  <JobListItem key={job.id} job={job} getStatusMessage={getStatusMessage} />
+                {recentPipelines.map((pipeline) => (
+                  <PipelineListItem key={pipeline.id} pipeline={pipeline} getStatusMessage={getStatusMessage} />
                 ))}
               </div>
             )}
@@ -167,11 +170,11 @@ function DashboardContent() {
   );
 }
 
-function JobListItem({ job, getStatusMessage }: { job: Job; getStatusMessage: (status: JobStatus) => string }) {
+function PipelineListItem({ pipeline, getStatusMessage }: { pipeline: Pipeline; getStatusMessage: (status: PipelineStatus) => string }) {
   const t = useTranslations();
 
   // Status icon and variant
-  const getStatusConfig = (status: string) => {
+  const getStatusConfig = (status: PipelineStatus) => {
     switch (status) {
       case 'completed':
         return {
@@ -185,7 +188,9 @@ function JobListItem({ job, getStatusMessage }: { job: Job; getStatusMessage: (s
           variant: 'destructive' as const,
           className: '',
         };
-      case 'pending':
+      case 'draft':
+      case 'images-ready':
+      case 'mesh-ready':
         return {
           icon: Clock,
           variant: 'secondary' as const,
@@ -200,9 +205,12 @@ function JobListItem({ job, getStatusMessage }: { job: Job; getStatusMessage: (s
     }
   };
 
-  const statusConfig = getStatusConfig(job.status);
+  const statusConfig = getStatusConfig(pipeline.status);
   const StatusIcon = statusConfig.icon;
-  const isProcessing = !['completed', 'failed', 'pending'].includes(job.status);
+  const isProcessing = ['generating-images', 'generating-mesh', 'generating-texture', 'batch-queued', 'batch-processing'].includes(pipeline.status);
+
+  // Get preview image
+  const previewImage = pipeline.inputImages[0]?.url || pipeline.meshImages?.front?.url || null;
 
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -220,23 +228,41 @@ function JobListItem({ job, getStatusMessage }: { job: Job; getStatusMessage: (s
 
   return (
     <Link
-      href={`/viewer?id=${job.id}`}
+      href={`/generate?id=${pipeline.id}`}
       className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
     >
       {/* Thumbnail */}
-      <img
-        src={job.inputImageUrl}
-        alt="Input"
-        className="w-12 h-12 rounded-md object-cover ring-1 ring-border"
-      />
+      {previewImage ? (
+        <img
+          src={previewImage}
+          alt="Preview"
+          className="w-12 h-12 rounded-md object-cover ring-1 ring-border bg-black"
+        />
+      ) : (
+        <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
+          <Box className="h-6 w-6 text-muted-foreground" />
+        </div>
+      )}
 
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {t(`upload.quality.${job.settings.quality}.label`)}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium truncate">
+            {pipeline.settings.quality === 'fine' ? '高品質' : pipeline.settings.quality === 'standard' ? '標準' : '草稿'}
+          </p>
+          {pipeline.meshUrl && (
+            <Badge variant="outline" className="gap-1 text-xs">
+              <Box className="h-3 w-3" />
+            </Badge>
+          )}
+          {pipeline.texturedModelUrl && (
+            <Badge variant="outline" className="gap-1 text-xs">
+              <Palette className="h-3 w-3" />
+            </Badge>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">
-          {formatDate(job.createdAt)}
+          {formatDate(pipeline.createdAt)}
         </p>
       </div>
 
@@ -246,7 +272,7 @@ function JobListItem({ job, getStatusMessage }: { job: Job; getStatusMessage: (s
         className={statusConfig.className}
       >
         <StatusIcon className={`mr-1 h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`} />
-        {getStatusMessage(job.status)}
+        {getStatusMessage(pipeline.status)}
       </Badge>
 
       {/* Arrow */}

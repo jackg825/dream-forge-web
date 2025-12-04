@@ -4,38 +4,27 @@ import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { Header } from '@/components/layout/Header';
-import { JobCard } from '@/components/history/JobCard';
 import { PipelineCard } from '@/components/history/PipelineCard';
 import { useAuth } from '@/hooks/useAuth';
-import { useJobs } from '@/hooks/useJobs';
 import { usePipelines } from '@/hooks/usePipelines';
 import { Link } from '@/i18n/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Box, Plus, Loader2, Wand2 } from 'lucide-react';
-import type { JobStatus, PipelineStatus, Pipeline } from '@/types';
+import { Box, Plus, Loader2 } from 'lucide-react';
+import type { PipelineStatus, Pipeline } from '@/types';
 
 // Filter options - 'processing' covers all intermediate statuses
 type FilterStatus = 'all' | 'completed' | 'processing' | 'pending' | 'failed';
-
-// View mode - jobs (legacy) or pipelines (new)
-type ViewMode = 'pipelines' | 'jobs';
-
-// All statuses considered "processing" for legacy jobs
-const PROCESSING_STATUSES: JobStatus[] = [
-  'generating-views',
-  'generating-model',
-  'downloading-model',
-  'uploading-storage',
-];
 
 // All statuses considered "processing" for pipelines
 const PIPELINE_PROCESSING_STATUSES: PipelineStatus[] = [
   'generating-images',
   'generating-mesh',
   'generating-texture',
+  'batch-queued',
+  'batch-processing',
 ];
 
 const ITEMS_PER_PAGE = 12;
@@ -43,14 +32,10 @@ const ITEMS_PER_PAGE = 12;
 function HistoryContent() {
   const t = useTranslations();
   const { user } = useAuth();
-  const { jobs, loading: jobsLoading } = useJobs(user?.uid);
-  const { pipelines, loading: pipelinesLoading } = usePipelines(user?.uid);
+  const { pipelines, loading } = usePipelines(user?.uid);
 
-  const [viewMode, setViewMode] = useState<ViewMode>('pipelines');
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [page, setPage] = useState(1);
-
-  const loading = viewMode === 'pipelines' ? pipelinesLoading : jobsLoading;
 
   // Filter pipelines
   const filteredPipelines = useMemo(() => {
@@ -64,27 +49,15 @@ function HistoryContent() {
     return pipelines.filter((p) => p.status === filter);
   }, [pipelines, filter]);
 
-  // Filter jobs - 'processing' filter includes all intermediate statuses
-  const filteredJobs = useMemo(() => {
-    if (filter === 'all') return jobs;
-    if (filter === 'processing') {
-      return jobs.filter((job) => PROCESSING_STATUSES.includes(job.status));
-    }
-    return jobs.filter((job) => job.status === filter);
-  }, [jobs, filter]);
-
-  // Current items based on view mode
-  const currentItems = viewMode === 'pipelines' ? filteredPipelines : filteredJobs;
-
   // Paginate
-  const totalPages = Math.ceil(currentItems.length / ITEMS_PER_PAGE);
-  const paginatedItems = useMemo(() => {
+  const totalPages = Math.ceil(filteredPipelines.length / ITEMS_PER_PAGE);
+  const paginatedPipelines = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
-    return currentItems.slice(start, start + ITEMS_PER_PAGE);
-  }, [currentItems, page]);
+    return filteredPipelines.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredPipelines, page]);
 
   // Status counts for pipelines
-  const pipelineStatusCounts = useMemo(() => {
+  const statusCounts = useMemo(() => {
     return {
       all: pipelines.length,
       completed: pipelines.filter((p) => p.status === 'completed').length,
@@ -94,28 +67,9 @@ function HistoryContent() {
     };
   }, [pipelines]);
 
-  // Status counts for jobs
-  const jobStatusCounts = useMemo(() => {
-    return {
-      all: jobs.length,
-      completed: jobs.filter((j) => j.status === 'completed').length,
-      processing: jobs.filter((j) => PROCESSING_STATUSES.includes(j.status)).length,
-      pending: jobs.filter((j) => j.status === 'pending').length,
-      failed: jobs.filter((j) => j.status === 'failed').length,
-    };
-  }, [jobs]);
-
-  const statusCounts = viewMode === 'pipelines' ? pipelineStatusCounts : jobStatusCounts;
-
   const handleFilterChange = (newFilter: FilterStatus) => {
     setFilter(newFilter);
     setPage(1); // Reset to first page when filter changes
-  };
-
-  const handleViewModeChange = (newMode: ViewMode) => {
-    setViewMode(newMode);
-    setPage(1);
-    setFilter('all');
   };
 
   return (
@@ -139,28 +93,6 @@ function HistoryContent() {
               {t('history.newGeneration')}
             </Link>
           </Button>
-        </div>
-
-        {/* View mode toggle */}
-        <div className="flex items-center gap-4 mb-4">
-          <Tabs value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-            <TabsList>
-              <TabsTrigger value="pipelines" className="gap-2">
-                <Wand2 className="h-4 w-4" />
-                新流程
-                <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
-                  {pipelines.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="jobs" className="gap-2">
-                <Box className="h-4 w-4" />
-                舊版
-                <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
-                  {jobs.length}
-                </Badge>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
         </div>
 
         {/* Status filters */}
@@ -198,7 +130,7 @@ function HistoryContent() {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : paginatedItems.length === 0 ? (
+        ) : paginatedPipelines.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Box className="h-16 w-16 text-muted-foreground/30 mb-4" />
@@ -223,13 +155,9 @@ function HistoryContent() {
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {viewMode === 'pipelines'
-                ? (paginatedItems as Pipeline[]).map((pipeline) => (
-                    <PipelineCard key={pipeline.id} pipeline={pipeline} />
-                  ))
-                : paginatedItems.map((job: any) => (
-                    <JobCard key={job.id} job={job} />
-                  ))}
+              {paginatedPipelines.map((pipeline: Pipeline) => (
+                <PipelineCard key={pipeline.id} pipeline={pipeline} />
+              ))}
             </div>
 
             {/* Pagination */}

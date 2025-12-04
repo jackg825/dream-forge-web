@@ -238,6 +238,68 @@ export interface ListUsersResponse {
   };
 }
 
+// Admin pipeline with user info
+export interface AdminPipeline {
+  id: string;
+  userId: string;
+  userDisplayName: string;
+  userEmail: string;
+  userPhotoURL: string | null;
+  status: PipelineStatus;
+  processingMode: ProcessingMode;
+  generationMode: GenerationModeId;
+  inputImages: Array<{ url: string; storagePath: string; uploadedAt: string }>;
+  meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
+  textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+  meshUrl: string | null;
+  texturedModelUrl: string | null;
+  creditsCharged: { mesh: number; texture: number };
+  settings: PipelineSettings;
+  userDescription: string | null;
+  error: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface ListAllPipelinesResponse {
+  success: boolean;
+  pipelines: AdminPipeline[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
+// Admin transaction types
+export type AdminTransactionType = 'consume' | 'purchase' | 'bonus' | 'adjustment';
+
+export interface AdminTransaction {
+  id: string;
+  userId: string;
+  type: AdminTransactionType;
+  amount: number;
+  jobId: string | null;
+  sessionId: string | null;
+  pipelineId: string | null;
+  reason: string | null;
+  adminId: string | null;
+  createdAt: string | null;
+}
+
+export interface GetUserTransactionsResponse {
+  success: boolean;
+  transactions: AdminTransaction[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
+
 // Job types - Granular status stages for progress tracking
 export type JobStatus =
   | 'pending'           // Job queued, waiting to start

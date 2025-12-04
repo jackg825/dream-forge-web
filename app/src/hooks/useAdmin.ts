@@ -6,9 +6,11 @@ import { functions } from '@/lib/firebase';
 import type {
   AdminStats,
   AdminUser,
+  AdminTransaction,
   RodinBalanceResponse,
   AdminStatsResponse,
   ListUsersResponse,
+  GetUserTransactionsResponse,
 } from '@/types';
 
 interface UseAdminReturn {
@@ -36,6 +38,19 @@ interface UseAdminReturn {
   // Credit management
   addingCredits: boolean;
   addCredits: (targetUserId: string, amount: number, reason?: string) => Promise<boolean>;
+  deductingCredits: boolean;
+  deductCredits: (targetUserId: string, amount: number, reason: string) => Promise<boolean>;
+
+  // Transaction history
+  transactions: AdminTransaction[];
+  transactionsLoading: boolean;
+  transactionsPagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  } | null;
+  fetchUserTransactions: (targetUserId: string, limit?: number, offset?: number) => Promise<void>;
 
   // Error state
   error: string | null;
@@ -63,6 +78,17 @@ export function useAdmin(): UseAdminReturn {
   } | null>(null);
 
   const [addingCredits, setAddingCredits] = useState(false);
+  const [deductingCredits, setDeductingCredits] = useState(false);
+
+  const [transactions, setTransactions] = useState<AdminTransaction[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionsPagination, setTransactionsPagination] = useState<{
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  } | null>(null);
+
   const [error, setError] = useState<string | null>(null);
 
   const fetchRodinBalance = useCallback(async () => {
@@ -177,6 +203,72 @@ export function useAdmin(): UseAdminReturn {
     }
   }, [fetchUsers]);
 
+  const deductCredits = useCallback(async (
+    targetUserId: string,
+    amount: number,
+    reason: string
+  ): Promise<boolean> => {
+    if (!functions) {
+      setError('Firebase not initialized');
+      return false;
+    }
+
+    setDeductingCredits(true);
+    setError(null);
+
+    try {
+      const deductCreditsFunc = httpsCallable<
+        { targetUserId: string; amount: number; reason: string },
+        { success: boolean; newBalance: number }
+      >(functions, 'deductCredits');
+
+      await deductCreditsFunc({ targetUserId, amount, reason });
+
+      // Refresh users list after deducting credits
+      await fetchUsers();
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to deduct credits';
+      setError(message);
+      console.error('Error deducting credits:', err);
+      return false;
+    } finally {
+      setDeductingCredits(false);
+    }
+  }, [fetchUsers]);
+
+  const fetchUserTransactions = useCallback(async (
+    targetUserId: string,
+    limit = 50,
+    offset = 0
+  ) => {
+    if (!functions) {
+      setError('Firebase not initialized');
+      return;
+    }
+
+    setTransactionsLoading(true);
+    setError(null);
+
+    try {
+      const getUserTransactionsFunc = httpsCallable<
+        { targetUserId: string; limit: number; offset: number },
+        GetUserTransactionsResponse
+      >(functions, 'getUserTransactions');
+
+      const result = await getUserTransactionsFunc({ targetUserId, limit, offset });
+      setTransactions(result.data.transactions);
+      setTransactionsPagination(result.data.pagination);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch transactions';
+      setError(message);
+      console.error('Error fetching transactions:', err);
+    } finally {
+      setTransactionsLoading(false);
+    }
+  }, []);
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -194,6 +286,12 @@ export function useAdmin(): UseAdminReturn {
     fetchUsers,
     addingCredits,
     addCredits,
+    deductingCredits,
+    deductCredits,
+    transactions,
+    transactionsLoading,
+    transactionsPagination,
+    fetchUserTransactions,
     error,
     clearError,
   };
