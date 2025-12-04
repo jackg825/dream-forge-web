@@ -52,10 +52,10 @@ export function AdminHeader({ className }: AdminHeaderProps) {
       centerSlot={
         <div className="hidden md:flex flex-1 items-center gap-4">
           <DesktopNav items={adminNavItems} className="flex-none" />
-          {/* Return to user mode link */}
+          {/* Return to normal mode link */}
           <Link
             href="/dashboard"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors ml-auto"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors ml-auto mr-4"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden lg:inline">{t('admin.returnToUser')}</span>

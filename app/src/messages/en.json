@@ -40,8 +40,8 @@
   },
   "admin": {
     "dashboard": "Dashboard",
-    "pipelines": "Pipeline Management",
-    "returnToUser": "Back to User Mode"
+    "pipelines": "Generations",
+    "returnToUser": "Back to Normal"
   },
   "settingsPage": {
     "title": "Settings",

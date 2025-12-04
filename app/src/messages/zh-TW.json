@@ -40,8 +40,8 @@
   },
   "admin": {
     "dashboard": "管理面板",
-    "pipelines": "Pipeline 管理",
-    "returnToUser": "返回用戶模式"
+    "pipelines": "生成管理",
+    "returnToUser": "返回一般模式"
   },
   "settingsPage": {
     "title": "設定",
