@@ -61,15 +61,22 @@ function GLBModel({
   rotation?: ModelRotation;
 }) {
   const { scene } = useGLTF(url);
+  const { invalidate } = useThree();
   const groupRef = useRef<THREE.Group>(null);
   const originalMaterialsRef = useRef<Map<THREE.MeshStandardMaterial, OriginalMaterialProps>>(new Map());
 
   // Clone scene to avoid modifying original
+  // Note: scene.clone() creates new material instances but shares texture references
   const clonedScene = useMemo(() => scene.clone(), [scene]);
 
   // Store original material properties on first render
+  // This must happen BEFORE any view mode modifications
   useEffect(() => {
     if (originalMaterialsRef.current.size === 0) {
+      // First, check original scene for texture data (before any modifications)
+      let totalMaterials = 0;
+      let materialsWithTextures = 0;
+
       clonedScene.traverse((child) => {
         if (child instanceof THREE.Mesh && child.material) {
           const materials = Array.isArray(child.material)
@@ -78,6 +85,23 @@ function GLBModel({
 
           materials.forEach((mat) => {
             if (mat instanceof THREE.MeshStandardMaterial && !originalMaterialsRef.current.has(mat)) {
+              totalMaterials++;
+              const hasAnyTexture = !!(mat.map || mat.normalMap || mat.roughnessMap || mat.metalnessMap);
+              if (hasAnyTexture) materialsWithTextures++;
+
+              // Debug: Log texture presence in loaded GLB
+              console.log('[ModelViewer] Material textures:', {
+                name: mat.name || `material_${totalMaterials}`,
+                hasMap: !!mat.map,
+                hasNormalMap: !!mat.normalMap,
+                hasRoughnessMap: !!mat.roughnessMap,
+                hasMetalnessMap: !!mat.metalnessMap,
+                mapImage: mat.map?.source?.data ? `${(mat.map.source.data as { width?: number }).width || 0}x${(mat.map.source.data as { height?: number }).height || 0}` : null,
+                color: mat.color.getHexString(),
+                metalness: mat.metalness,
+                roughness: mat.roughness,
+              });
+
               originalMaterialsRef.current.set(mat, {
                 map: mat.map,
                 normalMap: mat.normalMap,
@@ -90,6 +114,12 @@ function GLBModel({
             }
           });
         }
+      });
+
+      console.log('[ModelViewer] Material summary:', {
+        totalMaterials,
+        materialsWithTextures,
+        hasAnyTextures: materialsWithTextures > 0,
       });
     }
   }, [clonedScene]);
@@ -135,7 +165,11 @@ function GLBModel({
       groupRef.current.rotation.y += THREE.MathUtils.degToRad(rotation.y);
       groupRef.current.rotation.z += THREE.MathUtils.degToRad(rotation.z);
     }
-  }, [clonedScene, autoOrient, rotation]);
+
+    // Force re-render after model is positioned
+    // This ensures the camera/controls update properly on first load
+    invalidate();
+  }, [clonedScene, autoOrient, rotation, invalidate]);
 
   // Apply view mode to all materials in the scene
   useEffect(() => {
@@ -204,6 +238,7 @@ function STLModel({
   rotation?: ModelRotation;
 }) {
   const geometry = useLoader(STLLoader, url);
+  const { invalidate } = useThree();
   const meshRef = useRef<THREE.Mesh>(null);
 
   // Clone and orient geometry
@@ -249,8 +284,11 @@ function STLModel({
         meshRef.current.rotation.y += THREE.MathUtils.degToRad(rotation.y);
         meshRef.current.rotation.z += THREE.MathUtils.degToRad(rotation.z);
       }
+
+      // Force re-render after model is positioned
+      invalidate();
     }
-  }, [orientedGeometry, rotation]);
+  }, [orientedGeometry, rotation, invalidate]);
 
   const materialProps = useMemo(() => {
     if (viewMode === 'wireframe') {

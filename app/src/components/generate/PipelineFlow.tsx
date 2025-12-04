@@ -1075,15 +1075,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       : false;
 
     return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Main content - 3D viewer */}
-      <div className="lg:col-span-3 space-y-4">
+      <div className="space-y-6">
+        {/* Full-width 3D viewer */}
         {pipeline?.meshUrl ? (
           <>
-            {/* 3D Viewer with Toolbar */}
             <div
               ref={meshContainerRef}
-              className="relative aspect-[4/3] bg-muted/30 rounded-2xl overflow-hidden border border-border/50"
+              className="relative aspect-[4/3] lg:aspect-[16/9] bg-muted/30 rounded-2xl overflow-hidden border border-border/50"
             >
               <ModelViewerErrorBoundary>
                 <ModelViewer
@@ -1130,18 +1128,29 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             </div>
           </>
         ) : (
-          <Skeleton className="aspect-[4/3] rounded-2xl" />
+          <Skeleton className="aspect-[4/3] lg:aspect-[16/9] rounded-2xl" />
         )}
-      </div>
 
-      {/* Sidebar - previous outputs + actions */}
-      {pipeline && (
-        <div className="lg:col-span-1">
-          <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={false}>
-            {/* Action buttons in sidebar */}
-            <div className="space-y-3 pt-4">
+        {/* Info and actions below viewer */}
+        {pipeline && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Provider badge */}
+            <div className="flex items-center gap-2 p-4 bg-muted/30 rounded-xl">
+              <span className="text-sm text-muted-foreground">生成自:</span>
+              <Badge variant="outline" className="border-primary/50 text-primary">
+                {PROVIDER_OPTIONS[pipeline.settings?.provider || 'tripo']?.label || 'Tripo3D v3.0'}
+              </Badge>
+            </div>
+
+            {/* Previous outputs (collapsible) */}
+            <div className="md:col-span-1 lg:col-span-1">
+              <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={true} />
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row md:flex-col gap-3">
               <Button
-                className="w-full"
+                className="flex-1"
                 size="lg"
                 onClick={handleStartTexture}
                 disabled={actionLoading}
@@ -1160,18 +1169,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                className="flex-1"
                 onClick={() => router.push('/dashboard')}
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
                 完成 (僅網格)
               </Button>
             </div>
-          </PreviousOutputs>
-        </div>
-      )}
-    </div>
-  );
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Step 3: Texture generation in progress
@@ -1202,117 +1210,117 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const hasTexture = !!pipeline?.texturedModelUrl;
 
     return (
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Main content - 3D viewer */}
-        <div className="lg:col-span-3 space-y-4">
-          {modelUrl ? (
-            <>
-              {/* 3D Viewer with Toolbar */}
-              <div
-                ref={texturedContainerRef}
-                className="relative aspect-[4/3] bg-muted/30 rounded-2xl overflow-hidden border border-green-500/20"
-              >
-                <ModelViewerErrorBoundary>
-                  <ModelViewer
-                    ref={texturedViewerRef}
-                    modelUrl={modelUrl}
-                    viewMode={texturedViewMode}
-                    backgroundColor={texturedBgColor}
-                    showGrid={texturedShowGrid}
-                    showAxes={texturedShowAxes}
-                    autoRotate={texturedAutoRotate}
-                  />
-                </ModelViewerErrorBoundary>
-                <ViewerToolbar
+      <div className="space-y-6">
+        {/* Full-width 3D viewer */}
+        {modelUrl ? (
+          <>
+            <div
+              ref={texturedContainerRef}
+              className="relative aspect-[4/3] lg:aspect-[16/9] bg-muted/30 rounded-2xl overflow-hidden border border-green-500/20"
+            >
+              <ModelViewerErrorBoundary>
+                <ModelViewer
+                  ref={texturedViewerRef}
+                  modelUrl={modelUrl}
                   viewMode={texturedViewMode}
-                  onViewModeChange={setTexturedViewMode}
-                  hasTextures={hasTexture}
                   backgroundColor={texturedBgColor}
-                  onBackgroundChange={setTexturedBgColor}
                   showGrid={texturedShowGrid}
-                  onShowGridChange={setTexturedShowGrid}
                   showAxes={texturedShowAxes}
-                  onShowAxesChange={setTexturedShowAxes}
                   autoRotate={texturedAutoRotate}
-                  onAutoRotateChange={setTexturedAutoRotate}
-                  onScreenshot={handleTexturedScreenshot}
-                  onFullscreen={handleTexturedFullscreen}
-                  isFullscreen={texturedFullscreen}
-                  onReset={() => texturedViewerRef.current?.resetCamera()}
-                  portalContainer={texturedContainerRef.current}
                 />
-              </div>
-
-              {/* Download link */}
-              <div className="text-center">
-                <a
-                  href={modelUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline text-sm inline-flex items-center gap-1"
-                >
-                  {hasTexture ? <Palette className="h-3 w-3" /> : <Box className="h-3 w-3" />}
-                  下載 GLB 檔案
-                </a>
-              </div>
-            </>
-          ) : (
-            <div className="aspect-[4/3] bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
-              <div className="text-center">
-                <div className="bg-green-500/10 p-5 rounded-full inline-block mb-4">
-                  <CheckCircle className="h-14 w-14 text-green-500" />
-                </div>
-                <p className="text-xl font-semibold">
-                  {hasTexture ? '3D 模型已完成' : '3D 網格已完成'}
-                </p>
-              </div>
+              </ModelViewerErrorBoundary>
+              <ViewerToolbar
+                viewMode={texturedViewMode}
+                onViewModeChange={setTexturedViewMode}
+                hasTextures={hasTexture}
+                backgroundColor={texturedBgColor}
+                onBackgroundChange={setTexturedBgColor}
+                showGrid={texturedShowGrid}
+                onShowGridChange={setTexturedShowGrid}
+                showAxes={texturedShowAxes}
+                onShowAxesChange={setTexturedShowAxes}
+                autoRotate={texturedAutoRotate}
+                onAutoRotateChange={setTexturedAutoRotate}
+                onScreenshot={handleTexturedScreenshot}
+                onFullscreen={handleTexturedFullscreen}
+                isFullscreen={texturedFullscreen}
+                onReset={() => texturedViewerRef.current?.resetCamera()}
+                portalContainer={texturedContainerRef.current}
+              />
             </div>
-          )}
-        </div>
 
-        {/* Sidebar - previous outputs + print service + actions */}
+            {/* Download link */}
+            <div className="text-center">
+              <a
+                href={modelUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline text-sm inline-flex items-center gap-1"
+              >
+                {hasTexture ? <Palette className="h-3 w-3" /> : <Box className="h-3 w-3" />}
+                下載 GLB 檔案
+              </a>
+            </div>
+          </>
+        ) : (
+          <div className="aspect-[4/3] lg:aspect-[16/9] bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
+            <div className="text-center">
+              <div className="bg-green-500/10 p-5 rounded-full inline-block mb-4">
+                <CheckCircle className="h-14 w-14 text-green-500" />
+              </div>
+              <p className="text-xl font-semibold">
+                {hasTexture ? '3D 模型已完成' : '3D 網格已完成'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Info and actions below viewer */}
         {pipeline && (
-          <div className="lg:col-span-1">
-            <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={true}>
-              {/* Step 4: Print & Delivery - Coming Soon */}
-              <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="bg-primary/10 p-1.5 rounded-full">
-                    <Printer className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium">步驟 4: 列印&配送</h4>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5">
-                      Coming Soon
-                    </Badge>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Step 4: Print & Delivery - Coming Soon */}
+            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="bg-primary/10 p-1.5 rounded-full">
+                  <Printer className="h-4 w-4 text-primary" />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  很快你就可以直接訂購 3D 列印成品並寄送到府
-                </p>
+                <div>
+                  <h4 className="text-sm font-medium">步驟 4: 列印&配送</h4>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5">
+                    Coming Soon
+                  </Badge>
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                很快你就可以直接訂購 3D 列印成品並寄送到府
+              </p>
+            </div>
 
-              {/* Action buttons */}
-              <div className="space-y-3 pt-4">
-                <Button
-                  className="w-full"
-                  onClick={() => {
-                    setPipelineId(null);
-                    setUploadedImages([]);
-                    router.push('/generate', { scroll: false });
-                  }}
-                >
-                  創建新作品
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => router.push('/dashboard')}
-                >
-                  查看我的作品
-                </Button>
-              </div>
-            </PreviousOutputs>
+            {/* Previous outputs (collapsible) */}
+            <div className="md:col-span-1 lg:col-span-1">
+              <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={true} />
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col sm:flex-row md:flex-col gap-3">
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  setPipelineId(null);
+                  setUploadedImages([]);
+                  router.push('/generate', { scroll: false });
+                }}
+              >
+                創建新作品
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => router.push('/dashboard')}
+              >
+                查看我的作品
+              </Button>
+            </div>
           </div>
         )}
       </div>
