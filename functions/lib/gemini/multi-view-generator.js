@@ -425,6 +425,17 @@ class MultiViewGenerator {
      */
     async generateSingleView(referenceImageBase64, mimeType, prompt, extractColors, expectedColorCount) {
         const modelId = GEMINI_MODEL_IDS[this.geminiModel];
+        // Build generation config - imageConfig only supported by Pro model
+        const generationConfig = {
+            responseModalities: ['TEXT', 'IMAGE'],
+        };
+        // Only add imageConfig for Pro model (Flash doesn't support it)
+        if (this.geminiModel === 'gemini-3-pro') {
+            generationConfig.imageConfig = {
+                aspectRatio: '1:1',
+                imageSize: '1K',
+            };
+        }
         const response = await axios_1.default.post(`${GEMINI_API_BASE}/${modelId}:generateContent`, {
             contents: [
                 {
@@ -441,13 +452,7 @@ class MultiViewGenerator {
                     ],
                 },
             ],
-            generationConfig: {
-                responseModalities: ['TEXT', 'IMAGE'],
-                imageConfig: {
-                    aspectRatio: '1:1',
-                    imageSize: '1K',
-                },
-            },
+            generationConfig,
         }, {
             headers: {
                 'Content-Type': 'application/json',
