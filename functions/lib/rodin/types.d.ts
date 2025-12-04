@@ -348,6 +348,25 @@ export interface PrintFriendlinessAssessment {
     orientationTips: string[];
 }
 /**
+ * Key features extracted from the subject for multi-view consistency
+ * Used to ensure features appear correctly in all viewing angles
+ */
+export interface KeyFeatures {
+    ears?: {
+        present: boolean;
+        description?: string;
+    };
+    tail?: {
+        present: boolean;
+        description?: string;
+    };
+    limbs?: string;
+    accessories?: string[];
+    distinctiveMarks?: string[];
+    asymmetricFeatures?: string[];
+    surfaceTextures?: string[];
+}
+/**
  * Image analysis result from Gemini
  * Used to optimize view generation and Meshy texture prompts
  */
@@ -357,5 +376,6 @@ export interface ImageAnalysisResult {
     detectedMaterials: string[];
     objectType: string;
     printFriendliness: PrintFriendlinessAssessment;
+    keyFeatures?: KeyFeatures;
     analyzedAt: FirebaseFirestore.Timestamp;
 }

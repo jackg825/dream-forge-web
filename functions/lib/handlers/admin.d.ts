@@ -37,3 +37,23 @@ export declare const getAdminStats: functions.HttpsFunction & functions.Runnable
  * Admin-only function to list all users with their credits and stats.
  */
 export declare const listUsers: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: listAllPipelines
+ *
+ * Admin-only function to list all pipelines across all users.
+ * Supports filtering by status and userId.
+ */
+export declare const listAllPipelines: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: deductCredits
+ *
+ * Admin-only function to deduct credits from a user's account.
+ * Requires a reason for audit trail purposes.
+ */
+export declare const deductCredits: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: getUserTransactions
+ *
+ * Admin-only function to get transaction history for a specific user.
+ */
+export declare const getUserTransactions: functions.HttpsFunction & functions.Runnable<any>;

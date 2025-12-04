@@ -4,7 +4,7 @@
  * Defines different image generation modes for A/B testing 3D model quality.
  * Each mode specifies how mesh and texture images should be processed.
  */
-import type { PipelineMeshAngle, PipelineTextureAngle } from '../rodin/types';
+import type { PipelineMeshAngle, PipelineTextureAngle, ImageAnalysisResult } from '../rodin/types';
 /**
  * Available generation mode IDs
  */
@@ -45,8 +45,9 @@ export declare function getMode(id: GenerationModeId): ModeConfig;
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
+ * @param imageAnalysis - Optional image analysis result with key features
  */
-export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle, userDescription?: string | null, hint?: string): string;
+export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle, userDescription?: string | null, hint?: string, imageAnalysis?: ImageAnalysisResult | null): string;
 /**
  * Generate texture view prompt based on mode and angle
  * @param mode - The generation mode configuration

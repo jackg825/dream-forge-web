@@ -297,10 +297,10 @@ exports.generatePipelineImages = functions
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate all 6 views using the pipeline's generation mode and user description
         // Uses staggered parallel execution for better performance (~18s vs ~50s)
-        // If imageAnalysis exists, use its color palette for consistency
+        // If imageAnalysis exists, use its color palette and key features for consistency
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
         const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors);
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis);
         // Create progress callback to update Firestore in real-time
         const onProgress = async (type, angle, completed, total) => {
             const progress = type === 'mesh'
@@ -445,9 +445,10 @@ exports.regeneratePipelineImage = functions
         const referenceImageUrl = pipeline.inputImages[0].url;
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate single view using the pipeline's generation mode
-        // Pass userDescription from pipeline and optional hint for adjustments
+        // Pass userDescription from pipeline, color palette, imageAnalysis, and optional hint for adjustments
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription);
+        const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis);
         const now = admin.firestore.FieldValue.serverTimestamp();
         if (viewType === 'mesh') {
             // Regenerate mesh view

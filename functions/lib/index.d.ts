@@ -1,6 +1,6 @@
 export { onUserCreate } from './handlers/users';
 export { generateModel, checkJobStatus, retryFailedJob } from './handlers/generate';
-export { addCredits, setUnlimitedCredits, checkRodinBalance, getAdminStats, listUsers, } from './handlers/admin';
+export { addCredits, setUnlimitedCredits, checkRodinBalance, getAdminStats, listUsers, listAllPipelines, deductCredits, getUserTransactions, } from './handlers/admin';
 export { createSession, updateSession, deleteSession, getUserSessions, } from './handlers/sessions';
 export { generateSessionViews, regenerateView, uploadCustomView, } from './handlers/views';
 export { startSessionModelGeneration, checkSessionModelStatus, } from './handlers/model';

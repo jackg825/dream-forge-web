@@ -562,6 +562,31 @@ export interface PrintFriendlinessAssessment {
 }
 
 /**
+ * Key features extracted from the subject for multi-view consistency
+ * Used to ensure features appear correctly in all viewing angles
+ */
+export interface KeyFeatures {
+  // Anatomical features (for characters/animals)
+  ears?: {
+    present: boolean;
+    description?: string;  // e.g., "兩隻尖耳朵在頭頂"
+  };
+  tail?: {
+    present: boolean;
+    description?: string;  // e.g., "蓬鬆的尾巴向右彎曲"
+  };
+  limbs?: string;  // e.g., "四肢，前腳舉起"
+
+  // Object features
+  accessories?: string[];       // e.g., ["頭上的紅色蝴蝶結", "脖子上的項圈"]
+  distinctiveMarks?: string[];  // e.g., ["額頭上的星星圖案", "身上的條紋"]
+  asymmetricFeatures?: string[]; // e.g., ["左眼有疤痕", "右耳缺角"]
+
+  // Surface characteristics
+  surfaceTextures?: string[];   // e.g., ["毛茸茸的絨毛", "光滑的肚子"]
+}
+
+/**
  * Image analysis result from Gemini
  * Used to optimize view generation and Meshy texture prompts
  */
@@ -571,5 +596,6 @@ export interface ImageAnalysisResult {
   detectedMaterials: string[];        // Detected materials (fur, fabric, plastic)
   objectType: string;                 // Object classification (plush toy, figurine)
   printFriendliness: PrintFriendlinessAssessment;
+  keyFeatures?: KeyFeatures;          // Key features for multi-view consistency (optional)
   analyzedAt: FirebaseFirestore.Timestamp;
 }

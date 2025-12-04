@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react';
 import { uploadImage, validateImage } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, AlertCircle, Camera } from 'lucide-react';
 
 interface UploadedImage {
   url: string;
@@ -202,37 +202,55 @@ export function PipelineUploader({
 
       {/* Upload dropzone (when no images) */}
       {images.length === 0 && (
-        <div
-          onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onClick={() => canUploadMore && fileInputRef.current?.click()}
-          className={`
-            relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-            transition-all duration-200
-            ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'}
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-          `}
-        >
-          <div className="flex flex-col items-center gap-4">
-            <div className="p-4 rounded-full bg-muted">
-              <ImageIcon className="h-10 w-10 text-muted-foreground" />
+        <>
+          {/* Photo tips */}
+          <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start gap-3">
+              <Camera className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-blue-900 dark:text-blue-100">📸 最佳拍攝建議</p>
+                <ul className="text-sm text-blue-700 dark:text-blue-300 mt-1.5 space-y-1">
+                  <li>• <strong>正面視角</strong>：物體正面朝向鏡頭，如同面對面看著它</li>
+                  <li>• <strong>清晰完整</strong>：確保主體完整入鏡、光線均勻</li>
+                  <li>• <strong>簡潔背景</strong>：純色或簡單背景效果最佳</li>
+                </ul>
+              </div>
             </div>
-            <div>
-              <p className="text-lg font-medium">拖放圖片到這裡</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                或點擊選擇圖片 (最多 {maxImages} 張)
+          </div>
+
+          {/* Dropzone */}
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => canUploadMore && fileInputRef.current?.click()}
+            className={`
+              relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
+              transition-all duration-200
+              ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'}
+              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+            `}
+          >
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 rounded-full bg-muted">
+                <ImageIcon className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-lg font-medium">拖放圖片到這裡</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  或點擊選擇圖片 (最多 {maxImages} 張)
+                </p>
+              </div>
+              <Button variant="secondary" size="sm" disabled={disabled}>
+                <Upload className="h-4 w-4 mr-2" />
+                選擇圖片
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                支援 JPG、PNG、WebP 格式
               </p>
             </div>
-            <Button variant="secondary" size="sm" disabled={disabled}>
-              <Upload className="h-4 w-4 mr-2" />
-              選擇圖片
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              支援 JPG、PNG、WebP 格式
-            </p>
           </div>
-        </div>
+        </>
       )}
 
       {/* Upload progress */}

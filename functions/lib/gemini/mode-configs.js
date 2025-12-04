@@ -133,24 +133,148 @@ The result should look like a high-quality resin figure with preserved surface d
     }
 }
 /**
- * Get concrete viewpoint description for better AI understanding
- * Uses physical feature visibility instead of abstract rotation angles
+ * Get structured viewpoint information for each angle
+ * Uses result-oriented descriptions and negative constraints
  */
-function getViewpointDescription(angle) {
+function getViewpointInfo(angle) {
     switch (angle) {
         case 'front':
-            return 'in front, facing the camera';
+            return {
+                whatYouSee: [
+                    'The character FACING the camera directly',
+                    'BOTH ears visible (symmetrically on each side of head)',
+                    'The FACE is centered and looking forward',
+                ],
+                mustNotGenerate: [
+                    'Side profile view',
+                    'Back view',
+                    'Three-quarter angle',
+                ],
+                humanAnalogy: 'Like the character is looking at you',
+            };
         case 'back':
-            return 'behind, showing the back of the object';
+            return {
+                whatYouSee: [
+                    'The BACK of the character\'s head',
+                    'The character is facing AWAY from the camera',
+                    'If there\'s a tail, it should be visible',
+                    'You see the back of the body, NOT the face',
+                ],
+                mustNotGenerate: [
+                    'Front view (face visible)',
+                    'Side profile view',
+                    'The character looking over shoulder at camera',
+                ],
+                humanAnalogy: 'Like standing behind someone',
+            };
         case 'left':
-            // LEFT view = viewer sees the object's RIGHT side (object's right ear/arm/leg visible)
-            // Think: if object faces you, rotate it 90° clockwise to show its left-facing profile
-            return "the LEFT view (object rotated 90° clockwise from front). The viewer sees the object's profile facing LEFT. The object's RIGHT side features are visible (RIGHT ear, RIGHT arm). The nose/face points toward the LEFT edge of the image";
+            return {
+                whatYouSee: [
+                    'Pure side profile view',
+                    'LEFT EAR is visible',
+                    'NOSE/FACE points toward RIGHT edge of image',
+                ],
+                mustNotGenerate: [
+                    'Front view (face at camera)',
+                    'Back view',
+                    'Three-quarter view',
+                    'Face pointing LEFT (that would be RIGHT view)',
+                ],
+                humanAnalogy: 'Like standing to the LEFT of someone - you see their left ear',
+            };
         case 'right':
-            // RIGHT view = viewer sees the object's LEFT side (object's left ear/arm/leg visible)
-            // Think: if object faces you, rotate it 90° counter-clockwise to show its right-facing profile
-            return "the RIGHT view (object rotated 90° counter-clockwise from front). The viewer sees the object's profile facing RIGHT. The object's LEFT side features are visible (LEFT ear, LEFT arm). The nose/face points toward the RIGHT edge of the image";
+            return {
+                whatYouSee: [
+                    'Pure side profile view',
+                    'RIGHT EAR is visible',
+                    'NOSE/FACE points toward LEFT edge of image',
+                ],
+                mustNotGenerate: [
+                    'Front view (face at camera)',
+                    'Back view',
+                    'Three-quarter view',
+                    'Face pointing RIGHT (that would be LEFT view)',
+                ],
+                humanAnalogy: 'Like standing to the RIGHT of someone - you see their right ear',
+            };
     }
+}
+/**
+ * Build the view direction block for the prompt header
+ * Places critical view direction info at the very beginning
+ */
+function buildViewDirectionBlock(angle) {
+    const info = getViewpointInfo(angle);
+    const angleDisplay = ANGLE_PROMPTS[angle];
+    return `=== VIEW DIRECTION (CRITICAL - Read First) ===
+
+Generate the ${angleDisplay} PROFILE view for a 3D turnaround reference sheet.
+
+**WHAT YOU SHOULD SEE:**
+${info.whatYouSee.map(item => `- ${item}`).join('\n')}
+- ${info.humanAnalogy}
+
+**WHAT YOU MUST NOT GENERATE:**
+${info.mustNotGenerate.map(item => `❌ ${item}`).join('\n')}
+
+=== END VIEW DIRECTION ===`;
+}
+/**
+ * Build the feature preservation block from image analysis
+ * Injects materials and key features into the prompt
+ */
+function buildFeatureBlock(userDescription, imageAnalysis) {
+    const blocks = [];
+    // User description with strong language
+    if (userDescription) {
+        blocks.push(`**SUBJECT IDENTITY**
+This object is: "${userDescription}"
+You MUST maintain this identity across all views.`);
+    }
+    // Materials block
+    if (imageAnalysis?.detectedMaterials?.length) {
+        blocks.push(`**SURFACE MATERIALS** (MUST be visible in all views)
+Materials: ${imageAnalysis.detectedMaterials.join(', ')}
+Show these material textures consistently.`);
+    }
+    // Key features block
+    if (imageAnalysis?.keyFeatures) {
+        const kf = imageAnalysis.keyFeatures;
+        const features = [];
+        if (kf.ears?.present && kf.ears.description) {
+            features.push(`- 耳朵: ${kf.ears.description}`);
+        }
+        if (kf.tail?.present && kf.tail.description) {
+            features.push(`- 尾巴: ${kf.tail.description}`);
+        }
+        if (kf.limbs) {
+            features.push(`- 四肢: ${kf.limbs}`);
+        }
+        if (kf.accessories?.length) {
+            features.push(`- 配件: ${kf.accessories.join(', ')}`);
+        }
+        if (kf.distinctiveMarks?.length) {
+            features.push(`- 獨特標記: ${kf.distinctiveMarks.join(', ')}`);
+        }
+        if (kf.asymmetricFeatures?.length) {
+            features.push(`- 不對稱特徵: ${kf.asymmetricFeatures.join(', ')}`);
+        }
+        if (kf.surfaceTextures?.length) {
+            features.push(`- 表面質感: ${kf.surfaceTextures.join(', ')}`);
+        }
+        if (features.length > 0) {
+            blocks.push(`**關鍵特徵 (MUST PRESERVE - 必須在正確位置出現)**
+${features.join('\n')}`);
+        }
+    }
+    // Cross-view consistency requirement
+    if (blocks.length > 0) {
+        blocks.push(`**CROSS-VIEW CONSISTENCY**
+1. Proportions MUST match across all 4 views
+2. Features visible in front view MUST appear correctly in side/back views
+3. Colors and patterns MUST be consistent`);
+    }
+    return blocks.length > 0 ? '\n\n' + blocks.join('\n\n') + '\n' : '';
 }
 /**
  * Generate mesh view prompt based on mode and angle
@@ -158,22 +282,23 @@ function getViewpointDescription(angle) {
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
+ * @param imageAnalysis - Optional image analysis result with key features
  */
-function getMeshPrompt(mode, angle, userDescription, hint) {
+function getMeshPrompt(mode, angle, userDescription, hint, imageAnalysis) {
     const angleDisplay = ANGLE_PROMPTS[angle];
-    // Build user description block if provided
-    const userDescBlock = userDescription
-        ? `\n\n**USER DESCRIPTION**\nThe user describes this object as: "${userDescription}"\nUse this description to better understand and preserve the object's key features.\n`
-        : '';
+    // Build view direction block (placed at the very beginning for emphasis)
+    const viewDirectionBlock = buildViewDirectionBlock(angle);
+    // Build feature preservation block from user description and image analysis
+    const featureBlock = buildFeatureBlock(userDescription, imageAnalysis);
     // Build regeneration hint block if provided
     const hintBlock = hint
         ? `\n\n**REGENERATION ADJUSTMENT**\nThe user requests the following adjustment: "${hint}"\nApply this adjustment while maintaining all other requirements.\n`
         : '';
     if (mode.mesh.simplified) {
         // Simplified mode: ~7-color cel-shaded vinyl toy style
-        return `You are a professional 3D character artist creating a "Turnaround Reference Sheet" for a 3D modeler.${userDescBlock}${hintBlock}
+        return `${viewDirectionBlock}
 
-Generate a ${angleDisplay} VIEW of this object.
+You are a professional 3D character artist creating a "Turnaround Reference Sheet" for a 3D modeler.${featureBlock}${hintBlock}
 
 ${getMeshStyleDescription(true)}
 
@@ -182,10 +307,9 @@ STYLE & TECHNICAL REQUIREMENTS:
 2. **COLOR**: Use "Posterized" coloring. Limit to approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors.
 3. **LIGHTING**: "Flat Shading" or "Unlit". NO cast shadows, NO drop shadows.
 4. **GEOMETRY CUES**: Although flat lit, use distinct color blocks to define distinct 3D volumes (e.g., separate sleeves from arms with a color edge).
-5. **VIEWPORT**: Orthographic Projection (Telephoto lens). No perspective distortion. Show from directly ${getViewpointDescription(angle)}.
+5. **VIEWPORT**: Orthographic Projection. NO perspective distortion. Parallel lines remain parallel.
 6. **BOUNDARIES**: Hard, pixel-sharp edges against a Pure White (#FFFFFF) background.
-7. **CONSISTENCY**: The proportions, height, and features MUST match the front view logic.
-8. **COMPOSITION**: Object fills 90% of frame.
+7. **COMPOSITION**: Object fills 90% of frame.
 
 Ensure the output looks like a technical design document, not a photograph.
 
@@ -195,19 +319,18 @@ Generate the actual image, not a description.`;
     }
     else {
         // Full color mode: photogrammetry style with detail preservation
-        return `You are a 3D scanning expert preparing reference data for accurate 3D model reconstruction.${userDescBlock}${hintBlock}
+        return `${viewDirectionBlock}
 
-Generate a ${angleDisplay} VIEW of this object optimized for Mesh Reconstruction.
+You are a 3D scanning expert preparing reference data for accurate 3D model reconstruction.${featureBlock}${hintBlock}
 
 ${getMeshStyleDescription(false)}
 
 REQUIREMENTS:
-1. **VIEW**: Strictly Orthographic (Technical drawing view). Camera perfectly level with the object center. Show from directly ${getViewpointDescription(angle)}.
+1. **VIEW**: Orthographic Projection. NO perspective distortion. Camera perfectly level with object center.
 2. **LIGHTING**: "Studio Softbox Lighting". Even illumination. Include subtle "Ambient Occlusion" in crevices to define shape/depth, but AVOID harsh directional shadows.
 3. **DETAILS**: Preserve surface textures and details. Show fur direction, fabric folds, and material textures clearly.
 4. **BACKGROUND**: Pure White (#FFFFFF).
-5. **CONSISTENCY**: Critical. If the object has a tail/backpack/feature in the reference, it MUST appear correctly in this angle.
-6. **FRAMING**: Center the object, fill 85% of the canvas.
+5. **FRAMING**: Center the object, fill 85% of the canvas.
 
 Goal: A perfect reference image that captures the 3D volume AND surface details of the input image from the ${angleDisplay}.
 

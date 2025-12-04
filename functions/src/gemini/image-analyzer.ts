@@ -13,7 +13,7 @@
 
 import axios from 'axios';
 import * as functions from 'firebase-functions';
-import type { PrinterType } from '../rodin/types';
+import type { PrinterType, KeyFeatures } from '../rodin/types';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MODEL = 'gemini-2.0-flash';
@@ -38,6 +38,7 @@ export interface ImageAnalysisResult {
   detectedMaterials: string[];        // Detected materials (fur, fabric, plastic)
   objectType: string;                 // Object classification (plush toy, figurine)
   printFriendliness: PrintFriendlinessAssessment;
+  keyFeatures?: KeyFeatures;          // Key features for multi-view consistency
   analyzedAt: FirebaseFirestore.Timestamp;
 }
 
@@ -109,6 +110,15 @@ function buildAnalysisPrompt(colorCount: number, printerType: PrinterType): stri
 5. **物體類型** (OBJECT_TYPE)
    - 單一分類詞（英文，如 plush toy, figurine, character）
 
+6. **關鍵特徵** (KEY_FEATURES) - 用於確保多視角圖片的一致性
+   - EARS: 是否有耳朵？[yes/no]，若有請描述形狀和位置
+   - TAIL: 是否有尾巴？[yes/no]，若有請描述形狀和方向
+   - LIMBS: 描述四肢姿態（若適用）
+   - ACCESSORIES: 列出所有配件（蝴蝶結、項圈、帽子等），若無則填 none
+   - DISTINCTIVE_MARKS: 任何獨特的圖案、花紋、標記，若無則填 none
+   - ASYMMETRIC: 任何左右不對稱的特徵，若無則填 none
+   - SURFACE_TEXTURES: 表面質感描述（如：毛茸茸、光滑、粗糙）
+
 嚴格按照以下格式輸出（每行一個欄位）：
 DESCRIPTION: [你的描述，使用繁體中文]
 COLORS: #RRGGBB, #RRGGBB, #RRGGBB...
@@ -118,7 +128,14 @@ STRUCTURAL_CONCERNS: [逗號分隔的問題清單，使用繁體中文，若無�
 MATERIAL_RECOMMENDATIONS: [逗號分隔的材質建議清單，使用繁體中文]
 ORIENTATION_TIPS: [逗號分隔的方向建議清單，使用繁體中文]
 MATERIALS: [逗號分隔的英文材質清單]
-OBJECT_TYPE: [英文分類詞]`;
+OBJECT_TYPE: [英文分類詞]
+EARS: [yes/no], [描述，使用繁體中文]
+TAIL: [yes/no], [描述，使用繁體中文]
+LIMBS: [描述，使用繁體中文，若無則填 none]
+ACCESSORIES: [逗號分隔的配件清單，使用繁體中文，若無則填 none]
+DISTINCTIVE_MARKS: [逗號分隔的標記清單，使用繁體中文，若無則填 none]
+ASYMMETRIC: [逗號分隔的不對稱特徵清單，使用繁體中文，若無則填 none]
+SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]`;
 }
 
 /**
@@ -172,6 +189,49 @@ function parseAnalysisResponse(
   const detectedMaterials = parseList(extractField('MATERIALS'));
   const objectType = extractField('OBJECT_TYPE') || 'unknown';
 
+  // Extract key features for multi-view consistency
+  const parseYesNoField = (fieldName: string): { present: boolean; description?: string } | undefined => {
+    const raw = extractField(fieldName);
+    if (!raw) return undefined;
+
+    const yesNoMatch = raw.match(/^(yes|no)/i);
+    if (!yesNoMatch) return undefined;
+
+    const present = yesNoMatch[1].toLowerCase() === 'yes';
+    if (!present) return { present: false };
+
+    // Extract description after the yes/no
+    const descMatch = raw.match(/^(?:yes|no)[,，]?\s*(.+)/i);
+    const description = descMatch?.[1]?.trim();
+
+    return {
+      present: true,
+      description: description && description.toLowerCase() !== 'none' ? description : undefined,
+    };
+  };
+
+  const ears = parseYesNoField('EARS');
+  const tail = parseYesNoField('TAIL');
+  const limbs = extractField('LIMBS');
+  const accessories = parseList(extractField('ACCESSORIES'));
+  const distinctiveMarks = parseList(extractField('DISTINCTIVE_MARKS'));
+  const asymmetricFeatures = parseList(extractField('ASYMMETRIC'));
+  const surfaceTextures = parseList(extractField('SURFACE_TEXTURES'));
+
+  // Build keyFeatures object (only include non-empty fields)
+  const keyFeatures: KeyFeatures = {};
+
+  if (ears) keyFeatures.ears = ears;
+  if (tail) keyFeatures.tail = tail;
+  if (limbs && limbs.toLowerCase() !== 'none') keyFeatures.limbs = limbs;
+  if (accessories.length > 0) keyFeatures.accessories = accessories;
+  if (distinctiveMarks.length > 0) keyFeatures.distinctiveMarks = distinctiveMarks;
+  if (asymmetricFeatures.length > 0) keyFeatures.asymmetricFeatures = asymmetricFeatures;
+  if (surfaceTextures.length > 0) keyFeatures.surfaceTextures = surfaceTextures;
+
+  // Only include keyFeatures if it has any content
+  const hasKeyFeatures = Object.keys(keyFeatures).length > 0;
+
   return {
     description,
     colorPalette,
@@ -184,6 +244,7 @@ function parseAnalysisResponse(
       materialRecommendations,
       orientationTips,
     },
+    ...(hasKeyFeatures && { keyFeatures }),
   };
 }
 
@@ -295,6 +356,8 @@ export async function analyzeImage(
       materialCount: result.detectedMaterials.length,
       objectType: result.objectType,
       printScore: result.printFriendliness.score,
+      hasKeyFeatures: !!result.keyFeatures,
+      keyFeaturesCount: result.keyFeatures ? Object.keys(result.keyFeatures).length : 0,
     });
 
     return result;

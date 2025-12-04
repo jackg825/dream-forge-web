@@ -14,7 +14,7 @@
 import axios from 'axios';
 import * as functions from 'firebase-functions';
 import type { GeminiResponse, GeminiResponseAnalysis } from './types';
-import type { PipelineMeshAngle, PipelineTextureAngle, GenerationModeId } from '../rodin/types';
+import type { PipelineMeshAngle, PipelineTextureAngle, GenerationModeId, ImageAnalysisResult } from '../rodin/types';
 import {
   type ModeConfig,
   DEFAULT_MODE,
@@ -162,17 +162,20 @@ export class MultiViewGenerator {
   private modeConfig: ModeConfig;
   private userDescription?: string | null;
   private preAnalyzedColors?: string[];  // Pre-analyzed colors from image analysis
+  private imageAnalysis?: ImageAnalysisResult | null;  // Full image analysis for feature extraction
 
   constructor(
     apiKey: string,
     modeId: GenerationModeId = DEFAULT_MODE,
     userDescription?: string | null,
-    preAnalyzedColors?: string[]
+    preAnalyzedColors?: string[],
+    imageAnalysis?: ImageAnalysisResult | null
   ) {
     this.apiKey = apiKey;
     this.modeConfig = getMode(modeId);
     this.userDescription = userDescription;
     this.preAnalyzedColors = preAnalyzedColors;
+    this.imageAnalysis = imageAnalysis;
   }
 
   /**
@@ -225,7 +228,7 @@ export class MultiViewGenerator {
         hasUserDescription: !!this.userDescription,
       });
 
-      const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription);
+      const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, undefined, this.imageAnalysis);
       const result = await this.generateSingleView(
         referenceImageBase64,
         mimeType,
@@ -455,7 +458,7 @@ export class MultiViewGenerator {
     });
 
     if (type === 'mesh') {
-      const prompt = getMeshPrompt(this.modeConfig, angle as PipelineMeshAngle, this.userDescription);
+      const prompt = getMeshPrompt(this.modeConfig, angle as PipelineMeshAngle, this.userDescription, undefined, this.imageAnalysis);
       return this.generateSingleView(
         referenceImageBase64,
         mimeType,
@@ -558,7 +561,7 @@ export class MultiViewGenerator {
     angle: PipelineMeshAngle,
     hint?: string
   ): Promise<GeneratedViewResult> {
-    const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, hint);
+    const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, hint, this.imageAnalysis);
     return this.generateSingleView(
       referenceImageBase64,
       mimeType,
@@ -718,11 +721,13 @@ export class MultiViewGenerator {
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
  * @param userDescription - Optional user-provided description of the object
  * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
+ * @param imageAnalysis - Optional full image analysis result with key features
  */
 export function createMultiViewGenerator(
   modeId: GenerationModeId = DEFAULT_MODE,
   userDescription?: string | null,
-  preAnalyzedColors?: string[]
+  preAnalyzedColors?: string[],
+  imageAnalysis?: ImageAnalysisResult | null
 ): MultiViewGenerator {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -733,5 +738,5 @@ export function createMultiViewGenerator(
     );
   }
 
-  return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors);
+  return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis);
 }

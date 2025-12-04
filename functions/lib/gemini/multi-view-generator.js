@@ -138,11 +138,13 @@ class MultiViewGenerator {
     modeConfig;
     userDescription;
     preAnalyzedColors; // Pre-analyzed colors from image analysis
-    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors) {
+    imageAnalysis; // Full image analysis for feature extraction
+    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors, imageAnalysis) {
         this.apiKey = apiKey;
         this.modeConfig = (0, mode_configs_1.getMode)(modeId);
         this.userDescription = userDescription;
         this.preAnalyzedColors = preAnalyzedColors;
+        this.imageAnalysis = imageAnalysis;
     }
     /**
      * Get the current mode configuration
@@ -184,7 +186,7 @@ class MultiViewGenerator {
                 simplified: this.modeConfig.mesh.simplified,
                 hasUserDescription: !!this.userDescription,
             });
-            const prompt = (0, mode_configs_1.getMeshPrompt)(this.modeConfig, angle, this.userDescription);
+            const prompt = (0, mode_configs_1.getMeshPrompt)(this.modeConfig, angle, this.userDescription, undefined, this.imageAnalysis);
             const result = await this.generateSingleView(referenceImageBase64, mimeType, prompt, this.modeConfig.mesh.extractColors, this.modeConfig.mesh.colorCount);
             meshViews[angle] = result;
             viewIndex++;
@@ -347,7 +349,7 @@ class MultiViewGenerator {
             simplified: type === 'mesh' ? this.modeConfig.mesh.simplified : this.modeConfig.texture.simplified,
         });
         if (type === 'mesh') {
-            const prompt = (0, mode_configs_1.getMeshPrompt)(this.modeConfig, angle, this.userDescription);
+            const prompt = (0, mode_configs_1.getMeshPrompt)(this.modeConfig, angle, this.userDescription, undefined, this.imageAnalysis);
             return this.generateSingleView(referenceImageBase64, mimeType, prompt, this.modeConfig.mesh.extractColors, this.modeConfig.mesh.colorCount);
         }
         else {
@@ -399,7 +401,7 @@ class MultiViewGenerator {
      * @param hint - Optional regeneration hint for adjustments
      */
     async generateMeshView(referenceImageBase64, mimeType, angle, hint) {
-        const prompt = (0, mode_configs_1.getMeshPrompt)(this.modeConfig, angle, this.userDescription, hint);
+        const prompt = (0, mode_configs_1.getMeshPrompt)(this.modeConfig, angle, this.userDescription, hint, this.imageAnalysis);
         return this.generateSingleView(referenceImageBase64, mimeType, prompt, this.modeConfig.mesh.extractColors, this.modeConfig.mesh.colorCount);
     }
     /**
@@ -506,12 +508,13 @@ exports.MultiViewGenerator = MultiViewGenerator;
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
  * @param userDescription - Optional user-provided description of the object
  * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
+ * @param imageAnalysis - Optional full image analysis result with key features
  */
-function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors) {
+function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription, preAnalyzedColors, imageAnalysis) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new functions.https.HttpsError('failed-precondition', 'Gemini API key not configured');
     }
-    return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors);
+    return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis);
 }
 //# sourceMappingURL=multi-view-generator.js.map
