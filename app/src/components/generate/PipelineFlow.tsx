@@ -288,9 +288,16 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   }, [pipeline?.status, checkStatus]);
 
+  // Clear actionLoading when pipeline transitions to generating state
+  // This ensures smooth button state after Firestore updates
+  useEffect(() => {
+    const status = pipeline?.status;
+    if (status === 'generating-images' || status === 'batch-queued' || status === 'batch-processing') {
+      setActionLoading(false);
+    }
+  }, [pipeline?.status]);
+
   // Handle image upload and pipeline creation
-  // Uses fire-and-forget pattern: release UI immediately after createPipeline,
-  // let Firestore subscription handle updates from submitBatch/generateImages
   const handleStartPipeline = async () => {
     if (!user) {
       router.push('/auth');
@@ -310,17 +317,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           await updateAnalysis(imageAnalysis, imageAnalysis.description);
         }
 
-        // Release button immediately - Firestore subscription handles updates
-        setActionLoading(false);
-
         // Start generation on existing pipeline
+        // Keep actionLoading true until Firestore status changes to generating-images
         if (processingMode === 'batch') {
           submitBatch(pipelineId).catch((err) => {
             console.error('Batch submission failed:', err);
+            setActionLoading(false);
           });
         } else {
           generateImages(pipelineId).catch((err) => {
             console.error('Image generation failed:', err);
+            setActionLoading(false);
           });
         }
         return;
@@ -343,17 +350,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       // Update URL with pipeline ID
       router.push(`?id=${newPipelineId}`, { scroll: false });
 
-      // Release button immediately - Firestore subscription handles updates
-      setActionLoading(false);
-
-      // Fire-and-forget: Start image generation based on processing mode
+      // Start image generation based on processing mode
+      // Keep actionLoading true until Firestore status changes to generating-images
       if (processingMode === 'batch') {
         submitBatch(newPipelineId).catch((err) => {
           console.error('Batch submission failed:', err);
+          setActionLoading(false);
         });
       } else {
         generateImages(newPipelineId).catch((err) => {
           console.error('Image generation failed:', err);
+          setActionLoading(false);
         });
       }
     } catch (err) {
