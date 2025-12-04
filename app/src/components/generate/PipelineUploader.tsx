@@ -5,6 +5,7 @@ import { uploadImage, validateImage } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Upload, X, Image as ImageIcon, AlertCircle, Camera } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 interface UploadedImage {
   url: string;
@@ -33,6 +34,7 @@ export function PipelineUploader({
   maxImages = 4,
   disabled = false,
 }: PipelineUploaderProps) {
+  const t = useTranslations('pipelineUploader');
   const [isDragging, setIsDragging] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export function PipelineUploader({
       const remainingSlots = maxImages - images.length;
 
       if (fileArray.length > remainingSlots) {
-        setError(`最多只能上傳 ${maxImages} 張圖片`);
+        setError(t('maxImagesError', { max: maxImages }));
         return;
       }
 
@@ -55,7 +57,7 @@ export function PipelineUploader({
         // Validate and auto-compress
         const validation = await validateImage(file);
         if (!validation.valid) {
-          setError(validation.error || '圖片格式不正確');
+          setError(validation.error || t('invalidFormat'));
           continue;
         }
 
@@ -80,13 +82,13 @@ export function PipelineUploader({
 
           onImagesChange([...images, newImage]);
         } catch (err) {
-          setError(err instanceof Error ? err.message : '上傳失敗');
+          setError(err instanceof Error ? err.message : t('uploadFailed'));
         } finally {
           setUploadProgress(null);
         }
       }
     },
-    [userId, images, maxImages, disabled, onImagesChange]
+    [userId, images, maxImages, disabled, onImagesChange, t]
   );
 
   const handleDrop = useCallback(
@@ -170,7 +172,7 @@ export function PipelineUploader({
             >
               <img
                 src={image.previewUrl || image.url}
-                alt={`上傳的圖片 ${index + 1}`}
+                alt={t('uploadedImage', { index: index + 1 })}
                 className="w-full h-full object-cover"
               />
               {!disabled && (
@@ -178,7 +180,7 @@ export function PipelineUploader({
                   type="button"
                   onClick={() => handleRemoveImage(index)}
                   className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="移除圖片"
+                  aria-label={t('removeImage')}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -194,7 +196,7 @@ export function PipelineUploader({
               className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-colors"
             >
               <Upload className="h-8 w-8" />
-              <span className="text-xs">添加更多</span>
+              <span className="text-xs">{t('addMore')}</span>
             </button>
           )}
         </div>
@@ -208,11 +210,11 @@ export function PipelineUploader({
             <div className="flex items-start gap-3">
               <Camera className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-medium text-blue-900 dark:text-blue-100">📸 最佳拍攝建議</p>
+                <p className="font-medium text-blue-900 dark:text-blue-100">{t('photoTips.title')}</p>
                 <ul className="text-sm text-blue-700 dark:text-blue-300 mt-1.5 space-y-1">
-                  <li>• <strong>正面視角</strong>：物體正面朝向鏡頭，如同面對面看著它</li>
-                  <li>• <strong>清晰完整</strong>：確保主體完整入鏡、光線均勻</li>
-                  <li>• <strong>簡潔背景</strong>：純色或簡單背景效果最佳</li>
+                  <li>• <strong>{t('photoTips.frontView')}</strong>：{t('photoTips.frontViewDesc')}</li>
+                  <li>• <strong>{t('photoTips.clearComplete')}</strong>：{t('photoTips.clearCompleteDesc')}</li>
+                  <li>• <strong>{t('photoTips.simpleBackground')}</strong>：{t('photoTips.simpleBackgroundDesc')}</li>
                 </ul>
               </div>
             </div>
@@ -236,17 +238,17 @@ export function PipelineUploader({
                 <ImageIcon className="h-10 w-10 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-lg font-medium">拖放圖片到這裡</p>
+                <p className="text-lg font-medium">{t('dropzone.title')}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  或點擊選擇圖片 (最多 {maxImages} 張)
+                  {t('dropzone.subtitle', { max: maxImages })}
                 </p>
               </div>
               <Button variant="secondary" size="sm" disabled={disabled}>
                 <Upload className="h-4 w-4 mr-2" />
-                選擇圖片
+                {t('dropzone.button')}
               </Button>
               <p className="text-xs text-muted-foreground">
-                支援 JPG、PNG、WebP 格式
+                {t('dropzone.formats')}
               </p>
             </div>
           </div>
@@ -258,7 +260,7 @@ export function PipelineUploader({
         <div className="space-y-2">
           <Progress value={uploadProgress} />
           <p className="text-sm text-muted-foreground text-center">
-            上傳中... {Math.round(uploadProgress)}%
+            {t('uploading', { progress: Math.round(uploadProgress) })}
           </p>
         </div>
       )}
@@ -266,7 +268,7 @@ export function PipelineUploader({
       {/* Image count */}
       {images.length > 0 && (
         <p className="text-sm text-muted-foreground text-center">
-          已上傳 {images.length} / {maxImages} 張圖片
+          {t('imageCount', { count: images.length, max: maxImages })}
         </p>
       )}
     </div>

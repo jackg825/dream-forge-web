@@ -603,6 +603,31 @@
     "clickToUpload": "Click to upload",
     "supportedFormats": "JPG, PNG, or WEBP (max 10MB)"
   },
+  "pipelineUploader": {
+    "maxImagesError": "Maximum {max} images allowed",
+    "invalidFormat": "Invalid image format",
+    "uploadFailed": "Upload failed",
+    "uploadedImage": "Uploaded image {index}",
+    "removeImage": "Remove image",
+    "addMore": "Add more",
+    "photoTips": {
+      "title": "📸 Photo Tips",
+      "frontView": "Front View",
+      "frontViewDesc": "Subject facing the camera directly, as if looking at it face-to-face",
+      "clearComplete": "Clear & Complete",
+      "clearCompleteDesc": "Ensure the subject is fully visible with even lighting",
+      "simpleBackground": "Simple Background",
+      "simpleBackgroundDesc": "Solid colors or simple backgrounds work best"
+    },
+    "dropzone": {
+      "title": "Drop images here",
+      "subtitle": "Or click to select images (max {max})",
+      "button": "Select Images",
+      "formats": "Supports JPG, PNG, WebP formats"
+    },
+    "uploading": "Uploading... {progress}%",
+    "imageCount": "Uploaded {count} / {max} images"
+  },
   "adminStatus": {
     "draft": "Draft",
     "batchQueued": "Queued",

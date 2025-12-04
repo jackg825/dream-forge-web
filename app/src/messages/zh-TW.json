@@ -603,6 +603,31 @@
     "clickToUpload": "點擊上傳",
     "supportedFormats": "JPG、PNG 或 WEBP（最大 10MB）"
   },
+  "pipelineUploader": {
+    "maxImagesError": "最多只能上傳 {max} 張圖片",
+    "invalidFormat": "圖片格式不正確",
+    "uploadFailed": "上傳失敗",
+    "uploadedImage": "上傳的圖片 {index}",
+    "removeImage": "移除圖片",
+    "addMore": "添加更多",
+    "photoTips": {
+      "title": "📸 最佳拍攝建議",
+      "frontView": "正面視角",
+      "frontViewDesc": "主體正面朝向鏡頭，如同面對面看著它",
+      "clearComplete": "清晰完整",
+      "clearCompleteDesc": "確保主體完整入鏡、光線均勻",
+      "simpleBackground": "簡潔背景",
+      "simpleBackgroundDesc": "純色或簡單背景效果最佳"
+    },
+    "dropzone": {
+      "title": "拖放圖片到這裡",
+      "subtitle": "或點擊選擇圖片 (最多 {max} 張)",
+      "button": "選擇圖片",
+      "formats": "支援 JPG、PNG、WebP 格式"
+    },
+    "uploading": "上傳中... {progress}%",
+    "imageCount": "已上傳 {count} / {max} 張圖片"
+  },
   "adminStatus": {
     "draft": "草稿",
     "batchQueued": "排隊中",
