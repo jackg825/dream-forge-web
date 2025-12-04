@@ -79,8 +79,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
                 {/* 3D Model showcase - hover to interact */}
                 <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-br from-muted to-muted/50 relative group">
                   <ShowcaseViewer
-                    previewImage="/showcase/model-1/preview.webp"
-                    animatedImage="/showcase/model-1/rotate.gif"
+                    src="/showcase/model-1/rotate.gif"
                     alt={t('printService.visualCaption')}
                     className="w-full h-full"
                   />
