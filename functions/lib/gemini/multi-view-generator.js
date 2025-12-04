@@ -56,7 +56,7 @@ const mode_configs_1 = require("./mode-configs");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_MODEL_IDS = {
     'gemini-3-pro': 'gemini-3-pro-image-preview',
-    'gemini-2.5-flash': 'gemini-2.5-flash-preview-05-20',
+    'gemini-2.5-flash': 'gemini-2.5-flash-image',
 };
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 // Minimum delay between sequential API calls to avoid rate limiting

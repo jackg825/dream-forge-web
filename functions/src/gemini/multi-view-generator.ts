@@ -31,7 +31,7 @@ export type GeminiImageModel = 'gemini-3-pro' | 'gemini-2.5-flash';
 
 const GEMINI_MODEL_IDS: Record<GeminiImageModel, string> = {
   'gemini-3-pro': 'gemini-3-pro-image-preview',
-  'gemini-2.5-flash': 'gemini-2.5-flash-preview-05-20',
+  'gemini-2.5-flash': 'gemini-2.5-flash-image',
 };
 
 const DEFAULT_GEMINI_MODEL: GeminiImageModel = 'gemini-2.5-flash';
