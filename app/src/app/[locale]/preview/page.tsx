@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
-import { Header } from '@/components/layout/Header';
+import { UserHeader } from '@/components/layout/headers';
 import { FileDropZone } from '@/components/preview/FileDropZone';
 import { ModelInfoPanel } from '@/components/preview/ModelInfoPanel';
 import { ClippingPlaneControls, type ClippingAxis } from '@/components/preview/ClippingPlaneControls';
@@ -109,7 +109,7 @@ export default function PreviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <UserHeader />
 
       {/* Main Content */}
       <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -3,15 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AdminGuard } from '@/components/auth/AdminGuard';
+import { AdminHeader } from '@/components/layout/headers';
 import { useAdminPipelines } from '@/hooks/useAdminPipelines';
 import { AdminPipelineCard } from '@/components/admin/AdminPipelineCard';
 import { PipelineDetailModal } from '@/components/admin/PipelineDetailModal';
-import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Loader2, Box, Search, RefreshCw } from 'lucide-react';
+import { Loader2, Box, Search, RefreshCw } from 'lucide-react';
 import type { AdminPipeline, PipelineStatus } from '@/types';
 
 type FilterStatus = 'all' | PipelineStatus;
@@ -67,43 +67,7 @@ function AdminPipelinesContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/admin">
-                  <ArrowLeft className="h-5 w-5" />
-                </Link>
-              </Button>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Pipeline 管理
-                </h1>
-                <span className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 text-xs font-medium rounded">
-                  {t('common.admin')}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fetchPipelines()}
-                disabled={loading}
-                className="gap-2"
-              >
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                重新整理
-              </Button>
-              <Link href="/admin" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
-                返回管理員面板
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

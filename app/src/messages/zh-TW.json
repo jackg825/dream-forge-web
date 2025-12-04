@@ -30,7 +30,24 @@
     "history": "歷史紀錄",
     "previewTool": "預覽工具",
     "adminPanel": "管理面板",
-    "advancedFlow": "進階生成"
+    "advancedFlow": "進階生成",
+    "settings": "設定"
+  },
+  "mobile": {
+    "navigation": "導航",
+    "account": "帳戶",
+    "adminNavigation": "管理"
+  },
+  "admin": {
+    "dashboard": "管理面板",
+    "pipelines": "Pipeline 管理",
+    "returnToUser": "返回用戶模式"
+  },
+  "settingsPage": {
+    "title": "設定",
+    "subtitle": "管理您的偏好設定",
+    "appearanceDescription": "選擇您喜歡的顏色主題",
+    "languageDescription": "選擇您偏好的語言"
   },
   "settings": {
     "appearance": "外觀",

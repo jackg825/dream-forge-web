@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { AuthGuard } from '@/components/auth/AuthGuard';
-import { Header } from '@/components/layout/Header';
+import { UserHeader } from '@/components/layout/headers';
 import { PipelineCard } from '@/components/history/PipelineCard';
 import { useAuth } from '@/hooks/useAuth';
 import { usePipelines } from '@/hooks/usePipelines';
@@ -74,7 +74,7 @@ function HistoryContent() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      <UserHeader />
 
       {/* Main content */}
       <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

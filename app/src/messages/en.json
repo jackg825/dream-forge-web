@@ -30,7 +30,24 @@
     "history": "History",
     "previewTool": "Preview Tool",
     "adminPanel": "Admin Panel",
-    "advancedFlow": "Advanced"
+    "advancedFlow": "Advanced",
+    "settings": "Settings"
+  },
+  "mobile": {
+    "navigation": "Navigation",
+    "account": "Account",
+    "adminNavigation": "Admin"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "pipelines": "Pipeline Management",
+    "returnToUser": "Back to User Mode"
+  },
+  "settingsPage": {
+    "title": "Settings",
+    "subtitle": "Manage your preferences",
+    "appearanceDescription": "Choose your preferred color theme",
+    "languageDescription": "Select your preferred language"
   },
   "settings": {
     "appearance": "Appearance",
