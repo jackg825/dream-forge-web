@@ -372,6 +372,8 @@ export interface KeyFeatures {
  */
 export interface ImageAnalysisResult {
     description: string;
+    promptDescription?: string;
+    styleHints?: string[];
     colorPalette: string[];
     detectedMaterials: string[];
     objectType: string;

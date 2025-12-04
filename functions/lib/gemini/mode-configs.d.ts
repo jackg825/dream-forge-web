@@ -41,6 +41,9 @@ export declare const GENERATION_MODES: Record<GenerationModeId, ModeConfig>;
 export declare function getMode(id: GenerationModeId): ModeConfig;
 /**
  * Generate mesh view prompt based on mode and angle
+ * Uses narrative style following Gemini's best practice:
+ * "Describe the scene, don't just list keywords"
+ *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
@@ -50,6 +53,9 @@ export declare function getMode(id: GenerationModeId): ModeConfig;
 export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle, userDescription?: string | null, hint?: string, imageAnalysis?: ImageAnalysisResult | null): string;
 /**
  * Generate texture view prompt based on mode and angle
+ * Uses narrative style following Gemini's best practice:
+ * "Describe the scene, don't just list keywords"
+ *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object

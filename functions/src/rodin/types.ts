@@ -592,6 +592,8 @@ export interface KeyFeatures {
  */
 export interface ImageAnalysisResult {
   description: string;                // AI-generated description (includes all materials)
+  promptDescription?: string;         // Narrative description optimized for image generation prompts
+  styleHints?: string[];              // Style hints for generation (e.g., "kawaii", "vinyl toy")
   colorPalette: string[];             // Extracted HEX colors (configurable count)
   detectedMaterials: string[];        // Detected materials (fur, fabric, plastic)
   objectType: string;                 // Object classification (plush toy, figurine)

@@ -34,6 +34,8 @@ export interface PrintFriendlinessAssessment {
  */
 export interface ImageAnalysisResult {
   description: string;                // AI-generated description (includes all materials)
+  promptDescription?: string;         // Narrative description optimized for image generation prompts
+  styleHints?: string[];              // Style hints for generation (e.g., "kawaii", "vinyl toy")
   colorPalette: string[];             // Extracted HEX colors
   detectedMaterials: string[];        // Detected materials (fur, fabric, plastic)
   objectType: string;                 // Object classification (plush toy, figurine)
@@ -81,36 +83,44 @@ function buildAnalysisPrompt(colorCount: number, printerType: PrinterType): stri
     resin: '樹脂',
   }[printerType];
 
-  return `你是 3D 列印專家，分析這張參考圖片以用於 3D 模型生成。
+  return `你是 3D 列印專家和 AI 圖片生成 prompt 專家，分析這張參考圖片以用於多視角 3D 模型生成。
 
-請提供以下分析（全部使用繁體中文回覆）：
+請提供以下分析（除特別標註外，使用繁體中文回覆）：
 
-1. **物體描述** (DESCRIPTION)
-   - 描述整體形狀、主要特徵、比例
-   - 提及所有可見的表面材質（例如：「正面是毛茸茸的絨毛，背面是平滑的布料」）
-   - 這段描述將用於統一風格的 3D 模型生成
+1. **圖片生成用敘事描述** (PROMPT_DESCRIPTION) - 最重要！
+   這段描述將直接用於 AI 圖片生成，請遵循以下原則：
+   - 使用「敘事型段落」而非「關鍵字列表」
+   - 寫 3-5 句流暢的英文描述，像在描述一個場景
+   - 包含：主體識別、整體造型、表面材質質感、色調氛圍
+   - 使用攝影/藝術術語（如 soft matte finish, rounded forms, warm tones）
+   - 範例格式："A charming plush teddy bear with soft, velvety brown fur that catches the light with a subtle sheen. The bear features large, expressive black button eyes and a friendly embroidered smile. Its rounded, huggable form has stubby limbs with lighter tan paw pads."
 
-2. **色號提取** (COLORS)
+2. **風格提示** (STYLE_HINTS)
+   - 3-5 個英文風格關鍵詞，用於輔助圖片生成
+   - 例如：kawaii, vinyl toy, soft plush, warm tones, friendly character
+
+3. **物體描述** (DESCRIPTION)
+   - 描述整體形狀、主要特徵、比例（繁體中文）
+   - 提及所有可見的表面材質
+
+4. **色號提取** (COLORS)
    - 提取正好 ${colorCount} 個主要顏色，格式為 HEX
-   - 優先選擇：
-     - 高對比度、容易區分的顏色
-     - 3D 列印友善的實色
-     - 避免過於相近的顏色
+   - 優先選擇高對比度、容易區分的 3D 列印友善實色
 
-3. **3D 列印友善評估** (${printerDescription} 列印機)
+5. **3D 列印友善評估** (${printerDescription} 列印機)
    - 評分 (SCORE): 1-5 分（5分最容易列印）
    - 色彩建議 (COLOR_SUGGESTIONS): 哪些顏色適合列印、是否需要簡化漸層
    - 結構問題 (STRUCTURAL_CONCERNS): 薄壁部分、懸空結構、可能斷裂的細節
    - 材質推薦 (MATERIAL_RECOMMENDATIONS): 建議使用的列印材料
    - 列印方向 (ORIENTATION_TIPS): 最佳列印擺放方向
 
-4. **材質清單** (MATERIALS)
+6. **材質清單** (MATERIALS)
    - 列出偵測到的表面材質類型（英文，如 fur, fabric, plastic）
 
-5. **物體類型** (OBJECT_TYPE)
+7. **物體類型** (OBJECT_TYPE)
    - 單一分類詞（英文，如 plush toy, figurine, character）
 
-6. **關鍵特徵** (KEY_FEATURES) - 用於確保多視角圖片的一致性
+8. **關鍵特徵** (KEY_FEATURES) - 用於確保多視角圖片的一致性
    - EARS: 是否有耳朵？[yes/no]，若有請描述形狀和位置
    - TAIL: 是否有尾巴？[yes/no]，若有請描述形狀和方向
    - LIMBS: 描述四肢姿態（若適用）
@@ -120,6 +130,8 @@ function buildAnalysisPrompt(colorCount: number, printerType: PrinterType): stri
    - SURFACE_TEXTURES: 表面質感描述（如：毛茸茸、光滑、粗糙）
 
 嚴格按照以下格式輸出（每行一個欄位）：
+PROMPT_DESCRIPTION: [3-5 句英文敘事描述，適合直接用於圖片生成]
+STYLE_HINTS: [逗號分隔的英文風格關鍵詞]
 DESCRIPTION: [你的描述，使用繁體中文]
 COLORS: #RRGGBB, #RRGGBB, #RRGGBB...
 SCORE: [1-5]
@@ -158,7 +170,14 @@ function parseAnalysisResponse(
     return value.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
   };
 
-  // Extract description
+  // Extract prompt description (narrative description for image generation)
+  const promptDescription = extractField('PROMPT_DESCRIPTION') || undefined;
+
+  // Extract style hints
+  const styleHintsRaw = extractField('STYLE_HINTS');
+  const styleHints = styleHintsRaw ? parseList(styleHintsRaw) : undefined;
+
+  // Extract description (Chinese description)
   const description = extractField('DESCRIPTION') || '無法分析物體描述';
 
   // Extract colors
@@ -234,6 +253,8 @@ function parseAnalysisResponse(
 
   return {
     description,
+    ...(promptDescription && { promptDescription }),
+    ...(styleHints && styleHints.length > 0 && { styleHints }),
     colorPalette,
     detectedMaterials,
     objectType,
@@ -358,6 +379,8 @@ export async function analyzeImage(
       printScore: result.printFriendliness.score,
       hasKeyFeatures: !!result.keyFeatures,
       keyFeaturesCount: result.keyFeatures ? Object.keys(result.keyFeatures).length : 0,
+      hasPromptDescription: !!result.promptDescription,
+      styleHintsCount: result.styleHints?.length ?? 0,
     });
 
     return result;

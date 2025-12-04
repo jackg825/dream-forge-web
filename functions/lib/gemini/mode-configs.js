@@ -89,50 +89,6 @@ const TEXTURE_ANGLE_PROMPTS = {
     back: 'BACK',
 };
 /**
- * Get mesh style instructions based on mode
- * - Simplified mode: Cartoon/vinyl toy style (low-poly, rounded)
- * - Full color mode: Preserve details but optimize for 3D modeling
- */
-function getMeshStyleDescription(simplified) {
-    if (simplified) {
-        // 卡通公仔化風格
-        return `**3D MODELING OPTIMIZATION - CARTOON FIGURE STYLE**:
-Transform the subject into a collectible vinyl toy / Funko Pop style figure:
-- Round off sharp edges and corners
-- Simplify complex geometry (hair becomes solid mass, fabric folds become smooth)
-- Exaggerate cute features (larger head-to-body ratio for characters)
-- Remove fine details that cannot be 3D printed (individual hairs, tiny patterns)
-- Maintain recognizable silhouette and key identifying features
-- Think "chibi" or "SD (Super Deformed)" style for characters`;
-    }
-    else {
-        // 保留細節但優化建模 - 輕度平滑
-        return `**3D MODELING OPTIMIZATION - DETAIL PRESERVATION with LIGHT SMOOTHING**:
-Optimize the subject for accurate 3D reconstruction while preserving most details.
-Apply LIGHT SURFACE SMOOTHING (10-20% simplification) - preserve textures and patterns:
-
-**FEATURES TO FULLY PRESERVE**:
-- Face/head shape and all facial features (eyes, nose, mouth, expressions)
-- Accessories and adornments (bows, collars, patterns, decorations)
-- Overall silhouette, body proportions, and pose
-- Surface textures and patterns (fur direction, fabric weave, skin texture)
-- Color boundaries and gradients
-
-**FEATURES TO SLIGHTLY SIMPLIFY (Only if impossible to model)**:
-- Individual hair strands → suggest as volume/mass while keeping texture direction visible
-- Transparent parts → show as solid with surface indication
-- Very thin elements (< 1mm) → thicken slightly for printability
-
-**IMPORTANT - DO NOT OVER-SMOOTH**:
-- Keep fabric folds and wrinkles - they add realism
-- Keep fur/hair texture visible - show the direction and flow
-- Keep surface details like stitching, patterns, and material textures
-- The goal is a DETAILED figurine, NOT a smooth vinyl toy
-
-The result should look like a high-quality resin figure with preserved surface details.`;
-    }
-}
-/**
  * Get structured viewpoint information for each angle
  * Uses result-oriented descriptions and negative constraints
  */
@@ -220,64 +176,64 @@ ${info.mustNotGenerate.map(item => `❌ ${item}`).join('\n')}
 === END VIEW DIRECTION ===`;
 }
 /**
- * Build the feature preservation block from image analysis
- * Injects materials and key features into the prompt
+ * Build the narrative subject context from image analysis
+ * Prioritizes promptDescription for better image generation results
  */
-function buildFeatureBlock(userDescription, imageAnalysis) {
-    const blocks = [];
-    // User description with strong language
+function buildNarrativeContext(userDescription, imageAnalysis) {
+    // If we have a prompt description from analysis, use it as the primary narrative
+    // This follows Gemini's best practice: "describe the scene, don't just list keywords"
+    if (imageAnalysis?.promptDescription) {
+        const styleContext = imageAnalysis.styleHints?.length
+            ? ` Style hints: ${imageAnalysis.styleHints.join(', ')}.`
+            : '';
+        return `\n\n=== SUBJECT DESCRIPTION ===
+
+${imageAnalysis.promptDescription}${styleContext}
+
+This subject must maintain consistent identity, proportions, and features across all views.
+
+=== END SUBJECT DESCRIPTION ===\n`;
+    }
+    // Fallback: Build narrative from structured data
+    const narrativeParts = [];
     if (userDescription) {
-        blocks.push(`**SUBJECT IDENTITY**
-This object is: "${userDescription}"
-You MUST maintain this identity across all views.`);
+        narrativeParts.push(`This is ${userDescription}.`);
     }
-    // Materials block
     if (imageAnalysis?.detectedMaterials?.length) {
-        blocks.push(`**SURFACE MATERIALS** (MUST be visible in all views)
-Materials: ${imageAnalysis.detectedMaterials.join(', ')}
-Show these material textures consistently.`);
+        const materials = imageAnalysis.detectedMaterials.join(', ');
+        narrativeParts.push(`The surface features ${materials} textures that should be visible in all views.`);
     }
-    // Key features block
     if (imageAnalysis?.keyFeatures) {
         const kf = imageAnalysis.keyFeatures;
-        const features = [];
         if (kf.ears?.present && kf.ears.description) {
-            features.push(`- 耳朵: ${kf.ears.description}`);
+            narrativeParts.push(`It has ears: ${kf.ears.description}.`);
         }
         if (kf.tail?.present && kf.tail.description) {
-            features.push(`- 尾巴: ${kf.tail.description}`);
-        }
-        if (kf.limbs) {
-            features.push(`- 四肢: ${kf.limbs}`);
+            narrativeParts.push(`A tail is present: ${kf.tail.description}.`);
         }
         if (kf.accessories?.length) {
-            features.push(`- 配件: ${kf.accessories.join(', ')}`);
-        }
-        if (kf.distinctiveMarks?.length) {
-            features.push(`- 獨特標記: ${kf.distinctiveMarks.join(', ')}`);
-        }
-        if (kf.asymmetricFeatures?.length) {
-            features.push(`- 不對稱特徵: ${kf.asymmetricFeatures.join(', ')}`);
+            narrativeParts.push(`Accessories include: ${kf.accessories.join(', ')}.`);
         }
         if (kf.surfaceTextures?.length) {
-            features.push(`- 表面質感: ${kf.surfaceTextures.join(', ')}`);
-        }
-        if (features.length > 0) {
-            blocks.push(`**關鍵特徵 (MUST PRESERVE - 必須在正確位置出現)**
-${features.join('\n')}`);
+            narrativeParts.push(`Surface textures: ${kf.surfaceTextures.join(', ')}.`);
         }
     }
-    // Cross-view consistency requirement
-    if (blocks.length > 0) {
-        blocks.push(`**CROSS-VIEW CONSISTENCY**
-1. Proportions MUST match across all 4 views
-2. Features visible in front view MUST appear correctly in side/back views
-3. Colors and patterns MUST be consistent`);
+    if (narrativeParts.length === 0) {
+        return '';
     }
-    return blocks.length > 0 ? '\n\n' + blocks.join('\n\n') + '\n' : '';
+    return `\n\n=== SUBJECT DESCRIPTION ===
+
+${narrativeParts.join(' ')}
+
+Maintain consistent identity, proportions, and features across all views.
+
+=== END SUBJECT DESCRIPTION ===\n`;
 }
 /**
  * Generate mesh view prompt based on mode and angle
+ * Uses narrative style following Gemini's best practice:
+ * "Describe the scene, don't just list keywords"
+ *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
@@ -288,57 +244,48 @@ function getMeshPrompt(mode, angle, userDescription, hint, imageAnalysis) {
     const angleDisplay = ANGLE_PROMPTS[angle];
     // Build view direction block (placed at the very beginning for emphasis)
     const viewDirectionBlock = buildViewDirectionBlock(angle);
-    // Build feature preservation block from user description and image analysis
-    const featureBlock = buildFeatureBlock(userDescription, imageAnalysis);
+    // Build narrative context from user description and image analysis
+    const narrativeContext = buildNarrativeContext(userDescription, imageAnalysis);
     // Build regeneration hint block if provided
     const hintBlock = hint
-        ? `\n\n**REGENERATION ADJUSTMENT**\nThe user requests the following adjustment: "${hint}"\nApply this adjustment while maintaining all other requirements.\n`
+        ? `\n\nIMPORTANT ADJUSTMENT: The user requests: "${hint}". Apply this adjustment while maintaining all other visual characteristics.\n`
         : '';
     if (mode.mesh.simplified) {
-        // Simplified mode: ~7-color cel-shaded vinyl toy style
+        // Simplified mode: vinyl toy / Funko Pop style with narrative description
         return `${viewDirectionBlock}
+${narrativeContext}${hintBlock}
+Imagine this subject transformed into a charming collectible vinyl figure, reminiscent of Funko Pop or kawaii-style toys. The form is simplified with rounded edges, smooth surfaces, and exaggerated cute proportions. Complex details like individual hairs or fabric folds are smoothed into clean, stylized shapes while keeping the recognizable silhouette.
 
-You are a professional 3D character artist creating a "Turnaround Reference Sheet" for a 3D modeler.${featureBlock}${hintBlock}
+The figure is rendered in a cel-shaded style with approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors. There are no gradients or soft shadows - just clean blocks of flat color that define the 3D volumes. Each color zone has crisp, pixel-sharp edges, like a modern low-poly game asset.
 
-${getMeshStyleDescription(true)}
+The camera captures this ${angleDisplay} view using orthographic projection, eliminating any perspective distortion. The subject sits centered against a pure white (#FFFFFF) background, filling about 90% of the frame. The lighting is completely flat - no cast shadows, no highlights, just clean unlit color.
 
-STYLE & TECHNICAL REQUIREMENTS:
-1. **STYLE**: 3D Cel-Shaded Render. Look like a clean, low-poly game asset or vinyl toy.
-2. **COLOR**: Use "Posterized" coloring. Limit to approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors.
-3. **LIGHTING**: "Flat Shading" or "Unlit". NO cast shadows, NO drop shadows.
-4. **GEOMETRY CUES**: Although flat lit, use distinct color blocks to define distinct 3D volumes (e.g., separate sleeves from arms with a color edge).
-5. **VIEWPORT**: Orthographic Projection. NO perspective distortion. Parallel lines remain parallel.
-6. **BOUNDARIES**: Hard, pixel-sharp edges against a Pure White (#FFFFFF) background.
-7. **COMPOSITION**: Object fills 90% of frame.
+Think of this as a professional turnaround reference sheet for a 3D modeler, not a photograph.
 
-Ensure the output looks like a technical design document, not a photograph.
+After generating the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 
-After the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
-
-Generate the actual image, not a description.`;
+Generate the actual image now.`;
     }
     else {
-        // Full color mode: photogrammetry style with detail preservation
+        // Full color mode: photogrammetry reference with narrative description
         return `${viewDirectionBlock}
+${narrativeContext}${hintBlock}
+Picture this subject in a professional photogrammetry studio, set up for accurate 3D model reconstruction. Multiple softboxes provide even, diffused illumination that wraps around the form, revealing every surface texture and detail without harsh directional shadows. Subtle ambient occlusion appears naturally in crevices, helping define the shape and depth.
 
-You are a 3D scanning expert preparing reference data for accurate 3D model reconstruction.${featureBlock}${hintBlock}
+All the fine details are preserved - the texture direction of fur, the subtle folds of fabric, the smoothness or roughness of each material surface. Colors appear true-to-life with natural saturation. The overall form maintains its realistic proportions with only minimal smoothing (10-20%) of the most complex geometry.
 
-${getMeshStyleDescription(false)}
+The camera is positioned at eye level, using orthographic projection to eliminate perspective distortion. Parallel lines remain perfectly parallel. The subject sits centered against a pure white (#FFFFFF) background, filling about 85% of the frame. This ${angleDisplay} view captures both the 3D volume and the rich surface details.
 
-REQUIREMENTS:
-1. **VIEW**: Orthographic Projection. NO perspective distortion. Camera perfectly level with object center.
-2. **LIGHTING**: "Studio Softbox Lighting". Even illumination. Include subtle "Ambient Occlusion" in crevices to define shape/depth, but AVOID harsh directional shadows.
-3. **DETAILS**: Preserve surface textures and details. Show fur direction, fabric folds, and material textures clearly.
-4. **BACKGROUND**: Pure White (#FFFFFF).
-5. **FRAMING**: Center the object, fill 85% of the canvas.
+The goal is a perfect photogrammetry reference image - detailed enough for accurate 3D reconstruction, clean enough for professional modeling.
 
-Goal: A perfect reference image that captures the 3D volume AND surface details of the input image from the ${angleDisplay}.
-
-Generate the actual image, not a description.`;
+Generate the actual image now.`;
     }
 }
 /**
  * Generate texture view prompt based on mode and angle
+ * Uses narrative style following Gemini's best practice:
+ * "Describe the scene, don't just list keywords"
+ *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
@@ -346,62 +293,44 @@ Generate the actual image, not a description.`;
  */
 function getTexturePrompt(mode, angle, userDescription, hint) {
     const angleDisplay = TEXTURE_ANGLE_PROMPTS[angle];
-    // Build user description block if provided
-    const userDescBlock = userDescription
-        ? `\n\n**USER DESCRIPTION**\nThe user describes this object as: "${userDescription}"\nUse this description to better understand and preserve the object's key features.\n`
+    const viewPosition = angle === 'front' ? 'directly in front, centered' : 'from behind (180° from front)';
+    // Build user description as narrative context
+    const subjectContext = userDescription
+        ? `\n\nThis is ${userDescription}. Preserve its key visual features and identity.\n`
         : '';
-    // Build regeneration hint block if provided
-    const hintBlock = hint
-        ? `\n\n**REGENERATION ADJUSTMENT**\nThe user requests the following adjustment: "${hint}"\nApply this adjustment while maintaining all other requirements.\n`
+    // Build regeneration hint as narrative
+    const hintContext = hint
+        ? `\n\nIMPORTANT ADJUSTMENT: The user requests: "${hint}". Apply this change while maintaining all other visual characteristics.\n`
         : '';
     if (mode.texture.simplified) {
         // Simplified mode: vector art / sticker art style for H2C printing
-        return `You are a vector artist creating a texture map for a multi-color 3D print.${userDescBlock}${hintBlock}
+        return `Create a texture map for multi-color 3D printing in a clean, flat vector illustration style.${subjectContext}${hintContext}
 
-Generate a ${angleDisplay} VIEW image designed for Color Mapping.
+Imagine this ${angleDisplay} view as a stylized sticker or paint-by-numbers template. The entire image uses exactly ${mode.texture.colorCount} solid, distinct colors with absolutely no gradients, shading, or soft transitions. Each color zone is a crisp, clean block with sharp edges between regions - like a professional vector illustration or a simplified screen print design.
 
-CRITICAL CONSTRAINTS:
-1. **STYLE**: Flat Vector Illustration / Sticker Art style.
-2. **PALETTE**: STRICTLY LIMITED PALETTE. Reduce entire image to approximately ${mode.texture.colorCount} solid colors.
-3. **GRADIENTS**: FORBIDDEN. No gradients, no fading, no airbrushing. Solid blocks of color only.
-4. **SHADING**: ABSOLUTELY ZERO SHADING. This texture will be used for 3D PRINTING - the printed colors must NOT be affected by any simulated lighting.
-   - NO shadows (not even subtle ones)
-   - NO highlights or specular reflections
-   - NO ambient occlusion
-   - Think of this as a "flat color map" where each color zone represents the exact pigment to be printed.
-5. **EDGES**: Crisp, sharp lines between color zones. No anti-aliasing fuzziness.
-6. **ALIGNMENT**: Must match the silhouette of the 3D mesh perfectly. Show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}.
-7. **BACKGROUND**: Pure White (#FFFFFF).
-8. **COMPOSITION**: Object fills 90% of frame.
+This texture will be applied directly to a 3D printed object, so the colors represent the exact pigments to be printed. There are no simulated lighting effects - no shadows of any kind, no highlights, no ambient occlusion, no reflections. Every pixel shows the true base color, completely flat and unlit.
 
-Output logic: Think of this as a "Paint-by-numbers" guide. Each color region must be large enough to be 3D printed (avoid tiny pixel noise).
+The camera captures the view ${viewPosition}, using orthographic projection. The subject fills about 90% of the frame against a pure white (#FFFFFF) background. The silhouette and proportions match the corresponding mesh view exactly.
 
-After the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
+Think of this as creating a color map where each region is large enough to be physically printed - avoid tiny color details that would get lost in production.
 
-Generate the actual image, not a description.`;
+After generating the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
+
+Generate the actual image now.`;
     }
     else {
         // Full color mode: Albedo Map (Base Color) for PBR
-        return `You are a texture artist creating the "Albedo Map" (Base Color) for a 3D model.${userDescBlock}${hintBlock}
+        return `Create an albedo texture map (base color) for a 3D model, optimized for printing.${subjectContext}${hintContext}
 
-Generate a ${angleDisplay} VIEW Albedo texture reference.
+This ${angleDisplay} view captures the true surface colors of the subject as they would appear without any lighting. Imagine scanning the object's colors directly - no shadows, no highlights, no ambient occlusion, no reflections. Each pixel represents the exact pigment color to be printed, in full color with natural saturation.
 
-REQUIREMENTS:
-1. **LIGHTING**: STRICTLY UNLIT / FLAT. This is for 3D PRINTING - the colors represent the actual pigment to be printed, NOT how the surface appears under lighting.
-   - ZERO shadows of any kind
-   - ZERO highlights or reflections
-   - ZERO ambient occlusion
-   - Each pixel color = the exact print pigment color
-2. **DETAIL**: High-frequency texture details (fabric weave, skin pores, metal scratches) should be visible as color information.
-3. **VIEW**: Orthographic. Show from directly ${angle === 'front' ? 'in front, centered' : 'behind (180° from front)'}.
-4. **COLOR**: Full color dynamic range. Natural saturation.
-5. **BACKGROUND**: Pure White (#FFFFFF).
-6. **COMPOSITION**: Object fills 90% of frame.
-7. **CONSISTENCY**: Maintain exact proportions matching the mesh views.
+All the high-frequency texture details are visible as color information - the weave of fabric, the grain of wood, the subtle variations in skin tones, the scratches on metal. These details appear as color data, not as shading effects.
 
-The output must look like a flat texture map applied to the object, ready for a game engine.
+The camera is positioned ${viewPosition}, using orthographic projection. The subject sits centered against a pure white (#FFFFFF) background, filling about 90% of the frame. Proportions match the mesh views exactly for perfect UV alignment.
 
-Generate the actual image, not a description.`;
+The result should look like a flat, unlit texture map ready to be applied in a game engine or 3D printing workflow.
+
+Generate the actual image now.`;
     }
 }
 /**
@@ -420,14 +349,10 @@ function getTexturePromptWithColors(mode, angle, colorPalette, userDescription, 
     if (colorPalette.length === 0) {
         return basePrompt;
     }
-    // Inject color consistency instruction
+    // Inject color consistency instruction as narrative
     const colorHint = `
 
-**COLOR CONSISTENCY REQUIREMENT**
-IMPORTANT: To ensure color consistency with the mesh views, use ONLY these colors in your generated image:
-${colorPalette.join(', ')}
-
-These colors have been extracted from the mesh views. Your texture image MUST use the same color palette to ensure visual consistency across all views. Do not introduce new colors.`;
+For visual consistency with the mesh views, use only these specific colors: ${colorPalette.join(', ')}. These exact shades have been extracted from the mesh reference images. Stay strictly within this palette - do not introduce any new colors.`;
     // Insert color hint before the final "Generate the actual image" line
     const insertPoint = basePrompt.lastIndexOf('Generate the actual image');
     if (insertPoint > 0) {
