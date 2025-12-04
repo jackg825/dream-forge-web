@@ -507,16 +507,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             />
           )}
 
-          {/* Provider selector and Start button - only show after analysis completes */}
+          {/* Gemini model selector and Start button - only show after analysis completes */}
           {imageAnalysis && (
             <>
-              {/* 3D Provider selector (Hunyuan3D + Tripo3D only) */}
-              <ProviderSelector
-                value={selectedProvider}
-                onChange={setSelectedProvider}
+              {/* Gemini model selection for image generation */}
+              <GeminiModelSelector
+                value={geminiModel}
+                onChange={setGeminiModel}
                 disabled={actionLoading}
-                showCredits={true}
-                providers={['hunyuan', 'tripo']}
               />
 
               <div className="flex justify-center">
@@ -533,8 +531,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                     </>
                   ) : (
                     <>
-                      開始生成 ({GEMINI_MODEL_OPTIONS[geminiModel].creditCost} 點)
-                      <ChevronRight className="ml-2 h-4 w-4" />
+                      <Images className="mr-2 h-4 w-4" />
+                      生成多視角圖片 ({GEMINI_MODEL_OPTIONS[geminiModel].creditCost} 點)
                     </>
                   )}
                 </Button>
@@ -630,14 +628,24 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           />
         )}
 
-        {/* 3D Provider selection (Hunyuan3D + Tripo3D only) */}
-        <ProviderSelector
-          value={selectedProvider}
-          onChange={setSelectedProvider}
-          disabled={actionLoading || isGeneratingImages}
-          showCredits={true}
-          providers={['hunyuan', 'tripo']}
-        />
+        {/* Model selection based on current state */}
+        {!hasSomeImages ? (
+          // No multi-view images yet - show Gemini selector for image generation
+          <GeminiModelSelector
+            value={geminiModel}
+            onChange={setGeminiModel}
+            disabled={actionLoading || isGeneratingImages}
+          />
+        ) : (
+          // Images exist - show Provider selector for mesh generation
+          <ProviderSelector
+            value={selectedProvider}
+            onChange={setSelectedProvider}
+            disabled={actionLoading || isGeneratingImages}
+            showCredits={true}
+            providers={['hunyuan', 'tripo']}
+          />
+        )}
 
         {/* Action buttons */}
         <div className="flex justify-center gap-4 pt-4">
