@@ -36,10 +36,16 @@ export interface TripoImageToModelRequest {
     texture?: boolean;
     pbr?: boolean;
     texture_quality?: 'standard' | 'detailed';
+    texture_alignment?: 'original_image' | 'geometry';
+    geometry_quality?: 'standard' | 'detailed';
 }
 /**
  * Create task request (multiview to model)
  * files must be array of exactly 4 items: [front, left, back, right]
+ *
+ * Printing configurations:
+ * - FDM (geometry only): texture=false, pbr=false, geometry_quality='detailed'
+ * - Full-color resin: texture=true, pbr=true, texture_quality='detailed', texture_alignment='original_image'
  */
 export interface TripoMultiviewToModelRequest {
     type: 'multiview_to_model';
@@ -54,7 +60,11 @@ export interface TripoMultiviewToModelRequest {
     pbr?: boolean;
     face_limit?: number;
     texture_quality?: 'standard' | 'detailed';
+    texture_alignment?: 'original_image' | 'geometry';
+    geometry_quality?: 'standard' | 'detailed';
     auto_size?: boolean;
+    smart_low_poly?: boolean;
+    quad?: boolean;
 }
 /**
  * Upload image response

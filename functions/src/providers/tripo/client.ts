@@ -165,6 +165,10 @@ export class TripoProvider implements I3DProvider {
           geometry_quality: 'detailed',  // Keep detailed geometry for 3D printing accuracy
           model_version: 'v3.0-20250812',
           auto_size: true,
+          // 3D printing optimizations
+          quad: true,           // Quad faces are better for slicing and post-processing
+          face_limit: 200000,   // Balanced face count for printing (enough detail, not too heavy)
+          smart_low_poly: true, // Intelligent polygon reduction preserving important features
         };
 
         const response = await this.createTask(request);

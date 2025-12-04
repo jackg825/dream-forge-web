@@ -620,7 +620,6 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
     id: 'gemini-3-pro',
     name: 'Gemini 3.0 Pro',
     description: '高品質圖片生成，適合細節要求高的物件',
-    badge: '推薦',
     estimatedTime: '約 2-3 分鐘',
     creditCost: 10,
   },
@@ -628,6 +627,7 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
     description: '快速生成，適合快速測試',
+    badge: '推薦',
     estimatedTime: '約 1-2 分鐘',
     creditCost: 3,
   },
@@ -636,7 +636,7 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
 /**
  * Default Gemini model
  */
-export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-3-pro';
+export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-2.5-flash';
 
 /**
  * Pipeline status for new simplified workflow

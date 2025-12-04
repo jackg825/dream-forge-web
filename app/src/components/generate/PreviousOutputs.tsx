@@ -78,35 +78,38 @@ export function PreviousOutputs({
 
   return (
     <div className="space-y-4">
-      {/* Provider context */}
-      {pipeline.settings.provider && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>生成自:</span>
-          <ProviderBadge provider={pipeline.settings.provider} />
-        </div>
-      )}
-
-      {/* Generated Images Section */}
-      {showImagesSection && (
+      {/* Combined provider + images card */}
+      {(pipeline.settings.provider || showImagesSection) && (
         <div className="bg-muted/30 rounded-xl border border-border/50 overflow-hidden">
-          <Button
-            variant="ghost"
-            className="w-full flex items-center justify-between p-4 h-auto hover:bg-muted/50"
-            onClick={() => setImagesExpanded(!imagesExpanded)}
-          >
-            <div className="flex items-center gap-2">
-              <Images className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">視角圖片</span>
+          {/* Provider context header */}
+          {pipeline.settings.provider && (
+            <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-sm text-muted-foreground">
+              <span>生成自:</span>
+              <ProviderBadge provider={pipeline.settings.provider} />
             </div>
-            {imagesExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
+          )}
 
-          {imagesExpanded && (
-            <div className="px-4 pb-4 space-y-3">
+          {/* Generated Images Section */}
+          {showImagesSection && (
+            <>
+              <Button
+                variant="ghost"
+                className="w-full flex items-center justify-between px-4 py-3 h-auto hover:bg-muted/50 rounded-none"
+                onClick={() => setImagesExpanded(!imagesExpanded)}
+              >
+                <div className="flex items-center gap-2">
+                  <Images className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium">視角圖片</span>
+                </div>
+                {imagesExpanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+
+              {imagesExpanded && (
+                <div className="px-4 pb-4 space-y-3">
               {/* Mesh images - 4 columns */}
               {hasMeshImages && (
                 <div>
@@ -164,7 +167,9 @@ export function PreviousOutputs({
                   </div>
                 </div>
               )}
-            </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

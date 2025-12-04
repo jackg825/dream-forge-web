@@ -1133,22 +1133,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
         {/* Info and actions below viewer */}
         {pipeline && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Provider badge */}
-            <div className="flex items-center gap-2 p-4 bg-muted/30 rounded-xl">
-              <span className="text-sm text-muted-foreground">生成自:</span>
-              <Badge variant="outline" className="border-primary/50 text-primary">
-                {PROVIDER_OPTIONS[pipeline.settings?.provider || 'tripo']?.label || 'Tripo3D v3.0'}
-              </Badge>
-            </div>
-
-            {/* Previous outputs (collapsible) */}
-            <div className="md:col-span-1 lg:col-span-1">
-              <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={true} />
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Previous outputs with provider badge */}
+            <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={false} />
 
             {/* Action buttons */}
-            <div className="flex flex-col sm:flex-row md:flex-col gap-3">
+            <div className="flex flex-col gap-3">
               <Button
                 className="flex-1"
                 size="lg"
