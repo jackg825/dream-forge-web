@@ -64,3 +64,6 @@ export {
 
 // Image analysis (pre-upload Gemini analysis)
 export { analyzeUploadedImage } from './handlers/analyze';
+
+// Model format conversion (GLB to USDZ for iOS AR)
+export { convertToUsdz, checkUsdzAvailability } from './handlers/convert';

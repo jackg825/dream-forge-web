@@ -8,6 +8,9 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { UnifiedViewerToolbar } from '@/components/viewer/UnifiedViewerToolbar';
 import { DownloadPanel } from '@/components/viewer/DownloadPanel';
 import { useLighting } from '@/hooks/useLighting';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { useARLaunch } from '@/hooks/useARLaunch';
+import { cn } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
 import { Link, useRouter } from '@/i18n/navigation';
@@ -22,6 +25,7 @@ import {
   Loader2,
   RefreshCw,
   PanelRight,
+  Minimize,
 } from 'lucide-react';
 import type { JobStatus, ViewMode } from '@/types';
 import type { ModelViewerRef } from '@/components/viewer/ModelViewer';
@@ -60,7 +64,6 @@ function ViewerContentInner() {
   const [showGrid, setShowGrid] = useState(true);
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Lighting state
   const {
@@ -115,14 +118,23 @@ function ViewerContentInner() {
     }
   }, [job?.settings.printerType, hasTextures]);
 
-  // Fullscreen change listener
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+  // Fullscreen hook with iOS fallback
+  const {
+    isFullscreen,
+    isPseudoFullscreen,
+    toggleFullscreen,
+  } = useFullscreen(viewerContainerRef);
+
+  // AR hook for mobile preview
+  const {
+    isARSupported,
+    isLoading: arLoading,
+    launchAR,
+  } = useARLaunch({
+    glbUrl: job?.outputModelUrl || '',
+    // USDZ URL would be added here when backend conversion is ready
+    // usdzUrl: job?.outputModelUsdzUrl,
+  });
 
   // Handlers
   const handleScreenshot = useCallback(() => {
@@ -135,13 +147,7 @@ function ViewerContentInner() {
     }
   }, []);
 
-  const handleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      viewerContainerRef.current?.requestFullscreen();
-    }
-  }, []);
+  const handleFullscreen = toggleFullscreen;
 
   const handleReset = useCallback(() => {
     modelViewerRef.current?.resetCamera();
@@ -322,12 +328,41 @@ function ViewerContentInner() {
         {/* Completed state with viewer */}
         {job.status === 'completed' && job.outputModelUrl && (
           <div className="relative">
+            {/* Pseudo-fullscreen backdrop (iOS) */}
+            {isPseudoFullscreen && (
+              <div
+                className="pseudo-fullscreen-backdrop"
+                onClick={toggleFullscreen}
+              />
+            )}
+
             {/* Full-width 3D Viewer */}
             <div
               ref={viewerContainerRef}
-              className="relative bg-gray-900 rounded-2xl overflow-hidden border border-white/10 w-full h-[calc(100dvh-120px)] min-h-[400px]"
-              style={isFullscreen ? { height: '100vh' } : undefined}
+              className={cn(
+                'relative bg-gray-900 overflow-hidden border border-white/10 w-full',
+                isPseudoFullscreen
+                  ? 'pseudo-fullscreen pseudo-fullscreen-safe pseudo-fullscreen-animate'
+                  : 'rounded-2xl h-[calc(100dvh-120px)] min-h-[400px]'
+              )}
+              style={isFullscreen && !isPseudoFullscreen ? { height: '100vh' } : undefined}
             >
+              {/* Close button for pseudo-fullscreen (iOS) */}
+              {isPseudoFullscreen && (
+                <button
+                  onClick={toggleFullscreen}
+                  className="absolute top-4 right-4 z-[10000] p-2.5 rounded-full
+                             bg-black/60 hover:bg-black/80 transition-colors
+                             text-white/80 hover:text-white"
+                  style={{
+                    marginTop: 'env(safe-area-inset-top, 0)',
+                    marginRight: 'env(safe-area-inset-right, 0)',
+                  }}
+                >
+                  <Minimize className="w-5 h-5" />
+                </button>
+              )}
+
               <ModelViewer
                 ref={modelViewerRef}
                 modelUrl={job.outputModelUrl}
@@ -364,6 +399,9 @@ function ViewerContentInner() {
                 onFullscreen={handleFullscreen}
                 isFullscreen={isFullscreen}
                 onReset={handleReset}
+                onAR={launchAR}
+                arLoading={arLoading}
+                arSupported={isARSupported && isMobile}
                 portalContainer={viewerContainerRef.current}
               />
             </div>

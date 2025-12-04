@@ -8,3 +8,4 @@ export { optimizeColorsForH2C, uploadEditedH2CImage, } from './handlers/h2c';
 export { createPipeline, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, updatePipelineAnalysis, resetPipelineStep, } from './handlers/pipeline';
 export { submitGeminiBatch, pollGeminiBatchJobs, } from './handlers/gemini-batch';
 export { analyzeUploadedImage } from './handlers/analyze';
+export { convertToUsdz, checkUsdzAvailability } from './handlers/convert';

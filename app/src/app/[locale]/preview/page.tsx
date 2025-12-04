@@ -10,11 +10,13 @@ import { ClippingPlaneControls, type ClippingAxis } from '@/components/preview/C
 import { UnifiedViewerToolbar } from '@/components/viewer/UnifiedViewerToolbar';
 import { useLighting } from '@/hooks/useLighting';
 import { useModelLoader } from '@/hooks/useModelLoader';
+import { useFullscreen } from '@/hooks/useFullscreen';
+import { cn } from '@/lib/utils';
 import { Link } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, Loader2, Sparkles, RefreshCw } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, RefreshCw, Minimize } from 'lucide-react';
 
 // Dynamic import for PreviewViewer to avoid SSR issues with Three.js
 const PreviewViewer = dynamic(
@@ -60,31 +62,15 @@ export default function PreviewPage() {
   const [showGrid, setShowGrid] = useState(false);
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Handle fullscreen toggle
-  const handleFullscreen = useCallback(() => {
-    if (!viewerContainerRef.current) return;
+  // Fullscreen hook with iOS fallback
+  const {
+    isFullscreen,
+    isPseudoFullscreen,
+    toggleFullscreen,
+  } = useFullscreen(viewerContainerRef);
 
-    if (!document.fullscreenElement) {
-      viewerContainerRef.current.requestFullscreen().catch((err) => {
-        console.error('Error entering fullscreen:', err);
-      });
-    } else {
-      document.exitFullscreen();
-    }
-  }, []);
-
-  // Listen for fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
+  const handleFullscreen = toggleFullscreen;
 
   const handleFileSelect = useCallback(
     (file: File) => {
@@ -171,8 +157,41 @@ export default function PreviewPage() {
 
             {/* 3D Viewer */}
             {hasModel && (
-              <Card className="overflow-hidden">
-                <div ref={viewerContainerRef} className="relative h-[500px]">
+              <Card className={cn(
+                'overflow-hidden',
+                isPseudoFullscreen && 'pseudo-fullscreen pseudo-fullscreen-safe pseudo-fullscreen-animate border-0 rounded-none'
+              )}>
+                {/* Pseudo-fullscreen backdrop (iOS) */}
+                {isPseudoFullscreen && (
+                  <div
+                    className="pseudo-fullscreen-backdrop"
+                    onClick={toggleFullscreen}
+                  />
+                )}
+
+                <div
+                  ref={viewerContainerRef}
+                  className={cn(
+                    'relative',
+                    isPseudoFullscreen ? 'h-full' : 'h-[500px]'
+                  )}
+                >
+                  {/* Close button for pseudo-fullscreen (iOS) */}
+                  {isPseudoFullscreen && (
+                    <button
+                      onClick={toggleFullscreen}
+                      className="absolute top-4 right-4 z-[10000] p-2.5 rounded-full
+                                 bg-black/60 hover:bg-black/80 transition-colors
+                                 text-white/80 hover:text-white"
+                      style={{
+                        marginTop: 'env(safe-area-inset-top, 0)',
+                        marginRight: 'env(safe-area-inset-right, 0)',
+                      }}
+                    >
+                      <Minimize className="w-5 h-5" />
+                    </button>
+                  )}
+
                   <PreviewViewer
                     geometry={model.geometry}
                     group={model.group}

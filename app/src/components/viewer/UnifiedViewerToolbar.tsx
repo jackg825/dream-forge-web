@@ -13,6 +13,8 @@ import {
   RefreshCw,
   ChevronDown,
   Check,
+  Box,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
@@ -67,6 +69,11 @@ interface UnifiedViewerToolbarProps {
   onFullscreen?: () => void;
   isFullscreen?: boolean;
   onReset: () => void;
+
+  // AR (mobile only)
+  onAR?: () => void;
+  arLoading?: boolean;
+  arSupported?: boolean;
 
   // Container for portals (needed for fullscreen mode)
   portalContainer?: HTMLElement | null;
@@ -145,6 +152,11 @@ export function UnifiedViewerToolbar({
   onFullscreen,
   isFullscreen = false,
   onReset,
+
+  // AR
+  onAR,
+  arLoading = false,
+  arSupported = false,
 
   // Portal
   portalContainer,
@@ -452,6 +464,34 @@ export function UnifiedViewerToolbar({
               截圖
             </TooltipContent>
           </Tooltip>
+
+          {/* AR Preview (mobile only) */}
+          {arSupported && onAR && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onAR}
+                  disabled={arLoading}
+                  className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                >
+                  {arLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Box className="w-4 h-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                className="bg-black/90 text-white border-white/10"
+                {...portalProps}
+              >
+                AR 預覽
+              </TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Fullscreen */}
           {onFullscreen && (
