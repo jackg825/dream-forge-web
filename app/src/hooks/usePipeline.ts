@@ -21,6 +21,7 @@ import type {
   PipelineMeshAngle,
   PipelineTextureAngle,
   GenerationModeId,
+  GeminiModelId,
   ProcessingMode,
   ImageAnalysisResult,
   ModelProvider,
@@ -59,7 +60,8 @@ interface UsePipelineReturn {
     generationMode?: GenerationModeId,
     processingMode?: ProcessingMode,
     userDescription?: string,
-    imageAnalysis?: ImageAnalysisResult
+    imageAnalysis?: ImageAnalysisResult,
+    geminiModel?: GeminiModelId
   ) => Promise<string>;
   generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
   submitBatch: (overridePipelineId?: string) => Promise<SubmitBatchResponse>;
@@ -186,7 +188,8 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       generationMode?: GenerationModeId,
       processingMode?: ProcessingMode,
       userDescription?: string,
-      imageAnalysis?: ImageAnalysisResult
+      imageAnalysis?: ImageAnalysisResult,
+      geminiModel?: GeminiModelId
     ): Promise<string> => {
       if (!functions) {
         throw new Error('Firebase not initialized');
@@ -201,6 +204,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
             processingMode?: ProcessingMode;
             userDescription?: string;
             imageAnalysis?: ImageAnalysisResult;
+            geminiModel?: GeminiModelId;
           },
           CreatePipelineResponse
         >(functions, 'createPipeline');
@@ -212,6 +216,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
           processingMode,
           userDescription,
           imageAnalysis,
+          geminiModel,
         });
         return result.data.pipelineId;
       } catch (err) {

@@ -773,6 +773,12 @@ export const MESH_PRECISION_OPTIONS: Record<MeshPrecision, {
 export const DEFAULT_MESH_PRECISION: MeshPrecision = 'standard';
 
 /**
+ * Maximum number of image regenerations allowed per pipeline
+ * Since credits are only charged once per pipeline, we limit regenerations
+ */
+export const MAX_REGENERATIONS = 4;
+
+/**
  * Pipeline settings
  */
 export interface PipelineSettings {
@@ -780,6 +786,7 @@ export interface PipelineSettings {
   printerType: PrinterType;
   format: OutputFormat;
   generationMode?: GenerationModeId;
+  geminiModel?: GeminiModelId;    // Gemini model used for image generation
   meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
   colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
   provider?: ModelProvider;       // 3D generation provider (default: 'meshy')
@@ -855,6 +862,9 @@ export interface Pipeline {
     mesh: number;
     texture: number;
   };
+
+  // Regeneration tracking (max 4 per pipeline)
+  regenerationsUsed?: number;
 
   // Settings
   settings: PipelineSettings;

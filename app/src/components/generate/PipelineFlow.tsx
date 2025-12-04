@@ -60,6 +60,7 @@ import {
   DEFAULT_PROCESSING_MODE,
   DEFAULT_MESH_PRECISION,
   DEFAULT_GEMINI_MODEL,
+  MAX_REGENERATIONS,
   PROVIDER_OPTIONS,
   GEMINI_MODEL_OPTIONS,
 } from '@/types';
@@ -334,7 +335,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         generationMode,
         processingMode,
         finalDescription,
-        imageAnalysis || undefined
+        imageAnalysis || undefined,
+        geminiModel
       );
       setPipelineId(newPipelineId);
 
@@ -376,7 +378,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         generationMode,
         processingMode,
         result.description,
-        result
+        result,
+        geminiModel
       );
 
       // Update state and URL so user can return to this draft
@@ -422,8 +425,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   };
 
+  // Check if regeneration is allowed (within limit)
+  const regenerationsUsed = pipeline?.regenerationsUsed || 0;
+  const regenerationsRemaining = MAX_REGENERATIONS - regenerationsUsed;
+  const canRegenerate = regenerationsRemaining > 0;
+
   // Open regenerate dialog
   const openRegenerateDialog = (viewType: 'mesh' | 'texture', angle: string) => {
+    if (!canRegenerate) {
+      // Limit reached, don't open dialog
+      return;
+    }
     setRegenerateTarget({ viewType, angle });
     setRegenerateDialogOpen(true);
   };
@@ -772,16 +784,21 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                     ) : (
                       <Skeleton className="w-full aspect-square" />
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         size="sm"
                         variant="secondary"
                         onClick={() => openRegenerateDialog('mesh', angle)}
-                        disabled={actionLoading || regenerateLoading}
+                        disabled={actionLoading || regenerateLoading || !canRegenerate}
                       >
                         <RefreshCw className="h-4 w-4 mr-1" />
                         重新生成
                       </Button>
+                      {canRegenerate ? (
+                        <span className="text-xs text-white/70">剩餘 {regenerationsRemaining} 次</span>
+                      ) : (
+                        <span className="text-xs text-red-300">已達上限</span>
+                      )}
                     </div>
                     <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
                       {angle === 'front' ? '正面' : angle === 'back' ? '背面' : angle === 'left' ? '左側' : '右側'}

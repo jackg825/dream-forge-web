@@ -215,6 +215,7 @@ export interface PipelineSettings {
     printerType: PrinterType;
     format: OutputFormat;
     generationMode?: GenerationModeId;
+    geminiModel?: 'gemini-3-pro' | 'gemini-2.5-flash';
     meshPrecision?: MeshPrecision;
     colorCount?: number;
     provider?: ProviderType;
@@ -275,6 +276,7 @@ export interface PipelineDocument {
         mesh: number;
         texture: number;
     };
+    regenerationsUsed?: number;
     settings: PipelineSettings;
     userDescription?: string | null;
     imageAnalysis?: ImageAnalysisResult;

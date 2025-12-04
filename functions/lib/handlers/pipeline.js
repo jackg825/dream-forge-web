@@ -70,6 +70,8 @@ const PIPELINE_CREDITS = {
     MESH: 5, // Default (overridden by provider)
     TEXTURE: 10, // Meshy Retexture only
 };
+// Maximum regenerations allowed per pipeline (credits only charged once)
+const MAX_REGENERATIONS = 4;
 // ============================================
 // Helper Functions
 // ============================================
@@ -131,7 +133,7 @@ exports.createPipeline = functions
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to create a pipeline');
     }
     const userId = context.auth.uid;
-    const { imageUrls, settings, generationMode, userDescription, imageAnalysis } = data;
+    const { imageUrls, settings, generationMode, userDescription, imageAnalysis, geminiModel } = data;
     if (!imageUrls || imageUrls.length === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'At least one image URL is required');
     }
@@ -159,11 +161,13 @@ exports.createPipeline = functions
             mesh: 0,
             texture: 0,
         },
+        regenerationsUsed: 0, // Track regeneration count (max 4 per pipeline)
         settings: {
             quality: settings?.quality || 'standard',
             printerType: settings?.printerType || 'fdm',
             format: settings?.format || 'glb',
             generationMode: modeId,
+            geminiModel: geminiModel || 'gemini-2.5-flash', // Default to fast model
             colorCount: settings?.colorCount,
         },
         userDescription: userDescription || null,
@@ -431,6 +435,11 @@ exports.regeneratePipelineImage = functions
     if (pipeline.status !== 'images-ready') {
         throw new functions.https.HttpsError('failed-precondition', 'Can only regenerate images when status is images-ready');
     }
+    // Check regeneration limit
+    const regenerationsUsed = pipeline.regenerationsUsed || 0;
+    if (regenerationsUsed >= MAX_REGENERATIONS) {
+        throw new functions.https.HttpsError('resource-exhausted', `已達重新生成上限 (${MAX_REGENERATIONS} 次)`);
+    }
     try {
         // Download reference image
         const referenceImageUrl = pipeline.inputImages[0].url;
@@ -456,9 +465,10 @@ exports.regeneratePipelineImage = functions
             if (view.colorPalette && view.colorPalette.length > 0) {
                 processedMeshImage.colorPalette = view.colorPalette;
             }
-            // Update the mesh image first
+            // Update the mesh image and increment regeneration counter
             await pipelineRef.update({
                 [`meshImages.${angle}`]: processedMeshImage,
+                regenerationsUsed: admin.firestore.FieldValue.increment(1),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
             // Re-aggregate color palette from all mesh views (including the new one)
@@ -535,8 +545,10 @@ exports.regeneratePipelineImage = functions
                 source: 'gemini',
                 generatedAt: now,
             };
+            // Update texture image and increment regeneration counter
             await pipelineRef.update({
                 [`textureImages.${angle}`]: processedImage,
+                regenerationsUsed: admin.firestore.FieldValue.increment(1),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
             functions.logger.info('Pipeline texture image regenerated', { pipelineId, angle });

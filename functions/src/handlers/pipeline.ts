@@ -58,7 +58,11 @@ interface CreatePipelineData {
   generationMode?: GenerationModeId;  // A/B testing mode
   userDescription?: string;  // Optional description of the object for better AI generation
   imageAnalysis?: import('../rodin/types').ImageAnalysisResult;  // Pre-analysis results from Gemini
+  geminiModel?: 'gemini-3-pro' | 'gemini-2.5-flash';  // Gemini model for image generation
 }
+
+// Maximum regenerations allowed per pipeline (credits only charged once)
+const MAX_REGENERATIONS = 4;
 
 interface GeneratePipelineImagesData {
   pipelineId: string;
@@ -174,7 +178,7 @@ export const createPipeline = functions
     }
 
     const userId = context.auth.uid;
-    const { imageUrls, settings, generationMode, userDescription, imageAnalysis } = data;
+    const { imageUrls, settings, generationMode, userDescription, imageAnalysis, geminiModel } = data;
 
     if (!imageUrls || imageUrls.length === 0) {
       throw new functions.https.HttpsError(
@@ -213,11 +217,13 @@ export const createPipeline = functions
         mesh: 0,
         texture: 0,
       },
+      regenerationsUsed: 0,  // Track regeneration count (max 4 per pipeline)
       settings: {
         quality: settings?.quality || 'standard',
         printerType: settings?.printerType || 'fdm',
         format: settings?.format || 'glb',
         generationMode: modeId,
+        geminiModel: geminiModel || 'gemini-2.5-flash',  // Default to fast model
         colorCount: settings?.colorCount,
       },
       userDescription: userDescription || null,
@@ -548,6 +554,15 @@ export const regeneratePipelineImage = functions
       );
     }
 
+    // Check regeneration limit
+    const regenerationsUsed = pipeline.regenerationsUsed || 0;
+    if (regenerationsUsed >= MAX_REGENERATIONS) {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        `已達重新生成上限 (${MAX_REGENERATIONS} 次)`
+      );
+    }
+
     try {
       // Download reference image
       const referenceImageUrl = pipeline.inputImages[0].url;
@@ -578,9 +593,10 @@ export const regeneratePipelineImage = functions
           processedMeshImage.colorPalette = view.colorPalette;
         }
 
-        // Update the mesh image first
+        // Update the mesh image and increment regeneration counter
         await pipelineRef.update({
           [`meshImages.${angle}`]: processedMeshImage,
+          regenerationsUsed: admin.firestore.FieldValue.increment(1),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
@@ -674,8 +690,10 @@ export const regeneratePipelineImage = functions
           generatedAt: now as unknown as FirebaseFirestore.Timestamp,
         };
 
+        // Update texture image and increment regeneration counter
         await pipelineRef.update({
           [`textureImages.${angle}`]: processedImage,
+          regenerationsUsed: admin.firestore.FieldValue.increment(1),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 

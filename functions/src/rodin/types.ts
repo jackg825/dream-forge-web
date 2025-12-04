@@ -367,6 +367,7 @@ export interface PipelineSettings {
   printerType: PrinterType;
   format: OutputFormat;
   generationMode?: GenerationModeId;
+  geminiModel?: 'gemini-3-pro' | 'gemini-2.5-flash';  // Gemini model for image generation
   meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
   colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
   provider?: ProviderType;        // 3D generation provider (default: 'meshy')
@@ -450,6 +451,9 @@ export interface PipelineDocument {
     mesh: number;     // 5 when mesh generated
     texture: number;  // 10 when texture generated
   };
+
+  // Regeneration tracking (max 4 per pipeline since credits only charged once)
+  regenerationsUsed?: number;
 
   // Generation settings
   settings: PipelineSettings;
