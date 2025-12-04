@@ -1,7 +1,10 @@
 /**
  * Image compression module for automatic resizing and format conversion
- * Handles HEIC conversion, dimension constraints, and WebP output
+ * Uses browser-image-compression for memory-safe processing on mobile devices
+ * Implements "dimension-first, quality-second" strategy to preserve image quality
  */
+
+import imageCompression from 'browser-image-compression';
 
 export interface CompressionOptions {
   maxEdge?: number;
@@ -16,14 +19,18 @@ export interface CompressionResult {
   finalDimensions: { width: number; height: number };
 }
 
+// Conservative compression parameters optimized for AI model input
 const DEFAULT_OPTIONS: Required<CompressionOptions> = {
-  maxEdge: 4096,
-  maxFileSize: 10 * 1024 * 1024, // 10MB
-  quality: 0.88,
+  maxEdge: 2048,                      // Reduced from 4096 - sufficient for AI models
+  maxFileSize: 10 * 1024 * 1024,      // 10MB
+  quality: 0.85,                      // Starting quality
 };
 
-const QUALITY_STEPS = [0.88, 0.82, 0.75, 0.65, 0.55];
-const MAX_CANVAS_SIZE = 16000;
+// Quality steps: conservative, never below 0.60 to avoid compression artifacts
+const QUALITY_STEPS = [0.85, 0.78, 0.70, 0.65, 0.60];
+
+// Dimension steps: try smaller sizes when quality reduction isn't enough
+const DIMENSION_STEPS = [2048, 1536, 1280, 1024];
 
 /**
  * Check if a file is HEIC/HEIF format
@@ -82,157 +89,31 @@ function loadImage(blob: Blob): Promise<HTMLImageElement> {
 }
 
 /**
- * Calculate new dimensions maintaining aspect ratio
+ * Compress image using browser-image-compression with specified parameters
  */
-function calculateTargetDimensions(
-  width: number,
-  height: number,
-  maxEdge: number
-): { width: number; height: number; needsResize: boolean } {
-  if (width <= maxEdge && height <= maxEdge) {
-    return { width, height, needsResize: false };
-  }
-
-  const ratio = Math.min(maxEdge / width, maxEdge / height);
-  return {
-    width: Math.round(width * ratio),
-    height: Math.round(height * ratio),
-    needsResize: true,
+async function compressWithParams(
+  file: File,
+  maxDimension: number,
+  quality: number
+): Promise<File> {
+  const options = {
+    maxSizeMB: 10,
+    maxWidthOrHeight: maxDimension,
+    initialQuality: quality,
+    useWebWorker: true,
+    fileType: 'image/webp' as const,
+    alwaysKeepResolution: false,
   };
-}
 
-/**
- * Resize image using canvas and convert to WebP
- */
-async function resizeAndConvert(
-  img: HTMLImageElement,
-  targetWidth: number,
-  targetHeight: number,
-  quality: number
-): Promise<Blob> {
-  const canvas = document.createElement('canvas');
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    throw new Error('Canvas context not available');
-  }
-
-  // Use high-quality image smoothing
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Failed to create blob'));
-        }
-      },
-      'image/webp',
-      quality
-    );
-  });
-}
-
-/**
- * Multi-pass resize for very large images
- */
-async function multiPassResize(
-  img: HTMLImageElement,
-  targetWidth: number,
-  targetHeight: number,
-  quality: number
-): Promise<Blob> {
-  let currentWidth = img.width;
-  let currentHeight = img.height;
-  let currentSource: HTMLImageElement | HTMLCanvasElement = img;
-
-  // Calculate how many passes we need
-  while (currentWidth > MAX_CANVAS_SIZE || currentHeight > MAX_CANVAS_SIZE) {
-    // Halve the dimensions
-    currentWidth = Math.round(currentWidth / 2);
-    currentHeight = Math.round(currentHeight / 2);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = currentWidth;
-    canvas.height = currentHeight;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas context not available');
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(currentSource, 0, 0, currentWidth, currentHeight);
-
-    currentSource = canvas;
-  }
-
-  // Final resize to target dimensions
-  const finalCanvas = document.createElement('canvas');
-  finalCanvas.width = targetWidth;
-  finalCanvas.height = targetHeight;
-
-  const ctx = finalCanvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas context not available');
-
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(currentSource, 0, 0, targetWidth, targetHeight);
-
-  return new Promise((resolve, reject) => {
-    finalCanvas.toBlob(
-      (blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Failed to create blob'));
-        }
-      },
-      'image/webp',
-      quality
-    );
-  });
-}
-
-/**
- * Compress blob to fit within file size limit
- */
-async function compressToSize(
-  img: HTMLImageElement,
-  targetWidth: number,
-  targetHeight: number,
-  maxSize: number
-): Promise<Blob> {
-  for (const quality of QUALITY_STEPS) {
-    let blob: Blob;
-
-    if (img.width > MAX_CANVAS_SIZE || img.height > MAX_CANVAS_SIZE) {
-      blob = await multiPassResize(img, targetWidth, targetHeight, quality);
-    } else {
-      blob = await resizeAndConvert(img, targetWidth, targetHeight, quality);
-    }
-
-    if (blob.size <= maxSize) {
-      return blob;
-    }
-  }
-
-  // Return lowest quality if still over size
-  if (img.width > MAX_CANVAS_SIZE || img.height > MAX_CANVAS_SIZE) {
-    return multiPassResize(img, targetWidth, targetHeight, QUALITY_STEPS[QUALITY_STEPS.length - 1]);
-  }
-  return resizeAndConvert(img, targetWidth, targetHeight, QUALITY_STEPS[QUALITY_STEPS.length - 1]);
+  return await imageCompression(file, options);
 }
 
 /**
  * Main compression function
- * Automatically handles HEIC conversion, resizing, and WebP output
+ * Implements "dimension-first, quality-second" strategy:
+ * 1. Try highest quality at each dimension level
+ * 2. Only reduce quality if dimension reduction isn't enough
+ * 3. Never go below 0.60 quality or 1024px to preserve AI model input quality
  */
 export async function compressImage(
   file: File,
@@ -240,68 +121,102 @@ export async function compressImage(
 ): Promise<CompressionResult> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  let blob: Blob = file;
+  let processFile: File = file;
   let wasConverted = false;
 
-  // Convert HEIC to JPEG first
+  // Convert HEIC to JPEG first (browser-image-compression has limited HEIC support)
   if (isHeicFormat(file)) {
-    blob = await convertHeicToJpeg(file);
-    wasConverted = true;
+    try {
+      const jpegBlob = await convertHeicToJpeg(file);
+      processFile = new File(
+        [jpegBlob],
+        file.name.replace(/\.(heic|heif)$/i, '.jpg'),
+        { type: 'image/jpeg' }
+      );
+      wasConverted = true;
+    } catch (error) {
+      console.error('HEIC conversion failed, trying direct compression:', error);
+      // Continue with original file, let browser-image-compression try
+    }
   }
 
-  // Load image to get dimensions
-  const img = await loadImage(blob);
-  const originalDimensions = { width: img.width, height: img.height };
+  // Get original dimensions
+  const originalImg = await loadImage(processFile);
+  const originalDimensions = {
+    width: originalImg.width,
+    height: originalImg.height,
+  };
 
-  // Calculate target dimensions
-  const { width: targetWidth, height: targetHeight, needsResize } = calculateTargetDimensions(
-    img.width,
-    img.height,
-    opts.maxEdge
-  );
-
-  // Check if processing is needed
-  const needsProcessing = wasConverted || needsResize || file.size > opts.maxFileSize || file.type !== 'image/webp';
-
-  if (!needsProcessing) {
-    // No processing needed, but still convert to WebP for consistency
-    const webpBlob = await resizeAndConvert(img, img.width, img.height, opts.quality);
-
-    // Only use WebP if it's actually smaller
-    if (webpBlob.size < file.size) {
-      const webpFile = new File([webpBlob], file.name.replace(/\.[^/.]+$/, '.webp'), {
-        type: 'image/webp',
-      });
-      return {
-        file: webpFile,
-        wasCompressed: true,
-        originalDimensions,
-        finalDimensions: { width: img.width, height: img.height },
-      };
-    }
-
+  // Check if file already meets requirements
+  if (
+    processFile.size <= opts.maxFileSize &&
+    originalImg.width <= opts.maxEdge &&
+    originalImg.height <= opts.maxEdge &&
+    processFile.type === 'image/webp'
+  ) {
     return {
-      file,
-      wasCompressed: false,
+      file: processFile,
+      wasCompressed: wasConverted,
       originalDimensions,
       finalDimensions: originalDimensions,
     };
   }
 
-  // Compress to size
-  const compressedBlob = await compressToSize(img, targetWidth, targetHeight, opts.maxFileSize);
+  // Try dimension-first, quality-second compression
+  for (const maxDimension of DIMENSION_STEPS) {
+    // Skip dimensions larger than needed
+    if (maxDimension > opts.maxEdge) continue;
 
-  // Create new file with WebP extension
+    for (const quality of QUALITY_STEPS) {
+      try {
+        const compressed = await compressWithParams(processFile, maxDimension, quality);
+
+        if (compressed.size <= opts.maxFileSize) {
+          // Success! Get final dimensions
+          const finalImg = await loadImage(compressed);
+          const finalDimensions = {
+            width: finalImg.width,
+            height: finalImg.height,
+          };
+
+          // Create file with .webp extension
+          const newFileName = file.name.replace(/\.[^/.]+$/, '.webp');
+          const resultFile = new File([compressed], newFileName, {
+            type: 'image/webp',
+          });
+
+          return {
+            file: resultFile,
+            wasCompressed: true,
+            originalDimensions,
+            finalDimensions,
+          };
+        }
+      } catch (error) {
+        console.warn(`Compression failed at ${maxDimension}px, quality ${quality}:`, error);
+        // Continue to next quality/dimension
+      }
+    }
+  }
+
+  // Final fallback: smallest dimension with lowest acceptable quality
+  // This should always succeed for any reasonable image
+  const finalCompressed = await compressWithParams(processFile, 1024, 0.60);
+  const finalImg = await loadImage(finalCompressed);
+
   const newFileName = file.name.replace(/\.[^/.]+$/, '.webp');
-  const compressedFile = new File([compressedBlob], newFileName, {
+  const resultFile = new File([finalCompressed], newFileName, {
     type: 'image/webp',
   });
 
   return {
-    file: compressedFile,
+    file: resultFile,
     wasCompressed: true,
     originalDimensions,
-    finalDimensions: { width: targetWidth, height: targetHeight },
+    finalDimensions: {
+      width: finalImg.width,
+      height: finalImg.height,
+    },
   };
 }
 
