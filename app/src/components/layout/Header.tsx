@@ -44,6 +44,7 @@ import {
   Monitor,
   Globe,
   Palette,
+  Settings,
   Settings2,
   Wand2,
   Menu,
@@ -212,9 +213,29 @@ export function Header() {
                     </Link>
                   );
                 })}
+
+                {/* Settings link for logged-in users */}
+                {user && (
+                  <Link
+                    href="/settings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition-colors',
+                      'min-h-[48px]',
+                      isActivePath('/settings')
+                        ? 'bg-accent text-accent-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground active:bg-accent/80'
+                    )}
+                  >
+                    <Settings className="h-5 w-5 shrink-0" />
+                    <span>{t('nav.settings')}</span>
+                    <ChevronRight className="ml-auto h-4 w-4 opacity-50" />
+                  </Link>
+                )}
               </div>
 
-              {/* Settings section */}
+              {/* Settings section for non-logged-in users */}
+              {!user && (
               <div className="mt-6 pt-4 border-t space-y-1">
                 {/* Theme options */}
                 <div className="px-3 py-2">
@@ -274,6 +295,7 @@ export function Header() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Sign in/out */}
               <div className="mt-6 pt-4 border-t">
