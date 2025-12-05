@@ -706,7 +706,10 @@
         "collectible": "收藏品",
         "decor": "居家裝飾",
         "product": "產品",
-        "art": "藝術雕塑"
+        "art": "藝術雕塑",
+        "character": "角色",
+        "environment": "場景",
+        "concept": "概念"
       },
       "examples": {
         "puppy": {
@@ -729,7 +732,8 @@
           "after": "3D 渲染雕塑",
           "description": "古典雕塑完整呈現於 3D"
         }
-      }
+      },
+      "dragToRotate": "拖曳旋轉 3D 模型"
     },
     "howItWorks": {
       "badge": "簡單流程",

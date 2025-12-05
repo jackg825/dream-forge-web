@@ -706,7 +706,10 @@
         "collectible": "Collectibles",
         "decor": "Home Decor",
         "product": "Products",
-        "art": "Art & Sculpture"
+        "art": "Art & Sculpture",
+        "character": "Characters",
+        "environment": "Environments",
+        "concept": "Concepts"
       },
       "examples": {
         "puppy": {
@@ -729,7 +732,8 @@
           "after": "3D rendered sculpture",
           "description": "Classical sculpture captured in full 3D detail"
         }
-      }
+      },
+      "dragToRotate": "Drag to rotate the 3D model"
     },
     "howItWorks": {
       "badge": "Simple Process",
