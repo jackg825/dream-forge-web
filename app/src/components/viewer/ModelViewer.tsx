@@ -5,6 +5,7 @@ import { Canvas, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, Environment, useGLTF, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import type { ViewMode } from '@/types';
 import type { LightingState } from '@/types/lighting';
 import { SceneLighting } from './SceneLighting';
@@ -319,6 +320,144 @@ function STLModel({
 }
 
 /**
+ * FBX Model component - loads FBX with materials
+ * FBX files may use MeshPhongMaterial or MeshStandardMaterial
+ */
+function FBXModel({
+  url,
+  viewMode,
+  autoOrient = true,
+  rotation,
+}: {
+  url: string;
+  viewMode: ViewMode;
+  autoOrient?: boolean;
+  rotation?: ModelRotation;
+}) {
+  const fbx = useLoader(FBXLoader, url);
+  const { invalidate } = useThree();
+  const groupRef = useRef<THREE.Group>(null);
+  const originalMaterialsRef = useRef<Map<THREE.Material, {
+    color: THREE.Color;
+    map: THREE.Texture | null;
+    wireframe: boolean;
+  }>>(new Map());
+
+  // Clone FBX to avoid modifying original
+  const clonedFbx = useMemo(() => fbx.clone(), [fbx]);
+
+  // Store original material properties on first render
+  useEffect(() => {
+    if (originalMaterialsRef.current.size === 0) {
+      clonedFbx.traverse((child) => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const materials = Array.isArray(child.material)
+            ? child.material
+            : [child.material];
+
+          materials.forEach((mat) => {
+            if (!originalMaterialsRef.current.has(mat)) {
+              const color = 'color' in mat ? (mat as THREE.MeshStandardMaterial).color.clone() : new THREE.Color('#808080');
+              const map = 'map' in mat ? (mat as THREE.MeshStandardMaterial).map : null;
+
+              originalMaterialsRef.current.set(mat, {
+                color,
+                map,
+                wireframe: false,
+              });
+            }
+          });
+        }
+      });
+    }
+  }, [clonedFbx]);
+
+  // Apply transforms
+  useEffect(() => {
+    if (!groupRef.current) return;
+
+    // Reset transforms
+    groupRef.current.position.set(0, 0, 0);
+    groupRef.current.rotation.set(0, 0, 0);
+    groupRef.current.scale.set(1, 1, 1);
+
+    // Apply Z-up to Y-up rotation if enabled
+    if (autoOrient) {
+      applyZUpToYUpRotation(clonedFbx);
+    }
+
+    clonedFbx.updateMatrixWorld(true);
+
+    // Compute bounding box and scale
+    const box = new THREE.Box3().setFromObject(clonedFbx);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 3 / maxDim;
+    groupRef.current.scale.setScalar(scale);
+
+    // Center the model
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    groupRef.current.position.copy(center.multiplyScalar(-scale));
+
+    groupRef.current.updateMatrixWorld(true);
+
+    // Align to ground plane
+    alignToGroundPlane(groupRef.current, -1.5);
+
+    // Apply user rotation
+    if (rotation) {
+      groupRef.current.rotation.x += THREE.MathUtils.degToRad(rotation.x);
+      groupRef.current.rotation.y += THREE.MathUtils.degToRad(rotation.y);
+      groupRef.current.rotation.z += THREE.MathUtils.degToRad(rotation.z);
+    }
+
+    invalidate();
+  }, [clonedFbx, autoOrient, rotation, invalidate]);
+
+  // Apply view mode to materials
+  useEffect(() => {
+    clonedFbx.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.material) {
+        const materials = Array.isArray(child.material)
+          ? child.material
+          : [child.material];
+
+        materials.forEach((mat) => {
+          // Handle both MeshPhongMaterial and MeshStandardMaterial
+          if ('wireframe' in mat) {
+            if (viewMode === 'wireframe') {
+              mat.wireframe = true;
+            } else if (viewMode === 'clay') {
+              mat.wireframe = false;
+              if ('color' in mat) (mat as THREE.MeshStandardMaterial).color.set('#808080');
+              if ('map' in mat) (mat as THREE.MeshStandardMaterial).map = null;
+              mat.needsUpdate = true;
+            } else {
+              // textured - restore original
+              mat.wireframe = false;
+              const original = originalMaterialsRef.current.get(mat);
+              if (original) {
+                if ('color' in mat) (mat as THREE.MeshStandardMaterial).color.copy(original.color);
+                if ('map' in mat) (mat as THREE.MeshStandardMaterial).map = original.map;
+                mat.needsUpdate = true;
+              }
+            }
+          }
+        });
+      }
+    });
+  }, [clonedFbx, viewMode]);
+
+  return (
+    <group ref={groupRef}>
+      <primitive object={clonedFbx} castShadow receiveShadow />
+    </group>
+  );
+}
+
+/**
  * Loading spinner for Suspense fallback
  */
 function LoadingSpinner() {
@@ -456,7 +595,12 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
     const effectiveUrl = modelUrl;
 
     // Determine file type from URL
-    const isGlb = effectiveUrl.includes('.glb') || effectiveUrl.includes('.gltf');
+    const getModelType = (url: string): 'glb' | 'fbx' | 'stl' => {
+      if (url.includes('.glb') || url.includes('.gltf')) return 'glb';
+      if (url.includes('.fbx')) return 'fbx';
+      return 'stl';
+    };
+    const modelType = getModelType(effectiveUrl);
 
     return (
       <div className="w-full h-full rounded-lg overflow-hidden">
@@ -474,16 +618,25 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
           {/* Environment for reflections */}
           <Environment preset="studio" />
 
-          {/* Model - use GLB or STL based on availability and view mode */}
+          {/* Model - use GLB, FBX, or STL based on file extension */}
           <Suspense fallback={<LoadingSpinner />}>
-            {isGlb ? (
+            {modelType === 'glb' && (
               <GLBModel
                 url={effectiveUrl}
                 viewMode={viewMode}
                 autoOrient={autoOrient}
                 rotation={rotation}
               />
-            ) : (
+            )}
+            {modelType === 'fbx' && (
+              <FBXModel
+                url={effectiveUrl}
+                viewMode={viewMode}
+                autoOrient={autoOrient}
+                rotation={rotation}
+              />
+            )}
+            {modelType === 'stl' && (
               <STLModel
                 url={effectiveUrl}
                 viewMode={viewMode}
