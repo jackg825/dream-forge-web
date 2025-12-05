@@ -108,6 +108,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
                       showAxes={false}
                       backgroundColor="#1e293b"
                       cameraDistance={3}
+                      cameraTargetY={-0.8}
                     />
                   )}
 

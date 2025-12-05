@@ -31,6 +31,7 @@ interface ModelViewerProps {
   autoRotate?: boolean;       // Auto rotate model
   lighting?: LightingState;   // Controllable lighting state (optional)
   cameraDistance?: number;    // Initial camera distance from model (default: 5)
+  cameraTargetY?: number;     // Camera target Y position to shift model vertically (default: 0)
 }
 
 // Re-export ModelRotation for convenience
@@ -332,15 +333,15 @@ function LoadingSpinner() {
 /**
  * Camera setup component
  */
-function CameraSetup({ distance = 5 }: { distance?: number }) {
+function CameraSetup({ distance = 5, targetY = 0 }: { distance?: number; targetY?: number }) {
   const { camera } = useThree();
 
   useEffect(() => {
     // Position camera in front of model, height scales with distance
     const cameraHeight = distance * 0.3; // Scale height proportionally
     camera.position.set(0, cameraHeight, distance);
-    camera.lookAt(0, 0, 0);
-  }, [camera, distance]);
+    camera.lookAt(0, targetY, 0);
+  }, [camera, distance, targetY]);
 
   return null;
 }
@@ -352,13 +353,23 @@ function CameraControls({
   autoRotate,
   onResetRef,
   distance = 5,
+  targetY = 0,
 }: {
   autoRotate: boolean;
   onResetRef: React.MutableRefObject<(() => void) | null>;
   distance?: number;
+  targetY?: number;
 }) {
   const controlsRef = useRef<any>(null);
   const { camera } = useThree();
+
+  // Set initial target on mount
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.target.set(0, targetY, 0);
+      controlsRef.current.update();
+    }
+  }, [targetY]);
 
   useEffect(() => {
     onResetRef.current = () => {
@@ -366,11 +377,11 @@ function CameraControls({
         // Reset to front view position, height scales with distance
         const cameraHeight = distance * 0.3;
         camera.position.set(0, cameraHeight, distance);
-        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.target.set(0, targetY, 0);
         controlsRef.current.update();
       }
     };
-  }, [camera, onResetRef, distance]);
+  }, [camera, onResetRef, distance, targetY]);
 
   return (
     <OrbitControls
@@ -419,6 +430,7 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
       autoRotate = false,
       lighting,
       cameraDistance = 5,
+      cameraTargetY = 0,
     },
     ref
   ) {
@@ -454,7 +466,7 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
           gl={{ antialias: true, preserveDrawingBuffer: true }}
           style={{ background: backgroundColor }}
         >
-          <CameraSetup distance={cameraDistance} />
+          <CameraSetup distance={cameraDistance} targetY={cameraTargetY} />
 
           {/* Lighting - use SceneLighting if provided, otherwise defaults */}
           <SceneLighting lighting={lighting} />
@@ -482,7 +494,7 @@ export const ModelViewer = forwardRef<ModelViewerRef, ModelViewerProps>(
           </Suspense>
 
           {/* Controls */}
-          <CameraControls autoRotate={autoRotate} onResetRef={resetCameraRef} distance={cameraDistance} />
+          <CameraControls autoRotate={autoRotate} onResetRef={resetCameraRef} distance={cameraDistance} targetY={cameraTargetY} />
 
           {/* Reference Grid */}
           {showGrid && (
