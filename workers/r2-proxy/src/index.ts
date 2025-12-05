@@ -283,54 +283,70 @@ async function handleDownload(
     return createErrorResponse('Missing file key', 'INVALID_REQUEST', 400);
   }
 
-  // 檢查是否有簽名 URL 參數 (用於分享連結)
-  const signature = url.searchParams.get('sig');
-  const expires = url.searchParams.get('exp');
+  // 公開路徑：pipelines/* 和 uploads/* 允許公開訪問
+  // 路徑格式包含 userId，所以需要知道完整路徑才能訪問
+  const isPublicPath = key.startsWith('pipelines/') || key.startsWith('uploads/');
 
-  // 如果有簽名，驗證簽名有效性 (允許訪客存取)
-  if (signature && expires) {
-    const isValidSignature = await verifyUrlSignature(key, expires, signature, env.URL_SIGNING_SECRET || 'default-secret');
-    if (isValidSignature) {
-      // 簽名有效，允許訪客存取（但仍驗證 Referer 防止 hotlinking）
-      if (!validateReferer(request, env)) {
-        return createErrorResponse('Access denied', 'HOTLINK_BLOCKED', 403);
-      }
-      // 簽名有效，跳過認證，直接下載
-    } else {
-      return createErrorResponse('Invalid or expired signature', 'INVALID_SIGNATURE', 403);
+  if (isPublicPath) {
+    // 公開路徑：只驗證 Referer 防止 hotlinking
+    if (!validateReferer(request, env)) {
+      return createErrorResponse('Access denied', 'HOTLINK_BLOCKED', 403);
     }
+    // 跳過認證，直接下載
   } else {
-    // 沒有簽名，需要認證
-    const authHeader = request.headers.get('Authorization');
+    // 檢查是否有簽名 URL 參數 (用於分享連結)
+    const signature = url.searchParams.get('sig');
+    const expires = url.searchParams.get('exp');
 
-    if (!authHeader) {
-      return createErrorResponse('Authentication required', 'UNAUTHORIZED', 401);
-    }
+    // 如果有簽名，驗證簽名有效性 (允許訪客存取)
+    if (signature && expires) {
+      const isValidSignature = await verifyUrlSignature(key, expires, signature, env.URL_SIGNING_SECRET || 'default-secret');
+      if (isValidSignature) {
+        // 簽名有效，允許訪客存取（但仍驗證 Referer 防止 hotlinking）
+        if (!validateReferer(request, env)) {
+          return createErrorResponse('Access denied', 'HOTLINK_BLOCKED', 403);
+        }
+        // 簽名有效，跳過認證，直接下載
+      } else {
+        return createErrorResponse('Invalid or expired signature', 'INVALID_SIGNATURE', 403);
+      }
+    } else {
+      // 沒有簽名，需要認證
+      const authHeader = request.headers.get('Authorization');
 
-    try {
-      const auth = await authenticateRequest(request, env);
-
-      // 速率限制
-      const rateLimit = await checkRateLimit(env, auth.uid, 'download');
-      if (!rateLimit.allowed) {
-        return createRateLimitResponse(rateLimit.resetAt);
+      if (!authHeader) {
+        return createErrorResponse('Authentication required', 'UNAUTHORIZED', 401);
       }
 
-      // 權限檢查：用戶只能存取自己的檔案
-      if (!authorizePathAccess(auth.uid, key, 'read')) {
-        return createErrorResponse('Not authorized to access this file', 'FORBIDDEN', 403);
+      try {
+        const auth = await authenticateRequest(request, env);
+
+        // 速率限制
+        const rateLimit = await checkRateLimit(env, auth.uid, 'download');
+        if (!rateLimit.allowed) {
+          return createRateLimitResponse(rateLimit.resetAt);
+        }
+
+        // 權限檢查：用戶只能存取自己的檔案
+        if (!authorizePathAccess(auth.uid, key, 'read')) {
+          return createErrorResponse('Not authorized to access this file', 'FORBIDDEN', 403);
+        }
+      } catch {
+        return createErrorResponse('Authentication failed', 'AUTH_ERROR', 401);
       }
-    } catch {
-      return createErrorResponse('Authentication failed', 'AUTH_ERROR', 401);
     }
   }
 
   // 從 R2 獲取檔案
   try {
-    const object = await env.R2_BUCKET.get(key, {
-      range: request.headers,
-      onlyIf: request.headers,
-    });
+    // 對於公開路徑 (pipelines/*, uploads/*)，不支援 Range 請求
+    // 因為 Three.js loaders 不能處理 206 響應
+    const object = isPublicPath
+      ? await env.R2_BUCKET.get(key)  // 完整檔案
+      : await env.R2_BUCKET.get(key, {
+          range: request.headers,
+          onlyIf: request.headers,
+        });
 
     if (!object) {
       return createErrorResponse('File not found', 'NOT_FOUND', 404);
@@ -356,8 +372,8 @@ async function handleDownload(
     // 檢查是否有 body (R2ObjectBody vs R2Object)
     const body = 'body' in object ? object.body : null;
 
-    // 處理 Range 請求
-    if (object.range) {
+    // 處理 Range 請求 (僅非公開路徑)
+    if (!isPublicPath && object.range) {
       const { offset, length } = object.range as { offset: number; length: number };
       headers.set(
         'Content-Range',
