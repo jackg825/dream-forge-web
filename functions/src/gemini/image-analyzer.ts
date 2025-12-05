@@ -16,7 +16,7 @@ import * as functions from 'firebase-functions';
 import type { PrinterType, KeyFeatures } from '../rodin/types';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-2.0-flash';
+const MODEL = 'gemini-3-pro-image-preview';
 
 /**
  * 3D Print friendliness assessment
@@ -50,6 +50,7 @@ export interface ImageAnalysisResult {
 export interface AnalyzeImageOptions {
   colorCount: number;       // Number of colors to extract (3-12)
   printerType: PrinterType; // Printer type affects recommendations
+  locale?: string;          // User's locale for response language (default: 'zh-TW')
 }
 
 /**
@@ -74,62 +75,142 @@ interface GeminiAnalysisResponse {
 }
 
 /**
- * Build the analysis prompt for Gemini
+ * Get language-specific strings for prompts
  */
-function buildAnalysisPrompt(colorCount: number, printerType: PrinterType): string {
-  const printerDescription = {
-    fdm: 'FDM (熔融沉積)',
-    sla: 'SLA (光固化)',
-    resin: '樹脂',
-  }[printerType];
+function getLanguageStrings(locale: string): {
+  languageName: string;
+  printerTypes: Record<string, string>;
+  instructions: {
+    intro: string;
+    promptDescription: string;
+    styleHints: string;
+    description: string;
+    colors: string;
+    printFriendliness: string;
+    materials: string;
+    objectType: string;
+    keyFeatures: string;
+    outputFormat: string;
+  };
+} {
+  const isEnglish = locale === 'en' || locale.startsWith('en-');
 
-  return `你是 3D 列印專家和 AI 圖片生成 prompt 專家，分析這張參考圖片以用於多視角 3D 模型生成。
+  if (isEnglish) {
+    return {
+      languageName: 'English',
+      printerTypes: {
+        fdm: 'FDM (Fused Deposition Modeling)',
+        sla: 'SLA (Stereolithography)',
+        resin: 'Resin',
+      },
+      instructions: {
+        intro: `You are a 3D printing expert and AI image generation prompt specialist. Analyze this reference image for multi-view 3D model generation.
 
-請提供以下分析（除特別標註外，使用繁體中文回覆）：
+Please provide the following analysis (respond in English unless otherwise specified):`,
+        promptDescription: `1. **Narrative Description for Image Generation** (PROMPT_DESCRIPTION) - Most Important!
+   This description will be used directly for AI image generation. Follow these principles:
+   - Use "narrative paragraphs" instead of "keyword lists"
+   - Write 3-5 fluent English sentences, describing the scene
+   - Include: subject identification, overall form, surface texture, color mood
+   - Use photography/art terminology (e.g., soft matte finish, rounded forms, warm tones)
+   - Example format: "A charming plush teddy bear with soft, velvety brown fur that catches the light with a subtle sheen. The bear features large, expressive black button eyes and a friendly embroidered smile. Its rounded, huggable form has stubby limbs with lighter tan paw pads."`,
+        styleHints: `2. **Style Hints** (STYLE_HINTS)
+   - 3-5 English style keywords for image generation
+   - Example: kawaii, vinyl toy, soft plush, warm tones, friendly character`,
+        description: `3. **Object Description** (DESCRIPTION)
+   - Describe overall shape, main features, proportions (in English)
+   - Mention all visible surface materials`,
+        colors: `4. **Color Extraction** (COLORS)
+   - Extract exactly {colorCount} main colors in HEX format
+   - Prioritize high-contrast, distinguishable, 3D-print friendly solid colors`,
+        printFriendliness: `5. **3D Print Friendliness Assessment** ({printerDescription} printer)
+   - Score (SCORE): 1-5 (5 being easiest to print)
+   - Color Suggestions (COLOR_SUGGESTIONS): Which colors are suitable for printing, whether gradients need simplification
+   - Structural Concerns (STRUCTURAL_CONCERNS): Thin walls, overhangs, potentially fragile details
+   - Material Recommendations (MATERIAL_RECOMMENDATIONS): Suggested printing materials
+   - Orientation Tips (ORIENTATION_TIPS): Best printing orientation`,
+        materials: `6. **Material List** (MATERIALS)
+   - List detected surface material types (in English, e.g., fur, fabric, plastic)`,
+        objectType: `7. **Object Type** (OBJECT_TYPE)
+   - Single classification word (in English, e.g., plush toy, figurine, character)`,
+        keyFeatures: `8. **Key Features** (KEY_FEATURES) - For multi-view consistency
+   - EARS: Has ears? [yes/no], if yes describe shape and position
+   - TAIL: Has tail? [yes/no], if yes describe shape and direction
+   - LIMBS: Describe limb posture (if applicable)
+   - ACCESSORIES: List all accessories (bow, collar, hat, etc.), if none write "none"
+   - DISTINCTIVE_MARKS: Any unique patterns, markings, if none write "none"
+   - ASYMMETRIC: Any asymmetrical features, if none write "none"
+   - SURFACE_TEXTURES: Surface texture description (e.g., fluffy, smooth, rough)`,
+        outputFormat: `Output strictly in the following format (one field per line):
+PROMPT_DESCRIPTION: [3-5 English narrative sentences for image generation]
+STYLE_HINTS: [comma-separated English style keywords]
+DESCRIPTION: [your description in English]
+COLORS: #RRGGBB, #RRGGBB, #RRGGBB...
+SCORE: [1-5]
+COLOR_SUGGESTIONS: [comma-separated suggestions in English]
+STRUCTURAL_CONCERNS: [comma-separated issues in English, or "none"]
+MATERIAL_RECOMMENDATIONS: [comma-separated material suggestions in English]
+ORIENTATION_TIPS: [comma-separated orientation suggestions in English]
+MATERIALS: [comma-separated English material list]
+OBJECT_TYPE: [English classification word]
+EARS: [yes/no], [description in English]
+TAIL: [yes/no], [description in English]
+LIMBS: [description in English, or "none"]
+ACCESSORIES: [comma-separated accessory list in English, or "none"]
+DISTINCTIVE_MARKS: [comma-separated marks in English, or "none"]
+ASYMMETRIC: [comma-separated asymmetric features in English, or "none"]
+SURFACE_TEXTURES: [comma-separated texture descriptions in English]`,
+      },
+    };
+  }
 
-1. **圖片生成用敘事描述** (PROMPT_DESCRIPTION) - 最重要！
+  // Default: Traditional Chinese (zh-TW)
+  return {
+    languageName: '繁體中文',
+    printerTypes: {
+      fdm: 'FDM (熔融沉積)',
+      sla: 'SLA (光固化)',
+      resin: '樹脂',
+    },
+    instructions: {
+      intro: `你是 3D 列印專家和 AI 圖片生成 prompt 專家，分析這張參考圖片以用於多視角 3D 模型生成。
+
+請提供以下分析（除特別標註外，使用繁體中文回覆）：`,
+      promptDescription: `1. **圖片生成用敘事描述** (PROMPT_DESCRIPTION) - 最重要！
    這段描述將直接用於 AI 圖片生成，請遵循以下原則：
    - 使用「敘事型段落」而非「關鍵字列表」
    - 寫 3-5 句流暢的英文描述，像在描述一個場景
    - 包含：主體識別、整體造型、表面材質質感、色調氛圍
    - 使用攝影/藝術術語（如 soft matte finish, rounded forms, warm tones）
-   - 範例格式："A charming plush teddy bear with soft, velvety brown fur that catches the light with a subtle sheen. The bear features large, expressive black button eyes and a friendly embroidered smile. Its rounded, huggable form has stubby limbs with lighter tan paw pads."
-
-2. **風格提示** (STYLE_HINTS)
+   - 範例格式："A charming plush teddy bear with soft, velvety brown fur that catches the light with a subtle sheen. The bear features large, expressive black button eyes and a friendly embroidered smile. Its rounded, huggable form has stubby limbs with lighter tan paw pads."`,
+      styleHints: `2. **風格提示** (STYLE_HINTS)
    - 3-5 個英文風格關鍵詞，用於輔助圖片生成
-   - 例如：kawaii, vinyl toy, soft plush, warm tones, friendly character
-
-3. **物體描述** (DESCRIPTION)
+   - 例如：kawaii, vinyl toy, soft plush, warm tones, friendly character`,
+      description: `3. **物體描述** (DESCRIPTION)
    - 描述整體形狀、主要特徵、比例（繁體中文）
-   - 提及所有可見的表面材質
-
-4. **色號提取** (COLORS)
-   - 提取正好 ${colorCount} 個主要顏色，格式為 HEX
-   - 優先選擇高對比度、容易區分的 3D 列印友善實色
-
-5. **3D 列印友善評估** (${printerDescription} 列印機)
+   - 提及所有可見的表面材質`,
+      colors: `4. **色號提取** (COLORS)
+   - 提取正好 {colorCount} 個主要顏色，格式為 HEX
+   - 優先選擇高對比度、容易區分的 3D 列印友善實色`,
+      printFriendliness: `5. **3D 列印友善評估** ({printerDescription} 列印機)
    - 評分 (SCORE): 1-5 分（5分最容易列印）
    - 色彩建議 (COLOR_SUGGESTIONS): 哪些顏色適合列印、是否需要簡化漸層
    - 結構問題 (STRUCTURAL_CONCERNS): 薄壁部分、懸空結構、可能斷裂的細節
    - 材質推薦 (MATERIAL_RECOMMENDATIONS): 建議使用的列印材料
-   - 列印方向 (ORIENTATION_TIPS): 最佳列印擺放方向
-
-6. **材質清單** (MATERIALS)
-   - 列出偵測到的表面材質類型（英文，如 fur, fabric, plastic）
-
-7. **物體類型** (OBJECT_TYPE)
-   - 單一分類詞（英文，如 plush toy, figurine, character）
-
-8. **關鍵特徵** (KEY_FEATURES) - 用於確保多視角圖片的一致性
+   - 列印方向 (ORIENTATION_TIPS): 最佳列印擺放方向`,
+      materials: `6. **材質清單** (MATERIALS)
+   - 列出偵測到的表面材質類型（英文，如 fur, fabric, plastic）`,
+      objectType: `7. **物體類型** (OBJECT_TYPE)
+   - 單一分類詞（英文，如 plush toy, figurine, character）`,
+      keyFeatures: `8. **關鍵特徵** (KEY_FEATURES) - 用於確保多視角圖片的一致性
    - EARS: 是否有耳朵？[yes/no]，若有請描述形狀和位置
    - TAIL: 是否有尾巴？[yes/no]，若有請描述形狀和方向
    - LIMBS: 描述四肢姿態（若適用）
    - ACCESSORIES: 列出所有配件（蝴蝶結、項圈、帽子等），若無則填 none
    - DISTINCTIVE_MARKS: 任何獨特的圖案、花紋、標記，若無則填 none
    - ASYMMETRIC: 任何左右不對稱的特徵，若無則填 none
-   - SURFACE_TEXTURES: 表面質感描述（如：毛茸茸、光滑、粗糙）
-
-嚴格按照以下格式輸出（每行一個欄位）：
+   - SURFACE_TEXTURES: 表面質感描述（如：毛茸茸、光滑、粗糙）`,
+      outputFormat: `嚴格按照以下格式輸出（每行一個欄位）：
 PROMPT_DESCRIPTION: [3-5 句英文敘事描述，適合直接用於圖片生成]
 STYLE_HINTS: [逗號分隔的英文風格關鍵詞]
 DESCRIPTION: [你的描述，使用繁體中文]
@@ -147,7 +228,38 @@ LIMBS: [描述，使用繁體中文，若無則填 none]
 ACCESSORIES: [逗號分隔的配件清單，使用繁體中文，若無則填 none]
 DISTINCTIVE_MARKS: [逗號分隔的標記清單，使用繁體中文，若無則填 none]
 ASYMMETRIC: [逗號分隔的不對稱特徵清單，使用繁體中文，若無則填 none]
-SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]`;
+SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]`,
+    },
+  };
+}
+
+/**
+ * Build the analysis prompt for Gemini
+ */
+function buildAnalysisPrompt(colorCount: number, printerType: PrinterType, locale: string = 'zh-TW'): string {
+  const lang = getLanguageStrings(locale);
+  const printerDescription = lang.printerTypes[printerType] || lang.printerTypes.fdm;
+  const i = lang.instructions;
+
+  return `${i.intro}
+
+${i.promptDescription}
+
+${i.styleHints}
+
+${i.description}
+
+${i.colors.replace('{colorCount}', colorCount.toString())}
+
+${i.printFriendliness.replace('{printerDescription}', printerDescription)}
+
+${i.materials}
+
+${i.objectType}
+
+${i.keyFeatures}
+
+${i.outputFormat}`;
 }
 
 /**
@@ -294,14 +406,17 @@ export async function analyzeImage(
   // Validate color count
   const colorCount = Math.min(12, Math.max(3, options.colorCount));
 
+  const locale = options.locale || 'zh-TW';
+
   functions.logger.info('Starting image analysis', {
     model: MODEL,
     colorCount,
     printerType: options.printerType,
+    locale,
     mimeType,
   });
 
-  const prompt = buildAnalysisPrompt(colorCount, options.printerType);
+  const prompt = buildAnalysisPrompt(colorCount, options.printerType, locale);
 
   try {
     const response = await axios.post<GeminiAnalysisResponse>(

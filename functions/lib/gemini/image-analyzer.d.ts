@@ -41,6 +41,7 @@ export interface ImageAnalysisResult {
 export interface AnalyzeImageOptions {
     colorCount: number;
     printerType: PrinterType;
+    locale?: string;
 }
 /**
  * Analyze an image using Gemini
