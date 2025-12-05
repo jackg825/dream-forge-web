@@ -44,8 +44,8 @@ const client_1 = require("../rodin/client");
 const client_2 = require("../gemini/client");
 const factory_1 = require("../providers/factory");
 const credits_1 = require("../utils/credits");
+const storage_1 = require("../storage");
 const db = admin.firestore();
-const storage = admin.storage();
 // Credit costs based on input mode
 const creditCosts = {
     single: 1,
@@ -368,20 +368,9 @@ exports.checkJobStatus = functions
             const modelBuffer = await generationProvider.downloadModel(modelFile.url);
             // Update status to uploading-storage
             await jobRef.update({ status: 'uploading-storage' });
-            // Upload to Firebase Storage
-            const bucket = storage.bucket();
+            // Upload to storage (Firebase or R2)
             const modelPath = `models/${userId}/${jobId}.${job.settings.format}`;
-            const file = bucket.file(modelPath);
-            await file.save(modelBuffer, {
-                metadata: {
-                    contentType: getContentType(job.settings.format),
-                },
-            });
-            // Generate signed URL (valid for 7 days)
-            const [signedUrl] = await file.getSignedUrl({
-                action: 'read',
-                expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-            });
+            const signedUrl = await (0, storage_1.uploadBuffer)(modelBuffer, modelPath, getContentType(job.settings.format));
             // Update job with signed URL and all available download files for preview
             await jobRef.update({
                 status: 'completed',
@@ -718,20 +707,9 @@ exports.retryFailedJob = functions
         const modelBuffer = await generationProvider.downloadModel(modelFile.url);
         // Update status to uploading-storage
         await jobRef.update({ status: 'uploading-storage' });
-        // Upload to Firebase Storage
-        const bucket = storage.bucket();
+        // Upload to storage (Firebase or R2)
         const modelPath = `models/${userId}/${jobId}.${job.settings.format}`;
-        const file = bucket.file(modelPath);
-        await file.save(modelBuffer, {
-            metadata: {
-                contentType: getContentType(job.settings.format),
-            },
-        });
-        // Generate signed URL
-        const [signedUrl] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        });
+        const signedUrl = await (0, storage_1.uploadBuffer)(modelBuffer, modelPath, getContentType(job.settings.format));
         // Update job as completed with all download files for preview
         await jobRef.update({
             status: 'completed',

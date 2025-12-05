@@ -89,91 +89,154 @@ const TEXTURE_ANGLE_PROMPTS = {
     back: 'BACK',
 };
 /**
- * Get structured viewpoint information for each angle
- * Uses result-oriented descriptions and negative constraints
+ * Get viewpoint information using CLOCK SYSTEM
+ *
+ * Subject is at center, facing toward 6 o'clock (toward the viewer)
+ * - Front: Camera at 6 o'clock → sees front
+ * - Back: Camera at 12 o'clock → sees back
+ * - Left: Camera at 3 o'clock → sees subject's LEFT side
+ * - Right: Camera at 9 o'clock → sees subject's RIGHT side
  */
 function getViewpointInfo(angle) {
     switch (angle) {
         case 'front':
             return {
-                whatYouSee: [
-                    'The character FACING the camera directly',
-                    'BOTH ears visible (symmetrically on each side of head)',
-                    'The FACE is centered and looking forward',
-                ],
-                mustNotGenerate: [
-                    'Side profile view',
-                    'Back view',
-                    'Three-quarter angle',
-                ],
-                humanAnalogy: 'Like the character is looking at you',
+                clockPosition: '6 o\'clock',
+                cameraDirection: 'looking toward the center',
+                visibleSide: 'FRONT surface',
+                objectDescription: 'The primary/front face of the object, the side typically displayed or presented to viewers',
+                characterDescription: 'Face and front body visible, both left and right sides symmetrically visible',
+                technicalSpec: 'Camera perpendicular to front plane, 0° rotation from front',
+                rotationDegrees: 0,
             };
         case 'back':
             return {
-                whatYouSee: [
-                    'The BACK of the character\'s head',
-                    'The character is facing AWAY from the camera',
-                    'If there\'s a tail, it should be visible',
-                    'You see the back of the body, NOT the face',
-                ],
-                mustNotGenerate: [
-                    'Front view (face visible)',
-                    'Side profile view',
-                    'The character looking over shoulder at camera',
-                ],
-                humanAnalogy: 'Like standing behind someone',
+                clockPosition: '12 o\'clock',
+                cameraDirection: 'looking toward the center',
+                visibleSide: 'BACK surface',
+                objectDescription: 'The rear face of the object, opposite to the front/display side',
+                characterDescription: 'Back of head and body visible, NO face visible, tail visible if present',
+                technicalSpec: 'Camera perpendicular to back plane, 180° rotation from front',
+                rotationDegrees: 180,
             };
         case 'left':
             return {
-                whatYouSee: [
-                    'Pure side profile view',
-                    'LEFT EAR is visible',
-                    'NOSE/FACE points toward RIGHT edge of image',
-                ],
-                mustNotGenerate: [
-                    'Front view (face at camera)',
-                    'Back view',
-                    'Three-quarter view',
-                    'Face pointing LEFT (that would be RIGHT view)',
-                ],
-                humanAnalogy: 'Like standing to the LEFT of someone - you see their left ear',
+                clockPosition: '3 o\'clock',
+                cameraDirection: 'looking toward the center',
+                visibleSide: 'LEFT surface (the subject\'s own left side)',
+                objectDescription: 'The left side of the object when you face its front',
+                characterDescription: 'Left profile view - LEFT ear visible, face/nose points toward RIGHT edge of image',
+                technicalSpec: 'Camera perpendicular to left plane, 90° clockwise rotation from front',
+                rotationDegrees: 90,
             };
         case 'right':
             return {
-                whatYouSee: [
-                    'Pure side profile view',
-                    'RIGHT EAR is visible',
-                    'NOSE/FACE points toward LEFT edge of image',
-                ],
-                mustNotGenerate: [
-                    'Front view (face at camera)',
-                    'Back view',
-                    'Three-quarter view',
-                    'Face pointing RIGHT (that would be LEFT view)',
-                ],
-                humanAnalogy: 'Like standing to the RIGHT of someone - you see their right ear',
+                clockPosition: '9 o\'clock',
+                cameraDirection: 'looking toward the center',
+                visibleSide: 'RIGHT surface (the subject\'s own right side)',
+                objectDescription: 'The right side of the object when you face its front',
+                characterDescription: 'Right profile view - RIGHT ear visible, face/nose points toward LEFT edge of image',
+                technicalSpec: 'Camera perpendicular to right plane, 90° counter-clockwise rotation from front',
+                rotationDegrees: 270,
             };
     }
 }
 /**
- * Build the view direction block for the prompt header
- * Places critical view direction info at the very beginning
+ * Build the camera position block using clock system
+ * Works for both objects and characters
  */
 function buildViewDirectionBlock(angle) {
     const info = getViewpointInfo(angle);
     const angleDisplay = ANGLE_PROMPTS[angle];
-    return `=== VIEW DIRECTION (CRITICAL - Read First) ===
+    return `=== CAMERA POSITION (CRITICAL - READ FIRST) ===
 
-Generate the ${angleDisplay} PROFILE view for a 3D turnaround reference sheet.
+**CLOCK SYSTEM**: The subject is at the CENTER, with its front facing toward 6 o'clock.
+**CAMERA POSITION**: ${info.clockPosition}, ${info.cameraDirection}
+**VISIBLE SURFACE**: ${info.visibleSide}
+**ROTATION**: ${info.rotationDegrees}° from front view
 
-**WHAT YOU SHOULD SEE:**
-${info.whatYouSee.map(item => `- ${item}`).join('\n')}
-- ${info.humanAnalogy}
+For OBJECTS (cups, machines, furniture, buildings, etc.):
+→ ${info.objectDescription}
 
-**WHAT YOU MUST NOT GENERATE:**
-${info.mustNotGenerate.map(item => `❌ ${item}`).join('\n')}
+For CHARACTERS (people, animals, toys, figures):
+→ ${info.characterDescription}
 
-=== END VIEW DIRECTION ===`;
+**CRITICAL REQUIREMENTS**:
+- Generate EXACTLY this ${angleDisplay} viewing angle - no other angle
+- Do NOT rotate or tilt the subject from this specified view
+- Maintain orthographic projection (no perspective distortion)
+- The subject should appear as if photographed from this exact position
+
+=== END CAMERA POSITION ===`;
+}
+/**
+ * Build background isolation block
+ * Ensures clean output with only the subject
+ */
+function buildBackgroundIsolationBlock() {
+    return `=== BACKGROUND ISOLATION ===
+
+REMOVE all background elements, secondary objects, and environmental clutter from the original image.
+ISOLATE only the PRIMARY SUBJECT - nothing else should appear in the generated image.
+The subject floats against a PURE WHITE (#FFFFFF) seamless background.
+No ground plane, no surface reflections, no cast shadows on the background.
+The background must be completely empty, uniform, and distraction-free.
+
+=== END BACKGROUND ISOLATION ===`;
+}
+/**
+ * Build 3D print optimization block
+ * Different instructions for simplified vs full-color modes
+ */
+function build3DPrintOptimizationBlock(simplified) {
+    if (simplified) {
+        return `=== 3D PRINT OPTIMIZATION ===
+
+This image will be used as reference for 3D PRINTING. Apply these optimizations:
+
+**GEOMETRY SIMPLIFICATION**:
+- Smooth out fine surface details (wrinkles, tiny bumps, fabric texture)
+- Round sharp edges and corners for printability
+- Fill small holes and gaps
+- Merge thin protruding elements into thicker, more stable forms
+
+**STRUCTURAL STABILITY**:
+- Thicken thin elements (antennas, fingers, hair strands, thin handles)
+- Connect floating or loosely attached parts to the main body
+- Avoid deep undercuts and severe overhangs
+- Ensure all parts have sufficient thickness for printing
+
+**SURFACE TREATMENT**:
+- Matte, uniform surface finish (no glossy reflections)
+- Flatten complex textures into distinct color zones
+- Remove any transparency - all parts must appear solid
+
+The result should look like a MANUFACTURABLE toy or collectible figure.
+
+=== END 3D PRINT OPTIMIZATION ===`;
+    }
+    else {
+        return `=== 3D RECONSTRUCTION REFERENCE ===
+
+This image will be used for photogrammetry-based 3D model reconstruction.
+
+**DETAIL PRESERVATION**:
+- Maintain surface textures and material details
+- Preserve color gradients and subtle variations
+- Keep structural proportions accurate
+
+**SLIGHT OPTIMIZATION** (for printability):
+- Apply minimal smoothing (10-20%) to only the most extreme fine details
+- Slightly thicken very thin elements that would be unprintable
+- Ensure continuous, manifold surfaces (no impossible geometry)
+
+**LIGHTING FOR SCANNING**:
+- Even, diffused studio illumination revealing all surfaces
+- Subtle ambient occlusion in crevices for depth definition
+- No harsh shadows that would confuse 3D reconstruction
+
+=== END 3D RECONSTRUCTION REFERENCE ===`;
+    }
 }
 /**
  * Build the narrative subject context from image analysis
@@ -234,6 +297,14 @@ Maintain consistent identity, proportions, and features across all views.
  * Uses narrative style following Gemini's best practice:
  * "Describe the scene, don't just list keywords"
  *
+ * Structure:
+ * 1. CAMERA POSITION (clock system)
+ * 2. SUBJECT DESCRIPTION (from analysis)
+ * 3. BACKGROUND ISOLATION
+ * 4. 3D PRINT OPTIMIZATION
+ * 5. STYLE & RENDERING
+ * 6. OUTPUT INSTRUCTION
+ *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
@@ -242,43 +313,67 @@ Maintain consistent identity, proportions, and features across all views.
  */
 function getMeshPrompt(mode, angle, userDescription, hint, imageAnalysis) {
     const angleDisplay = ANGLE_PROMPTS[angle];
-    // Build view direction block (placed at the very beginning for emphasis)
-    const viewDirectionBlock = buildViewDirectionBlock(angle);
-    // Build narrative context from user description and image analysis
-    const narrativeContext = buildNarrativeContext(userDescription, imageAnalysis);
-    // Build regeneration hint block if provided
+    const info = getViewpointInfo(angle);
+    // Build all blocks
+    const cameraBlock = buildViewDirectionBlock(angle);
+    const subjectBlock = buildNarrativeContext(userDescription, imageAnalysis);
+    const backgroundBlock = buildBackgroundIsolationBlock();
+    const printOptBlock = build3DPrintOptimizationBlock(mode.mesh.simplified);
+    // Build regeneration hint if provided
     const hintBlock = hint
-        ? `\n\nIMPORTANT ADJUSTMENT: The user requests: "${hint}". Apply this adjustment while maintaining all other visual characteristics.\n`
+        ? `\n=== USER ADJUSTMENT ===\nThe user requests: "${hint}"\nApply this adjustment while maintaining the correct viewing angle and all other requirements.\n=== END USER ADJUSTMENT ===\n`
         : '';
     if (mode.mesh.simplified) {
-        // Simplified mode: vinyl toy / Funko Pop style with narrative description
-        return `${viewDirectionBlock}
-${narrativeContext}${hintBlock}
-Imagine this subject transformed into a charming collectible vinyl figure, reminiscent of Funko Pop or kawaii-style toys. The form is simplified with rounded edges, smooth surfaces, and exaggerated cute proportions. Complex details like individual hairs or fabric folds are smoothed into clean, stylized shapes while keeping the recognizable silhouette.
+        // Simplified mode: vinyl toy / Funko Pop style
+        return `${cameraBlock}
+${subjectBlock}
+${backgroundBlock}
 
-The figure is rendered in a cel-shaded style with approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors. There are no gradients or soft shadows - just clean blocks of flat color that define the 3D volumes. Each color zone has crisp, pixel-sharp edges, like a modern low-poly game asset.
+${printOptBlock}
+${hintBlock}
+=== STYLE & RENDERING ===
 
-The camera captures this ${angleDisplay} view using orthographic projection, eliminating any perspective distortion. The subject sits centered against a pure white (#FFFFFF) background, filling about 90% of the frame. The lighting is completely flat - no cast shadows, no highlights, just clean unlit color.
+Transform this subject into a charming collectible vinyl figure style, like Funko Pop or kawaii toys. Simplify the form with rounded edges, smooth surfaces, and clean shapes. Complex details (individual hairs, fabric folds, fine texture) should be smoothed into stylized forms while keeping the recognizable silhouette.
 
-Think of this as a professional turnaround reference sheet for a 3D modeler, not a photograph.
+Render in cel-shaded style with approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors. No gradients, no soft shadows - just clean blocks of flat color. Each color zone has crisp, pixel-sharp edges.
+
+Camera: Orthographic projection from ${info.clockPosition} position, ${info.rotationDegrees}° rotation.
+Framing: Subject centered, fills 90% of frame.
+Lighting: Completely flat - no cast shadows, no highlights.
+Background: Pure white (#FFFFFF), seamless.
+
+This is a professional turnaround reference for 3D modeling, not a photograph.
+
+=== END STYLE & RENDERING ===
 
 After generating the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 
-Generate the actual image now.`;
+Generate the actual ${angleDisplay} view image now.`;
     }
     else {
-        // Full color mode: photogrammetry reference with narrative description
-        return `${viewDirectionBlock}
-${narrativeContext}${hintBlock}
-Picture this subject in a professional photogrammetry studio, set up for accurate 3D model reconstruction. Multiple softboxes provide even, diffused illumination that wraps around the form, revealing every surface texture and detail without harsh directional shadows. Subtle ambient occlusion appears naturally in crevices, helping define the shape and depth.
+        // Full color mode: photogrammetry reference
+        return `${cameraBlock}
+${subjectBlock}
+${backgroundBlock}
 
-All the fine details are preserved - the texture direction of fur, the subtle folds of fabric, the smoothness or roughness of each material surface. Colors appear true-to-life with natural saturation. The overall form maintains its realistic proportions with only minimal smoothing (10-20%) of the most complex geometry.
+${printOptBlock}
+${hintBlock}
+=== STYLE & RENDERING ===
 
-The camera is positioned at eye level, using orthographic projection to eliminate perspective distortion. Parallel lines remain perfectly parallel. The subject sits centered against a pure white (#FFFFFF) background, filling about 85% of the frame. This ${angleDisplay} view captures both the 3D volume and the rich surface details.
+Picture this subject in a professional photogrammetry studio for accurate 3D reconstruction. Multiple softboxes provide even, diffused illumination that wraps around the form, revealing surface textures without harsh shadows. Subtle ambient occlusion appears in crevices for depth definition.
 
-The goal is a perfect photogrammetry reference image - detailed enough for accurate 3D reconstruction, clean enough for professional modeling.
+Preserve fine details: texture direction of materials, subtle surface variations, color gradients. Colors appear true-to-life with natural saturation. Apply only minimal smoothing (10-20%) to the most extreme fine details for printability.
 
-Generate the actual image now.`;
+Camera: Orthographic projection from ${info.clockPosition} position, ${info.rotationDegrees}° rotation.
+Framing: Subject centered, fills 85% of frame.
+Lighting: Even studio softbox illumination, no harsh directional shadows.
+Background: Pure white (#FFFFFF), seamless.
+
+Goal: A photogrammetry reference image - detailed for 3D reconstruction, optimized for printing.
+
+=== END STYLE & RENDERING ===
+
+Generate the actual ${angleDisplay} view image now.`;
     }
 }
 /**
@@ -293,44 +388,93 @@ Generate the actual image now.`;
  */
 function getTexturePrompt(mode, angle, userDescription, hint) {
     const angleDisplay = TEXTURE_ANGLE_PROMPTS[angle];
-    const viewPosition = angle === 'front' ? 'directly in front, centered' : 'from behind (180° from front)';
+    const clockPos = angle === 'front' ? '6 o\'clock' : '12 o\'clock';
+    const rotation = angle === 'front' ? 0 : 180;
     // Build user description as narrative context
     const subjectContext = userDescription
-        ? `\n\nThis is ${userDescription}. Preserve its key visual features and identity.\n`
+        ? `\n\n=== SUBJECT ===\nThis is ${userDescription}. Preserve its key visual features and identity.\n=== END SUBJECT ===\n`
         : '';
-    // Build regeneration hint as narrative
+    // Build regeneration hint
     const hintContext = hint
-        ? `\n\nIMPORTANT ADJUSTMENT: The user requests: "${hint}". Apply this change while maintaining all other visual characteristics.\n`
+        ? `\n=== USER ADJUSTMENT ===\nThe user requests: "${hint}"\nApply this while maintaining the correct viewing angle.\n=== END USER ADJUSTMENT ===\n`
         : '';
+    // Background isolation block
+    const backgroundBlock = buildBackgroundIsolationBlock();
     if (mode.texture.simplified) {
         // Simplified mode: vector art / sticker art style for H2C printing
-        return `Create a texture map for multi-color 3D printing in a clean, flat vector illustration style.${subjectContext}${hintContext}
+        return `=== CAMERA POSITION ===
+**CLOCK SYSTEM**: Subject at center, front facing 6 o'clock.
+**CAMERA**: ${clockPos}, looking at center
+**ROTATION**: ${rotation}° from front
+**VIEW**: ${angleDisplay}
+=== END CAMERA POSITION ===
+${subjectContext}
+${backgroundBlock}
+${hintContext}
+=== TEXTURE STYLE ===
 
-Imagine this ${angleDisplay} view as a stylized sticker or paint-by-numbers template. The entire image uses exactly ${mode.texture.colorCount} solid, distinct colors with absolutely no gradients, shading, or soft transitions. Each color zone is a crisp, clean block with sharp edges between regions - like a professional vector illustration or a simplified screen print design.
+Create a texture map for multi-color 3D PRINTING in flat vector illustration style.
 
-This texture will be applied directly to a 3D printed object, so the colors represent the exact pigments to be printed. There are no simulated lighting effects - no shadows of any kind, no highlights, no ambient occlusion, no reflections. Every pixel shows the true base color, completely flat and unlit.
+**COLOR CONSTRAINTS**:
+- Use EXACTLY ${mode.texture.colorCount} solid, distinct colors
+- NO gradients, NO shading, NO soft transitions
+- Each color zone is a crisp block with sharp edges
+- Like a paint-by-numbers template or screen print design
 
-The camera captures the view ${viewPosition}, using orthographic projection. The subject fills about 90% of the frame against a pure white (#FFFFFF) background. The silhouette and proportions match the corresponding mesh view exactly.
+**LIGHTING**: COMPLETELY FLAT AND UNLIT
+- NO shadows of any kind
+- NO highlights or specular reflections
+- NO ambient occlusion
+- Every pixel shows the TRUE BASE COLOR for printing
 
-Think of this as creating a color map where each region is large enough to be physically printed - avoid tiny color details that would get lost in production.
+**TECHNICAL**:
+- Orthographic projection from ${clockPos}
+- Subject fills 90% of frame
+- Proportions match mesh views exactly
+- Color regions large enough for physical printing
 
-After generating the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
+=== END TEXTURE STYLE ===
 
-Generate the actual image now.`;
+After generating, list colors: COLORS: #RRGGBB, #RRGGBB, ...
+
+Generate the actual ${angleDisplay} texture view now.`;
     }
     else {
         // Full color mode: Albedo Map (Base Color) for PBR
-        return `Create an albedo texture map (base color) for a 3D model, optimized for printing.${subjectContext}${hintContext}
+        return `=== CAMERA POSITION ===
+**CLOCK SYSTEM**: Subject at center, front facing 6 o'clock.
+**CAMERA**: ${clockPos}, looking at center
+**ROTATION**: ${rotation}° from front
+**VIEW**: ${angleDisplay}
+=== END CAMERA POSITION ===
+${subjectContext}
+${backgroundBlock}
+${hintContext}
+=== ALBEDO TEXTURE MAP ===
 
-This ${angleDisplay} view captures the true surface colors of the subject as they would appear without any lighting. Imagine scanning the object's colors directly - no shadows, no highlights, no ambient occlusion, no reflections. Each pixel represents the exact pigment color to be printed, in full color with natural saturation.
+Create an albedo (base color) texture map for 3D printing.
 
-All the high-frequency texture details are visible as color information - the weave of fabric, the grain of wood, the subtle variations in skin tones, the scratches on metal. These details appear as color data, not as shading effects.
+**COLOR CAPTURE**:
+- True surface colors WITHOUT any lighting effects
+- Full color with natural saturation
+- High-frequency texture details as color information
+- Fabric weave, wood grain, skin variations, surface scratches
 
-The camera is positioned ${viewPosition}, using orthographic projection. The subject sits centered against a pure white (#FFFFFF) background, filling about 90% of the frame. Proportions match the mesh views exactly for perfect UV alignment.
+**LIGHTING**: STRICTLY UNLIT
+- NO shadows, NO highlights
+- NO ambient occlusion, NO reflections
+- Each pixel = exact pigment color to be printed
 
-The result should look like a flat, unlit texture map ready to be applied in a game engine or 3D printing workflow.
+**TECHNICAL**:
+- Orthographic projection from ${clockPos}
+- Subject fills 90% of frame
+- Proportions match mesh views for UV alignment
 
-Generate the actual image now.`;
+Result: A flat, unlit texture map for 3D printing workflow.
+
+=== END ALBEDO TEXTURE MAP ===
+
+Generate the actual ${angleDisplay} texture view now.`;
     }
 }
 /**

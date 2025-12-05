@@ -44,6 +44,14 @@ export declare function getMode(id: GenerationModeId): ModeConfig;
  * Uses narrative style following Gemini's best practice:
  * "Describe the scene, don't just list keywords"
  *
+ * Structure:
+ * 1. CAMERA POSITION (clock system)
+ * 2. SUBJECT DESCRIPTION (from analysis)
+ * 3. BACKGROUND ISOLATION
+ * 4. 3D PRINT OPTIMIZATION
+ * 5. STYLE & RENDERING
+ * 6. OUTPUT INSTRUCTION
+ *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object

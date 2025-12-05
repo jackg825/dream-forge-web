@@ -11,11 +11,11 @@ import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createGeminiClient } from '../gemini/client';
 import { deductCredits } from '../utils/credits';
+import { uploadBase64, downloadFile } from '../storage';
 import type { SessionDocument, ViewAngle } from '../rodin/types';
 import { SESSION_CREDIT_COSTS } from '../rodin/types';
 
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
 
 /**
  * Download image from URL or Storage path
@@ -24,15 +24,20 @@ async function downloadImage(
   url: string,
   storagePath?: string
 ): Promise<{ buffer: Buffer; mimeType: string }> {
-  // If we have a storage path, download from Firebase Storage
+  // If we have a storage path, download from storage (Firebase or R2)
   if (storagePath) {
-    const file = bucket.file(storagePath);
-    const [buffer] = await file.download();
-    const [metadata] = await file.getMetadata();
-    return {
-      buffer,
-      mimeType: (metadata.contentType as string) || 'image/png',
-    };
+    const buffer = await downloadFile(storagePath);
+    // Infer mime type from extension
+    const ext = storagePath.split('.').pop()?.toLowerCase();
+    const mimeType =
+      ext === 'jpg' || ext === 'jpeg'
+        ? 'image/jpeg'
+        : ext === 'png'
+          ? 'image/png'
+          : ext === 'webp'
+            ? 'image/webp'
+            : 'image/png';
+    return { buffer, mimeType };
   }
 
   // Otherwise download from URL
@@ -48,7 +53,7 @@ async function downloadImage(
 }
 
 /**
- * Upload generated view to Firebase Storage
+ * Upload generated view to storage (Firebase or R2)
  */
 async function uploadGeneratedView(
   sessionId: string,
@@ -59,24 +64,9 @@ async function uploadGeneratedView(
 ): Promise<{ url: string; storagePath: string }> {
   const extension = mimeType.split('/')[1] || 'png';
   const storagePath = `sessions/${userId}/${sessionId}/views/${angle}.${extension}`;
-  const file = bucket.file(storagePath);
 
-  const buffer = Buffer.from(imageBase64, 'base64');
-
-  await file.save(buffer, {
-    metadata: {
-      contentType: mimeType,
-      metadata: {
-        angle,
-        source: 'ai',
-        generatedAt: new Date().toISOString(),
-      },
-    },
-  });
-
-  // Make file publicly readable
-  await file.makePublic();
-  const url = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+  // Use storage abstraction layer
+  const url = await uploadBase64(imageBase64, storagePath, mimeType);
 
   return { url, storagePath };
 }

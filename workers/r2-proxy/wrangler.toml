@@ -15,7 +15,7 @@ id = "dd79edcaa1a6498884e9800191f4aa22"
 
 # 環境變數
 [vars]
-ALLOWED_ORIGINS = "https://dreamforge.app,https://www.dreamforge.app,https://dreamforge-66998.web.app,http://localhost:3000,http://localhost:5173"
+ALLOWED_ORIGINS = "https://dreamforge.app,https://www.dreamforge.app,https://dreamforge-66998.web.app,https://dream-forge-r2-proxy.jackg825.workers.dev,http://localhost:3000,http://localhost:5173"
 FIREBASE_PROJECT_ID = "dreamforge-66998"
 
 # 生產環境設定
@@ -31,7 +31,7 @@ binding = "RATE_LIMIT_KV"
 id = "dd79edcaa1a6498884e9800191f4aa22"
 
 [env.production.vars]
-ALLOWED_ORIGINS = "https://dreamforge.app,https://www.dreamforge.app,https://dreamforge-66998.web.app,http://localhost:3000,http://localhost:5173"
+ALLOWED_ORIGINS = "https://dreamforge.app,https://www.dreamforge.app,https://dreamforge-66998.web.app,https://dream-forge-r2-proxy.jackg825.workers.dev,http://localhost:3000,http://localhost:5173"
 FIREBASE_PROJECT_ID = "dreamforge-66998"
 
 # 開發環境設定

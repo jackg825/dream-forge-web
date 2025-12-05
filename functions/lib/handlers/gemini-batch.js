@@ -49,9 +49,9 @@ const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
 const batch_client_1 = require("../gemini/batch-client");
+const storage_1 = require("../storage");
 const params_1 = require("firebase-functions/params");
 const db = admin.firestore();
-const storage = admin.storage();
 // Define secret for Gemini API key
 const geminiApiKey = (0, params_1.defineSecret)('GEMINI_API_KEY');
 /**
@@ -248,21 +248,10 @@ async function processCompletedBatchJob(jobRef, job, statusResponse, client) {
     for (const result of results) {
         if (result.success && result.imageBase64) {
             try {
-                // Upload to Storage
+                // Upload to Storage (Firebase or R2)
                 const storagePath = `pipelines/${job.pipelineId}/${result.viewType}_${result.angle}.png`;
-                const bucket = storage.bucket();
-                const file = bucket.file(storagePath);
-                const imageBuffer = Buffer.from(result.imageBase64, 'base64');
-                await file.save(imageBuffer, {
-                    metadata: {
-                        contentType: result.mimeType || 'image/png',
-                    },
-                });
-                // Get signed URL (7 days)
-                const [url] = await file.getSignedUrl({
-                    action: 'read',
-                    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-                });
+                const mimeType = result.mimeType || 'image/png';
+                const url = await (0, storage_1.uploadBase64)(result.imageBase64, storagePath, mimeType);
                 // Build processed image record
                 const processedImage = {
                     url,

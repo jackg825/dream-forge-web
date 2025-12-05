@@ -49,9 +49,9 @@ const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
 const factory_1 = require("../providers/factory");
 const credits_1 = require("../utils/credits");
+const storage_1 = require("../storage");
 const types_1 = require("../rodin/types");
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
 // View angles in order of importance for Rodin
 const VIEW_ORDER = ['front', 'back', 'left', 'right', 'top'];
 /**
@@ -295,20 +295,9 @@ exports.checkSessionModelStatus = functions
             }
             // Download the model
             const modelBuffer = await generationProvider.downloadModel(downloadResult.files[0].url);
-            // Upload to Storage
+            // Upload to Storage (Firebase or R2)
             const storagePath = `sessions/${userId}/${sessionId}/model.stl`;
-            const file = bucket.file(storagePath);
-            await file.save(modelBuffer, {
-                metadata: {
-                    contentType: 'application/sla',
-                    metadata: {
-                        sessionId,
-                        jobId: session.jobId,
-                    },
-                },
-            });
-            await file.makePublic();
-            const outputModelUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+            const outputModelUrl = await (0, storage_1.uploadBuffer)(modelBuffer, storagePath, 'application/sla');
             // Update job
             await jobRef.update({
                 status: 'completed',

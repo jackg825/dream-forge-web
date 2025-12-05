@@ -12,6 +12,7 @@ import axios from 'axios';
 import { createProvider } from '../providers/factory';
 import type { ProviderType } from '../providers/types';
 import { deductCredits, incrementGenerationCount } from '../utils/credits';
+import { uploadBuffer } from '../storage';
 import type {
   SessionDocument,
   ViewAngle,
@@ -19,7 +20,6 @@ import type {
 import { SESSION_CREDIT_COSTS } from '../rodin/types';
 
 const db = admin.firestore();
-const bucket = admin.storage().bucket();
 
 // View angles in order of importance for Rodin
 const VIEW_ORDER: ViewAngle[] = ['front', 'back', 'left', 'right', 'top'];
@@ -363,20 +363,9 @@ export const checkSessionModelStatus = functions
           // Download the model
           const modelBuffer = await generationProvider.downloadModel(downloadResult.files[0].url);
 
-          // Upload to Storage
+          // Upload to Storage (Firebase or R2)
           const storagePath = `sessions/${userId}/${sessionId}/model.stl`;
-          const file = bucket.file(storagePath);
-          await file.save(modelBuffer, {
-            metadata: {
-              contentType: 'application/sla',
-              metadata: {
-                sessionId,
-                jobId: session.jobId,
-              },
-            },
-          });
-          await file.makePublic();
-          const outputModelUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+          const outputModelUrl = await uploadBuffer(modelBuffer, storagePath, 'application/sla');
 
           // Update job
           await jobRef.update({

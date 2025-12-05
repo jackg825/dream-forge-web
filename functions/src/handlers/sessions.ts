@@ -10,6 +10,7 @@
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
+import { listFiles, deleteFile } from '../storage';
 import type {
   SessionDocument,
   SessionSettings,
@@ -326,13 +327,12 @@ export const deleteSession = functions
         );
       }
 
-      // Delete session files from Storage
-      const bucket = admin.storage().bucket();
+      // Delete session files from Storage (Firebase or R2)
       const sessionPath = `sessions/${session.userId}/${sessionId}`;
 
       try {
-        const [files] = await bucket.getFiles({ prefix: sessionPath });
-        await Promise.all(files.map((file) => file.delete()));
+        const files = await listFiles(sessionPath);
+        await Promise.all(files.map((file) => deleteFile(file.path)));
         functions.logger.info('Deleted session files', {
           sessionId,
           fileCount: files.length,

@@ -4,8 +4,12 @@ import {
   getDownloadURL,
   UploadTask,
 } from 'firebase/storage';
-import { storage } from './firebase';
+import { storage, auth } from './firebase';
 import { compressImage, type CompressionResult } from './imageCompression';
+
+// Storage backend configuration
+const STORAGE_BACKEND = process.env.NEXT_PUBLIC_STORAGE_BACKEND || 'firebase';
+const R2_WORKER_URL = process.env.NEXT_PUBLIC_R2_WORKER_URL || 'https://r2-proxy.dreamforge.app';
 
 export interface UploadProgress {
   progress: number; // 0-100
@@ -18,27 +22,160 @@ export interface UploadResult {
   storagePath: string;
 }
 
+// ============================================
+// R2 Upload Functions
+// ============================================
+
+interface PresignResponse {
+  uploadUrl: string;
+  downloadUrl: string;
+  storagePath: string;
+  expiresAt: string;
+}
+
 /**
- * Upload an image to Firebase Storage
- *
- * @param file - The file to upload
- * @param userId - The user's ID for path organization
- * @param onProgress - Optional callback for upload progress
- * @returns Promise with download URL and storage path
+ * Get Firebase ID token for R2 Worker authentication
  */
-export async function uploadImage(
+async function getIdToken(): Promise<string> {
+  if (!auth) {
+    throw new Error('Firebase Auth is not initialized');
+  }
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  return user.getIdToken();
+}
+
+/**
+ * Request a presigned upload URL from R2 Worker
+ */
+async function getPresignedUploadUrl(
+  storagePath: string,
+  contentType: string,
+  contentLength: number
+): Promise<PresignResponse> {
+  const token = await getIdToken();
+
+  const response = await fetch(`${R2_WORKER_URL}/upload/presign`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      path: storagePath,
+      contentType,
+      contentLength,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || `Failed to get presigned URL: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Confirm upload completion with R2 Worker
+ */
+async function confirmUpload(storagePath: string): Promise<{ downloadUrl: string }> {
+  const token = await getIdToken();
+
+  const response = await fetch(`${R2_WORKER_URL}/upload/confirm`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ path: storagePath }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(error.message || `Failed to confirm upload: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Upload file to R2 using presigned URL
+ */
+async function uploadToR2(
   file: File,
-  userId: string,
+  storagePath: string,
+  onProgress?: (progress: UploadProgress) => void
+): Promise<UploadResult> {
+  // Get presigned URL
+  const presign = await getPresignedUploadUrl(
+    storagePath,
+    file.type,
+    file.size
+  );
+
+  // Upload using XMLHttpRequest for progress tracking
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress({
+          progress: (event.loaded / event.total) * 100,
+          bytesTransferred: event.loaded,
+          totalBytes: event.total,
+        });
+      }
+    });
+
+    xhr.addEventListener('load', async () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          // Confirm upload and get final download URL
+          const { downloadUrl } = await confirmUpload(storagePath);
+          resolve({
+            downloadUrl,
+            storagePath: presign.storagePath,
+          });
+        } catch (error) {
+          reject(error);
+        }
+      } else {
+        reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      reject(new Error('Upload failed due to network error'));
+    });
+
+    xhr.addEventListener('abort', () => {
+      reject(new Error('Upload was cancelled'));
+    });
+
+    xhr.open('PUT', presign.uploadUrl);
+    xhr.setRequestHeader('Content-Type', file.type);
+    xhr.send(file);
+  });
+}
+
+// ============================================
+// Firebase Upload Functions
+// ============================================
+
+/**
+ * Upload file to Firebase Storage
+ */
+async function uploadToFirebase(
+  file: File,
+  storagePath: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadResult> {
   if (!storage) {
     throw new Error('Firebase Storage is not configured');
   }
-
-  // Generate unique filename with timestamp
-  const timestamp = Date.now();
-  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-  const storagePath = `uploads/${userId}/${timestamp}_${sanitizedName}`;
 
   const storageRef = ref(storage, storagePath);
   const uploadTask: UploadTask = uploadBytesResumable(storageRef, file, {
@@ -70,6 +207,43 @@ export async function uploadImage(
       }
     );
   });
+}
+
+// ============================================
+// Public API
+// ============================================
+
+/**
+ * Get current storage backend
+ */
+export function getStorageBackend(): 'firebase' | 'r2' {
+  return STORAGE_BACKEND as 'firebase' | 'r2';
+}
+
+/**
+ * Upload an image to storage (Firebase or R2 based on configuration)
+ *
+ * @param file - The file to upload
+ * @param userId - The user's ID for path organization
+ * @param onProgress - Optional callback for upload progress
+ * @returns Promise with download URL and storage path
+ */
+export async function uploadImage(
+  file: File,
+  userId: string,
+  onProgress?: (progress: UploadProgress) => void
+): Promise<UploadResult> {
+  // Generate unique filename with timestamp
+  const timestamp = Date.now();
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const storagePath = `uploads/${userId}/${timestamp}_${sanitizedName}`;
+
+  // Use R2 or Firebase based on configuration
+  if (STORAGE_BACKEND === 'r2') {
+    return uploadToR2(file, storagePath, onProgress);
+  }
+
+  return uploadToFirebase(file, storagePath, onProgress);
 }
 
 /**
@@ -179,38 +353,17 @@ export async function uploadSessionView(
   sessionId: string,
   angle: string
 ): Promise<UploadResult> {
-  if (!storage) {
-    throw new Error('Firebase Storage is not configured');
-  }
-
   // Generate path for session view
   const timestamp = Date.now();
   const extension = file.type.split('/')[1] || 'png';
   const storagePath = `sessions/${userId}/${sessionId}/views/${angle}_${timestamp}.${extension}`;
 
-  const storageRef = ref(storage, storagePath);
-  const uploadTask: UploadTask = uploadBytesResumable(storageRef, file, {
-    contentType: file.type,
-  });
+  // Use R2 or Firebase based on configuration
+  if (STORAGE_BACKEND === 'r2') {
+    return uploadToR2(file, storagePath);
+  }
 
-  return new Promise((resolve, reject) => {
-    uploadTask.on(
-      'state_changed',
-      undefined,
-      (error) => {
-        console.error('Upload error:', error);
-        reject(new Error(getUploadErrorMessage(error)));
-      },
-      async () => {
-        try {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve({ downloadUrl, storagePath });
-        } catch (error) {
-          reject(error);
-        }
-      }
-    );
-  });
+  return uploadToFirebase(file, storagePath);
 }
 
 /**

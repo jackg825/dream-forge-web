@@ -45,6 +45,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.getSession = exports.createSession = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
+const storage_1 = require("../storage");
 const types_1 = require("../rodin/types");
 const db = admin.firestore();
 // Default session settings
@@ -248,12 +249,11 @@ exports.deleteSession = functions
     if (session.userId !== context.auth.uid) {
         throw new functions.https.HttpsError('permission-denied', 'Not authorized to delete this session');
     }
-    // Delete session files from Storage
-    const bucket = admin.storage().bucket();
+    // Delete session files from Storage (Firebase or R2)
     const sessionPath = `sessions/${session.userId}/${sessionId}`;
     try {
-        const [files] = await bucket.getFiles({ prefix: sessionPath });
-        await Promise.all(files.map((file) => file.delete()));
+        const files = await (0, storage_1.listFiles)(sessionPath);
+        await Promise.all(files.map((file) => (0, storage_1.deleteFile)(file.path)));
         functions.logger.info('Deleted session files', {
             sessionId,
             fileCount: files.length,

@@ -16,6 +16,7 @@ import {
   type BatchRequest,
   type BatchStatusResponse,
 } from '../gemini/batch-client';
+import { uploadBase64 } from '../storage';
 import type {
   PipelineDocument,
   GeminiBatchJobDocument,
@@ -27,7 +28,6 @@ import type {
 import { defineSecret } from 'firebase-functions/params';
 
 const db = admin.firestore();
-const storage = admin.storage();
 
 // Define secret for Gemini API key
 const geminiApiKey = defineSecret('GEMINI_API_KEY');
@@ -296,23 +296,11 @@ async function processCompletedBatchJob(
   for (const result of results) {
     if (result.success && result.imageBase64) {
       try {
-        // Upload to Storage
+        // Upload to Storage (Firebase or R2)
         const storagePath = `pipelines/${job.pipelineId}/${result.viewType}_${result.angle}.png`;
-        const bucket = storage.bucket();
-        const file = bucket.file(storagePath);
+        const mimeType = result.mimeType || 'image/png';
 
-        const imageBuffer = Buffer.from(result.imageBase64, 'base64');
-        await file.save(imageBuffer, {
-          metadata: {
-            contentType: result.mimeType || 'image/png',
-          },
-        });
-
-        // Get signed URL (7 days)
-        const [url] = await file.getSignedUrl({
-          action: 'read',
-          expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        });
+        const url = await uploadBase64(result.imageBase64, storagePath, mimeType);
 
         // Build processed image record
         const processedImage: PipelineProcessedImage = {

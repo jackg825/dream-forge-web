@@ -6,12 +6,10 @@
  */
 
 import * as functions from 'firebase-functions/v1';
-import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createH2CColorOptimizer } from '../gemini/h2c-optimizer';
 import { deductCredits } from '../utils/credits';
-
-const storage = admin.storage();
+import { uploadBase64 } from '../storage';
 
 // Credit cost for H2C operations
 const H2C_CREDIT_COSTS = {
@@ -66,31 +64,14 @@ async function downloadImageAsBase64(
 }
 
 /**
- * Upload base64 image to Firebase Storage
+ * Upload base64 image to storage (Firebase or R2)
  */
 async function uploadImageToStorage(
   base64: string,
   mimeType: string,
   storagePath: string
 ): Promise<string> {
-  const bucket = storage.bucket();
-  const file = bucket.file(storagePath);
-
-  const buffer = Buffer.from(base64, 'base64');
-
-  await file.save(buffer, {
-    metadata: {
-      contentType: mimeType,
-    },
-  });
-
-  // Generate a signed URL valid for 7 days
-  const [signedUrl] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-  });
-
-  return signedUrl;
+  return uploadBase64(base64, storagePath, mimeType);
 }
 
 /**

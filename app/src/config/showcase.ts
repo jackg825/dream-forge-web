@@ -20,7 +20,8 @@ export interface ShowcaseModel {
   afterImage?: string;
 }
 
-const R2_PUBLIC_URL = 'https://storage.dreamforge.app/public/showcase';
+// Use workers.dev domain (custom domain storage.dreamforge.app not configured yet)
+const R2_PUBLIC_URL = 'https://dream-forge-r2-proxy.jackg825.workers.dev/public/showcase';
 
 /**
  * Curated showcase models

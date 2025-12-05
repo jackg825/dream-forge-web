@@ -3,9 +3,9 @@
  *
  * Cloud Functions for the new simplified 3D generation workflow:
  * 1. createPipeline - Initialize pipeline with uploaded images
- * 2. generatePipelineImages - Generate 6 views via Gemini
- * 3. regeneratePipelineImage - Regenerate a single view
- * 4. startPipelineMesh - Start Meshy mesh generation (5 credits)
+ * 2. generatePipelineImages - Generate 6 views via Gemini (10 credits for Pro / 3 credits for Flash)
+ * 3. regeneratePipelineImage - Regenerate a single view (free, max 4 times)
+ * 4. startPipelineMesh - Start mesh generation (5-8 credits depending on provider)
  * 5. checkPipelineStatus - Poll status
  * 6. startPipelineTexture - Start texture generation (10 credits)
  */
@@ -32,7 +32,11 @@ export declare const getUserPipelines: functions.HttpsFunction & functions.Runna
  * - 4 mesh-optimized views (7-color H2C style)
  * - 2 texture-ready views (full color)
  *
- * No credits charged (Gemini cost absorbed).
+ * Credit costs:
+ * - gemini-3-pro: 10 credits
+ * - gemini-2.5-flash: 3 credits
+ *
+ * Credits are refunded on failure.
  */
 export declare const generatePipelineImages: functions.HttpsFunction & functions.Runnable<any>;
 /**

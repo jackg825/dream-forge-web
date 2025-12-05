@@ -8,9 +8,9 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
+import { fileExists, getSignedUrl, uploadBuffer } from '../storage';
 
 const db = admin.firestore();
-const storage = admin.storage();
 
 // ============================================
 // Types
@@ -36,19 +36,14 @@ async function checkUsdzExists(
   userId: string,
   pipelineId: string
 ): Promise<{ exists: boolean; signedUrl?: string }> {
-  const bucket = storage.bucket();
   const usdzPath = `pipelines/${userId}/${pipelineId}/mesh.usdz`;
-  const file = bucket.file(usdzPath);
 
-  const [exists] = await file.exists();
+  const exists = await fileExists(usdzPath);
   if (!exists) {
     return { exists: false };
   }
 
-  const [signedUrl] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  const signedUrl = await getSignedUrl(usdzPath, 7 * 24 * 60 * 60); // 7 days in seconds
 
   return { exists: true, signedUrl };
 }
@@ -212,21 +207,8 @@ export const convertToUsdz = functions
         );
       }
 
-      // Upload to storage
-      const bucket = storage.bucket();
-      const usdzFile = bucket.file(usdzPath);
-
-      await usdzFile.save(usdzBuffer, {
-        metadata: {
-          contentType: 'model/vnd.usdz+zip',
-        },
-      });
-
-      // Generate signed URL
-      const [signedUrl] = await usdzFile.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
+      // Upload to storage (Firebase or R2)
+      const signedUrl = await uploadBuffer(usdzBuffer, usdzPath, 'model/vnd.usdz+zip');
 
       // Update pipeline document with USDZ URL
       await pipelineRef.update({

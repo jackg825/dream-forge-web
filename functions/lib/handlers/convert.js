@@ -46,8 +46,8 @@ exports.checkUsdzAvailability = exports.convertToUsdz = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
+const storage_1 = require("../storage");
 const db = admin.firestore();
-const storage = admin.storage();
 // ============================================
 // Helper Functions
 // ============================================
@@ -55,17 +55,12 @@ const storage = admin.storage();
  * Check if USDZ file already exists in storage
  */
 async function checkUsdzExists(userId, pipelineId) {
-    const bucket = storage.bucket();
     const usdzPath = `pipelines/${userId}/${pipelineId}/mesh.usdz`;
-    const file = bucket.file(usdzPath);
-    const [exists] = await file.exists();
+    const exists = await (0, storage_1.fileExists)(usdzPath);
     if (!exists) {
         return { exists: false };
     }
-    const [signedUrl] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    const signedUrl = await (0, storage_1.getSignedUrl)(usdzPath, 7 * 24 * 60 * 60); // 7 days in seconds
     return { exists: true, signedUrl };
 }
 /**
@@ -185,19 +180,8 @@ exports.convertToUsdz = functions
         console.error('USDZ conversion failed:', error);
         throw new functions.https.HttpsError('internal', 'Failed to convert model to USDZ format');
     }
-    // Upload to storage
-    const bucket = storage.bucket();
-    const usdzFile = bucket.file(usdzPath);
-    await usdzFile.save(usdzBuffer, {
-        metadata: {
-            contentType: 'model/vnd.usdz+zip',
-        },
-    });
-    // Generate signed URL
-    const [signedUrl] = await usdzFile.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Upload to storage (Firebase or R2)
+    const signedUrl = await (0, storage_1.uploadBuffer)(usdzBuffer, usdzPath, 'model/vnd.usdz+zip');
     // Update pipeline document with USDZ URL
     await pipelineRef.update({
         usdzUrl: signedUrl,

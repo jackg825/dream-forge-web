@@ -3,9 +3,9 @@
  *
  * Cloud Functions for the new simplified 3D generation workflow:
  * 1. createPipeline - Initialize pipeline with uploaded images
- * 2. generatePipelineImages - Generate 6 views via Gemini
- * 3. regeneratePipelineImage - Regenerate a single view
- * 4. startPipelineMesh - Start Meshy mesh generation (5 credits)
+ * 2. generatePipelineImages - Generate 6 views via Gemini (10 credits for Pro / 3 credits for Flash)
+ * 3. regeneratePipelineImage - Regenerate a single view (free, max 4 times)
+ * 4. startPipelineMesh - Start mesh generation (5-8 credits depending on provider)
  * 5. checkPipelineStatus - Poll status
  * 6. startPipelineTexture - Start texture generation (10 credits)
  */
@@ -18,6 +18,7 @@ import { MeshyProvider } from '../providers/meshy/client';
 import { createMeshyRetextureClient } from '../providers/meshy/retexture';
 import { ProviderFactory, isValidProvider } from '../providers/factory';
 import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
+import { uploadBase64, uploadBuffer } from '../storage';
 import type {
   PipelineDocument,
   PipelineSettings,
@@ -32,7 +33,6 @@ import type {
 import { DEFAULT_MODE } from '../gemini/mode-configs';
 
 const db = admin.firestore();
-const storage = admin.storage();
 
 // Credit costs per provider
 // See docs/cost-analysis.md for detailed breakdown
@@ -47,6 +47,12 @@ const PIPELINE_CREDITS = {
   MESH: 5,      // Default (overridden by provider)
   TEXTURE: 10,  // Meshy Retexture only
 } as const;
+
+// Credit costs per Gemini model for view generation
+const GEMINI_MODEL_CREDITS: Record<GeminiImageModel, number> = {
+  'gemini-3-pro': 10,
+  'gemini-2.5-flash': 3,
+};
 
 // ============================================
 // Request/Response Types
@@ -118,30 +124,15 @@ async function downloadImageAsBase64(url: string): Promise<{ base64: string; mim
 }
 
 /**
- * Upload image to Firebase Storage and get signed URL
+ * Upload image to storage and get URL
+ * Uses storage abstraction layer (Firebase or R2)
  */
 async function uploadImageToStorage(
   base64: string,
   mimeType: string,
   storagePath: string
 ): Promise<string> {
-  const bucket = storage.bucket();
-  const file = bucket.file(storagePath);
-
-  const buffer = Buffer.from(base64, 'base64');
-
-  await file.save(buffer, {
-    metadata: {
-      contentType: mimeType,
-    },
-  });
-
-  const [signedUrl] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-
-  return signedUrl;
+  return uploadBase64(base64, storagePath, mimeType);
 }
 
 /**
@@ -327,7 +318,11 @@ export const getUserPipelines = functions
  * - 4 mesh-optimized views (7-color H2C style)
  * - 2 texture-ready views (full color)
  *
- * No credits charged (Gemini cost absorbed).
+ * Credit costs:
+ * - gemini-3-pro: 10 credits
+ * - gemini-2.5-flash: 3 credits
+ *
+ * Credits are refunded on failure.
  */
 export const generatePipelineImages = functions
   .region('asia-east1')
@@ -367,9 +362,24 @@ export const generatePipelineImages = functions
       );
     }
 
+    // Get Gemini model and calculate credits
+    const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
+    const viewCredits = GEMINI_MODEL_CREDITS[geminiModel];
+
+    // Deduct credits (throws if insufficient)
+    try {
+      await deductCredits(userId, viewCredits, pipelineId);
+    } catch (error) {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        `Insufficient credits for view generation (${viewCredits} credits required for ${geminiModel})`
+      );
+    }
+
     // Update status (clear error if retrying)
     await pipelineRef.update({
       status: 'generating-images',
+      'creditsCharged.views': viewCredits,
       error: admin.firestore.FieldValue.delete(),
       errorStep: admin.firestore.FieldValue.delete(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -385,7 +395,7 @@ export const generatePipelineImages = functions
       // If imageAnalysis exists, use its color palette and key features for consistency
       const modeId = pipeline.generationMode || DEFAULT_MODE;
       const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
-      const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
+      // geminiModel is already declared above for credit calculation
       const generator = createMultiViewGenerator(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
 
       // Create progress callback to update Firestore in real-time
@@ -488,6 +498,17 @@ export const generatePipelineImages = functions
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Refund credits on failure (viewCredits is available in outer scope)
+      try {
+        await refundCredits(userId, viewCredits, pipelineId);
+        functions.logger.info('Refunded credits after view generation failure', {
+          pipelineId,
+          credits: viewCredits,
+        });
+      } catch (refundError) {
+        functions.logger.error('Failed to refund credits', { pipelineId, refundError });
+      }
 
       await pipelineRef.update({
         status: 'failed',
@@ -961,21 +982,13 @@ export const checkPipelineStatus = functions
           if (glbFile) {
             const modelBuffer = await provider.downloadModel(glbFile.url);
             const storagePath = `pipelines/${userId}/${pipelineId}/mesh.glb`;
-            const bucket = storage.bucket();
-            const file = bucket.file(storagePath);
 
-            await file.save(modelBuffer, {
-              metadata: { contentType: 'model/gltf-binary' },
-            });
-
-            const [signedUrl] = await file.getSignedUrl({
-              action: 'read',
-              expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-            });
+            // Use storage abstraction layer
+            const meshUrl = await uploadBuffer(modelBuffer, storagePath, 'model/gltf-binary');
 
             await pipelineRef.update({
               status: 'mesh-ready',
-              meshUrl: signedUrl,
+              meshUrl,
               meshStoragePath: storagePath,
               meshDownloadFiles: downloadResult.files,
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -985,7 +998,7 @@ export const checkPipelineStatus = functions
 
             return {
               status: 'mesh-ready',
-              meshUrl: signedUrl,
+              meshUrl,
               downloadFiles: downloadResult.files,
             };
           }
@@ -1015,21 +1028,13 @@ export const checkPipelineStatus = functions
           if (glbFile) {
             const modelBuffer = await retextureClient.downloadModel(glbFile.url);
             const storagePath = `pipelines/${userId}/${pipelineId}/textured.glb`;
-            const bucket = storage.bucket();
-            const file = bucket.file(storagePath);
 
-            await file.save(modelBuffer, {
-              metadata: { contentType: 'model/gltf-binary' },
-            });
-
-            const [signedUrl] = await file.getSignedUrl({
-              action: 'read',
-              expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
-            });
+            // Use storage abstraction layer
+            const texturedModelUrl = await uploadBuffer(modelBuffer, storagePath, 'model/gltf-binary');
 
             await pipelineRef.update({
               status: 'completed',
-              texturedModelUrl: signedUrl,
+              texturedModelUrl,
               texturedModelStoragePath: storagePath,
               texturedDownloadFiles: downloadResult.files,
               completedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -1038,7 +1043,7 @@ export const checkPipelineStatus = functions
 
             return {
               status: 'completed',
-              texturedModelUrl: signedUrl,
+              texturedModelUrl,
               downloadFiles: downloadResult.files,
             };
           }
