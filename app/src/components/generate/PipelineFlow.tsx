@@ -65,7 +65,7 @@ import {
   GEMINI_MODEL_OPTIONS,
 } from '@/types';
 import { GeminiModelSelector } from './GeminiModelSelector';
-import { ProviderSelector } from './ProviderSelector';
+// ProviderSelector hidden - defaulting to Hunyuan3D v3.0
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -146,8 +146,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [userDescription, setUserDescription] = useState<string>('');
   const [colorCount, setColorCount] = useState<number>(7);
 
-  // Provider selection state - default to Tripo for 3D printing optimization
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('tripo');
+  // Provider selection state - default to Hunyuan3D v3.0
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('hunyuan');
   const [providerOptions, setProviderOptions] = useState<ProviderOptions>({});
 
   // Gemini model selection state
@@ -655,16 +655,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             onChange={setGeminiModel}
             disabled={actionLoading || isGeneratingImages}
           />
-        ) : (
-          // Images exist - show Provider selector for mesh generation
-          <ProviderSelector
-            value={selectedProvider}
-            onChange={setSelectedProvider}
-            disabled={actionLoading || isGeneratingImages}
-            showCredits={true}
-            providers={['hunyuan', 'tripo']}
-          />
-        )}
+        ) : null /* Provider selector hidden - defaulting to Hunyuan3D v3.0 */}
 
         {/* Action buttons */}
         <div className="flex justify-center gap-4 pt-4">
@@ -857,14 +848,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           </div> */}
         </div>
 
-        {/* 3D Provider selection (Hunyuan3D + Tripo3D only) */}
-        <ProviderSelector
-          value={selectedProvider}
-          onChange={setSelectedProvider}
-          disabled={actionLoading}
-          showCredits={true}
-          providers={['hunyuan', 'tripo']}
-        />
+        {/* 3D Provider selection hidden - defaulting to Hunyuan3D v3.0 */}
 
         {/* Action button - proceed to mesh generation */}
         <div className="flex justify-center pt-4">
