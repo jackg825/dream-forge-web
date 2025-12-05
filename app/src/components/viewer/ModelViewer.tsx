@@ -336,8 +336,9 @@ function CameraSetup({ distance = 5 }: { distance?: number }) {
   const { camera } = useThree();
 
   useEffect(() => {
-    // Position camera in front of model, slightly elevated
-    camera.position.set(0, 1.5, distance);
+    // Position camera in front of model, height scales with distance
+    const cameraHeight = distance * 0.3; // Scale height proportionally
+    camera.position.set(0, cameraHeight, distance);
     camera.lookAt(0, 0, 0);
   }, [camera, distance]);
 
@@ -362,8 +363,9 @@ function CameraControls({
   useEffect(() => {
     onResetRef.current = () => {
       if (controlsRef.current) {
-        // Reset to front view position
-        camera.position.set(0, 1.5, distance);
+        // Reset to front view position, height scales with distance
+        const cameraHeight = distance * 0.3;
+        camera.position.set(0, cameraHeight, distance);
         controlsRef.current.target.set(0, 0, 0);
         controlsRef.current.update();
       }
