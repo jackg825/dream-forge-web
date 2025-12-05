@@ -3,6 +3,7 @@ import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { locales, type Locale, localeHtmlLang } from '@/i18n/config';
+import { fontVariables } from '../layout';
 
 interface LocaleLayoutProps {
   children: React.ReactNode;
@@ -32,7 +33,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={localeHtmlLang[locale as Locale]} suppressHydrationWarning>
-      <body className="antialiased">
+      <body className={`${fontVariables} antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>{children}</ThemeProvider>
         </NextIntlClientProvider>

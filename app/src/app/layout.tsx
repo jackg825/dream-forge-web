@@ -17,18 +17,14 @@ export const metadata: Metadata = {
   description: "Transform your photos into stunning 3D models with AI-powered technology. Perfect for 3D printing, gaming, or digital art.",
 };
 
+// Export font variables for use in locale layout
+export const fontVariables = `${geistSans.variable} ${geistMono.variable}`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
-    </html>
-  );
+  // This layout wraps [locale]/layout.tsx which handles <html> and <body>
+  return children;
 }
