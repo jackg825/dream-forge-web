@@ -87,12 +87,18 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
 
         {/* Main content grid - stacks on mobile, 60:40 on desktop */}
         <div className="grid lg:grid-cols-[3fr_2fr] gap-8 lg:gap-12 items-start">
-          {/* Left: Visual showcase - with padding on mobile for visual breathing room */}
-          <div className="relative order-2 lg:order-1">
-            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl rounded-lg">
-              <CardContent className="p-0">
-                {/* 3D Model showcase - larger aspect ratio for visual impact */}
-                <div className="aspect-[4/3] sm:aspect-[4/3] lg:aspect-[5/4] bg-gradient-to-br from-slate-900 to-slate-800 relative group">
+          {/* Left: Visual showcase with title for alignment */}
+          <div className="relative order-2 lg:order-1 flex flex-col">
+            {/* Title - aligns with "尺寸選擇" on right */}
+            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 flex items-center gap-2">
+              <span className="text-[var(--accent-violet)]">🎨</span>
+              {t('printService.previewTitle')}
+            </h3>
+            {/* Model viewer card - grows to fill space */}
+            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl rounded-lg flex-1">
+              <CardContent className="p-0 h-full">
+                {/* 3D Model showcase - no padding, zoomed in for visual impact */}
+                <div className="h-full min-h-[300px] sm:min-h-[400px] lg:min-h-[500px] bg-gradient-to-br from-slate-900 to-slate-800 relative group">
                   {showcaseModels[0] && (
                     <ModelViewer
                       modelUrl={showcaseModels[0].modelUrl}
@@ -101,10 +107,11 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
                       showGrid={false}
                       showAxes={false}
                       backgroundColor="#1e293b"
+                      cameraDistance={3.5}
                     />
                   )}
 
-                  {/* Floating badges - smaller on mobile */}
+                  {/* Floating badges */}
                   <div className="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 z-10">
                     <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
                     {t('printService.statusReady')}
