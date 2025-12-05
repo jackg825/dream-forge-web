@@ -57,7 +57,7 @@ const r2_client_1 = require("./r2-client");
 const STORAGE_BACKEND = process.env.STORAGE_BACKEND || 'firebase';
 exports.STORAGE_BACKEND = STORAGE_BACKEND;
 // R2 公開 URL (透過 Worker)
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://storage.dreamforge.app';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://dream-forge-r2-proxy.jackg825.workers.dev';
 exports.R2_PUBLIC_URL = R2_PUBLIC_URL;
 /**
  * 上傳 Buffer 到儲存

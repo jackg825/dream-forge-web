@@ -19,7 +19,7 @@ const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'dream-forge-storage';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://storage.dreamforge.app';
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://dream-forge-r2-proxy.jackg825.workers.dev';
 
 // 驗證配置
 function validateConfig(): void {

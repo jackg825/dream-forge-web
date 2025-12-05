@@ -94,7 +94,7 @@ exports.analyzeUploadedImage = functions
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to analyze images');
     }
-    const { imageUrl, colorCount = 7, printerType = 'fdm' } = data;
+    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW' } = data;
     // Validate input
     if (!imageUrl) {
         throw new functions.https.HttpsError('invalid-argument', 'imageUrl is required');
@@ -117,6 +117,7 @@ exports.analyzeUploadedImage = functions
         const analysisResult = await (0, image_analyzer_1.analyzeImage)(base64, mimeType, {
             colorCount: validColorCount,
             printerType,
+            locale,
         });
         // Add timestamp
         const analysis = {

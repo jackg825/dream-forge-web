@@ -199,6 +199,24 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     retryable: true,
     suggestedRetryDelayMs: 10000,
   },
+  {
+    pattern: /tripo.*task.*fail/i,
+    category: 'service',
+    code: 'TRIPO_TASK_FAILED',
+    severity: 'error',
+    userMessage: 'Tripo3D 模型生成失敗，請重試',
+    retryable: true,
+    suggestedRetryDelayMs: 5000,
+  },
+  {
+    pattern: /tripo.*error.*\d+/i,
+    category: 'service',
+    code: 'TRIPO_API_ERROR',
+    severity: 'error',
+    userMessage: 'Tripo3D 處理失敗',
+    retryable: true,
+    suggestedRetryDelayMs: 5000,
+  },
 
   // Service errors - Meshy (only matches explicit "meshy" keyword)
   {

@@ -14,7 +14,9 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createMultiViewGenerator, type GeminiImageModel } from '../gemini/multi-view-generator';
-import { MeshyProvider } from '../providers/meshy/client';
+import { MeshyProvider, type MeshGenerationOptions } from '../providers/meshy/client';
+import { TripoProvider } from '../providers/tripo/client';
+import { HunyuanProvider } from '../providers/hunyuan/client';
 import { createMeshyRetextureClient } from '../providers/meshy/retexture';
 import { ProviderFactory, isValidProvider } from '../providers/factory';
 import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
@@ -828,47 +830,65 @@ export const startPipelineMesh = functions
     });
 
     try {
-      // Download mesh images
-      const imageBuffers: Buffer[] = [];
-
-      for (const angle of meshAngles) {
-        const imageUrl = pipeline.meshImages[angle]!.url;
-        const response = await axios.get(imageUrl, {
-          responseType: 'arraybuffer',
-          timeout: 30000,
-        });
-        imageBuffers.push(Buffer.from(response.data));
-      }
+      // Get image URLs from pipeline (no need to download anymore!)
+      const imageUrls = meshAngles.map(angle => pipeline.meshImages[angle]!.url);
 
       // Get provider via factory pattern
       const provider = ProviderFactory.getProvider(providerType);
 
-      functions.logger.info('Starting mesh generation with provider', {
+      functions.logger.info('Starting mesh generation with provider (URL-based)', {
         pipelineId,
         provider: providerType,
         providerOptions,
+        imageCount: imageUrls.length,
       });
 
-      // For Meshy, use generateMeshOnly if available (mesh-only costs 5 credits vs 15 with texture)
+      // Use URL-based methods to avoid timeout issues
       let result;
-      if (providerType === 'meshy' && 'generateMeshOnly' in provider) {
+      if (providerType === 'tripo') {
+        // Tripo: use generateFromUrls
+        const tripoProvider = provider as TripoProvider;
+        result = await tripoProvider.generateFromUrls(imageUrls, {
+          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          enableTexture: true,
+          enablePBR: true,
+        });
+      } else if (providerType === 'meshy') {
+        // Meshy: use generateMeshOnlyFromUrls
         const meshyProvider = provider as MeshyProvider;
-        result = await meshyProvider.generateMeshOnly(imageBuffers, {
+        const meshOptions: MeshGenerationOptions = {
           quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
           format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
           precision: pipeline.settings.meshPrecision || 'standard',
+        };
+        result = await meshyProvider.generateMeshOnlyFromUrls(imageUrls, meshOptions);
+      } else if (providerType === 'hunyuan') {
+        // Hunyuan: use generateFromUrls
+        const hunyuanProvider = provider as HunyuanProvider;
+        result = await hunyuanProvider.generateFromUrls(imageUrls, {
+          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          enablePBR: false,
+          providerOptions: providerOptions ? {
+            hunyuan: providerOptions.faceCount ? { faceCount: providerOptions.faceCount } : undefined,
+          } : undefined,
         });
       } else {
-        // For other providers, use standard generateFromMultipleImages
+        // Fallback for unknown providers: download to buffers
+        const imageBuffers: Buffer[] = [];
+        for (const url of imageUrls) {
+          const response = await axios.get(url, {
+            responseType: 'arraybuffer',
+            timeout: 30000,
+          });
+          imageBuffers.push(Buffer.from(response.data));
+        }
         result = await provider.generateFromMultipleImages(imageBuffers, {
           quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
           format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
           enableTexture: false,
           enablePBR: false,
-          providerOptions: providerOptions ? {
-            hunyuan: providerOptions.faceCount ? { faceCount: providerOptions.faceCount } : undefined,
-            tripo: providerOptions.tripoMode ? { mode: providerOptions.tripoMode } : undefined,
-          } : undefined,
         });
       }
 
@@ -931,7 +951,10 @@ export const checkPipelineStatus = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY'],
+    secrets: [
+      'MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY',
+      'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
+    ],
   })
   .https.onCall(async (data: CheckPipelineStatusData, context) => {
     if (!context.auth) {
@@ -977,28 +1000,50 @@ export const checkPipelineStatus = functions
         if (status.status === 'completed') {
           // Download and store mesh
           const downloadResult = await provider.getDownloadUrls(taskId);
-          const glbFile = downloadResult.files.find((f) => f.format === 'glb');
 
-          if (glbFile) {
-            const modelBuffer = await provider.downloadModel(glbFile.url);
-            const storagePath = `pipelines/${userId}/${pipelineId}/mesh.glb`;
+          // Try to find the best model file: prefer GLB, then FBX, then first available
+          const modelFile = downloadResult.files.find((f) => f.format === 'glb')
+            || downloadResult.files.find((f) => f.format === 'fbx')
+            || downloadResult.files[0];
+
+          if (modelFile) {
+            const modelBuffer = await provider.downloadModel(modelFile.url);
+            const fileExt = modelFile.format || 'glb';
+            const storagePath = `pipelines/${userId}/${pipelineId}/mesh.${fileExt}`;
+
+            // Determine MIME type based on format
+            const mimeTypes: Record<string, string> = {
+              glb: 'model/gltf-binary',
+              fbx: 'application/octet-stream',
+              obj: 'text/plain',
+              stl: 'application/sla',
+            };
+            const mimeType = mimeTypes[fileExt] || 'application/octet-stream';
 
             // Use storage abstraction layer
-            const meshUrl = await uploadBuffer(modelBuffer, storagePath, 'model/gltf-binary');
+            const meshUrl = await uploadBuffer(modelBuffer, storagePath, mimeType);
 
             await pipelineRef.update({
               status: 'mesh-ready',
               meshUrl,
               meshStoragePath: storagePath,
               meshDownloadFiles: downloadResult.files,
+              meshFormat: fileExt,  // Store the actual format
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
 
             await incrementGenerationCount(userId);
 
+            functions.logger.info('Mesh stored successfully', {
+              pipelineId,
+              format: fileExt,
+              availableFormats: downloadResult.files.map(f => f.format),
+            });
+
             return {
               status: 'mesh-ready',
               meshUrl,
+              meshFormat: fileExt,
               downloadFiles: downloadResult.files,
             };
           }

@@ -17,7 +17,7 @@ const STORAGE_BACKEND: StorageBackend =
 
 // R2 公開 URL (透過 Worker)
 const R2_PUBLIC_URL =
-  process.env.R2_PUBLIC_URL || 'https://storage.dreamforge.app';
+  process.env.R2_PUBLIC_URL || 'https://dream-forge-r2-proxy.jackg825.workers.dev';
 
 /**
  * 上傳 Buffer 到儲存

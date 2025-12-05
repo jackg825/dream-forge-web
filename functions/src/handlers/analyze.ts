@@ -23,6 +23,7 @@ interface AnalyzeUploadedImageData {
   imageUrl: string;        // URL of uploaded image in Firebase Storage
   colorCount?: number;     // Number of colors to extract (3-12, default: 7)
   printerType?: PrinterType; // Printer type for recommendations (default: 'fdm')
+  locale?: string;         // User's locale for response language (default: 'zh-TW')
 }
 
 interface AnalyzeUploadedImageResponse {
@@ -81,7 +82,7 @@ export const analyzeUploadedImage = functions
       );
     }
 
-    const { imageUrl, colorCount = 7, printerType = 'fdm' } = data;
+    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW' } = data;
 
     // Validate input
     if (!imageUrl) {
@@ -113,6 +114,7 @@ export const analyzeUploadedImage = functions
       const analysisResult = await analyzeImage(base64, mimeType, {
         colorCount: validColorCount,
         printerType,
+        locale,
       });
 
       // Add timestamp
