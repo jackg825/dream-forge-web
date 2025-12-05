@@ -71,6 +71,7 @@ export function BeforeAfterSlider({
           src={afterImage}
           alt={afterAlt}
           className="w-full h-full object-cover"
+          loading="eager"
           draggable={false}
         />
         {/* Label */}
@@ -88,6 +89,7 @@ export function BeforeAfterSlider({
           src={beforeImage}
           alt={beforeAlt}
           className="w-full h-full object-cover"
+          loading="eager"
           draggable={false}
         />
         {/* Label */}
