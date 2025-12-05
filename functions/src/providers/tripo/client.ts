@@ -26,6 +26,7 @@ import {
   type TripoCreateTaskResponse,
   type TripoTaskStatusResponse,
   type TripoUploadResponse,
+  type TripoBalanceResponse,
 } from './types';
 import { mapTripoTaskStatus, extractTripoDownloads } from './mapper';
 
@@ -346,6 +347,40 @@ export class TripoProvider implements I3DProvider {
         fine: '~3 min',
       },
     };
+  }
+
+  /**
+   * Check API credit balance
+   * Returns the current balance and frozen amount
+   */
+  async checkBalance(): Promise<{ balance: number; frozen: number }> {
+    try {
+      const response = await axios.get<TripoBalanceResponse>(
+        `${TRIPO_API_BASE}/user/balance`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+          timeout: 10000,
+        }
+      );
+
+      if (response.data.code !== 0) {
+        throw new Error(`Tripo API error: code ${response.data.code}`);
+      }
+
+      functions.logger.info('Tripo balance checked', {
+        balance: response.data.data.balance,
+        frozen: response.data.data.frozen,
+      });
+
+      return {
+        balance: response.data.data.balance,
+        frozen: response.data.data.frozen,
+      };
+    } catch (error) {
+      this.handleError(error, 'checkBalance');
+    }
   }
 
   /**

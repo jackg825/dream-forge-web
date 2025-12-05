@@ -300,6 +300,20 @@ export interface GetUserTransactionsResponse {
   };
 }
 
+// Provider balance types
+export interface ProviderBalances {
+  rodin: { balance: number | null; error?: string };
+  meshy: { balance: number | null; error?: string };
+  tripo: { balance: number | null; frozen: number | null; error?: string };
+  hunyuan: { status: 'free-tier' };
+}
+
+export interface AllProviderBalancesResponse {
+  success: boolean;
+  balances: ProviderBalances;
+  checkedAt: string;
+}
+
 // Job types - Granular status stages for progress tracking
 export type JobStatus =
   | 'pending'           // Job queued, waiting to start

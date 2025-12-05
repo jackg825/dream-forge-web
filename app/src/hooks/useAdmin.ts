@@ -11,13 +11,20 @@ import type {
   AdminStatsResponse,
   ListUsersResponse,
   GetUserTransactionsResponse,
+  AllProviderBalancesResponse,
+  ProviderBalances,
 } from '@/types';
 
 interface UseAdminReturn {
-  // Rodin balance
+  // Rodin balance (legacy - kept for backward compatibility)
   rodinBalance: number | null;
   loadingBalance: boolean;
   fetchRodinBalance: () => Promise<void>;
+
+  // All provider balances
+  providerBalances: ProviderBalances | null;
+  loadingProviderBalances: boolean;
+  fetchAllProviderBalances: () => Promise<void>;
 
   // Admin stats
   stats: AdminStats | null;
@@ -64,6 +71,9 @@ interface UseAdminReturn {
 export function useAdmin(): UseAdminReturn {
   const [rodinBalance, setRodinBalance] = useState<number | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
+
+  const [providerBalances, setProviderBalances] = useState<ProviderBalances | null>(null);
+  const [loadingProviderBalances, setLoadingProviderBalances] = useState(false);
 
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -113,6 +123,36 @@ export function useAdmin(): UseAdminReturn {
       console.error('Error fetching Rodin balance:', err);
     } finally {
       setLoadingBalance(false);
+    }
+  }, []);
+
+  const fetchAllProviderBalances = useCallback(async () => {
+    if (!functions) {
+      setError('Firebase not initialized');
+      return;
+    }
+
+    setLoadingProviderBalances(true);
+    setError(null);
+
+    try {
+      const checkAllBalances = httpsCallable<void, AllProviderBalancesResponse>(
+        functions,
+        'checkAllProviderBalances'
+      );
+      const result = await checkAllBalances();
+      setProviderBalances(result.data.balances);
+
+      // Also update rodinBalance for backward compatibility
+      if (result.data.balances.rodin.balance !== null) {
+        setRodinBalance(result.data.balances.rodin.balance);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch provider balances';
+      setError(message);
+      console.error('Error fetching provider balances:', err);
+    } finally {
+      setLoadingProviderBalances(false);
     }
   }, []);
 
@@ -277,6 +317,9 @@ export function useAdmin(): UseAdminReturn {
     rodinBalance,
     loadingBalance,
     fetchRodinBalance,
+    providerBalances,
+    loadingProviderBalances,
+    fetchAllProviderBalances,
     stats,
     loadingStats,
     fetchStats,

@@ -13,9 +13,9 @@ function AdminDashboardContent() {
   const t = useTranslations();
   const { user } = useAuth();
   const {
-    rodinBalance,
-    loadingBalance,
-    fetchRodinBalance,
+    providerBalances,
+    loadingProviderBalances,
+    fetchAllProviderBalances,
     stats,
     loadingStats,
     fetchStats,
@@ -41,10 +41,10 @@ function AdminDashboardContent() {
 
   // Fetch data on mount
   useEffect(() => {
-    fetchRodinBalance();
+    fetchAllProviderBalances();
     fetchStats();
     fetchUsers();
-  }, [fetchRodinBalance, fetchStats, fetchUsers]);
+  }, [fetchAllProviderBalances, fetchStats, fetchUsers]);
 
   const openUserDetail = (targetUser: AdminUser) => {
     setSelectedUser(targetUser);
@@ -91,22 +91,18 @@ function AdminDashboardContent() {
 
         {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Rodin API Balance */}
+          {/* Provider Balances */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Rodin API Balance</p>
-                {loadingBalance ? (
-                  <div className="h-9 w-20 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
-                ) : (
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {rodinBalance !== null ? rodinBalance.toFixed(1) : '—'}
-                  </p>
-                )}
-              </div>
-              <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.providerBalances')}</p>
+              <button
+                onClick={fetchAllProviderBalances}
+                disabled={loadingProviderBalances}
+                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                title={t('admin.refresh')}
+              >
                 <svg
-                  className="w-6 h-6 text-purple-600 dark:text-purple-400"
+                  className={`w-4 h-4 text-purple-600 dark:text-purple-400 ${loadingProviderBalances ? 'animate-spin' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -115,25 +111,61 @@ function AdminDashboardContent() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-              </div>
+              </button>
             </div>
-            <button
-              onClick={fetchRodinBalance}
-              disabled={loadingBalance}
-              className="mt-3 text-xs text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 disabled:opacity-50"
-            >
-              {loadingBalance ? t('common.loading') : t('controls.reset')}
-            </button>
+            {loadingProviderBalances && !providerBalances ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Rodin</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {providerBalances?.rodin.balance?.toFixed(1) ?? '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Meshy</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {providerBalances?.meshy.balance?.toLocaleString() ?? '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Tripo</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    {providerBalances?.tripo.balance !== null && providerBalances?.tripo.balance !== undefined ? (
+                      <>
+                        {providerBalances.tripo.balance.toLocaleString()}
+                        {providerBalances.tripo.frozen ? (
+                          <span className="text-xs text-gray-500 ml-1">
+                            ({providerBalances.tripo.frozen} {t('admin.frozen')})
+                          </span>
+                        ) : null}
+                      </>
+                    ) : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Hunyuan</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
+                    {t('admin.freeTier')}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Total Users */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Users</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.totalUsers')}</p>
                 {loadingStats ? (
                   <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
                 ) : (
@@ -191,9 +223,9 @@ function AdminDashboardContent() {
             </div>
             {stats && (
               <div className="mt-2 flex gap-2 text-xs">
-                <span className="text-green-600 dark:text-green-400">{stats.jobs.completed} done</span>
-                <span className="text-yellow-600 dark:text-yellow-400">{stats.jobs.pending} pending</span>
-                <span className="text-red-600 dark:text-red-400">{stats.jobs.failed} failed</span>
+                <span className="text-green-600 dark:text-green-400">{t('admin.jobs.done', { count: stats.jobs.completed })}</span>
+                <span className="text-yellow-600 dark:text-yellow-400">{t('admin.jobs.pending', { count: stats.jobs.pending })}</span>
+                <span className="text-red-600 dark:text-red-400">{t('admin.jobs.failed', { count: stats.jobs.failed })}</span>
               </div>
             )}
           </div>
@@ -202,7 +234,7 @@ function AdminDashboardContent() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Credits Distributed</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.creditsDistributed')}</p>
                 {loadingStats ? (
                   <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
                 ) : (
@@ -232,10 +264,10 @@ function AdminDashboardContent() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Users</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.users')}</h2>
               {usersPagination && (
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {usersPagination.total} total users
+                  {t('admin.totalUsersCount', { count: usersPagination.total })}
                 </span>
               )}
             </div>
@@ -246,29 +278,29 @@ function AdminDashboardContent() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
             </div>
           ) : users.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 dark:text-gray-400">No users found</div>
+            <div className="p-6 text-center text-gray-500 dark:text-gray-400">{t('admin.noUsers')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      User
+                      {t('admin.table.user')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Credits
+                      {t('admin.table.credits')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Generations
+                      {t('admin.table.generations')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Role
+                      {t('admin.table.role')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Joined
+                      {t('admin.table.joined')}
                     </th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
+                      {t('admin.table.actions')}
                     </th>
                   </tr>
                 </thead>
@@ -335,7 +367,7 @@ function AdminDashboardContent() {
                           onClick={() => openUserDetail(targetUser)}
                           className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
                         >
-                          管理
+                          {t('admin.manage')}
                         </button>
                       </td>
                     </tr>
@@ -357,7 +389,7 @@ function AdminDashboardContent() {
                 }
                 className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
               >
-                Load more
+                {t('admin.loadMore')}
               </button>
             </div>
           )}

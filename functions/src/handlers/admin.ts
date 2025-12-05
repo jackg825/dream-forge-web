@@ -2,6 +2,8 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import type { TransactionDocument } from '../rodin/types';
 import { createRodinClient } from '../rodin/client';
+import { MeshyProvider } from '../providers/meshy/client';
+import { TripoProvider } from '../providers/tripo/client';
 
 const db = admin.firestore();
 
@@ -764,4 +766,226 @@ export const getUserTransactions = functions
         'Failed to get user transactions'
       );
     }
+  });
+
+// ============================================
+// Provider Balance Functions
+// ============================================
+
+/**
+ * Cloud Function: checkMeshyBalance
+ *
+ * Admin-only function to check Meshy API credit balance.
+ */
+export const checkMeshyBalance = functions
+  .region('asia-east1')
+  .runWith({
+    secrets: ['MESHY_API_KEY'],
+  })
+  .https.onCall(async (_data, context) => {
+    // Check authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be logged in'
+      );
+    }
+
+    // Check admin permission
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Admin access required'
+      );
+    }
+
+    try {
+      const apiKey = process.env.MESHY_API_KEY;
+      if (!apiKey) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'Meshy API key not configured'
+        );
+      }
+
+      const meshyProvider = new MeshyProvider(apiKey);
+      const balance = await meshyProvider.checkBalance();
+
+      functions.logger.info('Admin checked Meshy balance', {
+        adminId: context.auth.uid,
+        balance,
+      });
+
+      return {
+        success: true,
+        balance,
+        checkedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      functions.logger.error('Failed to check Meshy balance', { error });
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to check Meshy API balance'
+      );
+    }
+  });
+
+/**
+ * Cloud Function: checkTripoBalance
+ *
+ * Admin-only function to check Tripo API credit balance.
+ * Returns both available balance and frozen amount.
+ */
+export const checkTripoBalance = functions
+  .region('asia-east1')
+  .runWith({
+    secrets: ['TRIPO_API_KEY'],
+  })
+  .https.onCall(async (_data, context) => {
+    // Check authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be logged in'
+      );
+    }
+
+    // Check admin permission
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Admin access required'
+      );
+    }
+
+    try {
+      const apiKey = process.env.TRIPO_API_KEY;
+      if (!apiKey) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'Tripo API key not configured'
+        );
+      }
+
+      const tripoProvider = new TripoProvider(apiKey);
+      const { balance, frozen } = await tripoProvider.checkBalance();
+
+      functions.logger.info('Admin checked Tripo balance', {
+        adminId: context.auth.uid,
+        balance,
+        frozen,
+      });
+
+      return {
+        success: true,
+        balance,
+        frozen,
+        checkedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      functions.logger.error('Failed to check Tripo balance', { error });
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to check Tripo API balance'
+      );
+    }
+  });
+
+/**
+ * Cloud Function: checkAllProviderBalances
+ *
+ * Admin-only function to check all provider balances at once.
+ * More efficient than calling each balance check individually.
+ *
+ * Returns:
+ * - rodin: number (balance)
+ * - meshy: number (credits)
+ * - tripo: { balance: number, frozen: number }
+ * - hunyuan: 'free-tier' (no API available)
+ */
+export const checkAllProviderBalances = functions
+  .region('asia-east1')
+  .runWith({
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'TRIPO_API_KEY'],
+  })
+  .https.onCall(async (_data, context) => {
+    // Check authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be logged in'
+      );
+    }
+
+    // Check admin permission
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'Admin access required'
+      );
+    }
+
+    const results: {
+      rodin: { balance: number | null; error?: string };
+      meshy: { balance: number | null; error?: string };
+      tripo: { balance: number | null; frozen: number | null; error?: string };
+      hunyuan: { status: 'free-tier' };
+    } = {
+      rodin: { balance: null },
+      meshy: { balance: null },
+      tripo: { balance: null, frozen: null },
+      hunyuan: { status: 'free-tier' },
+    };
+
+    // Check Rodin balance
+    try {
+      const rodinClient = createRodinClient();
+      results.rodin.balance = await rodinClient.checkBalance();
+    } catch (error) {
+      results.rodin.error = 'Failed to check balance';
+      functions.logger.error('Failed to check Rodin balance', { error });
+    }
+
+    // Check Meshy balance
+    try {
+      const meshyKey = process.env.MESHY_API_KEY;
+      if (meshyKey) {
+        const meshyProvider = new MeshyProvider(meshyKey);
+        results.meshy.balance = await meshyProvider.checkBalance();
+      } else {
+        results.meshy.error = 'API key not configured';
+      }
+    } catch (error) {
+      results.meshy.error = 'Failed to check balance';
+      functions.logger.error('Failed to check Meshy balance', { error });
+    }
+
+    // Check Tripo balance
+    try {
+      const tripoKey = process.env.TRIPO_API_KEY;
+      if (tripoKey) {
+        const tripoProvider = new TripoProvider(tripoKey);
+        const tripoBalance = await tripoProvider.checkBalance();
+        results.tripo.balance = tripoBalance.balance;
+        results.tripo.frozen = tripoBalance.frozen;
+      } else {
+        results.tripo.error = 'API key not configured';
+      }
+    } catch (error) {
+      results.tripo.error = 'Failed to check balance';
+      functions.logger.error('Failed to check Tripo balance', { error });
+    }
+
+    functions.logger.info('Admin checked all provider balances', {
+      adminId: context.auth.uid,
+      rodin: results.rodin.balance,
+      meshy: results.meshy.balance,
+      tripo: results.tripo.balance,
+    });
+
+    return {
+      success: true,
+      balances: results,
+      checkedAt: new Date().toISOString(),
+    };
   });

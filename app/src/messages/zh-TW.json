@@ -41,7 +41,33 @@
   "admin": {
     "dashboard": "管理面板",
     "pipelines": "生成管理",
-    "returnToUser": "返回一般模式"
+    "returnToUser": "返回一般模式",
+    "providerBalances": "API 餘額",
+    "totalUsers": "總用戶數",
+    "totalGenerations": "總生成次數",
+    "creditsDistributed": "已發放點數",
+    "users": "用戶",
+    "totalUsersCount": "共 {count} 位用戶",
+    "noUsers": "未找到用戶",
+    "loadMore": "載入更多",
+    "manage": "管理",
+    "freeTier": "免費額度",
+    "reset": "重設",
+    "refresh": "重新整理",
+    "frozen": "凍結",
+    "table": {
+      "user": "用戶",
+      "credits": "點數",
+      "generations": "生成次數",
+      "role": "角色",
+      "joined": "加入時間",
+      "actions": "操作"
+    },
+    "jobs": {
+      "done": "{count} 完成",
+      "pending": "{count} 處理中",
+      "failed": "{count} 失敗"
+    }
   },
   "settingsPage": {
     "title": "設定",

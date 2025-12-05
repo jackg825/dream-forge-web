@@ -41,7 +41,33 @@
   "admin": {
     "dashboard": "Dashboard",
     "pipelines": "Generations",
-    "returnToUser": "Back to Normal"
+    "returnToUser": "Back to Normal",
+    "providerBalances": "API Balances",
+    "totalUsers": "Total Users",
+    "totalGenerations": "Total Generations",
+    "creditsDistributed": "Credits Distributed",
+    "users": "Users",
+    "totalUsersCount": "{count} total users",
+    "noUsers": "No users found",
+    "loadMore": "Load more",
+    "manage": "Manage",
+    "freeTier": "Free tier",
+    "reset": "Reset",
+    "refresh": "Refresh",
+    "frozen": "frozen",
+    "table": {
+      "user": "User",
+      "credits": "Credits",
+      "generations": "Generations",
+      "role": "Role",
+      "joined": "Joined",
+      "actions": "Actions"
+    },
+    "jobs": {
+      "done": "{count} done",
+      "pending": "{count} pending",
+      "failed": "{count} failed"
+    }
   },
   "settingsPage": {
     "title": "Settings",
