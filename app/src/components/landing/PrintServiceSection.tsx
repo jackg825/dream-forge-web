@@ -85,14 +85,14 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
           </p>
         </div>
 
-        {/* Main content grid - stacks on mobile */}
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          {/* Left: Visual showcase - hidden on mobile, shown at top on tablet */}
-          <div className="relative order-2 lg:order-1">
-            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl">
+        {/* Main content grid - stacks on mobile, 60:40 on desktop */}
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-8 lg:gap-12 items-center">
+          {/* Left: Visual showcase - full-width on mobile, 60% on desktop */}
+          <div className="relative order-2 lg:order-1 -mx-4 sm:mx-0">
+            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl rounded-none sm:rounded-lg">
               <CardContent className="p-0">
-                {/* 3D Model showcase - interactive viewer */}
-                <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-br from-slate-900 to-slate-800 relative group">
+                {/* 3D Model showcase - larger aspect ratio for visual impact */}
+                <div className="aspect-[4/3] sm:aspect-[4/3] lg:aspect-[5/4] bg-gradient-to-br from-slate-900 to-slate-800 relative group">
                   {showcaseModels[0] && (
                     <ModelViewer
                       modelUrl={showcaseModels[0].modelUrl}
@@ -117,11 +117,11 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
             </Card>
           </div>
 
-          {/* Right: Details - shows first on mobile */}
-          <div className="space-y-6 sm:space-y-8 order-1 lg:order-2">
+          {/* Right: Details - shows first on mobile, compact spacing for 40% width */}
+          <div className="space-y-4 sm:space-y-6 order-1 lg:order-2">
             {/* Size options */}
             <div>
-              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 flex items-center gap-2">
                 <Package className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-violet)]" />
                 {t('printService.sizesTitle')}
               </h3>
@@ -145,7 +145,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
 
             {/* Material options */}
             <div>
-              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 flex items-center gap-2">
                 <span className="text-[var(--accent-coral)]">✨</span>
                 {t('printService.materialsTitle')}
               </h3>
@@ -171,8 +171,8 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
               </div>
             </div>
 
-            {/* Features list - 2x2 grid */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {/* Features list - 2x2 compact grid */}
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {features.map((feature) => {
                 const Icon = feature.icon;
                 return (
@@ -189,7 +189,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
             </div>
 
             {/* Pricing teaser */}
-            <Card className="p-4 sm:p-6 bg-gradient-to-r from-[var(--accent-violet)]/5 to-[var(--accent-coral)]/5 border-dashed">
+            <Card className="p-3 sm:p-5 bg-gradient-to-r from-[var(--accent-violet)]/5 to-[var(--accent-coral)]/5 border-dashed">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                 <div>
                   <div className="text-xs sm:text-sm text-muted-foreground mb-0.5 sm:mb-1">
