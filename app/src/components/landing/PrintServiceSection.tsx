@@ -86,10 +86,10 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
         </div>
 
         {/* Main content grid - stacks on mobile, 60:40 on desktop */}
-        <div className="grid lg:grid-cols-[3fr_2fr] gap-8 lg:gap-12 items-center">
-          {/* Left: Visual showcase - full-width on mobile, 60% on desktop */}
-          <div className="relative order-2 lg:order-1 -mx-4 sm:mx-0">
-            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl rounded-none sm:rounded-lg">
+        <div className="grid lg:grid-cols-[3fr_2fr] gap-8 lg:gap-12 items-start">
+          {/* Left: Visual showcase - with padding on mobile for visual breathing room */}
+          <div className="relative order-2 lg:order-1">
+            <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl rounded-lg">
               <CardContent className="p-0">
                 {/* 3D Model showcase - larger aspect ratio for visual impact */}
                 <div className="aspect-[4/3] sm:aspect-[4/3] lg:aspect-[5/4] bg-gradient-to-br from-slate-900 to-slate-800 relative group">
