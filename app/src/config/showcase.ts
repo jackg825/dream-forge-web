@@ -12,7 +12,7 @@ export type ShowcaseCategory = 'product' | 'character' | 'environment' | 'concep
 export interface ShowcaseModel {
   id: string;
   category: ShowcaseCategory;
-  // R2 URLs - served via storage.dreamforge.app/public/showcase/
+  // R2 URLs - served via dream-forge-r2-proxy.jackg825.workers.dev
   modelUrl: string;
   thumbnailUrl: string;
   // Optional before/after images for comparison view
@@ -20,7 +20,7 @@ export interface ShowcaseModel {
   afterImage?: string;
 }
 
-// Use workers.dev domain (custom domain storage.dreamforge.app not configured yet)
+// R2 Worker URL for public showcase assets
 const R2_PUBLIC_URL = 'https://dream-forge-r2-proxy.jackg825.workers.dev/public/showcase';
 
 /**
