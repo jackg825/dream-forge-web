@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -131,6 +132,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pipelineIdParam = searchParams.get('id');
+  const locale = useLocale();
 
   const { user, loading: authLoading } = useAuth();
   const { credits, loading: creditsLoading } = useCredits(user?.uid);
@@ -374,8 +376,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     if (!user || uploadedImages.length === 0) return;
 
     try {
-      // Run analysis
-      const result = await analyzeImage(uploadedImages[0].url, colorCount, 'fdm');
+      // Run analysis with current locale for language-appropriate results
+      const result = await analyzeImage(uploadedImages[0].url, colorCount, 'fdm', locale);
 
       // Create draft pipeline with analysis results
       const imageUrls = uploadedImages.map((img) => img.url);

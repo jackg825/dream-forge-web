@@ -24,7 +24,8 @@ interface UseImageAnalysisReturn {
   analyzeImage: (
     imageUrl: string,
     colorCount?: number,
-    printerType?: PrinterType
+    printerType?: PrinterType,
+    locale?: string
   ) => Promise<ImageAnalysisResult>;
   setAnalysis: (analysis: ImageAnalysisResult | null) => void;
   updateDescription: (description: string) => void;
@@ -54,7 +55,8 @@ export function useImageAnalysis(): UseImageAnalysisReturn {
     async (
       imageUrl: string,
       colorCount: number = 7,
-      printerType: PrinterType = 'fdm'
+      printerType: PrinterType = 'fdm',
+      locale: string = 'zh-TW'
     ): Promise<ImageAnalysisResult> => {
       if (!functions) {
         throw new Error('Firebase not initialized');
@@ -65,11 +67,11 @@ export function useImageAnalysis(): UseImageAnalysisReturn {
 
       try {
         const analyzeFn = httpsCallable<
-          { imageUrl: string; colorCount: number; printerType: PrinterType },
+          { imageUrl: string; colorCount: number; printerType: PrinterType; locale: string },
           AnalyzeImageResponse
         >(functions, 'analyzeUploadedImage');
 
-        const result = await analyzeFn({ imageUrl, colorCount, printerType });
+        const result = await analyzeFn({ imageUrl, colorCount, printerType, locale });
         const analysisResult = result.data.analysis;
 
         // Convert timestamp to Date
