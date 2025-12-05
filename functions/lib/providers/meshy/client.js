@@ -243,6 +243,74 @@ class MeshyProvider {
         }
     }
     /**
+     * Generate 3D mesh only from image URLs (no upload needed)
+     *
+     * Passes R2/storage URLs directly to Meshy API, avoiding timeout issues
+     * from downloading and re-uploading images.
+     *
+     * @param imageUrls - Array of image URLs (max 4)
+     * @param options - Generation options (quality, format, precision)
+     * @returns Task ID for polling
+     */
+    async generateMeshOnlyFromUrls(imageUrls, options) {
+        try {
+            // Meshy supports max 4 images
+            const limitedUrls = imageUrls.slice(0, 4);
+            // Determine remesh settings based on precision
+            const shouldRemesh = options.precision !== 'high';
+            const polycount = shouldRemesh
+                ? (types_1.MESHY_QUALITY_POLYCOUNT[options.quality] || 100000)
+                : undefined;
+            functions.logger.info('Starting Meshy URL-based mesh-only generation', {
+                imageCount: limitedUrls.length,
+                quality: options.quality,
+                precision: options.precision || 'standard',
+                shouldRemesh,
+                polycount,
+                format: options.format,
+            });
+            // For multi-image, use the appropriate endpoint
+            const endpoint = limitedUrls.length > 1
+                ? `${types_1.MESHY_API_BASE}/multi-image-to-3d`
+                : `${types_1.MESHY_API_BASE}/image-to-3d`;
+            const requestBody = limitedUrls.length > 1
+                ? {
+                    image_urls: limitedUrls,
+                    ai_model: 'meshy-5',
+                    topology: 'triangle',
+                    ...(polycount && { target_polycount: polycount }),
+                    should_remesh: shouldRemesh,
+                    should_texture: false,
+                    enable_pbr: false,
+                }
+                : {
+                    image_url: limitedUrls[0],
+                    ai_model: 'latest',
+                    topology: 'triangle',
+                    ...(polycount && { target_polycount: polycount }),
+                    should_remesh: shouldRemesh,
+                    should_texture: false,
+                    enable_pbr: false,
+                };
+            const response = await axios_1.default.post(endpoint, requestBody, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 60000,
+            });
+            const taskId = response.data.result;
+            functions.logger.info('Meshy URL-based mesh-only generation started', {
+                taskId,
+                imageCount: limitedUrls.length,
+            });
+            return { taskId };
+        }
+        catch (error) {
+            this.handleError(error, 'generateMeshOnlyFromUrls');
+        }
+    }
+    /**
      * Check status of a generation task
      */
     async checkStatus(taskId) {

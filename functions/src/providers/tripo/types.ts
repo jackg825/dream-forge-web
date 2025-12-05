@@ -124,6 +124,11 @@ export interface TripoTaskStatusResponse {
       base_model?: TripoModelOutput;
     };
     create_time: number;
+    // Error fields (returned when status is 'failed')
+    error_code?: number;  // e.g., 1004
+    error_message?: string;
+    failure_reason?: string;
+    message?: string;
   };
 }
 

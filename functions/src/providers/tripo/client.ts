@@ -82,8 +82,7 @@ export class TripoProvider implements I3DProvider {
       // Upload image first
       const fileToken = await this.uploadImage(imageBuffer);
 
-      // Standard texture configuration for 3D printing (20 credits)
-      // Uses standard quality for cost-efficiency while maintaining good print quality
+      // Texture configuration for 3D printing
       const request: TripoImageToModelRequest = {
         type: 'image_to_model',
         file: {
@@ -92,9 +91,9 @@ export class TripoProvider implements I3DProvider {
         },
         texture: true,
         pbr: true,
-        texture_quality: 'standard',  // Standard texture (20 credits vs 30 for detailed)
-        texture_alignment: 'original_image',  // Align textures to original image for better color fidelity
-        geometry_quality: 'detailed',  // Keep detailed geometry for 3D printing accuracy
+        texture_quality: 'detailed',
+        texture_alignment: 'original_image',
+        geometry_quality: 'standard',
       };
 
       const response = await this.createTask(request);
@@ -153,22 +152,20 @@ export class TripoProvider implements I3DProvider {
           fileTokens[3] ? { type: 'png', file_token: fileTokens[3] } : {},  // right
         ];
 
-        // Standard texture configuration for 3D printing (20 credits)
-        // Uses standard texture quality for cost-efficiency while maintaining good print quality
+        // Texture configuration for 3D printing
         const request: TripoMultiviewToModelRequest = {
           type: 'multiview_to_model',
           files,
           texture: true,
           pbr: true,
-          texture_quality: 'standard',  // Standard texture (20 credits vs 30 for detailed)
-          texture_alignment: 'original_image',  // Align textures to original image for better color fidelity
-          geometry_quality: 'detailed',  // Keep detailed geometry for 3D printing accuracy
+          texture_quality: 'detailed',
+          texture_alignment: 'original_image',
+          geometry_quality: 'standard',
           model_version: 'v3.0-20250812',
           auto_size: true,
-          // 3D printing optimizations
-          quad: true,           // Quad faces are better for slicing and post-processing
-          face_limit: 200000,   // Balanced face count for printing (enough detail, not too heavy)
-          smart_low_poly: true, // Intelligent polygon reduction preserving important features
+          quad: false,
+          face_limit: 100000,
+          smart_low_poly: false,
         };
 
         const response = await this.createTask(request);
@@ -186,6 +183,64 @@ export class TripoProvider implements I3DProvider {
       return this.generateFromImage(imageBuffers[0], options);
     } catch (error) {
       this.handleError(error, 'generateFromMultipleImages');
+    }
+  }
+
+  /**
+   * Generate 3D model from image URLs (no upload needed)
+   *
+   * Passes R2/storage URLs directly to Tripo API, avoiding timeout issues
+   * from downloading and re-uploading images.
+   *
+   * Pipeline order: [front, back, left, right]
+   * Tripo order: [front, left, back, right]
+   */
+  async generateFromUrls(
+    imageUrls: string[],
+    options: GenerationOptions
+  ): Promise<GenerationTaskResult> {
+    try {
+      functions.logger.info('Starting Tripo URL-based generation', {
+        imageCount: imageUrls.length,
+        quality: options.quality,
+        format: options.format,
+      });
+
+      // Build files array in Tripo order: [front, left, back, right]
+      // Pipeline order is [front, back, left, right], so we swap indices 1 and 2
+      const files: [TripoMultiviewFileInput, TripoMultiviewFileInput, TripoMultiviewFileInput, TripoMultiviewFileInput] = [
+        imageUrls[0] ? { type: 'png', url: imageUrls[0] } : {},  // front
+        imageUrls[2] ? { type: 'png', url: imageUrls[2] } : {},  // left (from pipeline[2])
+        imageUrls[1] ? { type: 'png', url: imageUrls[1] } : {},  // back (from pipeline[1])
+        imageUrls[3] ? { type: 'png', url: imageUrls[3] } : {},  // right
+      ];
+
+      // Texture configuration for 3D printing
+      const request: TripoMultiviewToModelRequest = {
+        type: 'multiview_to_model',
+        files,
+        texture: true,
+        pbr: true,
+        texture_quality: 'detailed',
+        texture_alignment: 'original_image',
+        geometry_quality: 'standard',
+        model_version: 'v3.0-20250812',
+        auto_size: true,
+        quad: false,
+        face_limit: 100000,
+        smart_low_poly: false,
+      };
+
+      const response = await this.createTask(request);
+
+      functions.logger.info('Tripo URL-based generation started', {
+        taskId: response.data.task_id,
+        imageCount: imageUrls.length,
+      });
+
+      return { taskId: response.data.task_id };
+    } catch (error) {
+      this.handleError(error, 'generateFromUrls');
     }
   }
 

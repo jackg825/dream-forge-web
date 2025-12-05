@@ -19,6 +19,15 @@ export declare class HunyuanProvider implements I3DProvider {
      */
     generateFromMultipleImages(imageBuffers: Buffer[], options: GenerationOptions): Promise<GenerationTaskResult>;
     /**
+     * Generate 3D model from image URLs (no upload needed)
+     *
+     * Passes R2/storage URLs directly to Hunyuan API, avoiding timeout issues
+     * from downloading and re-uploading images.
+     *
+     * Pipeline image order: [front, back, left, right]
+     */
+    generateFromUrls(imageUrls: string[], options: GenerationOptions): Promise<GenerationTaskResult>;
+    /**
      * Check status of a generation task
      */
     checkStatus(taskId: string): Promise<TaskStatusResult>;

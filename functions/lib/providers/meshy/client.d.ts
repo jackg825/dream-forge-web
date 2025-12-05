@@ -45,6 +45,17 @@ export declare class MeshyProvider implements I3DProvider {
      */
     generateMeshOnly(imageBuffers: Buffer[], options: MeshGenerationOptions): Promise<GenerationTaskResult>;
     /**
+     * Generate 3D mesh only from image URLs (no upload needed)
+     *
+     * Passes R2/storage URLs directly to Meshy API, avoiding timeout issues
+     * from downloading and re-uploading images.
+     *
+     * @param imageUrls - Array of image URLs (max 4)
+     * @param options - Generation options (quality, format, precision)
+     * @returns Task ID for polling
+     */
+    generateMeshOnlyFromUrls(imageUrls: string[], options: MeshGenerationOptions): Promise<GenerationTaskResult>;
+    /**
      * Check status of a generation task
      */
     checkStatus(taskId: string): Promise<TaskStatusResult>;

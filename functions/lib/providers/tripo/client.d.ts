@@ -26,6 +26,16 @@ export declare class TripoProvider implements I3DProvider {
      */
     generateFromMultipleImages(imageBuffers: Buffer[], options: GenerationOptions): Promise<GenerationTaskResult>;
     /**
+     * Generate 3D model from image URLs (no upload needed)
+     *
+     * Passes R2/storage URLs directly to Tripo API, avoiding timeout issues
+     * from downloading and re-uploading images.
+     *
+     * Pipeline order: [front, back, left, right]
+     * Tripo order: [front, left, back, right]
+     */
+    generateFromUrls(imageUrls: string[], options: GenerationOptions): Promise<GenerationTaskResult>;
+    /**
      * Check status of a generation task
      */
     checkStatus(taskId: string): Promise<TaskStatusResult>;

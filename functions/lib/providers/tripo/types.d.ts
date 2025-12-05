@@ -112,6 +112,10 @@ export interface TripoTaskStatusResponse {
             base_model?: TripoModelOutput;
         };
         create_time: number;
+        error_code?: number;
+        error_message?: string;
+        failure_reason?: string;
+        message?: string;
     };
 }
 /**

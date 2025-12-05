@@ -148,6 +148,74 @@ export class HunyuanProvider implements I3DProvider {
   }
 
   /**
+   * Generate 3D model from image URLs (no upload needed)
+   *
+   * Passes R2/storage URLs directly to Hunyuan API, avoiding timeout issues
+   * from downloading and re-uploading images.
+   *
+   * Pipeline image order: [front, back, left, right]
+   */
+  async generateFromUrls(
+    imageUrls: string[],
+    options: GenerationOptions
+  ): Promise<GenerationTaskResult> {
+    try {
+      const faceCount = this.getFaceCount(options);
+
+      functions.logger.info('Starting Hunyuan URL-based generation', {
+        imageCount: imageUrls.length,
+        quality: options.quality,
+        faceCount,
+        format: options.format,
+      });
+
+      // Build multi-view images array using URLs
+      // Pipeline image order: [front, back, left, right]
+      const multiViewImages: Array<{
+        ViewType: string;
+        ViewImageUrl: string;
+      }> = [];
+
+      if (imageUrls[1]) {
+        multiViewImages.push({
+          ViewType: 'back',
+          ViewImageUrl: imageUrls[1],
+        });
+      }
+      if (imageUrls[2]) {
+        multiViewImages.push({
+          ViewType: 'left',
+          ViewImageUrl: imageUrls[2],
+        });
+      }
+      if (imageUrls[3]) {
+        multiViewImages.push({
+          ViewType: 'right',
+          ViewImageUrl: imageUrls[3],
+        });
+      }
+
+      const response = await this.client.SubmitHunyuanTo3DProJob({
+        ImageUrl: imageUrls[0],  // Primary image (front)
+        EnablePBR: options.enablePBR ?? false,
+        FaceCount: faceCount,
+        GenerateType: 'Normal',
+        MultiViewImages: multiViewImages.length > 0 ? multiViewImages : undefined,
+      });
+
+      functions.logger.info('Hunyuan URL-based generation started', {
+        jobId: response.JobId,
+        imageCount: imageUrls.length,
+        multiViewCount: multiViewImages.length,
+      });
+
+      return { taskId: response.JobId! };
+    } catch (error) {
+      this.handleError(error, 'generateFromUrls');
+    }
+  }
+
+  /**
    * Check status of a generation task
    */
   async checkStatus(taskId: string): Promise<TaskStatusResult> {

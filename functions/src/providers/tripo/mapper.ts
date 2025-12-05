@@ -31,10 +31,34 @@ export function mapTripoStatus(status: TripoTaskStatus): ProviderTaskStatus {
  * Map Tripo task status response to TaskStatusResult
  */
 export function mapTripoTaskStatus(response: TripoTaskStatusResponse): TaskStatusResult {
+  const data = response.data;
+
+  // Extract meaningful error message when task fails
+  let error: string | undefined;
+  if (data.status === 'failed') {
+    // Log full response for debugging
+    functions.logger.error('Tripo task failed', {
+      taskId: data.task_id,
+      errorCode: data.error_code,
+      rawData: JSON.stringify(data),
+    });
+
+    // Build error message with available details
+    if (data.error_code) {
+      error = `Tripo error ${data.error_code}`;
+    } else if (data.error_message) {
+      error = `Tripo: ${data.error_message}`;
+    } else if (data.failure_reason) {
+      error = `Tripo: ${data.failure_reason}`;
+    } else {
+      error = 'Tripo task failed';
+    }
+  }
+
   return {
-    status: mapTripoStatus(response.data.status),
-    progress: response.data.progress,
-    error: response.data.status === 'failed' ? 'Task failed' : undefined,
+    status: mapTripoStatus(data.status),
+    progress: data.progress,
+    error,
   };
 }
 
