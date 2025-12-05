@@ -444,12 +444,9 @@ async function handlePublicDownload(
     return createErrorResponse('Access denied', 'HOTLINK_BLOCKED', 403);
   }
 
-  // 從 R2 獲取檔案
+  // 從 R2 獲取完整檔案 (不支援 Range 請求，避免 GLTFLoader 206 問題)
   try {
-    const object = await env.R2_BUCKET.get(key, {
-      range: request.headers,
-      onlyIf: request.headers,
-    });
+    const object = await env.R2_BUCKET.get(key);
 
     if (!object) {
       return createErrorResponse('File not found', 'NOT_FOUND', 404);
@@ -474,16 +471,6 @@ async function handlePublicDownload(
 
     // 檢查是否有 body
     const body = 'body' in object ? object.body : null;
-
-    // 處理 Range 請求
-    if (object.range) {
-      const { offset, length } = object.range as { offset: number; length: number };
-      headers.set(
-        'Content-Range',
-        `bytes ${offset}-${offset + length - 1}/${object.size}`
-      );
-      return new Response(body, { status: 206, headers });
-    }
 
     return new Response(body, { headers });
   } catch (error) {

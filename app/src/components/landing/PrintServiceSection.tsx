@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
@@ -13,8 +14,22 @@ import {
   Truck,
   ArrowRight,
   Check,
+  Loader2,
 } from 'lucide-react';
-import { ShowcaseViewer } from './ShowcaseViewer';
+import { showcaseModels } from '@/config/showcase';
+
+// Lazy load ModelViewer to avoid blocking initial page load
+const ModelViewer = dynamic(
+  () => import('@/components/viewer/ModelViewer').then(mod => mod.ModelViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    ),
+  }
+);
 
 interface PrintServiceSectionProps {
   className?: string;
@@ -76,13 +91,18 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
           <div className="relative order-2 lg:order-1">
             <Card className="overflow-hidden border-2 border-[var(--accent-violet)]/20 shadow-xl sm:shadow-2xl">
               <CardContent className="p-0">
-                {/* 3D Model showcase - hover to interact */}
-                <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-br from-muted to-muted/50 relative group">
-                  <ShowcaseViewer
-                    src="/showcase/model-1/rotate.gif"
-                    alt={t('printService.visualCaption')}
-                    className="w-full h-full"
-                  />
+                {/* 3D Model showcase - interactive viewer */}
+                <div className="aspect-[4/3] sm:aspect-square bg-gradient-to-br from-slate-900 to-slate-800 relative group">
+                  {showcaseModels[0] && (
+                    <ModelViewer
+                      modelUrl={showcaseModels[0].modelUrl}
+                      viewMode="textured"
+                      autoRotate
+                      showGrid={false}
+                      showAxes={false}
+                      backgroundColor="#1e293b"
+                    />
+                  )}
 
                   {/* Floating badges - smaller on mobile */}
                   <div className="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 z-10">
