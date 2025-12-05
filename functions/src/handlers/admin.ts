@@ -868,7 +868,7 @@ export const checkTripoBalance = functions
       }
 
       const tripoProvider = new TripoProvider(apiKey);
-      const { balance, frozen } = await tripoProvider.checkBalance();
+      const { balance, frozen } = await tripoProvider.checkBalanceWithFrozen();
 
       functions.logger.info('Admin checked Tripo balance', {
         adminId: context.auth.uid,
@@ -965,7 +965,7 @@ export const checkAllProviderBalances = functions
       const tripoKey = process.env.TRIPO_API_KEY;
       if (tripoKey) {
         const tripoProvider = new TripoProvider(tripoKey);
-        const tripoBalance = await tripoProvider.checkBalance();
+        const tripoBalance = await tripoProvider.checkBalanceWithFrozen();
         results.tripo.balance = tripoBalance.balance;
         results.tripo.frozen = tripoBalance.frozen;
       } else {
