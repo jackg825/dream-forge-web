@@ -505,7 +505,7 @@ export interface AdminAction {
   actionType: AdminActionType;
   targetField: string;  // e.g., 'meshImages.front', 'mesh', 'texture'
   provider?: ProviderType;
-  previousValue?: string;  // URL or task ID being replaced
+  previousValue?: string | null;  // URL or task ID being replaced
   timestamp: FirebaseFirestore.Timestamp;
   reason?: string;  // Optional admin note
 }

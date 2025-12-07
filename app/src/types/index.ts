@@ -262,7 +262,7 @@ export interface AdminAction {
   actionType: AdminActionType;
   targetField: string;
   provider?: ModelProvider;
-  previousValue?: string;
+  previousValue?: string | null;
   timestamp: string;
   reason?: string;
 }

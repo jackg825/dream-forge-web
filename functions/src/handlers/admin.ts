@@ -1199,7 +1199,7 @@ export const adminRegeneratePipelineImage = functions
         adminEmail,
         actionType: 'regenerate-image',
         targetField: `${viewType}Images.${angle}`,
-        previousValue: previousUrl,
+        previousValue: previousUrl || null,
       });
 
       functions.logger.info('Admin regenerated pipeline image to preview', {
@@ -1349,7 +1349,7 @@ export const adminStartPipelineMesh = functions
         actionType: previousProvider !== providerType ? 'change-provider' : 'regenerate-mesh',
         targetField: 'mesh',
         provider: providerType,
-        previousValue: pipeline.meshUrl || undefined,
+        previousValue: pipeline.meshUrl || null,
       });
 
       functions.logger.info('Admin started mesh regeneration', {

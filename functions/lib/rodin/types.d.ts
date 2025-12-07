@@ -302,7 +302,7 @@ export interface AdminAction {
     actionType: AdminActionType;
     targetField: string;
     provider?: ProviderType;
-    previousValue?: string;
+    previousValue?: string | null;
     timestamp: FirebaseFirestore.Timestamp;
     reason?: string;
 }
