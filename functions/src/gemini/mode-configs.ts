@@ -170,11 +170,11 @@ function getViewpointInfo(angle: PipelineMeshAngle): ViewpointInfo {
         cameraDirection: 'looking toward the center',
         visibleSide: 'LEFT surface (the subject\'s own left side)',
         objectDescription: 'The left side of the object when you face its front',
-        characterDescription: 'Left profile view - LEFT ear visible, face/nose points toward RIGHT edge of image',
+        characterDescription: 'Left profile view - LEFT ear visible, face/nose points toward LEFT edge of image',
         technicalSpec: 'Camera perpendicular to left plane, 90° clockwise rotation from front',
         rotationDegrees: 90,
         notThisSide: 'RIGHT',
-        mirrorCheck: 'If the face/nose points toward the LEFT edge, you generated the WRONG side - that would be the RIGHT view',
+        mirrorCheck: 'If the face/nose points toward the RIGHT edge, you generated the WRONG side - that would be the RIGHT view',
       };
     case 'right':
       return {
@@ -182,11 +182,11 @@ function getViewpointInfo(angle: PipelineMeshAngle): ViewpointInfo {
         cameraDirection: 'looking toward the center',
         visibleSide: 'RIGHT surface (the subject\'s own right side)',
         objectDescription: 'The right side of the object when you face its front',
-        characterDescription: 'Right profile view - RIGHT ear visible, face/nose points toward LEFT edge of image',
+        characterDescription: 'Right profile view - RIGHT ear visible, face/nose points toward RIGHT edge of image',
         technicalSpec: 'Camera perpendicular to right plane, 90° counter-clockwise rotation from front',
         rotationDegrees: 270,
         notThisSide: 'LEFT',
-        mirrorCheck: 'If the face/nose points toward the RIGHT edge, you generated the WRONG side - that would be the LEFT view',
+        mirrorCheck: 'If the face/nose points toward the LEFT edge, you generated the WRONG side - that would be the LEFT view',
       };
   }
 }
@@ -213,8 +213,8 @@ function buildViewDirectionBlock(angle: PipelineMeshAngle): string {
     ? `
 **SELF-CHECK before generating**:
 For characters with a face: Which direction should the nose point?
-- LEFT SIDE view → nose points toward RIGHT edge of image
-- RIGHT SIDE view → nose points toward LEFT edge of image
+- LEFT SIDE view → nose points toward LEFT edge of image
+- RIGHT SIDE view → nose points toward RIGHT edge of image
 You are generating the ${angleDisplay} view. Verify the nose direction matches before finalizing.
 `
     : '';
