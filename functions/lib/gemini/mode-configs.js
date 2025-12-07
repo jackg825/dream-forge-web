@@ -128,6 +128,8 @@ function getViewpointInfo(angle) {
                 characterDescription: 'Left profile view - LEFT ear visible, face/nose points toward RIGHT edge of image',
                 technicalSpec: 'Camera perpendicular to left plane, 90° clockwise rotation from front',
                 rotationDegrees: 90,
+                notThisSide: 'RIGHT',
+                mirrorCheck: 'If the face/nose points toward the LEFT edge, you generated the WRONG side - that would be the RIGHT view',
             };
         case 'right':
             return {
@@ -138,6 +140,8 @@ function getViewpointInfo(angle) {
                 characterDescription: 'Right profile view - RIGHT ear visible, face/nose points toward LEFT edge of image',
                 technicalSpec: 'Camera perpendicular to right plane, 90° counter-clockwise rotation from front',
                 rotationDegrees: 270,
+                notThisSide: 'LEFT',
+                mirrorCheck: 'If the face/nose points toward the RIGHT edge, you generated the WRONG side - that would be the LEFT view',
             };
     }
 }
@@ -148,19 +152,37 @@ function getViewpointInfo(angle) {
 function buildViewDirectionBlock(angle) {
     const info = getViewpointInfo(angle);
     const angleDisplay = ANGLE_PROMPTS[angle];
+    // Build confusion warning block for left/right views
+    const confusionWarning = info.notThisSide
+        ? `
+**⚠️ DO NOT CONFUSE - COMMON MISTAKE**:
+- This is the ${angleDisplay} view, absolutely NOT the ${info.notThisSide} SIDE view
+- ${info.mirrorCheck}
+`
+        : '';
+    // Build self-check block for left/right views
+    const selfCheckBlock = info.notThisSide
+        ? `
+**SELF-CHECK before generating**:
+For characters with a face: Which direction should the nose point?
+- LEFT SIDE view → nose points toward RIGHT edge of image
+- RIGHT SIDE view → nose points toward LEFT edge of image
+You are generating the ${angleDisplay} view. Verify the nose direction matches before finalizing.
+`
+        : '';
     return `=== CAMERA POSITION (CRITICAL - READ FIRST) ===
 
 **CLOCK SYSTEM**: The subject is at the CENTER, with its front facing toward 6 o'clock.
 **CAMERA POSITION**: ${info.clockPosition}, ${info.cameraDirection}
 **VISIBLE SURFACE**: ${info.visibleSide}
 **ROTATION**: ${info.rotationDegrees}° from front view
-
+${confusionWarning}
 For OBJECTS (cups, machines, furniture, buildings, etc.):
 → ${info.objectDescription}
 
 For CHARACTERS (people, animals, toys, figures):
 → ${info.characterDescription}
-
+${selfCheckBlock}
 **CRITICAL REQUIREMENTS**:
 - Generate EXACTLY this ${angleDisplay} viewing angle - no other angle
 - Do NOT rotate or tilt the subject from this specified view
