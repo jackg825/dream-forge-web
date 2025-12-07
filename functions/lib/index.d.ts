@@ -1,11 +1,10 @@
 export { onUserCreate } from './handlers/users';
 export { generateModel, checkJobStatus, retryFailedJob } from './handlers/generate';
-export { addCredits, setUnlimitedCredits, checkRodinBalance, checkMeshyBalance, checkTripoBalance, checkAllProviderBalances, getAdminStats, listUsers, listAllPipelines, deductCredits, getUserTransactions, adminRegeneratePipelineImage, adminStartPipelineMesh, adminCheckPreviewStatus, adminConfirmPreview, adminRejectPreview, } from './handlers/admin';
+export { addCredits, checkRodinBalance, checkAllProviderBalances, getAdminStats, listUsers, listAllPipelines, deductCredits, getUserTransactions, adminRegeneratePipelineImage, adminStartPipelineMesh, adminCheckPreviewStatus, adminConfirmPreview, adminRejectPreview, } from './handlers/admin';
 export { createSession, updateSession, deleteSession, getUserSessions, } from './handlers/sessions';
 export { generateSessionViews, regenerateView, uploadCustomView, } from './handlers/views';
 export { startSessionModelGeneration, checkSessionModelStatus, } from './handlers/model';
 export { optimizeColorsForH2C, uploadEditedH2CImage, } from './handlers/h2c';
 export { createPipeline, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, updatePipelineAnalysis, resetPipelineStep, } from './handlers/pipeline';
-export { submitGeminiBatch, pollGeminiBatchJobs, } from './handlers/gemini-batch';
+export { submitGeminiBatch } from './handlers/gemini-batch';
 export { analyzeUploadedImage } from './handlers/analyze';
-export { convertToUsdz, checkUsdzAvailability } from './handlers/convert';

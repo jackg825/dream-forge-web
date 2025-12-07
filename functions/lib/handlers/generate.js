@@ -36,12 +36,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.retryFailedJob = exports.generateTexture = exports.checkJobStatus = exports.generateModel = void 0;
+exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
-const client_1 = require("../rodin/client");
-const client_2 = require("../gemini/client");
+const client_1 = require("../gemini/client");
 const factory_1 = require("../providers/factory");
 const credits_1 = require("../utils/credits");
 const storage_1 = require("../storage");
@@ -179,7 +178,7 @@ exports.generateModel = functions
                 angles: generateAngles,
                 jobId,
             });
-            const geminiClient = (0, client_2.createGeminiClient)();
+            const geminiClient = (0, client_1.createGeminiClient)();
             const base64 = primaryBuffer.toString('base64');
             const generatedViews = await geminiClient.generateViews(base64, 'image/png', generateAngles);
             // Add generated images to buffers
@@ -471,168 +470,6 @@ function getContentType(format) {
             return 'application/octet-stream';
     }
 }
-// Texture generation cost (per Rodin API: 0.5 credits)
-const TEXTURE_CREDIT_COST = 0.5;
-/**
- * Cloud Function: generateTexture
- *
- * Generates PBR textures for an existing 3D model.
- *
- * Workflow:
- * 1. User generates a model (generateModel)
- * 2. User previews the model
- * 3. User uploads a reference image and calls generateTexture
- * 4. Rodin applies textures based on the reference image
- *
- * Steps:
- * 1. Verify authentication and job ownership
- * 2. Validate source job exists and is completed
- * 3. Deduct 0.5 credits
- * 4. Download the existing model from Storage
- * 5. Download the reference image
- * 6. Call Rodin texture API
- * 7. Create texture job document
- * 8. Return job ID for status polling
- */
-exports.generateTexture = functions
-    .region('asia-east1')
-    .runWith({
-    timeoutSeconds: 120,
-    memory: '1GB',
-    secrets: ['RODIN_API_KEY'],
-})
-    .https.onCall(async (data, context) => {
-    // 1. Verify authentication
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to generate textures');
-    }
-    const userId = context.auth.uid;
-    const { sourceJobId, imageUrl, resolution = 'Basic', format = 'glb', prompt, } = data;
-    // Validate input
-    if (!sourceJobId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Source job ID is required');
-    }
-    if (!imageUrl) {
-        throw new functions.https.HttpsError('invalid-argument', 'Reference image URL is required');
-    }
-    // 2. Validate source job
-    const sourceJobRef = db.collection('jobs').doc(sourceJobId);
-    const sourceJobDoc = await sourceJobRef.get();
-    if (!sourceJobDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Source model job not found');
-    }
-    const sourceJob = sourceJobDoc.data();
-    // Verify ownership
-    if (sourceJob.userId !== userId) {
-        throw new functions.https.HttpsError('permission-denied', 'You do not have access to this model');
-    }
-    // Verify source job is completed
-    if (sourceJob.status !== 'completed' || !sourceJob.outputModelUrl) {
-        throw new functions.https.HttpsError('failed-precondition', 'Source model must be completed before generating textures');
-    }
-    // 3. Create texture job document first
-    const jobRef = db.collection('jobs').doc();
-    const jobId = jobRef.id;
-    // Deduct credits (0.5 for texture generation)
-    try {
-        await (0, credits_1.deductCredits)(userId, TEXTURE_CREDIT_COST, jobId);
-    }
-    catch (error) {
-        if (error instanceof functions.https.HttpsError &&
-            error.code === 'resource-exhausted') {
-            throw new functions.https.HttpsError('resource-exhausted', `You need ${TEXTURE_CREDIT_COST} credit(s) for texture generation.`);
-        }
-        throw error;
-    }
-    // 4. Create job document
-    const now = admin.firestore.FieldValue.serverTimestamp();
-    const jobSettings = {
-        tier: 'Gen-2',
-        quality: sourceJob.settings.quality,
-        format: format,
-        printerType: sourceJob.settings.printerType,
-        inputMode: 'single',
-        imageCount: 1,
-    };
-    const jobDoc = {
-        userId,
-        jobType: 'texture',
-        status: 'pending',
-        inputImageUrl: imageUrl,
-        outputModelUrl: null,
-        rodinTaskId: '',
-        rodinSubscriptionKey: '',
-        settings: jobSettings,
-        error: null,
-        createdAt: now,
-        completedAt: null,
-        sourceJobId,
-        textureResolution: resolution,
-    };
-    await jobRef.set(jobDoc);
-    try {
-        // 5. Download the existing model from Storage
-        functions.logger.info('Downloading source model', {
-            jobId,
-            sourceJobId,
-            modelUrl: sourceJob.outputModelUrl,
-        });
-        const modelResponse = await axios_1.default.get(sourceJob.outputModelUrl, {
-            responseType: 'arraybuffer',
-            timeout: 60000,
-        });
-        const modelBuffer = Buffer.from(modelResponse.data);
-        // 6. Download the reference image
-        functions.logger.info('Downloading reference image', {
-            jobId,
-            imageUrl,
-        });
-        const imageResponse = await axios_1.default.get(imageUrl, {
-            responseType: 'arraybuffer',
-            timeout: 30000,
-        });
-        const imageBuffer = Buffer.from(imageResponse.data);
-        // 7. Call Rodin texture API
-        const rodinClient = (0, client_1.createRodinClient)();
-        const { taskUuid, jobUuids, subscriptionKey } = await rodinClient.generateTexture(imageBuffer, modelBuffer, {
-            format,
-            material: 'PBR',
-            resolution,
-            prompt,
-        });
-        // 8. Update job with Rodin task IDs
-        await jobRef.update({
-            rodinTaskId: taskUuid,
-            rodinTaskUuid: taskUuid,
-            rodinJobUuids: jobUuids,
-            rodinSubscriptionKey: subscriptionKey,
-            status: 'processing',
-        });
-        functions.logger.info('Texture generation started', {
-            jobId,
-            userId,
-            sourceJobId,
-            taskUuid,
-            resolution,
-            format,
-        });
-        return { jobId, status: 'processing' };
-    }
-    catch (error) {
-        // Mark job as failed (auto-refund temporarily disabled)
-        // await refundCredits(userId, TEXTURE_CREDIT_COST, jobId);
-        await jobRef.update({
-            status: 'failed',
-            error: error instanceof Error ? error.message : 'Unknown error',
-        });
-        functions.logger.error('Texture generation failed', {
-            jobId,
-            sourceJobId,
-            error: error instanceof Error ? error.message : 'Unknown error',
-        });
-        throw error;
-    }
-});
 /**
  * Cloud Function: retryFailedJob
  *

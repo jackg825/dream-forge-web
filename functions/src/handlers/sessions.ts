@@ -3,9 +3,9 @@
  *
  * Handles the multi-step 3D model creation flow:
  * 1. createSession - Initialize a new workflow session
- * 2. getSession - Retrieve session state for resuming
- * 3. updateSession - Update session data (images, settings)
- * 4. deleteSession - Remove a session and its files
+ * 2. updateSession - Update session data (images, settings)
+ * 3. deleteSession - Remove a session and its files
+ * 4. getUserSessions - List all user sessions
  */
 
 import * as functions from 'firebase-functions/v1';
@@ -122,64 +122,6 @@ export const createSession = functions
         sessionId: sessionRef.id,
         status: 'draft',
         currentStep: 1,
-      };
-    }
-  );
-
-/**
- * getSession - Retrieve session state
- *
- * Used for page refresh or resuming a session.
- */
-export const getSession = functions
-  .region('asia-east1')
-  .https.onCall(
-    async (
-      data: {
-        sessionId: string;
-      },
-      context: functions.https.CallableContext
-    ) => {
-      // Verify authentication
-      if (!context.auth) {
-        throw new functions.https.HttpsError(
-          'unauthenticated',
-          'Must be logged in'
-        );
-      }
-
-      const { sessionId } = data;
-      if (!sessionId) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Session ID is required'
-        );
-      }
-
-      const sessionDoc = await db.collection('sessions').doc(sessionId).get();
-
-      if (!sessionDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Session not found');
-      }
-
-      const session = sessionDoc.data() as SessionDocument;
-
-      // Verify ownership
-      if (session.userId !== context.auth.uid) {
-        throw new functions.https.HttpsError(
-          'permission-denied',
-          'Not authorized to access this session'
-        );
-      }
-
-      return {
-        session: {
-          id: sessionDoc.id,
-          ...session,
-          // Convert timestamps to ISO strings for client
-          createdAt: session.createdAt?.toDate?.()?.toISOString() || null,
-          updatedAt: session.updatedAt?.toDate?.()?.toISOString() || null,
-        },
       };
     }
   );

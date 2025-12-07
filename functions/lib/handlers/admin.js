@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.checkAllProviderBalances = exports.checkTripoBalance = exports.checkMeshyBalance = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = void 0;
+exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.checkAllProviderBalances = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.addCredits = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -160,50 +160,6 @@ exports.addCredits = functions
         success: true,
         targetUserId,
         creditsAdded: amount,
-        newBalance: newCredits,
-    };
-});
-/**
- * Cloud Function: setUnlimitedCredits
- *
- * Admin-only function to give a user unlimited credits (or revoke).
- * Sets credits to a very high number (999999) as a flag.
- */
-exports.setUnlimitedCredits = functions
-    .region('asia-east1')
-    .https.onCall(async (data, context) => {
-    // Check authentication
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-    }
-    // Check admin permission
-    if (!(await isAdmin(context))) {
-        throw new functions.https.HttpsError('permission-denied', 'Admin access required');
-    }
-    const { targetUserId, unlimited } = data;
-    if (!targetUserId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Target user ID is required');
-    }
-    const userRef = db.collection('users').doc(targetUserId);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Target user not found');
-    }
-    const newCredits = unlimited ? 999999 : 3; // Reset to default if disabling
-    await userRef.update({
-        credits: newCredits,
-        isAdmin: unlimited, // Optional: flag user as admin
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-    functions.logger.info('Admin set unlimited credits', {
-        adminId: context.auth.uid,
-        targetUserId,
-        unlimited,
-    });
-    return {
-        success: true,
-        targetUserId,
-        unlimited,
         newBalance: newCredits,
     };
 });
@@ -619,91 +575,6 @@ exports.getUserTransactions = functions
 // ============================================
 // Provider Balance Functions
 // ============================================
-/**
- * Cloud Function: checkMeshyBalance
- *
- * Admin-only function to check Meshy API credit balance.
- */
-exports.checkMeshyBalance = functions
-    .region('asia-east1')
-    .runWith({
-    secrets: ['MESHY_API_KEY'],
-})
-    .https.onCall(async (_data, context) => {
-    // Check authentication
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-    }
-    // Check admin permission
-    if (!(await isAdmin(context))) {
-        throw new functions.https.HttpsError('permission-denied', 'Admin access required');
-    }
-    try {
-        const apiKey = process.env.MESHY_API_KEY;
-        if (!apiKey) {
-            throw new functions.https.HttpsError('failed-precondition', 'Meshy API key not configured');
-        }
-        const meshyProvider = new client_2.MeshyProvider(apiKey);
-        const balance = await meshyProvider.checkBalance();
-        functions.logger.info('Admin checked Meshy balance', {
-            adminId: context.auth.uid,
-            balance,
-        });
-        return {
-            success: true,
-            balance,
-            checkedAt: new Date().toISOString(),
-        };
-    }
-    catch (error) {
-        functions.logger.error('Failed to check Meshy balance', { error });
-        throw new functions.https.HttpsError('internal', 'Failed to check Meshy API balance');
-    }
-});
-/**
- * Cloud Function: checkTripoBalance
- *
- * Admin-only function to check Tripo API credit balance.
- * Returns both available balance and frozen amount.
- */
-exports.checkTripoBalance = functions
-    .region('asia-east1')
-    .runWith({
-    secrets: ['TRIPO_API_KEY'],
-})
-    .https.onCall(async (_data, context) => {
-    // Check authentication
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
-    }
-    // Check admin permission
-    if (!(await isAdmin(context))) {
-        throw new functions.https.HttpsError('permission-denied', 'Admin access required');
-    }
-    try {
-        const apiKey = process.env.TRIPO_API_KEY;
-        if (!apiKey) {
-            throw new functions.https.HttpsError('failed-precondition', 'Tripo API key not configured');
-        }
-        const tripoProvider = new client_3.TripoProvider(apiKey);
-        const { balance, frozen } = await tripoProvider.checkBalanceWithFrozen();
-        functions.logger.info('Admin checked Tripo balance', {
-            adminId: context.auth.uid,
-            balance,
-            frozen,
-        });
-        return {
-            success: true,
-            balance,
-            frozen,
-            checkedAt: new Date().toISOString(),
-        };
-    }
-    catch (error) {
-        functions.logger.error('Failed to check Tripo balance', { error });
-        throw new functions.https.HttpsError('internal', 'Failed to check Tripo API balance');
-    }
-});
 /**
  * Cloud Function: checkAllProviderBalances
  *

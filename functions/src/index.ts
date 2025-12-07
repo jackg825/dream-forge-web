@@ -8,10 +8,7 @@ export { onUserCreate } from './handlers/users';
 export { generateModel, checkJobStatus, retryFailedJob } from './handlers/generate';
 export {
   addCredits,
-  setUnlimitedCredits,
   checkRodinBalance,
-  checkMeshyBalance,
-  checkTripoBalance,
   checkAllProviderBalances,
   getAdminStats,
   listUsers,
@@ -66,13 +63,7 @@ export {
 } from './handlers/pipeline';
 
 // Gemini Batch API handlers
-export {
-  submitGeminiBatch,
-  pollGeminiBatchJobs,
-} from './handlers/gemini-batch';
+export { submitGeminiBatch } from './handlers/gemini-batch';
 
 // Image analysis (pre-upload Gemini analysis)
 export { analyzeUploadedImage } from './handlers/analyze';
-
-// Model format conversion (GLB to USDZ for iOS AR)
-export { convertToUsdz, checkUsdzAvailability } from './handlers/convert';

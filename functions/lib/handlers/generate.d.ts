@@ -32,28 +32,6 @@ export declare const generateModel: functions.HttpsFunction & functions.Runnable
  */
 export declare const checkJobStatus: functions.HttpsFunction & functions.Runnable<any>;
 /**
- * Cloud Function: generateTexture
- *
- * Generates PBR textures for an existing 3D model.
- *
- * Workflow:
- * 1. User generates a model (generateModel)
- * 2. User previews the model
- * 3. User uploads a reference image and calls generateTexture
- * 4. Rodin applies textures based on the reference image
- *
- * Steps:
- * 1. Verify authentication and job ownership
- * 2. Validate source job exists and is completed
- * 3. Deduct 0.5 credits
- * 4. Download the existing model from Storage
- * 5. Download the reference image
- * 6. Call Rodin texture API
- * 7. Create texture job document
- * 8. Return job ID for status polling
- */
-export declare const generateTexture: functions.HttpsFunction & functions.Runnable<any>;
-/**
  * Cloud Function: retryFailedJob
  *
  * Retries a failed job by re-attempting the download process.

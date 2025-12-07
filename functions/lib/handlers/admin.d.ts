@@ -10,13 +10,6 @@ import * as functions from 'firebase-functions/v1';
  */
 export declare const addCredits: functions.HttpsFunction & functions.Runnable<any>;
 /**
- * Cloud Function: setUnlimitedCredits
- *
- * Admin-only function to give a user unlimited credits (or revoke).
- * Sets credits to a very high number (999999) as a flag.
- */
-export declare const setUnlimitedCredits: functions.HttpsFunction & functions.Runnable<any>;
-/**
  * Cloud Function: checkRodinBalance
  *
  * Admin-only function to check remaining Rodin API credits.
@@ -57,19 +50,6 @@ export declare const deductCredits: functions.HttpsFunction & functions.Runnable
  * Admin-only function to get transaction history for a specific user.
  */
 export declare const getUserTransactions: functions.HttpsFunction & functions.Runnable<any>;
-/**
- * Cloud Function: checkMeshyBalance
- *
- * Admin-only function to check Meshy API credit balance.
- */
-export declare const checkMeshyBalance: functions.HttpsFunction & functions.Runnable<any>;
-/**
- * Cloud Function: checkTripoBalance
- *
- * Admin-only function to check Tripo API credit balance.
- * Returns both available balance and frozen amount.
- */
-export declare const checkTripoBalance: functions.HttpsFunction & functions.Runnable<any>;
 /**
  * Cloud Function: checkAllProviderBalances
  *

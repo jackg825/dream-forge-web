@@ -3,9 +3,9 @@
  *
  * Handles the multi-step 3D model creation flow:
  * 1. createSession - Initialize a new workflow session
- * 2. getSession - Retrieve session state for resuming
- * 3. updateSession - Update session data (images, settings)
- * 4. deleteSession - Remove a session and its files
+ * 2. updateSession - Update session data (images, settings)
+ * 3. deleteSession - Remove a session and its files
+ * 4. getUserSessions - List all user sessions
  */
 import * as functions from 'firebase-functions/v1';
 /**
@@ -15,12 +15,6 @@ import * as functions from 'firebase-functions/v1';
  * Automatically cleans up old drafts if user exceeds limit.
  */
 export declare const createSession: functions.HttpsFunction & functions.Runnable<any>;
-/**
- * getSession - Retrieve session state
- *
- * Used for page refresh or resuming a session.
- */
-export declare const getSession: functions.HttpsFunction & functions.Runnable<any>;
 /**
  * updateSession - Update session data
  *

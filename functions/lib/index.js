@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkUsdzAvailability = exports.convertToUsdz = exports.analyzeUploadedImage = exports.pollGeminiBatchJobs = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkAllProviderBalances = exports.checkTripoBalance = exports.checkMeshyBalance = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.analyzeUploadedImage = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkAllProviderBalances = exports.checkRodinBalance = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -46,10 +46,7 @@ Object.defineProperty(exports, "checkJobStatus", { enumerable: true, get: functi
 Object.defineProperty(exports, "retryFailedJob", { enumerable: true, get: function () { return generate_1.retryFailedJob; } });
 var admin_1 = require("./handlers/admin");
 Object.defineProperty(exports, "addCredits", { enumerable: true, get: function () { return admin_1.addCredits; } });
-Object.defineProperty(exports, "setUnlimitedCredits", { enumerable: true, get: function () { return admin_1.setUnlimitedCredits; } });
 Object.defineProperty(exports, "checkRodinBalance", { enumerable: true, get: function () { return admin_1.checkRodinBalance; } });
-Object.defineProperty(exports, "checkMeshyBalance", { enumerable: true, get: function () { return admin_1.checkMeshyBalance; } });
-Object.defineProperty(exports, "checkTripoBalance", { enumerable: true, get: function () { return admin_1.checkTripoBalance; } });
 Object.defineProperty(exports, "checkAllProviderBalances", { enumerable: true, get: function () { return admin_1.checkAllProviderBalances; } });
 Object.defineProperty(exports, "getAdminStats", { enumerable: true, get: function () { return admin_1.getAdminStats; } });
 Object.defineProperty(exports, "listUsers", { enumerable: true, get: function () { return admin_1.listUsers; } });
@@ -94,12 +91,7 @@ Object.defineProperty(exports, "resetPipelineStep", { enumerable: true, get: fun
 // Gemini Batch API handlers
 var gemini_batch_1 = require("./handlers/gemini-batch");
 Object.defineProperty(exports, "submitGeminiBatch", { enumerable: true, get: function () { return gemini_batch_1.submitGeminiBatch; } });
-Object.defineProperty(exports, "pollGeminiBatchJobs", { enumerable: true, get: function () { return gemini_batch_1.pollGeminiBatchJobs; } });
 // Image analysis (pre-upload Gemini analysis)
 var analyze_1 = require("./handlers/analyze");
 Object.defineProperty(exports, "analyzeUploadedImage", { enumerable: true, get: function () { return analyze_1.analyzeUploadedImage; } });
-// Model format conversion (GLB to USDZ for iOS AR)
-var convert_1 = require("./handlers/convert");
-Object.defineProperty(exports, "convertToUsdz", { enumerable: true, get: function () { return convert_1.convertToUsdz; } });
-Object.defineProperty(exports, "checkUsdzAvailability", { enumerable: true, get: function () { return convert_1.checkUsdzAvailability; } });
 //# sourceMappingURL=index.js.map
