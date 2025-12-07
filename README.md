@@ -13,33 +13,46 @@ Transform your photos into stunning 3D models using AI technology.
 
 ## Tech Stack
 
-- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
-- **3D Rendering**: Three.js, @react-three/fiber, @react-three/drei
-- **Backend**: Firebase Cloud Functions (Node.js)
+- **Frontend**: Next.js 16, React 19, TypeScript 5, Tailwind CSS 4
+- **3D Rendering**: Three.js 0.181, @react-three/fiber 9, @react-three/drei 10
+- **Backend**: Firebase Cloud Functions (Node.js 20)
 - **Database**: Cloud Firestore
-- **Storage**: Firebase Storage
+- **Storage**: Firebase Storage, AWS S3
 - **Auth**: Firebase Authentication (Google + Email)
-- **AI**: Rodin Gen-2 API (Hyper3D)
+- **AI Providers**: Rodin Gen-2 (Hyper3D), Tripo, Meshy
+- **Image Analysis**: Google Gemini, Tencent Hunyuan
+- **i18n**: next-intl (English & Chinese)
+- **UI Components**: Radix UI, shadcn/ui
 
 ## Project Structure
 
 ```
 dream-forge/
-├── app/                    # Next.js Frontend
+├── app/                    # Next.js 16 Frontend
 │   ├── src/
-│   │   ├── app/           # App Router pages
-│   │   ├── components/    # React components
+│   │   ├── app/
+│   │   │   └── [locale]/  # i18n routing (en/zh)
+│   │   ├── components/    # React & UI components
 │   │   ├── lib/           # Firebase, utilities
-│   │   ├── hooks/         # Custom hooks
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── config/        # App configuration
+│   │   ├── i18n/          # Internationalization
+│   │   ├── messages/      # Translation files
 │   │   └── types/         # TypeScript types
 │   └── public/
-├── functions/              # Cloud Functions
+├── functions/              # Cloud Functions (Node.js 20)
 │   └── src/
 │       ├── handlers/      # Function handlers
 │       ├── rodin/         # Rodin API client
-│       └── utils/         # Utilities
+│       ├── gemini/        # Gemini API client
+│       ├── providers/     # Multi-provider support
+│       ├── storage/       # Storage utilities
+│       └── utils/         # Shared utilities
+├── workers/                # Cloudflare Workers
+├── docs/                   # Documentation
 ├── firebase.json
 ├── firestore.rules
+├── firestore.indexes.json
 └── storage.rules
 ```
 
@@ -47,10 +60,14 @@ dream-forge/
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ (required for functions)
 - Firebase CLI (`npm install -g firebase-tools`)
 - Firebase project (Blaze plan for Cloud Functions)
-- Rodin API key from Hyper3D
+- API keys from providers:
+  - Rodin API key (Hyper3D) - Primary
+  - Tripo API key (optional)
+  - Meshy API key (optional)
+  - Gemini API key (image analysis)
 
 ### 1. Clone and Install
 
@@ -161,9 +178,11 @@ firebase deploy --only firestore:rules,storage
 
 ### Cloud Functions
 
-- `generateModel`: Starts a 3D generation job
+- `generateModel`: Starts a 3D generation job (multi-provider support)
 - `checkJobStatus`: Polls job status and handles completion
 - `onUserCreate`: Creates user document with initial credits
+- `analyzeImage`: AI-powered image analysis (Gemini/Hunyuan)
+- `regeneratePipeline`: Admin function for batch regeneration
 
 ## License
 

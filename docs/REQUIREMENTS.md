@@ -6,32 +6,41 @@
 
 | 技術 | 版本 | 用途 |
 |------|------|------|
-| Next.js | 14.x | React 框架 + App Router |
+| Next.js | 16.x | React 框架 + App Router |
+| React | 19.x | UI 函式庫 |
 | TypeScript | 5.x | 型別安全 |
-| Tailwind CSS | 3.x | 樣式框架 |
-| Three.js | 0.160+ | 3D 渲染 |
-| @react-three/fiber | 8.x | React Three.js 封裝 |
-| @react-three/drei | 9.x | Three.js 工具集 |
-| Firebase SDK | 10.x | Auth, Storage, Firestore |
-| Zustand | 4.x | 狀態管理 |
+| Tailwind CSS | 4.x | 樣式框架 (PostCSS) |
+| Three.js | 0.181+ | 3D 渲染 |
+| @react-three/fiber | 9.x | React Three.js 封裝 |
+| @react-three/drei | 10.x | Three.js 工具集 |
+| Firebase SDK | 12.x | Auth, Storage, Firestore |
+| Zustand | 5.x | 狀態管理 |
 | React Query | 5.x | 伺服器狀態管理 |
+| next-intl | 4.x | 國際化 (i18n) |
+| Radix UI | latest | 無障礙 UI 元件 |
 
 ### 1.2 Backend (Firebase)
 
-| 服務 | 用途 |
-|------|------|
-| Firebase Auth | 用戶認證 |
-| Cloud Firestore | 資料庫 |
-| Cloud Storage | 檔案儲存 |
-| Cloud Functions | 後端邏輯 |
-| Firebase Hosting | 靜態託管 |
+| 服務 | 版本 | 用途 |
+|------|------|------|
+| Firebase Auth | - | 用戶認證 |
+| Cloud Firestore | - | 資料庫 |
+| Cloud Storage | - | 檔案儲存 |
+| Cloud Functions | Node.js 20 | 後端邏輯 |
+| Firebase Hosting | - | 靜態託管 |
+| firebase-admin | 13.x | Admin SDK |
+| firebase-functions | 7.x | Functions SDK |
 
 ### 1.3 External Services
 
 | 服務 | 用途 | 文檔 |
 |------|------|------|
-| Rodin Gen-2 API | 3D 模型生成 | https://developer.hyper3d.ai |
-| Gemini API (Optional) | 圖像預處理 | https://ai.google.dev |
+| Rodin Gen-2 API | 3D 模型生成 (主要) | https://developer.hyper3d.ai |
+| Tripo API | 3D 模型生成 (備用) | https://www.tripo3d.ai |
+| Meshy API | 3D 模型生成 (備用) | https://docs.meshy.ai |
+| Google Gemini API | 圖像分析 | https://ai.google.dev |
+| Tencent Hunyuan | 圖像分析 (中文) | https://cloud.tencent.com |
+| AWS S3 | 外部檔案儲存 | - |
 
 ---
 
@@ -40,35 +49,43 @@
 ### 2.1 專案結構
 
 ```
-photo-to-3d-mvp/
+dream-forge/
 ├── firebase.json
 ├── firestore.rules
+├── firestore.indexes.json
 ├── storage.rules
 ├── .firebaserc
-├── functions/
+├── functions/                    # Cloud Functions (Node.js 20)
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── src/
 │       ├── index.ts
-│       ├── rodin/
+│       ├── rodin/               # Rodin API client
 │       │   ├── client.ts
 │       │   └── types.ts
+│       ├── gemini/              # Gemini API client
+│       ├── providers/           # Multi-provider support
+│       ├── storage/             # Storage utilities
 │       ├── handlers/
 │       │   ├── generate.ts
-│       │   ├── webhook.ts
-│       │   └── jobs.ts
+│       │   ├── jobs.ts
+│       │   └── ...
 │       └── utils/
-│           ├── auth.ts
-│           └── credits.ts
-└── app/                    # Next.js App
+├── workers/                      # Cloudflare Workers
+└── app/                          # Next.js 16 App
     ├── package.json
-    ├── next.config.js
-    ├── tailwind.config.js
+    ├── next.config.ts
     └── src/
         ├── app/
+        │   └── [locale]/        # i18n routing (en/zh)
         ├── components/
+        │   └── ui/              # shadcn/ui components
         ├── lib/
-        └── hooks/
+        ├── hooks/
+        ├── config/
+        ├── i18n/
+        ├── messages/            # Translation files
+        └── types/
 ```
 
 ### 2.2 Firestore Security Rules
@@ -289,8 +306,10 @@ export class RodinClient {
 | 函式名稱 | 觸發方式 | 說明 |
 |----------|----------|------|
 | `onUserCreate` | Auth onCreate | 初始化用戶資料 |
-| `generateModel` | HTTPS Callable | 啟動生成任務 |
+| `generateModel` | HTTPS Callable | 啟動生成任務 (多供應商) |
 | `checkJobStatus` | HTTPS Callable | 查詢任務狀態 |
+| `analyzeImage` | HTTPS Callable | AI 圖像分析 |
+| `regeneratePipeline` | HTTPS Callable | 管理員批次重新生成 |
 | `processCompletion` | Firestore onUpdate | 處理完成任務 |
 | `scheduledCleanup` | Pub/Sub (每日) | 清理過期資料 |
 
@@ -580,7 +599,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=xxx
   },
   "functions": {
     "source": "functions",
-    "runtime": "nodejs18",
+    "runtime": "nodejs20",
     "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
   },
   "firestore": {

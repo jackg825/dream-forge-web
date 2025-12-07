@@ -28,7 +28,7 @@
    - Authentication (Google + Email/Password)
    - Cloud Firestore (asia-east1)
    - Cloud Storage (asia-east1)
-   - Cloud Functions (Node.js 18)
+   - Cloud Functions (Node.js 20)
    - Hosting
 
 驗收標準:
@@ -47,23 +47,25 @@
 請幫我初始化 Firebase + Next.js 專案結構：
 
 1. 建立專案目錄結構：
-photo-to-3d-mvp/
-├── app/                    # Next.js 14 App Router
-├── functions/              # Cloud Functions
+dream-forge/
+├── app/                    # Next.js 16 App Router
+├── functions/              # Cloud Functions (Node.js 20)
 ├── firebase.json
 ├── firestore.rules
+├── firestore.indexes.json
 ├── storage.rules
 └── .firebaserc
 
 2. 初始化 Next.js (app/ 目錄):
-- 使用 TypeScript
-- 使用 Tailwind CSS
-- 使用 App Router
-- 安裝依賴: firebase, @react-three/fiber, @react-three/drei, three, zustand, @tanstack/react-query
+- 使用 TypeScript 5
+- 使用 Tailwind CSS 4 (PostCSS)
+- 使用 App Router with [locale] routing
+- 安裝依賴: firebase@12, @react-three/fiber@9, @react-three/drei@10, three, zustand@5, @tanstack/react-query@5, next-intl@4
 
 3. 初始化 Cloud Functions (functions/ 目錄):
 - 使用 TypeScript
-- 安裝依賴: firebase-admin, firebase-functions, axios, form-data
+- Node.js 20 runtime
+- 安裝依賴: firebase-admin@13, firebase-functions@7, axios, form-data
 
 4. 設置 Firebase 配置文件
 
@@ -102,7 +104,7 @@ photo-to-3d-mvp/
 - 監聽 auth state 變化
 - 自動重導向（未登入 -> /auth）
 
-請使用 Firebase SDK v10+ 的 modular API。
+請使用 Firebase SDK v12+ 的 modular API。
 ---
 
 驗收標準:
@@ -917,3 +919,24 @@ photo-to-3d-mvp/
 | Task 7.3 | ⬜ | | | |
 
 狀態圖例: ⬜ 待開始 | 🔄 進行中 | ✅ 完成 | ❌ 阻塞
+
+---
+
+## 技術棧參考 (Updated Dec 2025)
+
+| 技術 | 版本 |
+|------|------|
+| Next.js | 16.x |
+| React | 19.x |
+| TypeScript | 5.x |
+| Tailwind CSS | 4.x |
+| Firebase SDK | 12.x |
+| firebase-admin | 13.x |
+| firebase-functions | 7.x |
+| Node.js (Functions) | 20 |
+| @react-three/fiber | 9.x |
+| @react-three/drei | 10.x |
+| Three.js | 0.181+ |
+| next-intl | 4.x |
+| Zustand | 5.x |
+| React Query | 5.x |

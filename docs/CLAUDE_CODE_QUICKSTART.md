@@ -4,9 +4,11 @@
 Photo-to-3D MVP: 用戶上傳照片，透過 Rodin Gen-2 API 生成可列印的 3D 模型
 
 ## 技術棧
-- Frontend: Next.js 14 + TypeScript + Tailwind CSS + Three.js
-- Backend: Firebase (Auth, Firestore, Storage, Functions)
-- AI API: Rodin Gen-2 (Hyper3D)
+- Frontend: Next.js 16 + React 19 + TypeScript + Tailwind CSS 4 + Three.js
+- Backend: Firebase (Auth, Firestore, Storage, Functions with Node.js 20)
+- AI API: Rodin Gen-2 (Hyper3D), Tripo, Meshy
+- Image Analysis: Google Gemini, Tencent Hunyuan
+- i18n: next-intl (English & Chinese)
 
 ---
 
@@ -18,50 +20,59 @@ Photo-to-3D MVP: 用戶上傳照片，透過 Rodin Gen-2 API 生成可列印的 
 請幫我建立 Photo-to-3D MVP 專案。
 
 技術需求:
-- Next.js 14 with App Router + TypeScript
-- Tailwind CSS
-- Firebase SDK v10+
-- Three.js via @react-three/fiber
-- Cloud Functions with TypeScript
+- Next.js 16 with App Router + TypeScript
+- React 19
+- Tailwind CSS 4 (PostCSS)
+- Firebase SDK v12+
+- Three.js via @react-three/fiber 9
+- Cloud Functions with TypeScript (Node.js 20)
+- next-intl for i18n
 
 專案結構:
-photo-to-3d-mvp/
-├── app/                      # Next.js
+dream-forge/
+├── app/                      # Next.js 16
 │   ├── src/
-│   │   ├── app/              # Pages
-│   │   │   ├── page.tsx      # 首頁（上傳）
-│   │   │   ├── auth/         # 登入
-│   │   │   ├── dashboard/    # 儀表板
-│   │   │   └── viewer/[id]/  # 3D 預覽
+│   │   ├── app/
+│   │   │   └── [locale]/    # i18n routing
+│   │   │       ├── page.tsx  # 首頁（上傳）
+│   │   │       ├── auth/     # 登入
+│   │   │       ├── dashboard/ # 儀表板
+│   │   │       └── viewer/[id]/ # 3D 預覽
 │   │   ├── components/
 │   │   │   ├── upload/
 │   │   │   ├── viewer/
-│   │   │   └── ui/
+│   │   │   └── ui/          # shadcn/ui components
 │   │   ├── lib/
 │   │   │   ├── firebase.ts
 │   │   │   └── auth.ts
-│   │   └── hooks/
+│   │   ├── hooks/
+│   │   ├── i18n/
+│   │   └── messages/        # Translation files
 │   ├── package.json
-│   └── tailwind.config.js
+│   └── next.config.ts
 ├── functions/
 │   ├── src/
 │   │   ├── index.ts
 │   │   ├── rodin/
 │   │   │   ├── client.ts
 │   │   │   └── types.ts
+│   │   ├── gemini/          # Gemini API client
+│   │   ├── providers/       # Multi-provider support
 │   │   └── handlers/
 │   │       ├── generate.ts
 │   │       └── jobs.ts
 │   └── package.json
 ├── firebase.json
 ├── firestore.rules
+├── firestore.indexes.json
 └── storage.rules
 
 請生成:
 1. 所有配置檔案 (package.json, tsconfig, firebase.json, rules)
 2. Firebase 初始化 (lib/firebase.ts)
 3. Auth hook (hooks/useAuth.ts)
-4. 基本頁面框架
+4. i18n 設置
+5. 基本頁面框架
 
 先不要實作完整功能，只建立骨架結構。
 ```
@@ -267,8 +278,12 @@ firebase functions:secrets:set RODIN_API_KEY
 
 開發前確認:
 - [ ] Firebase 專案已建立
-- [ ] 取得 Rodin API Key (https://hyper3d.ai)
-- [ ] Node.js 18+ 已安裝
+- [ ] 取得 API Keys:
+  - [ ] Rodin API Key (https://hyper3d.ai)
+  - [ ] Tripo API Key (optional)
+  - [ ] Meshy API Key (optional)
+  - [ ] Gemini API Key (https://ai.google.dev)
+- [ ] Node.js 20+ 已安裝
 - [ ] Firebase CLI 已安裝
 
 功能完成確認:
@@ -286,13 +301,19 @@ firebase functions:secrets:set RODIN_API_KEY
 ## 🐛 常見問題
 
 **Q: Firebase Functions 部署失敗**
-A: 確認 Node.js 版本 18+，確認 functions/package.json 的 engines 設定
+A: 確認 Node.js 版本 20+，確認 functions/package.json 的 engines 設定為 "node": "20"
 
 **Q: Rodin API 返回 401**
-A: 確認 API Key 正確設置在 Firebase Secrets
+A: 確認 API Key 正確設置在 Firebase Secrets (`firebase functions:secrets:set RODIN_API_KEY`)
 
 **Q: 3D 模型載入失敗**
 A: 確認 CORS 設定，確認 Storage 權限
 
 **Q: 積分沒有扣除**
 A: 檢查 Firestore Security Rules 是否阻擋了 Functions 的寫入
+
+**Q: Tailwind CSS 樣式不生效**
+A: Next.js 16 + Tailwind v4 使用 PostCSS 配置，確認 `@tailwindcss/postcss` 已安裝
+
+**Q: i18n 路由不工作**
+A: 確認 middleware.ts 和 i18n 配置正確，使用 `[locale]` 動態路由
