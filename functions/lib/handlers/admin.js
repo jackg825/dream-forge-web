@@ -801,11 +801,13 @@ async function getAdminEmail(adminId) {
 }
 /**
  * Helper: Add admin action to pipeline audit trail
+ * Note: Using Timestamp.now() instead of serverTimestamp() because
+ * serverTimestamp() cannot be used inside arrayUnion operations
  */
 async function addAdminAction(pipelineRef, action) {
     const actionWithTimestamp = {
         ...action,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: admin.firestore.Timestamp.now(),
     };
     await pipelineRef.update({
         adminActions: admin.firestore.FieldValue.arrayUnion(actionWithTimestamp),

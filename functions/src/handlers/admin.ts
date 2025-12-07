@@ -1060,6 +1060,8 @@ async function getAdminEmail(adminId: string): Promise<string> {
 
 /**
  * Helper: Add admin action to pipeline audit trail
+ * Note: Using Timestamp.now() instead of serverTimestamp() because
+ * serverTimestamp() cannot be used inside arrayUnion operations
  */
 async function addAdminAction(
   pipelineRef: FirebaseFirestore.DocumentReference,
@@ -1067,7 +1069,7 @@ async function addAdminAction(
 ): Promise<void> {
   const actionWithTimestamp: AdminAction = {
     ...action,
-    timestamp: admin.firestore.FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+    timestamp: admin.firestore.Timestamp.now(),
   };
 
   await pipelineRef.update({
