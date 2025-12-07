@@ -125,3 +125,13 @@ export interface TripoError {
     code: number;
     message: string;
 }
+/**
+ * Get user balance response
+ */
+export interface TripoBalanceResponse {
+    code: number;
+    data: {
+        balance: number;
+        frozen: number;
+    };
+}

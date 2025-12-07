@@ -76,6 +76,11 @@ export declare class MeshyProvider implements I3DProvider {
      */
     getCapabilities(): ProviderCapabilities;
     /**
+     * Check API credit balance
+     * Returns the current credit balance for the authenticated user
+     */
+    checkBalance(): Promise<number>;
+    /**
      * Handle and log API errors
      */
     private handleError;

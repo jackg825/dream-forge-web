@@ -317,6 +317,55 @@ class TripoProvider {
         };
     }
     /**
+     * Check API credit balance
+     * Returns the current available balance (conforms to I3DProvider interface)
+     */
+    async checkBalance() {
+        try {
+            const response = await axios_1.default.get(`${types_1.TRIPO_API_BASE}/user/balance`, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                },
+                timeout: 10000,
+            });
+            if (response.data.code !== 0) {
+                throw new Error(`Tripo API error: code ${response.data.code}`);
+            }
+            functions.logger.info('Tripo balance checked', {
+                balance: response.data.data.balance,
+                frozen: response.data.data.frozen,
+            });
+            return response.data.data.balance;
+        }
+        catch (error) {
+            this.handleError(error, 'checkBalance');
+        }
+    }
+    /**
+     * Check API credit balance with frozen amount
+     * Returns both balance and frozen for admin dashboard
+     */
+    async checkBalanceWithFrozen() {
+        try {
+            const response = await axios_1.default.get(`${types_1.TRIPO_API_BASE}/user/balance`, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                },
+                timeout: 10000,
+            });
+            if (response.data.code !== 0) {
+                throw new Error(`Tripo API error: code ${response.data.code}`);
+            }
+            return {
+                balance: response.data.data.balance,
+                frozen: response.data.data.frozen,
+            };
+        }
+        catch (error) {
+            this.handleError(error, 'checkBalance');
+        }
+    }
+    /**
      * Create a new task
      */
     async createTask(request) {

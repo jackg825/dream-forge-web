@@ -57,3 +57,61 @@ export declare const deductCredits: functions.HttpsFunction & functions.Runnable
  * Admin-only function to get transaction history for a specific user.
  */
 export declare const getUserTransactions: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: checkMeshyBalance
+ *
+ * Admin-only function to check Meshy API credit balance.
+ */
+export declare const checkMeshyBalance: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: checkTripoBalance
+ *
+ * Admin-only function to check Tripo API credit balance.
+ * Returns both available balance and frozen amount.
+ */
+export declare const checkTripoBalance: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: checkAllProviderBalances
+ *
+ * Admin-only function to check all provider balances at once.
+ * More efficient than calling each balance check individually.
+ *
+ * Returns:
+ * - rodin: number (balance)
+ * - meshy: number (credits)
+ * - tripo: { balance: number, frozen: number }
+ * - hunyuan: 'free-tier' (no API available)
+ */
+export declare const checkAllProviderBalances: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: adminRegeneratePipelineImage
+ *
+ * Admin-only function to regenerate a pipeline image without credit deduction.
+ * Stores result in adminPreview for confirmation before overwriting.
+ */
+export declare const adminRegeneratePipelineImage: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: adminStartPipelineMesh
+ *
+ * Admin-only function to regenerate mesh with optional provider change.
+ * No credit deduction. Stores result in adminPreview.
+ */
+export declare const adminStartPipelineMesh: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: adminCheckPreviewStatus
+ *
+ * Admin-only function to check status of mesh/texture regeneration in preview.
+ */
+export declare const adminCheckPreviewStatus: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: adminConfirmPreview
+ *
+ * Admin-only function to confirm preview and overwrite production data.
+ */
+export declare const adminConfirmPreview: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Cloud Function: adminRejectPreview
+ *
+ * Admin-only function to reject preview and discard changes.
+ */
+export declare const adminRejectPreview: functions.HttpsFunction & functions.Runnable<any>;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,13 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Box,
   Palette,
   Clock,
@@ -20,16 +27,27 @@ import {
   Loader2,
   Image as ImageIcon,
   ExternalLink,
-  Settings,
-  User,
+  RefreshCw,
+  Wrench,
+  History,
 } from 'lucide-react';
-import type { AdminPipeline, PipelineStatus, PipelineMeshAngle, PipelineTextureAngle } from '@/types';
+import type {
+  AdminPipeline,
+  PipelineStatus,
+  PipelineMeshAngle,
+  PipelineTextureAngle,
+  ModelProvider,
+  AdminAction,
+} from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
+import { PROVIDER_OPTIONS } from '@/types';
+import { useAdminPipelineRegeneration } from '@/hooks/useAdminPipelineRegeneration';
 
 interface PipelineDetailModalProps {
   pipeline: AdminPipeline | null;
   open: boolean;
   onClose: () => void;
+  onPipelineUpdated?: () => void;
 }
 
 // Status display configuration
@@ -63,8 +81,32 @@ function formatDate(dateStr: string | null): string {
   }).format(new Date(dateStr));
 }
 
-function ImageGallery({ images, title }: { images: { url: string; label: string }[]; title: string }) {
+interface ImageGalleryProps {
+  images: { url: string; label: string; angle?: string }[];
+  title: string;
+  previewImages?: { url: string; label: string; angle?: string }[];
+  onRegenerate?: (angle: string) => void;
+  onConfirm?: (angle: string) => void;
+  onReject?: (angle: string) => void;
+  isRegenerating?: boolean;
+  showActions?: boolean;
+}
+
+function ImageGallery({
+  images,
+  title,
+  previewImages,
+  onRegenerate,
+  onConfirm,
+  onReject,
+  isRegenerating,
+  showActions = false,
+}: ImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedAngle, setSelectedAngle] = useState<string | null>(null);
+
+  // Find preview for selected angle
+  const previewForSelected = previewImages?.find((p) => p.angle === selectedAngle);
 
   if (images.length === 0) {
     return (
@@ -77,40 +119,157 @@ function ImageGallery({ images, title }: { images: { url: string; label: string 
 
   return (
     <div>
-      {/* Selected image preview */}
+      {/* Selected image preview with comparison */}
       {selectedImage && (
-        <div className="mb-4 bg-black rounded-lg overflow-hidden">
-          <img
-            src={selectedImage}
-            alt="Preview"
-            className="w-full h-64 object-contain"
-          />
+        <div className="mb-4">
+          <div className="flex gap-2 items-stretch">
+            {/* Current image */}
+            <div className="flex-1 bg-black rounded-lg overflow-hidden">
+              <p className="text-xs text-center py-1 bg-muted/50">目前</p>
+              <img
+                src={selectedImage}
+                alt="Current"
+                className="w-full h-56 object-contain"
+              />
+            </div>
+            {/* Preview image (if exists) */}
+            {previewForSelected && (
+              <div className="flex-1 bg-black rounded-lg overflow-hidden border-2 border-yellow-500">
+                <p className="text-xs text-center py-1 bg-yellow-500/20 text-yellow-600">預覽</p>
+                <img
+                  src={previewForSelected.url}
+                  alt="Preview"
+                  className="w-full h-56 object-contain"
+                />
+              </div>
+            )}
+          </div>
+          {/* Actions for selected */}
+          {showActions && selectedAngle && (
+            <div className="flex gap-2 mt-2 justify-center">
+              {previewForSelected ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => onConfirm?.(selectedAngle)}
+                    disabled={isRegenerating}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    確認覆蓋
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onReject?.(selectedAngle)}
+                    disabled={isRegenerating}
+                  >
+                    取消
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onRegenerate?.(selectedAngle)}
+                  disabled={isRegenerating}
+                >
+                  {isRegenerating ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                  )}
+                  重新生成
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Thumbnail grid */}
       <div className="grid grid-cols-4 gap-2">
-        {images.map((img, idx) => (
-          <button
-            key={idx}
-            onClick={() => setSelectedImage(img.url)}
-            className={`aspect-square bg-black rounded-md overflow-hidden border-2 transition-colors ${
-              selectedImage === img.url ? 'border-primary' : 'border-transparent hover:border-muted'
-            }`}
-          >
-            <img
-              src={img.url}
-              alt={img.label}
-              className="w-full h-full object-contain"
-            />
-          </button>
-        ))}
+        {images.map((img, idx) => {
+          const hasPreview = previewImages?.some((p) => p.angle === img.angle);
+          return (
+            <button
+              key={idx}
+              onClick={() => {
+                setSelectedImage(img.url);
+                setSelectedAngle(img.angle || null);
+              }}
+              className={`relative aspect-square bg-black rounded-md overflow-hidden border-2 transition-colors ${
+                selectedImage === img.url ? 'border-primary' : 'border-transparent hover:border-muted'
+              }`}
+            >
+              <img
+                src={img.url}
+                alt={img.label}
+                className="w-full h-full object-contain"
+              />
+              {hasPreview && (
+                <div className="absolute top-1 right-1 w-3 h-3 bg-yellow-500 rounded-full" />
+              )}
+              <span className="absolute bottom-0 left-0 right-0 text-xs bg-black/60 text-white text-center py-0.5">
+                {img.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-export function PipelineDetailModal({ pipeline, open, onClose }: PipelineDetailModalProps) {
+export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated }: PipelineDetailModalProps) {
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('meshy');
+  const [activeTab, setActiveTab] = useState('input');
+
+  const {
+    isRegenerating,
+    previewStatus,
+    previewData,
+    error: regenError,
+    regenerateImage,
+    regenerateMesh,
+    checkPreviewStatus,
+    confirmPreview,
+    rejectPreview,
+    clearError,
+    setPreviewData,
+  } = useAdminPipelineRegeneration();
+
+  // Initialize preview data from pipeline
+  useEffect(() => {
+    if (pipeline?.adminPreview) {
+      setPreviewData(pipeline.adminPreview);
+    } else {
+      setPreviewData(null);
+    }
+  }, [pipeline?.adminPreview, setPreviewData]);
+
+  // Reset provider selection when pipeline changes
+  useEffect(() => {
+    if (pipeline?.settings?.provider) {
+      setSelectedProvider(pipeline.settings.provider);
+    }
+  }, [pipeline?.settings?.provider]);
+
+  // Poll for mesh preview status
+  useEffect(() => {
+    if (!pipeline || previewStatus !== 'processing') return;
+
+    const interval = setInterval(async () => {
+      const result = await checkPreviewStatus(pipeline.id);
+      if (result?.status === 'completed' || result?.status === 'failed') {
+        clearInterval(interval);
+        onPipelineUpdated?.();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [pipeline, previewStatus, checkPreviewStatus, onPipelineUpdated]);
+
   if (!pipeline) return null;
 
   const statusConfig = STATUS_CONFIG[pipeline.status] || STATUS_CONFIG.draft;
@@ -123,10 +282,50 @@ export function PipelineDetailModal({ pipeline, open, onClose }: PipelineDetailM
     pipeline.status === 'generating-texture';
   const totalCredits = pipeline.creditsCharged.mesh + pipeline.creditsCharged.texture;
 
+  // Handlers for image regeneration
+  const handleRegenerateMeshImage = async (angle: string) => {
+    await regenerateImage(pipeline.id, 'mesh', angle as PipelineMeshAngle);
+  };
+
+  const handleRegenerateTextureImage = async (angle: string) => {
+    await regenerateImage(pipeline.id, 'texture', angle as PipelineTextureAngle);
+  };
+
+  const handleConfirmMeshImage = async (angle: string) => {
+    const success = await confirmPreview(pipeline.id, 'meshImages', angle);
+    if (success) onPipelineUpdated?.();
+  };
+
+  const handleConfirmTextureImage = async (angle: string) => {
+    const success = await confirmPreview(pipeline.id, 'textureImages', angle);
+    if (success) onPipelineUpdated?.();
+  };
+
+  const handleRejectMeshImage = async (angle: string) => {
+    await rejectPreview(pipeline.id, 'meshImages', angle);
+  };
+
+  const handleRejectTextureImage = async (angle: string) => {
+    await rejectPreview(pipeline.id, 'textureImages', angle);
+  };
+
+  const handleRegenerateMesh = async () => {
+    await regenerateMesh(pipeline.id, selectedProvider);
+  };
+
+  const handleConfirmMesh = async () => {
+    const success = await confirmPreview(pipeline.id, 'mesh');
+    if (success) onPipelineUpdated?.();
+  };
+
+  const handleRejectMesh = async () => {
+    await rejectPreview(pipeline.id, 'mesh');
+  };
+
   // Prepare image galleries
   const inputImages = pipeline.inputImages.map((img, idx) => ({
     url: img.url,
-    label: `輸入圖片 ${idx + 1}`,
+    label: `輸入 ${idx + 1}`,
   }));
 
   const meshImages = MESH_ANGLES
@@ -134,6 +333,7 @@ export function PipelineDetailModal({ pipeline, open, onClose }: PipelineDetailM
     .map((angle) => ({
       url: pipeline.meshImages[angle]!.url,
       label: angle,
+      angle,
     }));
 
   const textureImages = TEXTURE_ANGLES
@@ -141,7 +341,25 @@ export function PipelineDetailModal({ pipeline, open, onClose }: PipelineDetailM
     .map((angle) => ({
       url: pipeline.textureImages[angle]!.url,
       label: angle,
+      angle,
     }));
+
+  // Preview images
+  const meshPreviewImages = previewData?.meshImages
+    ? Object.entries(previewData.meshImages).map(([angle, img]) => ({
+        url: img!.url,
+        label: angle,
+        angle,
+      }))
+    : [];
+
+  const texturePreviewImages = previewData?.textureImages
+    ? Object.entries(previewData.textureImages).map(([angle, img]) => ({
+        url: img!.url,
+        label: angle,
+        angle,
+      }))
+    : [];
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -224,20 +442,35 @@ export function PipelineDetailModal({ pipeline, open, onClose }: PipelineDetailM
               </div>
             )}
 
-            {/* Images tabs */}
-            <Tabs defaultValue="input" className="w-full">
-              <TabsList className="w-full grid grid-cols-3">
-                <TabsTrigger value="input" className="gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  輸入圖片 ({inputImages.length})
+            {/* Error display for regeneration */}
+            {regenError && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
+                <p className="text-sm text-destructive flex-1">{regenError}</p>
+                <Button size="sm" variant="ghost" onClick={clearError}>
+                  關閉
+                </Button>
+              </div>
+            )}
+
+            {/* Images tabs with admin actions */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="w-full grid grid-cols-4">
+                <TabsTrigger value="input" className="gap-1 text-xs">
+                  <ImageIcon className="h-3 w-3" />
+                  輸入 ({inputImages.length})
                 </TabsTrigger>
-                <TabsTrigger value="mesh" className="gap-2">
-                  <Box className="h-4 w-4" />
-                  網格圖片 ({meshImages.length})
+                <TabsTrigger value="mesh" className="gap-1 text-xs">
+                  <Box className="h-3 w-3" />
+                  網格 ({meshImages.length})
                 </TabsTrigger>
-                <TabsTrigger value="texture" className="gap-2">
-                  <Palette className="h-4 w-4" />
-                  貼圖圖片 ({textureImages.length})
+                <TabsTrigger value="texture" className="gap-1 text-xs">
+                  <Palette className="h-3 w-3" />
+                  貼圖 ({textureImages.length})
+                </TabsTrigger>
+                <TabsTrigger value="admin" className="gap-1 text-xs">
+                  <Wrench className="h-3 w-3" />
+                  管理
                 </TabsTrigger>
               </TabsList>
 
@@ -246,11 +479,155 @@ export function PipelineDetailModal({ pipeline, open, onClose }: PipelineDetailM
               </TabsContent>
 
               <TabsContent value="mesh" className="mt-4">
-                <ImageGallery images={meshImages} title="網格圖片" />
+                <ImageGallery
+                  images={meshImages}
+                  title="網格圖片"
+                  previewImages={meshPreviewImages}
+                  onRegenerate={handleRegenerateMeshImage}
+                  onConfirm={handleConfirmMeshImage}
+                  onReject={handleRejectMeshImage}
+                  isRegenerating={isRegenerating}
+                  showActions={true}
+                />
               </TabsContent>
 
               <TabsContent value="texture" className="mt-4">
-                <ImageGallery images={textureImages} title="貼圖圖片" />
+                <ImageGallery
+                  images={textureImages}
+                  title="貼圖圖片"
+                  previewImages={texturePreviewImages}
+                  onRegenerate={handleRegenerateTextureImage}
+                  onConfirm={handleConfirmTextureImage}
+                  onReject={handleRejectTextureImage}
+                  isRegenerating={isRegenerating}
+                  showActions={true}
+                />
+              </TabsContent>
+
+              <TabsContent value="admin" className="mt-4 space-y-4">
+                {/* Mesh regeneration with provider selection */}
+                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Box className="h-4 w-4" />
+                    重新生成 3D 網格
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    使用不同供應商重新生成網格模型（不扣點）
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    <Select
+                      value={selectedProvider}
+                      onValueChange={(v: string) => setSelectedProvider(v as ModelProvider)}
+                    >
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="選擇供應商" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(PROVIDER_OPTIONS).map(([key, opt]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              <span>{opt.label}</span>
+                              {opt.badge && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {opt.badge}
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleRegenerateMesh}
+                      disabled={isRegenerating || previewStatus === 'processing'}
+                    >
+                      {previewStatus === 'processing' ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          生成中...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          重新生成
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Mesh preview comparison */}
+                  {previewData?.meshUrl && (
+                    <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                      <p className="text-sm font-medium text-yellow-600 mb-2">
+                        預覽準備就緒
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={handleConfirmMesh}
+                          disabled={isRegenerating}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          確認覆蓋
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleRejectMesh}
+                          disabled={isRegenerating}
+                        >
+                          取消
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          asChild
+                        >
+                          <a
+                            href={previewData.meshUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            預覽模型
+                          </a>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Audit log */}
+                {pipeline.adminActions && pipeline.adminActions.length > 0 && (
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <h4 className="font-medium flex items-center gap-2 mb-3">
+                      <History className="h-4 w-4" />
+                      管理員操作紀錄
+                    </h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {pipeline.adminActions.slice().reverse().map((action, idx) => (
+                        <div
+                          key={idx}
+                          className="text-xs bg-background/50 rounded p-2 flex justify-between items-start"
+                        >
+                          <div>
+                            <span className="font-medium">{action.actionType}</span>
+                            <span className="text-muted-foreground mx-1">→</span>
+                            <span>{action.targetField}</span>
+                            {action.provider && (
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                {action.provider}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-muted-foreground">
+                            {action.adminEmail}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 

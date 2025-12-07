@@ -285,6 +285,45 @@ export interface PipelineDocument {
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt: FirebaseFirestore.Timestamp;
     completedAt?: FirebaseFirestore.Timestamp;
+    adminPreview?: AdminPreview;
+    adminActions?: AdminAction[];
+}
+/**
+ * Admin action types for audit trail
+ */
+export type AdminActionType = 'regenerate-image' | 'regenerate-mesh' | 'regenerate-texture' | 'confirm-preview' | 'reject-preview' | 'change-provider';
+/**
+ * Admin action record for audit trail
+ * Tracks all admin operations on a pipeline for accountability
+ */
+export interface AdminAction {
+    adminId: string;
+    adminEmail: string;
+    actionType: AdminActionType;
+    targetField: string;
+    provider?: ProviderType;
+    previousValue?: string;
+    timestamp: FirebaseFirestore.Timestamp;
+    reason?: string;
+}
+/**
+ * Admin preview data for "preview before overwrite" flow
+ * Stores temporary regeneration results before admin confirmation
+ */
+export interface AdminPreview {
+    meshImages?: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
+    textureImages?: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+    meshUrl?: string;
+    meshStoragePath?: string;
+    meshDownloadFiles?: DownloadFile[];
+    texturedModelUrl?: string;
+    texturedModelStoragePath?: string;
+    texturedDownloadFiles?: DownloadFile[];
+    provider?: ProviderType;
+    taskId?: string;
+    taskStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+    createdAt?: FirebaseFirestore.Timestamp;
+    createdBy?: string;
 }
 /**
  * Batch job status

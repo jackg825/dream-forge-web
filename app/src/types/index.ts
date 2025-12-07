@@ -238,6 +238,63 @@ export interface ListUsersResponse {
   };
 }
 
+// ============================================
+// Admin Pipeline Regeneration Types
+// ============================================
+
+/**
+ * Admin action types for audit trail
+ */
+export type AdminActionType =
+  | 'regenerate-image'
+  | 'regenerate-mesh'
+  | 'regenerate-texture'
+  | 'confirm-preview'
+  | 'reject-preview'
+  | 'change-provider';
+
+/**
+ * Admin action record for audit trail
+ */
+export interface AdminAction {
+  adminId: string;
+  adminEmail: string;
+  actionType: AdminActionType;
+  targetField: string;
+  provider?: ModelProvider;
+  previousValue?: string;
+  timestamp: string;
+  reason?: string;
+}
+
+/**
+ * Admin preview data for "preview before overwrite" flow
+ */
+export interface AdminPreview {
+  // Image previews
+  meshImages?: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
+  textureImages?: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+
+  // Mesh preview
+  meshUrl?: string;
+  meshStoragePath?: string;
+  meshDownloadFiles?: DownloadFile[];
+
+  // Texture preview
+  texturedModelUrl?: string;
+  texturedModelStoragePath?: string;
+  texturedDownloadFiles?: DownloadFile[];
+
+  // Provider tracking
+  provider?: ModelProvider;
+  taskId?: string;
+  taskStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+
+  // Metadata
+  createdAt?: string;
+  createdBy?: string;
+}
+
 // Admin pipeline with user info
 export interface AdminPipeline {
   id: string;
@@ -260,6 +317,10 @@ export interface AdminPipeline {
   createdAt: string | null;
   updatedAt: string | null;
   completedAt: string | null;
+
+  // Admin regeneration fields
+  adminPreview?: AdminPreview;
+  adminActions?: AdminAction[];
 }
 
 export interface ListAllPipelinesResponse {

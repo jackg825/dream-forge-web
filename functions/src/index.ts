@@ -18,6 +18,12 @@ export {
   listAllPipelines,
   deductCredits,
   getUserTransactions,
+  // Admin pipeline regeneration functions
+  adminRegeneratePipelineImage,
+  adminStartPipelineMesh,
+  adminCheckPreviewStatus,
+  adminConfirmPreview,
+  adminRejectPreview,
 } from './handlers/admin';
 
 // Multi-step creation flow (Sessions)

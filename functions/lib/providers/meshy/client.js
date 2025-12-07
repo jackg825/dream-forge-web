@@ -447,6 +447,27 @@ class MeshyProvider {
         };
     }
     /**
+     * Check API credit balance
+     * Returns the current credit balance for the authenticated user
+     */
+    async checkBalance() {
+        try {
+            const response = await axios_1.default.get(`${types_1.MESHY_API_BASE}/balance`, {
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                },
+                timeout: 10000,
+            });
+            functions.logger.info('Meshy balance checked', {
+                balance: response.data.result,
+            });
+            return response.data.result;
+        }
+        catch (error) {
+            this.handleError(error, 'checkBalance');
+        }
+    }
+    /**
      * Handle and log API errors
      */
     handleError(error, operation) {

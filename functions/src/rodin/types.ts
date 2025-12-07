@@ -472,6 +472,71 @@ export interface PipelineDocument {
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;
   completedAt?: FirebaseFirestore.Timestamp;
+
+  // Admin regeneration preview (temporary storage before confirmation)
+  adminPreview?: AdminPreview;
+
+  // Admin action audit trail
+  adminActions?: AdminAction[];
+}
+
+// ============================================
+// Admin Pipeline Regeneration Types
+// ============================================
+
+/**
+ * Admin action types for audit trail
+ */
+export type AdminActionType =
+  | 'regenerate-image'
+  | 'regenerate-mesh'
+  | 'regenerate-texture'
+  | 'confirm-preview'
+  | 'reject-preview'
+  | 'change-provider';
+
+/**
+ * Admin action record for audit trail
+ * Tracks all admin operations on a pipeline for accountability
+ */
+export interface AdminAction {
+  adminId: string;
+  adminEmail: string;
+  actionType: AdminActionType;
+  targetField: string;  // e.g., 'meshImages.front', 'mesh', 'texture'
+  provider?: ProviderType;
+  previousValue?: string;  // URL or task ID being replaced
+  timestamp: FirebaseFirestore.Timestamp;
+  reason?: string;  // Optional admin note
+}
+
+/**
+ * Admin preview data for "preview before overwrite" flow
+ * Stores temporary regeneration results before admin confirmation
+ */
+export interface AdminPreview {
+  // Image previews (per-view regeneration)
+  meshImages?: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
+  textureImages?: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
+
+  // Mesh preview (full mesh regeneration)
+  meshUrl?: string;
+  meshStoragePath?: string;
+  meshDownloadFiles?: DownloadFile[];
+
+  // Texture preview (full texture regeneration)
+  texturedModelUrl?: string;
+  texturedModelStoragePath?: string;
+  texturedDownloadFiles?: DownloadFile[];
+
+  // Provider tracking for mesh/texture regeneration
+  provider?: ProviderType;
+  taskId?: string;
+  taskStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+
+  // Preview metadata
+  createdAt?: FirebaseFirestore.Timestamp;
+  createdBy?: string;  // Admin ID
 }
 
 // ============================================

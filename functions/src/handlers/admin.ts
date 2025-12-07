@@ -1,11 +1,67 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
-import type { TransactionDocument } from '../rodin/types';
+import axios from 'axios';
+import type {
+  TransactionDocument,
+  PipelineDocument,
+  PipelineMeshAngle,
+  PipelineTextureAngle,
+  PipelineProcessedImage,
+  AdminAction,
+} from '../rodin/types';
+import type { ProviderType, ProviderOptions } from '../providers/types';
 import { createRodinClient } from '../rodin/client';
 import { MeshyProvider } from '../providers/meshy/client';
 import { TripoProvider } from '../providers/tripo/client';
+import { HunyuanProvider } from '../providers/hunyuan/client';
+import { ProviderFactory } from '../providers/factory';
+import { createMultiViewGenerator } from '../gemini/multi-view-generator';
+import type { GeminiImageModel } from '../gemini/multi-view-generator';
+import { uploadBase64 } from '../storage';
 
 const db = admin.firestore();
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Download image and convert to base64
+ */
+async function downloadImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
+  const response = await axios.get(url, {
+    responseType: 'arraybuffer',
+    timeout: 30000,
+  });
+
+  const base64 = Buffer.from(response.data).toString('base64');
+  const contentType = response.headers['content-type'] || 'image/png';
+
+  return { base64, mimeType: contentType };
+}
+
+/**
+ * Upload image to storage and get URL
+ */
+async function uploadImageToStorage(
+  base64: string,
+  mimeType: string,
+  storagePath: string
+): Promise<string> {
+  return uploadBase64(base64, storagePath, mimeType);
+}
+
+/**
+ * Get file extension from MIME type
+ */
+function getExtensionFromMimeType(mimeType: string): string {
+  const mimeMap: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+  };
+  return mimeMap[mimeType] || 'png';
+}
 
 /**
  * Check if the current user is an admin by checking their role in Firestore
@@ -987,5 +1043,632 @@ export const checkAllProviderBalances = functions
       success: true,
       balances: results,
       checkedAt: new Date().toISOString(),
+    };
+  });
+
+// ============================================
+// Admin Pipeline Regeneration Functions
+// ============================================
+
+/**
+ * Helper: Get admin email for audit trail
+ */
+async function getAdminEmail(adminId: string): Promise<string> {
+  const adminDoc = await db.collection('users').doc(adminId).get();
+  return adminDoc.data()?.email || 'unknown';
+}
+
+/**
+ * Helper: Add admin action to pipeline audit trail
+ */
+async function addAdminAction(
+  pipelineRef: FirebaseFirestore.DocumentReference,
+  action: Omit<AdminAction, 'timestamp'>
+): Promise<void> {
+  const actionWithTimestamp: AdminAction = {
+    ...action,
+    timestamp: admin.firestore.FieldValue.serverTimestamp() as unknown as FirebaseFirestore.Timestamp,
+  };
+
+  await pipelineRef.update({
+    adminActions: admin.firestore.FieldValue.arrayUnion(actionWithTimestamp),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+interface AdminRegeneratePipelineImageData {
+  pipelineId: string;
+  viewType: 'mesh' | 'texture';
+  angle: string;
+  hint?: string;
+}
+
+/**
+ * Cloud Function: adminRegeneratePipelineImage
+ *
+ * Admin-only function to regenerate a pipeline image without credit deduction.
+ * Stores result in adminPreview for confirmation before overwriting.
+ */
+export const adminRegeneratePipelineImage = functions
+  .region('asia-east1')
+  .runWith({
+    timeoutSeconds: 120,
+    memory: '512MB',
+    secrets: ['GEMINI_API_KEY'],
+  })
+  .https.onCall(async (data: AdminRegeneratePipelineImageData, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+    }
+
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError('permission-denied', 'Admin access required');
+    }
+
+    const adminId = context.auth.uid;
+    const adminEmail = await getAdminEmail(adminId);
+    const { pipelineId, viewType, angle, hint } = data;
+
+    // Validate viewType and angle
+    const validMeshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
+    const validTextureAngles: PipelineTextureAngle[] = ['front', 'back'];
+
+    if (viewType === 'mesh' && !validMeshAngles.includes(angle as PipelineMeshAngle)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
+    }
+
+    if (viewType === 'texture' && !validTextureAngles.includes(angle as PipelineTextureAngle)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid texture angle');
+    }
+
+    // Get pipeline (no ownership check - admin can access any pipeline)
+    const pipelineRef = db.collection('pipelines').doc(pipelineId);
+    const pipelineDoc = await pipelineRef.get();
+
+    if (!pipelineDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+
+    const pipeline = pipelineDoc.data() as PipelineDocument;
+
+    try {
+      // Download reference image
+      const referenceImageUrl = pipeline.inputImages[0].url;
+      const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
+
+      // Generate view using pipeline's settings
+      const modeId = pipeline.generationMode || 'simplified-texture';
+      const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
+      const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
+      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
+      const now = admin.firestore.FieldValue.serverTimestamp();
+
+      let processedImage: PipelineProcessedImage;
+      const previousUrl = viewType === 'mesh'
+        ? pipeline.meshImages[angle as PipelineMeshAngle]?.url
+        : pipeline.textureImages[angle as PipelineTextureAngle]?.url;
+
+      if (viewType === 'mesh') {
+        const view = await generator.generateMeshView(base64, mimeType, angle as PipelineMeshAngle, hint);
+        const ext = getExtensionFromMimeType(view.mimeType);
+        // Store in preview/ subdirectory
+        const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/mesh_${angle}.${ext}`;
+        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+        processedImage = {
+          url,
+          storagePath,
+          source: 'gemini',
+          generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+        };
+        if (view.colorPalette?.length) {
+          processedImage.colorPalette = view.colorPalette;
+        }
+
+        // Update adminPreview
+        await pipelineRef.update({
+          [`adminPreview.meshImages.${angle}`]: processedImage,
+          'adminPreview.createdAt': now,
+          'adminPreview.createdBy': adminId,
+          updatedAt: now,
+        });
+      } else {
+        const view = await generator.generateTextureView(base64, mimeType, angle as PipelineTextureAngle, hint);
+        const ext = getExtensionFromMimeType(view.mimeType);
+        const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/texture_${angle}.${ext}`;
+        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+        processedImage = {
+          url,
+          storagePath,
+          source: 'gemini',
+          generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+        };
+
+        await pipelineRef.update({
+          [`adminPreview.textureImages.${angle}`]: processedImage,
+          'adminPreview.createdAt': now,
+          'adminPreview.createdBy': adminId,
+          updatedAt: now,
+        });
+      }
+
+      // Add audit trail
+      await addAdminAction(pipelineRef, {
+        adminId,
+        adminEmail,
+        actionType: 'regenerate-image',
+        targetField: `${viewType}Images.${angle}`,
+        previousValue: previousUrl,
+      });
+
+      functions.logger.info('Admin regenerated pipeline image to preview', {
+        adminId,
+        pipelineId,
+        viewType,
+        angle,
+        userId: pipeline.userId,
+      });
+
+      return {
+        success: true,
+        viewType,
+        angle,
+        previewImage: processedImage,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      functions.logger.error('Admin image regeneration failed', { pipelineId, viewType, angle, error: errorMessage });
+      throw new functions.https.HttpsError('internal', `Regeneration failed: ${errorMessage}`);
+    }
+  });
+
+interface AdminStartPipelineMeshData {
+  pipelineId: string;
+  provider: ProviderType;
+  providerOptions?: ProviderOptions;
+}
+
+/**
+ * Cloud Function: adminStartPipelineMesh
+ *
+ * Admin-only function to regenerate mesh with optional provider change.
+ * No credit deduction. Stores result in adminPreview.
+ */
+export const adminStartPipelineMesh = functions
+  .region('asia-east1')
+  .runWith({
+    timeoutSeconds: 180,
+    memory: '1GB',
+    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY'],
+  })
+  .https.onCall(async (data: AdminStartPipelineMeshData, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+    }
+
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError('permission-denied', 'Admin access required');
+    }
+
+    const adminId = context.auth.uid;
+    const adminEmail = await getAdminEmail(adminId);
+    const { pipelineId, provider: requestedProvider, providerOptions } = data;
+
+    const pipelineRef = db.collection('pipelines').doc(pipelineId);
+    const pipelineDoc = await pipelineRef.get();
+
+    if (!pipelineDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+
+    const pipeline = pipelineDoc.data() as PipelineDocument;
+
+    // Check pipeline has images ready
+    if (!pipeline.meshImages || Object.keys(pipeline.meshImages).length < 4) {
+      throw new functions.https.HttpsError('failed-precondition', 'Pipeline images not ready');
+    }
+
+    try {
+      // Collect mesh image URLs
+      const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
+      const imageUrls = meshAngles
+        .map((angle) => pipeline.meshImages[angle]?.url)
+        .filter((url): url is string => !!url);
+
+      if (imageUrls.length < 4) {
+        throw new functions.https.HttpsError('failed-precondition', 'Not all mesh images available');
+      }
+
+      // Get provider
+      const providerType = requestedProvider || pipeline.settings?.provider || 'meshy';
+      const provider = ProviderFactory.getProvider(providerType);
+
+      // Start mesh generation (no credits deducted) - provider-specific handling
+      let result;
+      if (providerType === 'tripo') {
+        const tripoProvider = provider as TripoProvider;
+        result = await tripoProvider.generateFromUrls(imageUrls, {
+          quality: (pipeline.settings?.quality as 'draft' | 'standard' | 'fine') || 'standard',
+          format: (pipeline.settings?.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz') || 'glb',
+          enableTexture: true,
+          enablePBR: true,
+        });
+      } else if (providerType === 'meshy') {
+        const meshyProvider = provider as MeshyProvider;
+        result = await meshyProvider.generateMeshOnlyFromUrls(imageUrls, {
+          quality: (pipeline.settings?.quality as 'draft' | 'standard' | 'fine') || 'standard',
+          format: (pipeline.settings?.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz') || 'glb',
+          precision: pipeline.settings?.meshPrecision || 'standard',
+        });
+      } else if (providerType === 'hunyuan') {
+        const hunyuanProvider = provider as HunyuanProvider;
+        result = await hunyuanProvider.generateFromUrls(imageUrls, {
+          quality: (pipeline.settings?.quality as 'draft' | 'standard' | 'fine') || 'standard',
+          format: (pipeline.settings?.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz') || 'glb',
+          enablePBR: false,
+          providerOptions: providerOptions?.faceCount ? {
+            hunyuan: { faceCount: providerOptions.faceCount },
+          } : undefined,
+        });
+      } else {
+        // Fallback: download images and use generateFromMultipleImages
+        const imageBuffers: Buffer[] = [];
+        for (const url of imageUrls) {
+          const response = await axios.get(url, {
+            responseType: 'arraybuffer',
+            timeout: 30000,
+          });
+          imageBuffers.push(Buffer.from(response.data));
+        }
+        result = await provider.generateFromMultipleImages(imageBuffers, {
+          quality: (pipeline.settings?.quality as 'draft' | 'standard' | 'fine') || 'standard',
+          format: (pipeline.settings?.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz') || 'glb',
+          enableTexture: true,
+          enablePBR: true,
+        });
+      }
+
+      const now = admin.firestore.FieldValue.serverTimestamp();
+
+      // Store task info in adminPreview
+      await pipelineRef.update({
+        'adminPreview.provider': providerType,
+        'adminPreview.taskId': result.taskId,
+        'adminPreview.taskStatus': 'pending',
+        'adminPreview.createdAt': now,
+        'adminPreview.createdBy': adminId,
+        updatedAt: now,
+      });
+
+      // Add audit trail
+      const previousProvider = pipeline.settings?.provider;
+      await addAdminAction(pipelineRef, {
+        adminId,
+        adminEmail,
+        actionType: previousProvider !== providerType ? 'change-provider' : 'regenerate-mesh',
+        targetField: 'mesh',
+        provider: providerType,
+        previousValue: pipeline.meshUrl || undefined,
+      });
+
+      functions.logger.info('Admin started mesh regeneration', {
+        adminId,
+        pipelineId,
+        provider: providerType,
+        taskId: result.taskId,
+        userId: pipeline.userId,
+      });
+
+      return {
+        success: true,
+        taskId: result.taskId,
+        provider: providerType,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      functions.logger.error('Admin mesh regeneration failed', { pipelineId, error: errorMessage });
+      throw new functions.https.HttpsError('internal', `Mesh regeneration failed: ${errorMessage}`);
+    }
+  });
+
+interface AdminCheckPreviewStatusData {
+  pipelineId: string;
+}
+
+/**
+ * Cloud Function: adminCheckPreviewStatus
+ *
+ * Admin-only function to check status of mesh/texture regeneration in preview.
+ */
+export const adminCheckPreviewStatus = functions
+  .region('asia-east1')
+  .runWith({
+    timeoutSeconds: 60,
+    memory: '512MB',
+    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY'],
+  })
+  .https.onCall(async (data: AdminCheckPreviewStatusData, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+    }
+
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError('permission-denied', 'Admin access required');
+    }
+
+    const { pipelineId } = data;
+    const pipelineRef = db.collection('pipelines').doc(pipelineId);
+    const pipelineDoc = await pipelineRef.get();
+
+    if (!pipelineDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+
+    const pipeline = pipelineDoc.data() as PipelineDocument;
+    const preview = pipeline.adminPreview;
+
+    if (!preview?.taskId || !preview?.provider) {
+      return {
+        success: true,
+        status: 'no-active-task',
+        preview: preview || null,
+      };
+    }
+
+    try {
+      const providerInstance = ProviderFactory.getProvider(preview.provider);
+      const status = await providerInstance.checkStatus(preview.taskId);
+
+      if (status.status === 'completed') {
+        // Download model to preview storage
+        const downloadUrls = await providerInstance.getDownloadUrls(preview.taskId);
+        const glbFile = downloadUrls.files.find((f) => f.name.endsWith('.glb'));
+
+        if (glbFile) {
+          const modelBuffer = await providerInstance.downloadModel(glbFile.url);
+          const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/model.glb`;
+          const bucket = admin.storage().bucket();
+          const file = bucket.file(storagePath);
+          await file.save(modelBuffer, { contentType: 'model/gltf-binary' });
+          await file.makePublic();
+          const meshUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+
+          await pipelineRef.update({
+            'adminPreview.meshUrl': meshUrl,
+            'adminPreview.meshStoragePath': storagePath,
+            'adminPreview.meshDownloadFiles': downloadUrls.files,
+            'adminPreview.taskStatus': 'completed',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+          return {
+            success: true,
+            status: 'completed',
+            meshUrl,
+            downloadFiles: downloadUrls.files,
+          };
+        }
+      } else if (status.status === 'failed') {
+        await pipelineRef.update({
+          'adminPreview.taskStatus': 'failed',
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return {
+          success: true,
+          status: 'failed',
+          error: status.error,
+        };
+      }
+
+      // Still processing
+      await pipelineRef.update({
+        'adminPreview.taskStatus': 'processing',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      return {
+        success: true,
+        status: 'processing',
+        progress: status.progress,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      functions.logger.error('Admin preview status check failed', { pipelineId, error: errorMessage });
+      throw new functions.https.HttpsError('internal', `Status check failed: ${errorMessage}`);
+    }
+  });
+
+interface AdminConfirmPreviewData {
+  pipelineId: string;
+  targetField: 'meshImages' | 'textureImages' | 'mesh';
+  angle?: string; // Required for image fields
+}
+
+/**
+ * Cloud Function: adminConfirmPreview
+ *
+ * Admin-only function to confirm preview and overwrite production data.
+ */
+export const adminConfirmPreview = functions
+  .region('asia-east1')
+  .runWith({
+    timeoutSeconds: 60,
+    memory: '256MB',
+  })
+  .https.onCall(async (data: AdminConfirmPreviewData, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+    }
+
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError('permission-denied', 'Admin access required');
+    }
+
+    const adminId = context.auth.uid;
+    const adminEmail = await getAdminEmail(adminId);
+    const { pipelineId, targetField, angle } = data;
+
+    const pipelineRef = db.collection('pipelines').doc(pipelineId);
+    const pipelineDoc = await pipelineRef.get();
+
+    if (!pipelineDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+
+    const pipeline = pipelineDoc.data() as PipelineDocument;
+    const preview = pipeline.adminPreview;
+
+    if (!preview) {
+      throw new functions.https.HttpsError('failed-precondition', 'No preview to confirm');
+    }
+
+    const updates: Record<string, unknown> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    let confirmedField: string = targetField;
+
+    if (targetField === 'meshImages' && angle) {
+      const previewImage = preview.meshImages?.[angle as PipelineMeshAngle];
+      if (!previewImage) {
+        throw new functions.https.HttpsError('failed-precondition', `No preview for meshImages.${angle}`);
+      }
+      updates[`meshImages.${angle}`] = previewImage;
+      updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
+      confirmedField = `meshImages.${angle}`;
+    } else if (targetField === 'textureImages' && angle) {
+      const previewImage = preview.textureImages?.[angle as PipelineTextureAngle];
+      if (!previewImage) {
+        throw new functions.https.HttpsError('failed-precondition', `No preview for textureImages.${angle}`);
+      }
+      updates[`textureImages.${angle}`] = previewImage;
+      updates[`adminPreview.textureImages.${angle}`] = admin.firestore.FieldValue.delete();
+      confirmedField = `textureImages.${angle}`;
+    } else if (targetField === 'mesh') {
+      if (!preview.meshUrl) {
+        throw new functions.https.HttpsError('failed-precondition', 'No mesh preview to confirm');
+      }
+      updates['meshUrl'] = preview.meshUrl;
+      updates['meshStoragePath'] = preview.meshStoragePath;
+      updates['meshDownloadFiles'] = preview.meshDownloadFiles;
+      if (preview.provider) {
+        updates['settings.provider'] = preview.provider;
+      }
+      // Clear mesh preview fields
+      updates['adminPreview.meshUrl'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.meshStoragePath'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.meshDownloadFiles'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.taskId'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.taskStatus'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.provider'] = admin.firestore.FieldValue.delete();
+    }
+
+    await pipelineRef.update(updates);
+
+    // Add audit trail
+    await addAdminAction(pipelineRef, {
+      adminId,
+      adminEmail,
+      actionType: 'confirm-preview',
+      targetField: confirmedField,
+    });
+
+    functions.logger.info('Admin confirmed preview', {
+      adminId,
+      pipelineId,
+      targetField: confirmedField,
+      userId: pipeline.userId,
+    });
+
+    return {
+      success: true,
+      confirmedField,
+    };
+  });
+
+interface AdminRejectPreviewData {
+  pipelineId: string;
+  targetField: 'meshImages' | 'textureImages' | 'mesh' | 'all';
+  angle?: string;
+}
+
+/**
+ * Cloud Function: adminRejectPreview
+ *
+ * Admin-only function to reject preview and discard changes.
+ */
+export const adminRejectPreview = functions
+  .region('asia-east1')
+  .runWith({
+    timeoutSeconds: 60,
+    memory: '256MB',
+  })
+  .https.onCall(async (data: AdminRejectPreviewData, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+    }
+
+    if (!(await isAdmin(context))) {
+      throw new functions.https.HttpsError('permission-denied', 'Admin access required');
+    }
+
+    const adminId = context.auth.uid;
+    const adminEmail = await getAdminEmail(adminId);
+    const { pipelineId, targetField, angle } = data;
+
+    const pipelineRef = db.collection('pipelines').doc(pipelineId);
+    const pipelineDoc = await pipelineRef.get();
+
+    if (!pipelineDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+
+    const pipeline = pipelineDoc.data() as PipelineDocument;
+    const updates: Record<string, unknown> = {
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    let rejectedField: string = targetField;
+
+    if (targetField === 'all') {
+      updates['adminPreview'] = admin.firestore.FieldValue.delete();
+      rejectedField = 'all';
+    } else if (targetField === 'meshImages' && angle) {
+      updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
+      rejectedField = `meshImages.${angle}`;
+    } else if (targetField === 'textureImages' && angle) {
+      updates[`adminPreview.textureImages.${angle}`] = admin.firestore.FieldValue.delete();
+      rejectedField = `textureImages.${angle}`;
+    } else if (targetField === 'mesh') {
+      updates['adminPreview.meshUrl'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.meshStoragePath'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.meshDownloadFiles'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.taskId'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.taskStatus'] = admin.firestore.FieldValue.delete();
+      updates['adminPreview.provider'] = admin.firestore.FieldValue.delete();
+    }
+
+    await pipelineRef.update(updates);
+
+    // Add audit trail
+    await addAdminAction(pipelineRef, {
+      adminId,
+      adminEmail,
+      actionType: 'reject-preview',
+      targetField: rejectedField,
+    });
+
+    functions.logger.info('Admin rejected preview', {
+      adminId,
+      pipelineId,
+      targetField: rejectedField,
+      userId: pipeline.userId,
+    });
+
+    return {
+      success: true,
+      rejectedField,
     };
   });

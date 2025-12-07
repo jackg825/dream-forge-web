@@ -56,6 +56,19 @@ export declare class TripoProvider implements I3DProvider {
      */
     getCapabilities(): ProviderCapabilities;
     /**
+     * Check API credit balance
+     * Returns the current available balance (conforms to I3DProvider interface)
+     */
+    checkBalance(): Promise<number>;
+    /**
+     * Check API credit balance with frozen amount
+     * Returns both balance and frozen for admin dashboard
+     */
+    checkBalanceWithFrozen(): Promise<{
+        balance: number;
+        frozen: number;
+    }>;
+    /**
      * Create a new task
      */
     private createTask;

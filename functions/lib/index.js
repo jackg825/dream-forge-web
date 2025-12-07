@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkUsdzAvailability = exports.convertToUsdz = exports.analyzeUploadedImage = exports.pollGeminiBatchJobs = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.checkUsdzAvailability = exports.convertToUsdz = exports.analyzeUploadedImage = exports.pollGeminiBatchJobs = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkAllProviderBalances = exports.checkTripoBalance = exports.checkMeshyBalance = exports.checkRodinBalance = exports.setUnlimitedCredits = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -48,11 +48,20 @@ var admin_1 = require("./handlers/admin");
 Object.defineProperty(exports, "addCredits", { enumerable: true, get: function () { return admin_1.addCredits; } });
 Object.defineProperty(exports, "setUnlimitedCredits", { enumerable: true, get: function () { return admin_1.setUnlimitedCredits; } });
 Object.defineProperty(exports, "checkRodinBalance", { enumerable: true, get: function () { return admin_1.checkRodinBalance; } });
+Object.defineProperty(exports, "checkMeshyBalance", { enumerable: true, get: function () { return admin_1.checkMeshyBalance; } });
+Object.defineProperty(exports, "checkTripoBalance", { enumerable: true, get: function () { return admin_1.checkTripoBalance; } });
+Object.defineProperty(exports, "checkAllProviderBalances", { enumerable: true, get: function () { return admin_1.checkAllProviderBalances; } });
 Object.defineProperty(exports, "getAdminStats", { enumerable: true, get: function () { return admin_1.getAdminStats; } });
 Object.defineProperty(exports, "listUsers", { enumerable: true, get: function () { return admin_1.listUsers; } });
 Object.defineProperty(exports, "listAllPipelines", { enumerable: true, get: function () { return admin_1.listAllPipelines; } });
 Object.defineProperty(exports, "deductCredits", { enumerable: true, get: function () { return admin_1.deductCredits; } });
 Object.defineProperty(exports, "getUserTransactions", { enumerable: true, get: function () { return admin_1.getUserTransactions; } });
+// Admin pipeline regeneration functions
+Object.defineProperty(exports, "adminRegeneratePipelineImage", { enumerable: true, get: function () { return admin_1.adminRegeneratePipelineImage; } });
+Object.defineProperty(exports, "adminStartPipelineMesh", { enumerable: true, get: function () { return admin_1.adminStartPipelineMesh; } });
+Object.defineProperty(exports, "adminCheckPreviewStatus", { enumerable: true, get: function () { return admin_1.adminCheckPreviewStatus; } });
+Object.defineProperty(exports, "adminConfirmPreview", { enumerable: true, get: function () { return admin_1.adminConfirmPreview; } });
+Object.defineProperty(exports, "adminRejectPreview", { enumerable: true, get: function () { return admin_1.adminRejectPreview; } });
 // Multi-step creation flow (Sessions)
 var sessions_1 = require("./handlers/sessions");
 Object.defineProperty(exports, "createSession", { enumerable: true, get: function () { return sessions_1.createSession; } });
