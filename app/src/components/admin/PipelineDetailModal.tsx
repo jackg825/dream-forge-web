@@ -85,9 +85,9 @@ interface ImageGalleryProps {
   images: { url: string; label: string; angle?: string }[];
   title: string;
   previewImages?: { url: string; label: string; angle?: string }[];
-  onRegenerate?: (angle: string) => void;
-  onConfirm?: (angle: string) => void;
-  onReject?: (angle: string) => void;
+  onRegenerate?: (angle: string) => Promise<void>;
+  onConfirm?: (angle: string) => Promise<void>;
+  onReject?: (angle: string) => Promise<void>;
   isRegenerating?: boolean;
   showActions?: boolean;
 }
@@ -104,9 +104,21 @@ function ImageGallery({
 }: ImageGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedAngle, setSelectedAngle] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Sync selectedImage when images prop changes (e.g., after confirm)
+  useEffect(() => {
+    if (selectedAngle) {
+      const currentImage = images.find((img) => img.angle === selectedAngle);
+      if (currentImage && currentImage.url !== selectedImage) {
+        setSelectedImage(currentImage.url);
+      }
+    }
+  }, [images, selectedAngle, selectedImage]);
 
   // Find preview for selected angle
   const previewForSelected = previewImages?.find((p) => p.angle === selectedAngle);
+  const isDisabled = isRegenerating || isProcessing;
 
   if (images.length === 0) {
     return (
@@ -152,17 +164,35 @@ function ImageGallery({
                   <Button
                     size="sm"
                     variant="default"
-                    onClick={() => onConfirm?.(selectedAngle)}
-                    disabled={isRegenerating}
+                    onClick={async () => {
+                      setIsProcessing(true);
+                      try {
+                        await onConfirm?.(selectedAngle);
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                    disabled={isDisabled}
                   >
-                    <CheckCircle className="h-4 w-4 mr-1" />
+                    {isProcessing ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                    )}
                     確認覆蓋
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => onReject?.(selectedAngle)}
-                    disabled={isRegenerating}
+                    onClick={async () => {
+                      setIsProcessing(true);
+                      try {
+                        await onReject?.(selectedAngle);
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                    disabled={isDisabled}
                   >
                     取消
                   </Button>
@@ -171,10 +201,17 @@ function ImageGallery({
                 <Button
                   size="sm"
                   variant="secondary"
-                  onClick={() => onRegenerate?.(selectedAngle)}
-                  disabled={isRegenerating}
+                  onClick={async () => {
+                    setIsProcessing(true);
+                    try {
+                      await onRegenerate?.(selectedAngle);
+                    } finally {
+                      setIsProcessing(false);
+                    }
+                  }}
+                  disabled={isDisabled}
                 >
-                  {isRegenerating ? (
+                  {isDisabled ? (
                     <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                   ) : (
                     <RefreshCw className="h-4 w-4 mr-1" />
