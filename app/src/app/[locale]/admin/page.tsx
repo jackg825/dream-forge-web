@@ -7,6 +7,7 @@ import { AdminHeader } from '@/components/layout/headers';
 import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { UserDetailModal } from '@/components/admin/UserDetailModal';
+import { LoadingButton } from '@/components/ui/loading-button';
 import type { AdminUser } from '@/types';
 
 function AdminDashboardContent() {
@@ -380,17 +381,20 @@ function AdminDashboardContent() {
           {/* Pagination */}
           {usersPagination && usersPagination.hasMore && (
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-              <button
+              <LoadingButton
+                variant="link"
+                size="sm"
                 onClick={() =>
                   fetchUsers(
                     usersPagination.limit,
                     usersPagination.offset + usersPagination.limit
                   )
                 }
-                className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
+                loading={usersLoading}
+                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200 p-0 h-auto"
               >
                 {t('admin.loadMore')}
-              </button>
+              </LoadingButton>
             </div>
           )}
         </div>
