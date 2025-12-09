@@ -55,6 +55,7 @@ import type {
   ProviderOptions,
   GeminiModelId,
 } from '@/types';
+import { downloadFile } from '@/lib/download';
 import {
   GENERATION_MODE_OPTIONS,
   DEFAULT_GENERATION_MODE,
@@ -204,6 +205,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetTargetStep, setResetTargetStep] = useState<ResetTargetStep | null>(null);
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Download state
+  const [downloading, setDownloading] = useState(false);
 
   const {
     pipeline,
@@ -1076,6 +1080,19 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   };
 
+  // Download handler - uses fetch to preserve Referer header
+  const handleDownload = async (url: string, fileName: string) => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadFile(url, fileName);
+    } catch (error) {
+      console.error('Download failed:', error);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   // Step 2 complete: Mesh preview - user can add texture or finish with mesh only
   const renderMeshPreviewStep = () => {
     // Check if provider outputs textured mesh (e.g., Hunyuan 3D Pro)
@@ -1126,15 +1143,18 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
             {/* Download link */}
             <div className="text-center">
-              <a
-                href={pipeline.meshUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline text-sm inline-flex items-center gap-1"
+              <button
+                onClick={() => handleDownload(pipeline.meshUrl!, 'mesh-model.glb')}
+                disabled={downloading}
+                className="text-primary hover:underline text-sm inline-flex items-center gap-1 disabled:opacity-50"
               >
-                <Box className="h-3 w-3" />
+                {downloading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Box className="h-3 w-3" />
+                )}
                 下載 GLB 檔案
-              </a>
+              </button>
             </div>
           </>
         ) : (
@@ -1251,15 +1271,22 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
             {/* Download link */}
             <div className="text-center">
-              <a
-                href={modelUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline text-sm inline-flex items-center gap-1"
+              <button
+                onClick={() =>
+                  handleDownload(modelUrl, hasTexture ? 'textured-model.glb' : 'mesh-model.glb')
+                }
+                disabled={downloading}
+                className="text-primary hover:underline text-sm inline-flex items-center gap-1 disabled:opacity-50"
               >
-                {hasTexture ? <Palette className="h-3 w-3" /> : <Box className="h-3 w-3" />}
+                {downloading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : hasTexture ? (
+                  <Palette className="h-3 w-3" />
+                ) : (
+                  <Box className="h-3 w-3" />
+                )}
                 下載 GLB 檔案
-              </a>
+              </button>
             </div>
           </>
         ) : (

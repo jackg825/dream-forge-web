@@ -42,6 +42,7 @@ import type {
 import { ProviderBadge } from '@/components/ui/provider-badge';
 import { PROVIDER_OPTIONS } from '@/types';
 import { useAdminPipelineRegeneration } from '@/hooks/useAdminPipelineRegeneration';
+import { downloadFile } from '@/lib/download';
 
 interface PipelineDetailModalProps {
   pipeline: AdminPipeline | null;
@@ -261,6 +262,20 @@ function ImageGallery({
 export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated }: PipelineDetailModalProps) {
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('meshy');
   const [activeTab, setActiveTab] = useState('input');
+  const [downloading, setDownloading] = useState(false);
+
+  // Download handler - uses fetch to preserve Referer header
+  const handleDownload = async (url: string, fileName: string) => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadFile(url, fileName);
+    } catch (error) {
+      console.error('Download failed:', error);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const {
     isRegenerating,
@@ -674,31 +689,35 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
                 <p className="text-sm font-medium">3D 模型</p>
                 <div className="flex flex-wrap gap-2">
                   {pipeline.meshUrl && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href={pipeline.meshUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gap-2"
-                      >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(pipeline.meshUrl!, 'mesh-model.glb')}
+                      disabled={downloading}
+                      className="gap-2"
+                    >
+                      {downloading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
                         <Box className="h-4 w-4" />
-                        下載網格
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      )}
+                      下載網格
                     </Button>
                   )}
                   {pipeline.texturedModelUrl && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a
-                        href={pipeline.texturedModelUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="gap-2"
-                      >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownload(pipeline.texturedModelUrl!, 'textured-model.glb')}
+                      disabled={downloading}
+                      className="gap-2"
+                    >
+                      {downloading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
                         <Palette className="h-4 w-4" />
-                        下載貼圖模型
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      )}
+                      下載貼圖模型
                     </Button>
                   )}
                 </div>
