@@ -70,39 +70,6 @@ export function HowItWorksSection({ className }: HowItWorksSectionProps) {
             <div className="absolute inset-0 animate-pulse opacity-50" />
           </div>
 
-          {/* Mobile vertical connector - enhanced with particles */}
-          <div className="md:hidden absolute left-1/2 top-[140px] bottom-[140px] -translate-x-1/2 flex flex-col items-center pointer-events-none">
-            {/* Base glow line */}
-            <div className="absolute inset-0 w-1 bg-gradient-to-b from-[var(--accent-violet)] via-[var(--accent-mint)] to-[var(--accent-coral)] opacity-20 blur-sm" />
-
-            {/* Main animated gradient line */}
-            <div
-              className="absolute inset-0 w-0.5"
-              style={{
-                background: 'linear-gradient(to bottom, var(--accent-violet), var(--accent-mint), var(--accent-coral), var(--accent-violet))',
-                backgroundSize: '100% 200%',
-                animation: 'gradient-flow 3s linear infinite',
-              }}
-            />
-
-            {/* Flowing particle 1 */}
-            <div
-              className="absolute top-0 w-2 h-2 rounded-full bg-[var(--accent-violet)]"
-              style={{
-                boxShadow: '0 0 8px var(--accent-violet)',
-                animation: 'particle-flow 2.5s ease-in-out infinite',
-              }}
-            />
-            {/* Flowing particle 2 (delayed) */}
-            <div
-              className="absolute top-0 w-2 h-2 rounded-full bg-[var(--accent-mint)]"
-              style={{
-                boxShadow: '0 0 8px var(--accent-mint)',
-                animation: 'particle-flow 2.5s ease-in-out infinite 1.25s',
-              }}
-            />
-          </div>
-
           <div className="grid md:grid-cols-3 gap-4 sm:gap-6 md:gap-12">
             {steps.map((step, index) => {
               const Icon = step.icon;
@@ -176,25 +143,39 @@ export function HowItWorksSection({ className }: HowItWorksSectionProps) {
                     </div>
                   </div>
 
-                  {/* Mobile connector between steps - animated dots */}
+                  {/* Mobile connector between steps - vertical line with dot */}
                   {index < steps.length - 1 && (
-                    <div className="md:hidden flex flex-col items-center my-5 sm:my-6 relative">
+                    <div className="md:hidden flex flex-col items-center my-4 relative">
+                      {/* Upper line segment */}
+                      <div
+                        className="w-0.5 h-5 rounded-full"
+                        style={{
+                          background: `linear-gradient(to bottom, ${step.color}, ${steps[index + 1].color})`,
+                        }}
+                      />
                       {/* Pulsing background ring */}
                       <div
-                        className="absolute w-6 h-6 rounded-full animate-ping opacity-20"
+                        className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full animate-ping opacity-20"
                         style={{ backgroundColor: steps[index + 1].color }}
                       />
                       {/* Center gradient dot */}
                       <div
-                        className="relative z-10 w-3 h-3 rounded-full shadow-lg"
+                        className="relative z-10 w-2.5 h-2.5 rounded-full shadow-lg my-1"
                         style={{
                           background: `linear-gradient(135deg, ${step.color}, ${steps[index + 1].color})`,
-                          boxShadow: `0 0 10px ${step.color}`,
+                          boxShadow: `0 0 8px ${step.color}`,
+                        }}
+                      />
+                      {/* Lower line segment */}
+                      <div
+                        className="w-0.5 h-3 rounded-full"
+                        style={{
+                          background: steps[index + 1].color,
                         }}
                       />
                       {/* Down arrow */}
                       <ChevronDown
-                        className="w-4 h-4 mt-1"
+                        className="w-4 h-4 -mt-0.5"
                         style={{ color: steps[index + 1].color }}
                       />
                     </div>

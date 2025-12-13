@@ -137,20 +137,20 @@ export function HeroSection({ className }: HeroSectionProps) {
             className="mb-8 sm:mb-12 animate-fade-in-up"
             style={{ animationDelay: '0.4s' }}
           >
-            {/* Mobile: Horizontal scrollable container */}
-            <div className="flex sm:hidden overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide">
-              <div className="flex items-center gap-3 mx-auto">
+            {/* Mobile: Centered flexbox layout */}
+            <div className="flex sm:hidden justify-center pb-4">
+              <div className="flex items-center gap-2">
                 {journeySteps.map((step, index) => {
                   const Icon = step.icon;
                   return (
-                    <div key={step.label} className="flex items-center gap-3 snap-center">
+                    <div key={step.label} className="flex items-center gap-2">
                       <div className={cn(
-                        'flex flex-col items-center gap-2 p-4 rounded-2xl backdrop-blur-sm min-w-[100px]',
+                        'flex flex-col items-center gap-1.5 p-3 rounded-2xl backdrop-blur-sm min-w-[85px]',
                         'bg-white/70 border border-zinc-200/50 shadow-lg shadow-zinc-200/20',
                         'dark:bg-white/5 dark:border-white/10 dark:shadow-none'
                       )}>
                         <div
-                          className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
+                          className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg"
                           style={{
                             background: index === 0
                               ? 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)'
@@ -159,9 +159,9 @@ export function HeroSection({ className }: HeroSectionProps) {
                               : 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
                           }}
                         >
-                          <Icon className="w-6 h-6 text-white" />
+                          <Icon className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                        <span className="text-[11px] font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
                           {step.label}
                         </span>
                       </div>
@@ -169,8 +169,8 @@ export function HeroSection({ className }: HeroSectionProps) {
                       {/* Connector arrow */}
                       {index < journeySteps.length - 1 && (
                         <div className="flex items-center shrink-0">
-                          <div className="w-6 h-px bg-gradient-to-r from-zinc-300 to-zinc-200 dark:from-white/20 dark:to-white/5" />
-                          <div className="w-0 h-0 border-t-[5px] border-b-[5px] border-l-[6px] border-t-transparent border-b-transparent border-l-zinc-300 dark:border-l-white/20" />
+                          <div className="w-4 h-px bg-gradient-to-r from-zinc-300 to-zinc-200 dark:from-white/20 dark:to-white/5" />
+                          <div className="w-0 h-0 border-t-[4px] border-b-[4px] border-l-[5px] border-t-transparent border-b-transparent border-l-zinc-300 dark:border-l-white/20" />
                         </div>
                       )}
                     </div>
