@@ -67,7 +67,7 @@ import {
   GEMINI_MODEL_OPTIONS,
 } from '@/types';
 import { GeminiModelSelector } from './GeminiModelSelector';
-// ProviderSelector hidden - defaulting to Hunyuan3D v3.0
+import { ProviderSelector } from './ProviderSelector';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -149,8 +149,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [userDescription, setUserDescription] = useState<string>('');
   const [colorCount, setColorCount] = useState<number>(7);
 
-  // Provider selection state - default to Hunyuan3D v3.0
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('hunyuan');
+  // Provider selection state - default to Tripo3D v3.0
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('tripo');
   const [providerOptions, setProviderOptions] = useState<ProviderOptions>({});
 
   // Gemini model selection state
@@ -854,7 +854,16 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           </div> */}
         </div>
 
-        {/* 3D Provider selection hidden - defaulting to Hunyuan3D v3.0 */}
+        {/* 3D 生成引擎選擇 */}
+        <div className="mt-6">
+          <ProviderSelector
+            value={selectedProvider}
+            onChange={setSelectedProvider}
+            disabled={actionLoading}
+            showCredits={true}
+            providers={['tripo', 'hunyuan']}
+          />
+        </div>
 
         {/* Action button - proceed to mesh generation */}
         <div className="flex justify-center pt-4">
