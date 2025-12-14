@@ -23,6 +23,7 @@ import {
   getTexturePrompt,
   getTexturePromptWithColors,
 } from './mode-configs';
+import { type StyleId } from '../config/styles';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -173,6 +174,7 @@ export class MultiViewGenerator {
   private preAnalyzedColors?: string[];  // Pre-analyzed colors from image analysis
   private imageAnalysis?: ImageAnalysisResult | null;  // Full image analysis for feature extraction
   private geminiModel: GeminiImageModel;  // Selected Gemini model for image generation
+  private selectedStyle?: StyleId;  // User-selected figure style
 
   constructor(
     apiKey: string,
@@ -180,7 +182,8 @@ export class MultiViewGenerator {
     userDescription?: string | null,
     preAnalyzedColors?: string[],
     imageAnalysis?: ImageAnalysisResult | null,
-    geminiModel: GeminiImageModel = DEFAULT_GEMINI_MODEL
+    geminiModel: GeminiImageModel = DEFAULT_GEMINI_MODEL,
+    selectedStyle?: StyleId
   ) {
     this.apiKey = apiKey;
     this.modeConfig = getMode(modeId);
@@ -188,6 +191,7 @@ export class MultiViewGenerator {
     this.preAnalyzedColors = preAnalyzedColors;
     this.imageAnalysis = imageAnalysis;
     this.geminiModel = geminiModel;
+    this.selectedStyle = selectedStyle;
   }
 
   /**
@@ -241,7 +245,7 @@ export class MultiViewGenerator {
         hasUserDescription: !!this.userDescription,
       });
 
-      const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, undefined, this.imageAnalysis);
+      const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, undefined, this.imageAnalysis, this.selectedStyle);
       const result = await this.generateSingleView(
         referenceImageBase64,
         mimeType,
@@ -266,7 +270,7 @@ export class MultiViewGenerator {
           hasUserDescription: !!this.userDescription,
         });
 
-        const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription);
+        const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription, undefined, this.selectedStyle);
         const result = await this.generateSingleView(
           referenceImageBase64,
           mimeType,
@@ -472,7 +476,7 @@ export class MultiViewGenerator {
     });
 
     if (type === 'mesh') {
-      const prompt = getMeshPrompt(this.modeConfig, angle as PipelineMeshAngle, this.userDescription, undefined, this.imageAnalysis);
+      const prompt = getMeshPrompt(this.modeConfig, angle as PipelineMeshAngle, this.userDescription, undefined, this.imageAnalysis, this.selectedStyle);
       return this.generateSingleView(
         referenceImageBase64,
         mimeType,
@@ -481,7 +485,7 @@ export class MultiViewGenerator {
         this.modeConfig.mesh.colorCount
       );
     } else {
-      const prompt = getTexturePrompt(this.modeConfig, angle as PipelineTextureAngle, this.userDescription);
+      const prompt = getTexturePrompt(this.modeConfig, angle as PipelineTextureAngle, this.userDescription, undefined, this.selectedStyle);
       return this.generateSingleView(
         referenceImageBase64,
         mimeType,
@@ -516,8 +520,8 @@ export class MultiViewGenerator {
 
     // Use color-aware prompt if we have colors
     const prompt = colorPalette.length > 0
-      ? getTexturePromptWithColors(this.modeConfig, angle, colorPalette, this.userDescription)
-      : getTexturePrompt(this.modeConfig, angle, this.userDescription);
+      ? getTexturePromptWithColors(this.modeConfig, angle, colorPalette, this.userDescription, undefined, this.selectedStyle)
+      : getTexturePrompt(this.modeConfig, angle, this.userDescription, undefined, this.selectedStyle);
 
     return this.generateSingleView(
       referenceImageBase64,
@@ -575,7 +579,7 @@ export class MultiViewGenerator {
     angle: PipelineMeshAngle,
     hint?: string
   ): Promise<GeneratedViewResult> {
-    const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, hint, this.imageAnalysis);
+    const prompt = getMeshPrompt(this.modeConfig, angle, this.userDescription, hint, this.imageAnalysis, this.selectedStyle);
     return this.generateSingleView(
       referenceImageBase64,
       mimeType,
@@ -595,7 +599,7 @@ export class MultiViewGenerator {
     angle: PipelineTextureAngle,
     hint?: string
   ): Promise<GeneratedViewResult> {
-    const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription, hint);
+    const prompt = getTexturePrompt(this.modeConfig, angle, this.userDescription, hint, this.selectedStyle);
     return this.generateSingleView(
       referenceImageBase64,
       mimeType,
@@ -747,13 +751,15 @@ export class MultiViewGenerator {
  * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
  * @param imageAnalysis - Optional full image analysis result with key features
  * @param geminiModel - Gemini model for image generation (default: 'gemini-2.5-flash')
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
 export function createMultiViewGenerator(
   modeId: GenerationModeId = DEFAULT_MODE,
   userDescription?: string | null,
   preAnalyzedColors?: string[],
   imageAnalysis?: ImageAnalysisResult | null,
-  geminiModel: GeminiImageModel = DEFAULT_GEMINI_MODEL
+  geminiModel: GeminiImageModel = DEFAULT_GEMINI_MODEL,
+  selectedStyle?: StyleId
 ): MultiViewGenerator {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -764,5 +770,5 @@ export function createMultiViewGenerator(
     );
   }
 
-  return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis, geminiModel);
+  return new MultiViewGenerator(apiKey, modeId, userDescription, preAnalyzedColors, imageAnalysis, geminiModel, selectedStyle);
 }

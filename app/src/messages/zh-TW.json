@@ -1095,5 +1095,31 @@
       "confirm": "確認",
       "cancel": "取消"
     }
+  },
+  "styles": {
+    "selectStyle": "選擇公仔風格",
+    "aiRecommended": "AI 推薦",
+    "viewExamples": "範例",
+    "headRatio": "頭身比例",
+    "bodyStyle": "身體風格",
+    "faceEmphasis": "臉部重點",
+    "colorApproach": "色彩取向",
+    "selectThisStyle": "選擇此風格",
+    "bobblehead": {
+      "name": "搖頭公仔",
+      "description": "經典搖頭公仔，超大頭配彈簧頸"
+    },
+    "chibi": {
+      "name": "Q版",
+      "description": "日式可愛風，大眼睛小身體"
+    },
+    "cartoon": {
+      "name": "卡通",
+      "description": "皮克斯/迪士尼風格，表情豐富"
+    },
+    "emoji": {
+      "name": "表情符號",
+      "description": "極簡球形設計，專注表情呈現"
+    }
   }
 }

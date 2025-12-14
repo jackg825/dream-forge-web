@@ -6,6 +6,7 @@
  */
 
 import type { PipelineMeshAngle, PipelineTextureAngle, ImageAnalysisResult } from '../rodin/types';
+import { type StyleId, getStyleConfig, DEFAULT_STYLE } from '../config/styles';
 
 /**
  * Available generation mode IDs
@@ -96,6 +97,58 @@ export function getMode(id: GenerationModeId): ModeConfig {
     throw new Error(`Unknown generation mode: ${id}`);
   }
   return mode;
+}
+
+// =============================================================================
+// Style-Aware Prompt Generation
+// =============================================================================
+
+/**
+ * Generate style-specific prompt block for mesh generation
+ *
+ * This is the core function that translates the selected style into
+ * specific prompt instructions that guide Gemini's image generation.
+ *
+ * @param selectedStyle - The user's selected style (or default)
+ * @param colorCount - Number of colors for cel-shaded rendering
+ * @returns Style prompt block to inject into the main prompt
+ */
+function getStylePromptBlockForMesh(selectedStyle: StyleId | undefined, colorCount: number): string {
+  const style = getStyleConfig(selectedStyle || DEFAULT_STYLE);
+  const { meshStyle, proportions, features } = style.promptModifiers;
+
+  return `=== FIGURE STYLE: ${style.name.toUpperCase()} ===
+
+**Target Style**: ${meshStyle}
+
+**Proportions**: ${proportions}
+
+**Feature Emphasis**: ${features}
+
+Render in cel-shaded style with approximately ${colorCount || 7} distinct, high-contrast solid colors. No gradients, no soft shadows - just clean blocks of flat color. Each color zone has crisp, pixel-sharp edges.
+
+=== END FIGURE STYLE ===`;
+}
+
+/**
+ * Generate style-specific prompt block for texture generation
+ *
+ * @param selectedStyle - The user's selected style (or default)
+ * @param colorCount - Number of colors for simplified rendering
+ * @returns Style prompt block for texture generation
+ */
+function getStylePromptBlockForTexture(selectedStyle: StyleId | undefined, colorCount: number): string {
+  const style = getStyleConfig(selectedStyle || DEFAULT_STYLE);
+  const { textureStyle } = style.promptModifiers;
+
+  return `=== FIGURE STYLE: ${style.name.toUpperCase()} ===
+
+**Texture Style**: ${textureStyle}
+
+Create a flat, albedo-like texture reference with exactly ${colorCount || 6} distinct solid colors.
+No lighting effects, no shadows, no highlights - pure surface color only.
+
+=== END FIGURE STYLE ===`;
 }
 
 // =============================================================================
@@ -387,21 +440,24 @@ Maintain consistent identity, proportions, and features across all views.
  * 2. SUBJECT DESCRIPTION (from analysis)
  * 3. BACKGROUND ISOLATION
  * 4. 3D PRINT OPTIMIZATION
- * 5. STYLE & RENDERING
- * 6. OUTPUT INSTRUCTION
+ * 5. FIGURE STYLE (user-selected style)
+ * 6. STYLE & RENDERING
+ * 7. OUTPUT INSTRUCTION
  *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
  * @param imageAnalysis - Optional image analysis result with key features
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
 export function getMeshPrompt(
   mode: ModeConfig,
   angle: PipelineMeshAngle,
   userDescription?: string | null,
   hint?: string,
-  imageAnalysis?: ImageAnalysisResult | null
+  imageAnalysis?: ImageAnalysisResult | null,
+  selectedStyle?: StyleId
 ): string {
   const angleDisplay = ANGLE_PROMPTS[angle];
   const info = getViewpointInfo(angle);
@@ -411,6 +467,7 @@ export function getMeshPrompt(
   const subjectBlock = buildNarrativeContext(userDescription, imageAnalysis);
   const backgroundBlock = buildBackgroundIsolationBlock();
   const printOptBlock = build3DPrintOptimizationBlock(mode.mesh.simplified);
+  const styleBlock = getStylePromptBlockForMesh(selectedStyle, mode.mesh.colorCount);
 
   // Build regeneration hint if provided
   const hintBlock = hint
@@ -418,18 +475,16 @@ export function getMeshPrompt(
     : '';
 
   if (mode.mesh.simplified) {
-    // Simplified mode: vinyl toy / Funko Pop style
+    // Simplified mode: use selected figure style
     return `${cameraBlock}
 ${subjectBlock}
 ${backgroundBlock}
 
 ${printOptBlock}
 ${hintBlock}
-=== STYLE & RENDERING ===
+${styleBlock}
 
-Transform this subject into a charming collectible vinyl figure style, like Funko Pop or kawaii toys. Simplify the form with rounded edges, smooth surfaces, and clean shapes. Complex details (individual hairs, fabric folds, fine texture) should be smoothed into stylized forms while keeping the recognizable silhouette.
-
-Render in cel-shaded style with approximately ${mode.mesh.colorCount} distinct, high-contrast solid colors. No gradients, no soft shadows - just clean blocks of flat color. Each color zone has crisp, pixel-sharp edges.
+=== RENDERING REQUIREMENTS ===
 
 Camera: Orthographic projection from ${info.clockPosition} position, ${info.rotationDegrees}° rotation.
 Framing: Subject centered, fills 90% of frame.
@@ -438,7 +493,7 @@ Background: Pure white (#FFFFFF), seamless.
 
 This is a professional turnaround reference for 3D modeling, not a photograph.
 
-=== END STYLE & RENDERING ===
+=== END RENDERING REQUIREMENTS ===
 
 After generating the image, list the colors used: COLORS: #RRGGBB, #RRGGBB, ...
 
@@ -479,12 +534,14 @@ Generate the actual ${angleDisplay} view image now.`;
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
 export function getTexturePrompt(
   mode: ModeConfig,
   angle: PipelineTextureAngle,
   userDescription?: string | null,
-  hint?: string
+  hint?: string,
+  selectedStyle?: StyleId
 ): string {
   const angleDisplay = TEXTURE_ANGLE_PROMPTS[angle];
   const clockPos = angle === 'front' ? '6 o\'clock' : '12 o\'clock';
@@ -503,6 +560,9 @@ export function getTexturePrompt(
   // Background isolation block
   const backgroundBlock = buildBackgroundIsolationBlock();
 
+  // Style-specific texture block
+  const styleBlock = getStylePromptBlockForTexture(selectedStyle, mode.texture.colorCount);
+
   if (mode.texture.simplified) {
     // Simplified mode: vector art / sticker art style for H2C printing
     return `=== CAMERA POSITION ===
@@ -514,7 +574,9 @@ export function getTexturePrompt(
 ${subjectContext}
 ${backgroundBlock}
 ${hintContext}
-=== TEXTURE STYLE ===
+${styleBlock}
+
+=== TEXTURE REQUIREMENTS ===
 
 Create a texture map for multi-color 3D PRINTING in flat vector illustration style.
 
@@ -536,7 +598,7 @@ Create a texture map for multi-color 3D PRINTING in flat vector illustration sty
 - Proportions match mesh views exactly
 - Color regions large enough for physical printing
 
-=== END TEXTURE STYLE ===
+=== END TEXTURE REQUIREMENTS ===
 
 After generating, list colors: COLORS: #RRGGBB, #RRGGBB, ...
 
@@ -589,15 +651,17 @@ Generate the actual ${angleDisplay} texture view now.`;
  * @param colorPalette - Color palette extracted from mesh views for consistency
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
 export function getTexturePromptWithColors(
   mode: ModeConfig,
   angle: PipelineTextureAngle,
   colorPalette: string[],
   userDescription?: string | null,
-  hint?: string
+  hint?: string,
+  selectedStyle?: StyleId
 ): string {
-  const basePrompt = getTexturePrompt(mode, angle, userDescription, hint);
+  const basePrompt = getTexturePrompt(mode, angle, userDescription, hint, selectedStyle);
 
   // If no color palette or mode doesn't use simplified mesh, return base prompt
   if (colorPalette.length === 0) {

@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef } from 'react';
-import { Loader2, Sparkles, RefreshCw, Plus, X, Palette, AlertTriangle, Lightbulb, Package, RotateCcw } from 'lucide-react';
+import { Loader2, Sparkles, RefreshCw, Plus, X, Palette, AlertTriangle, Lightbulb, Package, RotateCcw, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
@@ -23,6 +23,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import type { ImageAnalysisResult, PrinterType } from '@/types';
+import { STYLE_CONFIGS } from '@/config/styles';
 
 interface ImageAnalysisPanelProps {
   analysis: ImageAnalysisResult | null;
@@ -289,6 +290,34 @@ export function ImageAnalysisPanel({
             點擊色塊可選擇新顏色，hover 可刪除
           </p>
         </div>
+
+        {/* Style Recommendation */}
+        {analysis?.recommendedStyle && (
+          <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Star className="w-4 h-4 text-primary fill-primary" />
+              <span className="text-sm font-medium text-foreground">AI 推薦風格</span>
+              {analysis.styleConfidence !== undefined && analysis.styleConfidence > 0.5 && (
+                <span className="text-xs text-muted-foreground">
+                  ({Math.round(analysis.styleConfidence * 100)}% 信心度)
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant="default" className="text-sm">
+                {STYLE_CONFIGS[analysis.recommendedStyle]?.nameZh || analysis.recommendedStyle}
+              </Badge>
+              <span className="text-xs text-muted-foreground">
+                {STYLE_CONFIGS[analysis.recommendedStyle]?.name}
+              </span>
+            </div>
+            {analysis.styleReasoning && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {analysis.styleReasoning}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Print Friendliness Assessment */}
         <Collapsible open={printAssessmentOpen} onOpenChange={setPrintAssessmentOpen}>

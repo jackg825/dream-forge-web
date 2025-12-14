@@ -51,6 +51,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeImage = analyzeImage;
 const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
+const styles_1 = require("../config/styles");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MODEL = 'gemini-3-pro-image-preview';
 /**
@@ -104,6 +105,17 @@ Please provide the following analysis (respond in English unless otherwise speci
    - DISTINCTIVE_MARKS: Any unique patterns, markings, if none write "none"
    - ASYMMETRIC: Any asymmetrical features, if none write "none"
    - SURFACE_TEXTURES: Surface texture description (e.g., fluffy, smooth, rough)`,
+                styleRecommendation: `9. **Style Recommendation** (RECOMMENDED_STYLE) - Suggest the best 3D figure style
+   Based on the image content, recommend ONE style from these options:
+   - bobblehead: Best for people/celebrities with distinctive faces, larger head proportions (3-4x body)
+   - chibi: Best for anime characters, cute mascots, fantasy characters (2-3 head proportion)
+   - cartoon: Best for characters with personality, animals, stylized figures (Pixar/Disney style)
+   - emoji: Best for simple objects, expressions, icons, minimalist subjects (spherical/iconic)
+
+   Consider: subject type, existing proportions, level of detail, and target audience.
+   - RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
+   - STYLE_CONFIDENCE: [0.0-1.0] (how confident you are in this recommendation)
+   - STYLE_REASONING: [Brief 1-2 sentence explanation why this style fits best]`,
                 outputFormat: `Output strictly in the following format (one field per line):
 PROMPT_DESCRIPTION: [3-5 English narrative sentences for image generation]
 STYLE_HINTS: [comma-separated English style keywords]
@@ -122,7 +134,10 @@ LIMBS: [description in English, or "none"]
 ACCESSORIES: [comma-separated accessory list in English, or "none"]
 DISTINCTIVE_MARKS: [comma-separated marks in English, or "none"]
 ASYMMETRIC: [comma-separated asymmetric features in English, or "none"]
-SURFACE_TEXTURES: [comma-separated texture descriptions in English]`,
+SURFACE_TEXTURES: [comma-separated texture descriptions in English]
+RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
+STYLE_CONFIDENCE: [0.0-1.0]
+STYLE_REASONING: [Brief explanation in English]`,
             },
         };
     }
@@ -172,6 +187,17 @@ SURFACE_TEXTURES: [comma-separated texture descriptions in English]`,
    - DISTINCTIVE_MARKS: 任何獨特的圖案、花紋、標記，若無則填 none
    - ASYMMETRIC: 任何左右不對稱的特徵，若無則填 none
    - SURFACE_TEXTURES: 表面質感描述（如：毛茸茸、光滑、粗糙）`,
+            styleRecommendation: `9. **風格推薦** (RECOMMENDED_STYLE) - 推薦最適合的 3D 公仔風格
+   根據圖片內容，從以下選項中推薦一種最適合的風格：
+   - bobblehead: 最適合人物/名人、有鮮明臉部特徵者（頭身比 3-4 倍）
+   - chibi: 最適合動漫角色、可愛吉祥物、奇幻角色（2-3 頭身比例）
+   - cartoon: 最適合有個性的角色、動物、風格化人物（皮克斯/迪士尼風格）
+   - emoji: 最適合簡單物體、表情、圖標、極簡主題（球形/圖標化）
+
+   考慮：主體類型、現有比例、細節程度、目標受眾
+   - RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
+   - STYLE_CONFIDENCE: [0.0-1.0]（對此推薦的信心程度）
+   - STYLE_REASONING: [簡短 1-2 句解釋為何推薦此風格，使用繁體中文]`,
             outputFormat: `嚴格按照以下格式輸出（每行一個欄位）：
 PROMPT_DESCRIPTION: [3-5 句英文敘事描述，適合直接用於圖片生成]
 STYLE_HINTS: [逗號分隔的英文風格關鍵詞]
@@ -190,7 +216,10 @@ LIMBS: [描述，使用繁體中文，若無則填 none]
 ACCESSORIES: [逗號分隔的配件清單，使用繁體中文，若無則填 none]
 DISTINCTIVE_MARKS: [逗號分隔的標記清單，使用繁體中文，若無則填 none]
 ASYMMETRIC: [逗號分隔的不對稱特徵清單，使用繁體中文，若無則填 none]
-SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]`,
+SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]
+RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
+STYLE_CONFIDENCE: [0.0-1.0]
+STYLE_REASONING: [簡短解釋，使用繁體中文]`,
         },
     };
 }
@@ -218,6 +247,8 @@ ${i.materials}
 ${i.objectType}
 
 ${i.keyFeatures}
+
+${i.styleRecommendation}
 
 ${i.outputFormat}`;
 }
@@ -311,6 +342,14 @@ function parseAnalysisResponse(text, expectedColorCount) {
         keyFeatures.surfaceTextures = surfaceTextures;
     // Only include keyFeatures if it has any content
     const hasKeyFeatures = Object.keys(keyFeatures).length > 0;
+    // Extract style recommendation (new in v2)
+    const recommendedStyleRaw = extractField('RECOMMENDED_STYLE').toLowerCase().trim();
+    const recommendedStyle = (0, styles_1.isValidStyleId)(recommendedStyleRaw) ? recommendedStyleRaw : undefined;
+    const styleConfidenceRaw = extractField('STYLE_CONFIDENCE');
+    const styleConfidence = styleConfidenceRaw
+        ? Math.min(1, Math.max(0, parseFloat(styleConfidenceRaw) || 0))
+        : undefined;
+    const styleReasoning = extractField('STYLE_REASONING') || undefined;
     return {
         description,
         ...(promptDescription && { promptDescription }),
@@ -326,6 +365,10 @@ function parseAnalysisResponse(text, expectedColorCount) {
             orientationTips,
         },
         ...(hasKeyFeatures && { keyFeatures }),
+        // Style recommendation fields
+        ...(recommendedStyle && { recommendedStyle }),
+        ...(styleConfidence !== undefined && { styleConfidence }),
+        ...(styleReasoning && { styleReasoning }),
     };
 }
 /**
@@ -410,6 +453,9 @@ async function analyzeImage(imageBase64, mimeType, options) {
             keyFeaturesCount: result.keyFeatures ? Object.keys(result.keyFeatures).length : 0,
             hasPromptDescription: !!result.promptDescription,
             styleHintsCount: result.styleHints?.length ?? 0,
+            // Style recommendation logging
+            recommendedStyle: result.recommendedStyle ?? 'none',
+            styleConfidence: result.styleConfidence ?? 0,
         });
         return result;
     }

@@ -12,6 +12,7 @@
  */
 import type { PipelineMeshAngle, PipelineTextureAngle, GenerationModeId, ImageAnalysisResult } from '../rodin/types';
 import { type ModeConfig } from './mode-configs';
+import { type StyleId } from '../config/styles';
 export type GeminiImageModel = 'gemini-3-pro' | 'gemini-2.5-flash';
 /**
  * Result of a single view generation
@@ -55,7 +56,8 @@ export declare class MultiViewGenerator {
     private preAnalyzedColors?;
     private imageAnalysis?;
     private geminiModel;
-    constructor(apiKey: string, modeId?: GenerationModeId, userDescription?: string | null, preAnalyzedColors?: string[], imageAnalysis?: ImageAnalysisResult | null, geminiModel?: GeminiImageModel);
+    private selectedStyle?;
+    constructor(apiKey: string, modeId?: GenerationModeId, userDescription?: string | null, preAnalyzedColors?: string[], imageAnalysis?: ImageAnalysisResult | null, geminiModel?: GeminiImageModel, selectedStyle?: StyleId);
     /**
      * Get the current mode configuration
      */
@@ -126,5 +128,6 @@ export declare class MultiViewGenerator {
  * @param preAnalyzedColors - Optional pre-analyzed color palette from image analysis
  * @param imageAnalysis - Optional full image analysis result with key features
  * @param geminiModel - Gemini model for image generation (default: 'gemini-2.5-flash')
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
-export declare function createMultiViewGenerator(modeId?: GenerationModeId, userDescription?: string | null, preAnalyzedColors?: string[], imageAnalysis?: ImageAnalysisResult | null, geminiModel?: GeminiImageModel): MultiViewGenerator;
+export declare function createMultiViewGenerator(modeId?: GenerationModeId, userDescription?: string | null, preAnalyzedColors?: string[], imageAnalysis?: ImageAnalysisResult | null, geminiModel?: GeminiImageModel, selectedStyle?: StyleId): MultiViewGenerator;

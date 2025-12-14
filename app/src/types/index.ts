@@ -928,6 +928,7 @@ export interface PipelineSettings {
   colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
   provider?: ModelProvider;       // 3D generation provider (default: 'meshy')
   providerOptions?: ProviderOptions;
+  selectedStyle?: import('./styles').StyleId;  // Figure style (bobblehead, chibi, cartoon, emoji)
 }
 
 /**
@@ -1094,6 +1095,10 @@ export interface ImageAnalysisResult {
   detectedMaterials: string[];        // Detected materials (fur, fabric, plastic)
   objectType: string;                 // Object classification (plush toy, figurine)
   printFriendliness: PrintFriendlinessAssessment;
+  // Style recommendation (new in v2)
+  recommendedStyle?: import('./styles').StyleId;  // AI-recommended figure style
+  styleConfidence?: number;           // Confidence score 0-1
+  styleReasoning?: string;            // Why this style was recommended
   analyzedAt: Date;
 }
 
@@ -1112,3 +1117,7 @@ export interface AnalyzeImageRequest {
 export interface AnalyzeImageResponse {
   analysis: ImageAnalysisResult;
 }
+
+// Re-export style types for convenience
+export type { StyleId, StyleConfig, StyleRecommendation } from './styles';
+export { DEFAULT_STYLE, STYLE_IDS, isValidStyleId } from './styles';

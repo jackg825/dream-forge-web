@@ -11,6 +11,7 @@
  * Results are used to optimize view generation prompts and Meshy texture prompts.
  */
 import type { PrinterType, KeyFeatures } from '../rodin/types';
+import { type StyleId } from '../config/styles';
 /**
  * 3D Print friendliness assessment
  */
@@ -33,6 +34,9 @@ export interface ImageAnalysisResult {
     objectType: string;
     printFriendliness: PrintFriendlinessAssessment;
     keyFeatures?: KeyFeatures;
+    recommendedStyle?: StyleId;
+    styleConfidence?: number;
+    styleReasoning?: string;
     analyzedAt: FirebaseFirestore.Timestamp;
 }
 /**

@@ -1095,5 +1095,31 @@
       "confirm": "Confirm",
       "cancel": "Cancel"
     }
+  },
+  "styles": {
+    "selectStyle": "Select Figure Style",
+    "aiRecommended": "AI Recommended",
+    "viewExamples": "Examples",
+    "headRatio": "Head Ratio",
+    "bodyStyle": "Body Style",
+    "faceEmphasis": "Face Emphasis",
+    "colorApproach": "Color Approach",
+    "selectThisStyle": "Select This Style",
+    "bobblehead": {
+      "name": "Bobblehead",
+      "description": "Classic bobblehead with oversized head on spring neck"
+    },
+    "chibi": {
+      "name": "Chibi",
+      "description": "Cute Japanese-style with big eyes and small body"
+    },
+    "cartoon": {
+      "name": "Cartoon",
+      "description": "Pixar/Disney style with expressive personality"
+    },
+    "emoji": {
+      "name": "Emoji",
+      "description": "Minimalist spherical design, expression-focused"
+    }
   }
 }

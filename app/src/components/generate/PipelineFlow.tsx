@@ -28,7 +28,8 @@ import { ModelViewer, type ModelViewerRef } from '@/components/viewer/ModelViewe
 import { ModelViewerErrorBoundary } from '@/components/viewer/ModelViewerErrorBoundary';
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
 import { usePipeline } from '@/hooks/usePipeline';
-import type { ViewMode } from '@/types';
+import type { ViewMode, StyleId } from '@/types';
+import { DEFAULT_STYLE } from '@/types/styles';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
 import { PipelineUploader } from './PipelineUploader';
@@ -43,6 +44,7 @@ import { PipelineProgressBar } from './PipelineProgressBar';
 import type { ResetTargetStep } from '@/hooks/usePipeline';
 import { UnifiedProgressIndicator } from './UnifiedProgressIndicator';
 import { ImageAnalysisPanel } from './ImageAnalysisPanel';
+import { StyleSelector } from './StyleSelector';
 import { MultiViewGrid } from './MultiViewGrid';
 import { useImageAnalysis } from '@/hooks/useImageAnalysis';
 import type {
@@ -155,6 +157,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Gemini model selection state
   const [geminiModel, setGeminiModel] = useState<GeminiModelId>(DEFAULT_GEMINI_MODEL);
+
+  // Style selection state - default to chibi, auto-set from AI recommendation
+  const [selectedStyle, setSelectedStyle] = useState<StyleId>(DEFAULT_STYLE);
 
   // Image analysis hook
   const {
@@ -272,6 +277,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   }, [pipeline, imageAnalysis, setAnalysis, uploadedImages.length]);
 
+  // Auto-select recommended style when analysis provides a recommendation
+  useEffect(() => {
+    if (imageAnalysis?.recommendedStyle) {
+      setSelectedStyle(imageAnalysis.recommendedStyle);
+    }
+  }, [imageAnalysis?.recommendedStyle]);
+
   // Start polling when generating
   useEffect(() => {
     if (pipeline?.status === 'generating-mesh' || pipeline?.status === 'generating-texture') {
@@ -344,7 +356,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       const finalDescription = imageAnalysis?.description || userDescription.trim() || undefined;
       const newPipelineId = await createPipeline(
         imageUrls,
-        { meshPrecision, colorCount },
+        { meshPrecision, colorCount, selectedStyle },
         generationMode,
         processingMode,
         finalDescription,
@@ -384,10 +396,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       const result = await analyzeImage(uploadedImages[0].url, colorCount, 'fdm', locale);
 
       // Create draft pipeline with analysis results
+      // Use recommended style from analysis, or default if not available
+      const styleToUse = result.recommendedStyle || selectedStyle;
       const imageUrls = uploadedImages.map((img) => img.url);
       const newPipelineId = await createPipeline(
         imageUrls,
-        { meshPrecision, colorCount },
+        { meshPrecision, colorCount, selectedStyle: styleToUse },
         generationMode,
         processingMode,
         result.description,
@@ -532,6 +546,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             />
           )}
 
+          {/* Style Selector - shows after analysis completes */}
+          {imageAnalysis && (
+            <StyleSelector
+              value={selectedStyle}
+              onChange={setSelectedStyle}
+              recommendedStyle={imageAnalysis.recommendedStyle}
+              styleConfidence={imageAnalysis.styleConfidence}
+              disabled={actionLoading}
+            />
+          )}
+
           {/* Gemini model selector and Start button - only show after analysis completes */}
           {imageAnalysis && (
             <>
@@ -637,6 +662,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           hasEdits={analysisHasEdits}
           disabled={actionLoading}
         />
+
+        {/* Style Selector - shows after analysis completes */}
+        {imageAnalysis && (
+          <StyleSelector
+            value={selectedStyle}
+            onChange={setSelectedStyle}
+            recommendedStyle={imageAnalysis.recommendedStyle}
+            styleConfidence={imageAnalysis.styleConfidence}
+            disabled={actionLoading}
+          />
+        )}
 
         {/* Multi-view grid (if images exist) - only show mesh images for 3D printing */}
         {hasSomeImages && (

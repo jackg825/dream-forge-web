@@ -127,7 +127,7 @@ exports.createPipeline = functions
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to create a pipeline');
     }
     const userId = context.auth.uid;
-    const { imageUrls, settings, generationMode, userDescription, imageAnalysis, geminiModel } = data;
+    const { imageUrls, settings, generationMode, userDescription, imageAnalysis, geminiModel, selectedStyle } = data;
     if (!imageUrls || imageUrls.length === 0) {
         throw new functions.https.HttpsError('invalid-argument', 'At least one image URL is required');
     }
@@ -163,6 +163,7 @@ exports.createPipeline = functions
             generationMode: modeId,
             geminiModel: geminiModel || 'gemini-2.5-flash', // Default to fast model
             colorCount: settings?.colorCount,
+            selectedStyle: selectedStyle, // User-selected figure style
         },
         userDescription: userDescription || null,
         imageAnalysis: imageAnalysis || undefined,
@@ -310,7 +311,8 @@ exports.generatePipelineImages = functions
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
         const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
         // geminiModel is already declared above for credit calculation
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
+        const selectedStyle = pipeline.settings?.selectedStyle;
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel, selectedStyle);
         // Create progress callback to update Firestore in real-time
         const onProgress = async (type, angle, completed, total) => {
             const progress = type === 'mesh'
@@ -471,7 +473,8 @@ exports.regeneratePipelineImage = functions
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
         const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
         const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash');
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
+        const selectedStyle = pipeline.settings?.selectedStyle;
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel, selectedStyle);
         const now = admin.firestore.FieldValue.serverTimestamp();
         if (viewType === 'mesh') {
             // Regenerate mesh view

@@ -5,6 +5,7 @@
  * Each mode specifies how mesh and texture images should be processed.
  */
 import type { PipelineMeshAngle, PipelineTextureAngle, ImageAnalysisResult } from '../rodin/types';
+import { type StyleId } from '../config/styles';
 /**
  * Available generation mode IDs
  */
@@ -49,16 +50,18 @@ export declare function getMode(id: GenerationModeId): ModeConfig;
  * 2. SUBJECT DESCRIPTION (from analysis)
  * 3. BACKGROUND ISOLATION
  * 4. 3D PRINT OPTIMIZATION
- * 5. STYLE & RENDERING
- * 6. OUTPUT INSTRUCTION
+ * 5. FIGURE STYLE (user-selected style)
+ * 6. STYLE & RENDERING
+ * 7. OUTPUT INSTRUCTION
  *
  * @param mode - The generation mode configuration
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
  * @param imageAnalysis - Optional image analysis result with key features
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
-export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle, userDescription?: string | null, hint?: string, imageAnalysis?: ImageAnalysisResult | null): string;
+export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle, userDescription?: string | null, hint?: string, imageAnalysis?: ImageAnalysisResult | null, selectedStyle?: StyleId): string;
 /**
  * Generate texture view prompt based on mode and angle
  * Uses narrative style following Gemini's best practice:
@@ -68,8 +71,9 @@ export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle
  * @param angle - The view angle to generate
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
-export declare function getTexturePrompt(mode: ModeConfig, angle: PipelineTextureAngle, userDescription?: string | null, hint?: string): string;
+export declare function getTexturePrompt(mode: ModeConfig, angle: PipelineTextureAngle, userDescription?: string | null, hint?: string, selectedStyle?: StyleId): string;
 /**
  * Generate texture view prompt with color palette hints for consistency
  * Used when generating texture views after mesh views are complete
@@ -79,5 +83,6 @@ export declare function getTexturePrompt(mode: ModeConfig, angle: PipelineTextur
  * @param colorPalette - Color palette extracted from mesh views for consistency
  * @param userDescription - Optional user-provided description of the object
  * @param hint - Optional regeneration hint for adjustments
+ * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
-export declare function getTexturePromptWithColors(mode: ModeConfig, angle: PipelineTextureAngle, colorPalette: string[], userDescription?: string | null, hint?: string): string;
+export declare function getTexturePromptWithColors(mode: ModeConfig, angle: PipelineTextureAngle, colorPalette: string[], userDescription?: string | null, hint?: string, selectedStyle?: StyleId): string;

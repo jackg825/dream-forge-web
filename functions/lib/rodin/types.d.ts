@@ -220,6 +220,7 @@ export interface PipelineSettings {
     colorCount?: number;
     provider?: ProviderType;
     providerOptions?: ProviderOptions;
+    selectedStyle?: import('../config/styles').StyleId;
 }
 /**
  * Pipeline document for new simplified 3D generation workflow

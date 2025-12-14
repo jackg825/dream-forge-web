@@ -372,6 +372,7 @@ export interface PipelineSettings {
   colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
   provider?: ProviderType;        // 3D generation provider (default: 'meshy')
   providerOptions?: ProviderOptions;
+  selectedStyle?: import('../config/styles').StyleId;  // User-selected figure style
 }
 
 /**
