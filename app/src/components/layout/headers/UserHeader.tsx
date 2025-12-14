@@ -71,7 +71,7 @@ export function UserHeader({ className }: UserHeaderProps) {
             <UserMenu user={user} showAdminLink onSignOut={signOut} />
           </>
         ) : (
-          /* Logged out: Settings button + Sign in */
+          /* Logged out: Settings button + prominent Sign in button */
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -85,13 +85,12 @@ export function UserHeader({ className }: UserHeaderProps) {
                     {t('nav.settings')}
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/auth" className="cursor-pointer">
-                    {t('common.signIn')}
-                  </Link>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            {/* Prominent sign in button */}
+            <Button asChild className="hidden sm:inline-flex">
+              <Link href="/auth">{t('common.signIn')}</Link>
+            </Button>
           </>
         )
       }

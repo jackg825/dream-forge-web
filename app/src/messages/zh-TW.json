@@ -36,7 +36,9 @@
   "mobile": {
     "navigation": "導航",
     "account": "帳戶",
-    "adminNavigation": "管理"
+    "adminNavigation": "管理",
+    "welcome": "歡迎來到 Dream Forge",
+    "explore": "探索功能"
   },
   "admin": {
     "dashboard": "管理面板",

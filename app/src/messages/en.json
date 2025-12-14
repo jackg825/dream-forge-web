@@ -36,7 +36,9 @@
   "mobile": {
     "navigation": "Navigation",
     "account": "Account",
-    "adminNavigation": "Admin"
+    "adminNavigation": "Admin",
+    "welcome": "Welcome to Dream Forge",
+    "explore": "Explore"
   },
   "admin": {
     "dashboard": "Dashboard",
