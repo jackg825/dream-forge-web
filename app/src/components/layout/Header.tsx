@@ -502,69 +502,68 @@ export function Header() {
               </DropdownMenu>
             </>
           ) : (
-            /* Logged out user menu - still has settings */
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10">
-                  <Settings2 className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end">
-                {/* Theme Selector */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Palette className="mr-2 h-4 w-4" />
-                    <span>{t('settings.appearance')}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {getThemeLabel()}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-                      <DropdownMenuRadioItem value="light">
-                        <Sun className="mr-2 h-4 w-4" />
-                        {t('settings.theme.light')}
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="dark">
-                        <Moon className="mr-2 h-4 w-4" />
-                        {t('settings.theme.dark')}
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="system">
-                        <Monitor className="mr-2 h-4 w-4" />
-                        {t('settings.theme.system')}
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-
-                {/* Language Selector */}
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Globe className="mr-2 h-4 w-4" />
-                    <span>{t('settings.language')}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {localeNames[locale]}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuRadioGroup value={locale} onValueChange={handleLocaleChange}>
-                      {locales.map((loc) => (
-                        <DropdownMenuRadioItem key={loc} value={loc}>
-                          {localeNames[loc]}
+            /* Logged out: Settings dropdown + prominent Sign in button */
+            <>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10">
+                    <Settings2 className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end">
+                  {/* Theme Selector */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Palette className="mr-2 h-4 w-4" />
+                      <span>{t('settings.appearance')}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {getThemeLabel()}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                        <DropdownMenuRadioItem value="light">
+                          <Sun className="mr-2 h-4 w-4" />
+                          {t('settings.theme.light')}
                         </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                        <DropdownMenuRadioItem value="dark">
+                          <Moon className="mr-2 h-4 w-4" />
+                          {t('settings.theme.dark')}
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="system">
+                          <Monitor className="mr-2 h-4 w-4" />
+                          {t('settings.theme.system')}
+                        </DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
 
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/auth" className="cursor-pointer">
-                    {t('common.signIn')}
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {/* Language Selector */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <Globe className="mr-2 h-4 w-4" />
+                      <span>{t('settings.language')}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {localeNames[locale]}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuRadioGroup value={locale} onValueChange={handleLocaleChange}>
+                        {locales.map((loc) => (
+                          <DropdownMenuRadioItem key={loc} value={loc}>
+                            {localeNames[loc]}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {/* Prominent sign in button */}
+              <Button asChild className="hidden sm:inline-flex">
+                <Link href="/auth">{t('common.signIn')}</Link>
+              </Button>
+            </>
           )}
         </div>
       </div>
