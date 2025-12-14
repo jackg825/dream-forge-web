@@ -329,7 +329,7 @@ export function Header() {
                   <Link
                     href="/auth"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-base font-medium text-primary-foreground min-h-[48px]"
+                    className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 text-base font-medium text-white shadow-md shadow-purple-500/20 min-h-[48px]"
                   >
                     {t('common.signIn')}
                   </Link>
@@ -559,8 +559,11 @@ export function Header() {
                   </DropdownMenuSub>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/* Prominent sign in button */}
-              <Button asChild className="hidden sm:inline-flex">
+              {/* Prominent sign in button - visible on all screens with brand gradient */}
+              <Button
+                asChild
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-200"
+              >
                 <Link href="/auth">{t('common.signIn')}</Link>
               </Button>
             </>
