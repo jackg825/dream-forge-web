@@ -215,15 +215,36 @@
       }
     },
     "provider": {
-      "title": "生成引擎",
-      "recommended": "推薦",
+      "title": "3D 生成引擎",
+      "badges": {
+        "recommended": "推薦",
+        "newFeature": "新功能",
+        "fullColor": "全彩"
+      },
+      "capabilities": {
+        "multiview": "多視角",
+        "faceCountControl": "多邊形控制"
+      },
+      "credits": "{count} 點",
       "meshy": {
         "label": "Meshy 6",
-        "description": "快速逼真 3D 模型"
+        "description": "快速逼真的 3D 模型",
+        "estimatedTime": "約 2-3 分鐘"
+      },
+      "hunyuan": {
+        "label": "Hunyuan3D v3.0",
+        "description": "騰訊雲精細多邊形控制",
+        "estimatedTime": "約 3-6 分鐘"
       },
       "rodin": {
         "label": "Rodin Gen-2",
-        "description": "高品質細節呈現"
+        "description": "Hyper3D 高品質模型",
+        "estimatedTime": "約 3-5 分鐘"
+      },
+      "tripo": {
+        "label": "Tripo3D v3.0",
+        "description": "原生多視角支援",
+        "estimatedTime": "約 2-4 分鐘"
       }
     },
     "dragDrop": "拖放照片到此處",
@@ -1169,5 +1190,79 @@
     "objectType": "類型:",
     "recommendedStyle": "AI 推薦風格",
     "confidence": "信心度"
+  },
+  "progress": {
+    "status": {
+      "draft": {
+        "title": "正在提交作業...",
+        "subtitle": "您的圖片正在上傳並排隊處理"
+      },
+      "batchQueued": {
+        "title": "排隊中",
+        "subtitle": "AI 正在準備處理您的圖片",
+        "estimatedTime": "5-15 分鐘"
+      },
+      "batchProcessing": {
+        "title": "批次處理中",
+        "subtitle": "AI 正在分析並生成多角度視圖",
+        "estimatedTime": "5-15 分鐘"
+      },
+      "generatingImages": {
+        "title": "生成視角圖片",
+        "subtitle": "AI 正在為您的模型生成多個角度的視圖",
+        "estimatedTime": "2-5 分鐘"
+      },
+      "imagesReady": {
+        "title": "圖片就緒",
+        "subtitle": "請檢查生成的視角圖片"
+      },
+      "generatingMesh": {
+        "title": "生成 3D 網格",
+        "subtitle": "正在將圖片轉換為 3D 模型",
+        "subtitleWithProvider": "{provider} 正在將圖片轉換為 3D 模型",
+        "estimatedTime": "2-5 分鐘"
+      },
+      "meshReady": {
+        "title": "網格就緒",
+        "subtitle": "3D 網格已生成完成"
+      },
+      "generatingTexture": {
+        "title": "生成貼圖",
+        "subtitle": "正在為 3D 模型添加精細貼圖",
+        "estimatedTime": "2-5 分鐘"
+      },
+      "completed": {
+        "title": "完成",
+        "subtitle": "您的 3D 模型已準備就緒"
+      },
+      "failed": {
+        "title": "處理失敗",
+        "subtitle": "發生錯誤，請重試"
+      }
+    },
+    "nextStep": {
+      "generateMesh": "生成 3D 網格",
+      "addTexture": "添加貼圖"
+    },
+    "time": {
+      "estimated": "預計",
+      "aboutToComplete": "即將完成",
+      "aboutMinute": "約 1 分鐘",
+      "aboutMinutes": "約 {count} 分鐘"
+    },
+    "batch": {
+      "completed": "{count} 完成",
+      "processing": "{count} 處理中",
+      "failed": "{count} 失敗"
+    },
+    "ui": {
+      "imagesReceived": "圖片已收到",
+      "canLeavePage": "您可以安心離開此頁面",
+      "viewInHistory": "處理完成後，您可以在歷史記錄中查看結果",
+      "viewHistory": "前往歷史記錄查看",
+      "nextStepLabel": "下一步：",
+      "credits": "{count} 點",
+      "optional": "(可選)"
+    }
   }
 }

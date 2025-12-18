@@ -215,15 +215,36 @@
       }
     },
     "provider": {
-      "title": "Generation Engine",
-      "recommended": "Recommended",
+      "title": "3D Generation Engine",
+      "badges": {
+        "recommended": "Recommended",
+        "newFeature": "New",
+        "fullColor": "Full Color"
+      },
+      "capabilities": {
+        "multiview": "Multi-view",
+        "faceCountControl": "Polygon Control"
+      },
+      "credits": "{count} credits",
       "meshy": {
         "label": "Meshy 6",
-        "description": "Fast, realistic 3D models"
+        "description": "Fast, realistic 3D models",
+        "estimatedTime": "About 2-3 minutes"
+      },
+      "hunyuan": {
+        "label": "Hunyuan3D v3.0",
+        "description": "Tencent Cloud fine polygon control",
+        "estimatedTime": "About 3-6 minutes"
       },
       "rodin": {
         "label": "Rodin Gen-2",
-        "description": "High-quality detail rendering"
+        "description": "Hyper3D high quality models",
+        "estimatedTime": "About 3-5 minutes"
+      },
+      "tripo": {
+        "label": "Tripo3D v3.0",
+        "description": "Native multi-view support",
+        "estimatedTime": "About 2-4 minutes"
       }
     },
     "dragDrop": "Drag and drop your photo here",
@@ -1169,5 +1190,79 @@
     "objectType": "Type:",
     "recommendedStyle": "AI Recommended Style",
     "confidence": "confidence"
+  },
+  "progress": {
+    "status": {
+      "draft": {
+        "title": "Submitting...",
+        "subtitle": "Your images are being uploaded and queued for processing"
+      },
+      "batchQueued": {
+        "title": "Queued",
+        "subtitle": "AI is preparing to process your images",
+        "estimatedTime": "5-15 minutes"
+      },
+      "batchProcessing": {
+        "title": "Batch Processing",
+        "subtitle": "AI is analyzing and generating multi-angle views",
+        "estimatedTime": "5-15 minutes"
+      },
+      "generatingImages": {
+        "title": "Generating View Images",
+        "subtitle": "AI is generating multiple angle views for your model",
+        "estimatedTime": "2-5 minutes"
+      },
+      "imagesReady": {
+        "title": "Images Ready",
+        "subtitle": "Please review the generated view images"
+      },
+      "generatingMesh": {
+        "title": "Generating 3D Mesh",
+        "subtitle": "Converting images to 3D model",
+        "subtitleWithProvider": "{provider} is converting images to 3D model",
+        "estimatedTime": "2-5 minutes"
+      },
+      "meshReady": {
+        "title": "Mesh Ready",
+        "subtitle": "3D mesh has been generated"
+      },
+      "generatingTexture": {
+        "title": "Generating Texture",
+        "subtitle": "Adding detailed textures to the 3D model",
+        "estimatedTime": "2-5 minutes"
+      },
+      "completed": {
+        "title": "Completed",
+        "subtitle": "Your 3D model is ready"
+      },
+      "failed": {
+        "title": "Processing Failed",
+        "subtitle": "An error occurred, please retry"
+      }
+    },
+    "nextStep": {
+      "generateMesh": "Generate 3D Mesh",
+      "addTexture": "Add Texture"
+    },
+    "time": {
+      "estimated": "Estimated",
+      "aboutToComplete": "Almost done",
+      "aboutMinute": "About 1 minute",
+      "aboutMinutes": "About {count} minutes"
+    },
+    "batch": {
+      "completed": "{count} completed",
+      "processing": "{count} processing",
+      "failed": "{count} failed"
+    },
+    "ui": {
+      "imagesReceived": "Images received",
+      "canLeavePage": "You can safely leave this page",
+      "viewInHistory": "You can view results in history when done",
+      "viewHistory": "View History",
+      "nextStepLabel": "Next step:",
+      "credits": "{count} credits",
+      "optional": "(optional)"
+    }
   }
 }

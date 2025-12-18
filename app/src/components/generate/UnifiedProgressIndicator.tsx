@@ -15,8 +15,31 @@ import {
   Clock,
   Info,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { PipelineStatus, BatchProgress, ProcessingMode, ModelProvider } from '@/types';
 import { PIPELINE_PROGRESS_MESSAGES, getProgressMessage, getNextStepInfo } from '@/types/progress';
+
+/** Map PipelineStatus to translation key */
+const STATUS_KEY_MAP: Record<PipelineStatus, string> = {
+  'draft': 'draft',
+  'batch-queued': 'batchQueued',
+  'batch-processing': 'batchProcessing',
+  'generating-images': 'generatingImages',
+  'images-ready': 'imagesReady',
+  'generating-mesh': 'generatingMesh',
+  'mesh-ready': 'meshReady',
+  'generating-texture': 'generatingTexture',
+  'completed': 'completed',
+  'failed': 'failed',
+};
+
+/** Provider display names */
+const PROVIDER_DISPLAY_NAMES: Record<ModelProvider, string> = {
+  meshy: 'Meshy AI',
+  hunyuan: 'Hunyuan 3D',
+  rodin: 'Rodin',
+  tripo: 'Tripo3D',
+};
 
 /**
  * Progress data for different generation phases
@@ -84,15 +107,16 @@ function StatusIcon({ icon, isAnimated }: { icon: string; isAnimated?: boolean }
 
 /**
  * Format remaining time from estimated completion
+ * Returns { type, count } for translation
  */
-function formatTimeRemaining(date: Date): string {
+function getTimeRemainingKey(date: Date): { type: 'aboutToComplete' | 'aboutMinute' | 'aboutMinutes'; count?: number } {
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
   const diffMins = Math.max(0, Math.ceil(diffMs / 60000));
 
-  if (diffMins === 0) return '即將完成';
-  if (diffMins === 1) return '約 1 分鐘';
-  return `約 ${diffMins} 分鐘`;
+  if (diffMins === 0) return { type: 'aboutToComplete' };
+  if (diffMins === 1) return { type: 'aboutMinute' };
+  return { type: 'aboutMinutes', count: diffMins };
 }
 
 /**
@@ -150,6 +174,7 @@ export function UnifiedProgressIndicator({
   onViewHistory,
   className,
 }: UnifiedProgressIndicatorProps) {
+  const t = useTranslations('progress');
   const message = getProgressMessage(status, provider);
   const nextStep = getNextStepInfo(status);
   const progressValue = calculateProgress(status, progress);
@@ -159,6 +184,30 @@ export function UnifiedProgressIndicator({
     status === 'batch-processing' ||
     status === 'draft';
 
+  // Get translation key for current status
+  const statusKey = STATUS_KEY_MAP[status];
+
+  // Get translated title and subtitle
+  const title = t(`status.${statusKey}.title`);
+  const subtitle = status === 'generating-mesh' && provider
+    ? t('status.generatingMesh.subtitleWithProvider', { provider: PROVIDER_DISPLAY_NAMES[provider] || provider })
+    : t(`status.${statusKey}.subtitle`);
+  const estimatedTime = t.has(`status.${statusKey}.estimatedTime`)
+    ? t(`status.${statusKey}.estimatedTime`)
+    : '';
+
+  // Format time remaining if provided
+  const getFormattedTimeRemaining = () => {
+    if (estimatedCompletionTime) {
+      const timeKey = getTimeRemainingKey(estimatedCompletionTime);
+      if (timeKey.count !== undefined) {
+        return t(`time.${timeKey.type}`, { count: timeKey.count });
+      }
+      return t(`time.${timeKey.type}`);
+    }
+    return estimatedTime;
+  };
+
   // Inline variant - compact display
   if (variant === 'inline') {
     return (
@@ -167,10 +216,10 @@ export function UnifiedProgressIndicator({
           <StatusIcon icon={message.icon} isAnimated={isProcessing} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{message.title}</p>
-          {message.estimatedTime && (
+          <p className="text-sm font-medium truncate">{title}</p>
+          {estimatedTime && (
             <p className="text-xs text-muted-foreground">
-              預計 {message.estimatedTime}
+              {t('time.estimated')} {estimatedTime}
             </p>
           )}
         </div>
@@ -201,20 +250,17 @@ export function UnifiedProgressIndicator({
       </div>
 
       {/* Title and subtitle */}
-      <p className="text-lg font-medium mt-6">{message.title}</p>
+      <p className="text-lg font-medium mt-6">{title}</p>
       <p className="text-sm text-muted-foreground mt-2 text-center max-w-md">
-        {message.subtitle}
+        {subtitle}
       </p>
 
       {/* Estimated time */}
-      {isProcessing && (message.estimatedTime || estimatedCompletionTime) && (
+      {isProcessing && (estimatedTime || estimatedCompletionTime) && (
         <div className="flex items-center gap-1.5 mt-4 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
           <span>
-            預計{' '}
-            {estimatedCompletionTime
-              ? formatTimeRemaining(estimatedCompletionTime)
-              : message.estimatedTime}
+            {t('time.estimated')} {getFormattedTimeRemaining()}
           </span>
         </div>
       )}
@@ -235,18 +281,18 @@ export function UnifiedProgressIndicator({
           <div className="flex gap-2 flex-wrap justify-center mt-4">
             <Badge variant="outline" className="text-xs gap-1 border-green-500/50 text-green-600 dark:text-green-400">
               <CheckCircle className="h-3 w-3" />
-              {completed} 完成
+              {t('batch.completed', { count: completed })}
             </Badge>
             {pending > 0 && (
               <Badge variant="outline" className="text-xs gap-1 border-blue-500/50 text-blue-600 dark:text-blue-400">
                 <Loader2 className="h-3 w-3 animate-spin" />
-                {pending} 處理中
+                {t('batch.processing', { count: pending })}
               </Badge>
             )}
             {failed > 0 && (
               <Badge variant="outline" className="text-xs gap-1 border-red-500/50 text-red-600 dark:text-red-400">
                 <AlertCircle className="h-3 w-3" />
-                {failed} 失敗
+                {t('batch.failed', { count: failed })}
               </Badge>
             )}
           </div>
@@ -257,7 +303,7 @@ export function UnifiedProgressIndicator({
       {status === 'draft' && (
         <div className="flex items-center gap-2 mt-4 text-green-600 dark:text-green-400">
           <CheckCircle className="h-4 w-4" />
-          <span className="text-sm">圖片已收到</span>
+          <span className="text-sm">{t('ui.imagesReceived')}</span>
         </div>
       )}
 
@@ -266,10 +312,10 @@ export function UnifiedProgressIndicator({
         <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-4 mt-6 max-w-sm text-center">
           <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300">
             <Info className="h-4 w-4" />
-            <p className="text-sm font-medium">您可以安心離開此頁面</p>
+            <p className="text-sm font-medium">{t('ui.canLeavePage')}</p>
           </div>
           <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-            處理完成後，您可以在歷史記錄中查看結果
+            {t('ui.viewInHistory')}
           </p>
         </div>
       )}
@@ -281,21 +327,21 @@ export function UnifiedProgressIndicator({
           className="mt-4"
           onClick={onViewHistory}
         >
-          前往歷史記錄查看
+          {t('ui.viewHistory')}
         </Button>
       )}
 
       {/* Next step preview */}
       {nextStep && !isProcessing && (
         <div className="flex items-center gap-2 mt-6 text-sm text-muted-foreground">
-          <span>下一步：{nextStep.label}</span>
+          <span>{t('ui.nextStepLabel')}{status === 'images-ready' ? t('nextStep.generateMesh') : t('nextStep.addTexture')}</span>
           {nextStep.cost !== undefined && (
             <Badge variant="secondary" className="text-xs">
-              {nextStep.cost} 點
+              {t('ui.credits', { count: nextStep.cost })}
             </Badge>
           )}
           {nextStep.optional && (
-            <span className="text-muted-foreground/60">(可選)</span>
+            <span className="text-muted-foreground/60">{t('ui.optional')}</span>
           )}
         </div>
       )}
