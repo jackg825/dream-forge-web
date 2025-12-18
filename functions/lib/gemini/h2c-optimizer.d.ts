@@ -2,7 +2,7 @@
  * H2C Color Optimizer
  * Optimizes images to 7 solid colors for Bambu Lab H2C multi-color 3D printing
  *
- * Uses Gemini 3 Pro Image Preview for intelligent color reduction
+ * Uses Gemini 2.5 Flash Image for intelligent color reduction
  * while preserving visual fidelity and printability
  */
 /**

@@ -18,7 +18,7 @@ import type { PipelineMeshAngle, PipelineTextureAngle } from '../rodin/types';
 import { getMode, getMeshPrompt, getTexturePrompt, type GenerationModeId } from './mode-configs';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const MODEL = 'gemini-3-pro-image-preview';
+const MODEL = 'gemini-2.5-flash-image';
 
 /**
  * Batch job status from Gemini API

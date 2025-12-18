@@ -8,12 +8,12 @@
  * Supports multiple generation modes for A/B testing different
  * image processing strategies.
  *
- * Uses Gemini 3 Pro Image Preview for consistent multi-view generation
+ * Uses Gemini 2.5 Flash Image for consistent multi-view generation
  */
 import type { PipelineMeshAngle, PipelineTextureAngle, GenerationModeId, ImageAnalysisResult } from '../rodin/types';
 import { type ModeConfig } from './mode-configs';
 import { type StyleId } from '../config/styles';
-export type GeminiImageModel = 'gemini-3-pro' | 'gemini-2.5-flash';
+export type GeminiImageModel = 'gemini-2.5-flash';
 /**
  * Result of a single view generation
  */

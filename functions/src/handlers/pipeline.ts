@@ -50,9 +50,8 @@ const PIPELINE_CREDITS = {
   TEXTURE: 10,  // Meshy Retexture only
 } as const;
 
-// Credit costs per Gemini model for view generation
+// Credit cost for Gemini view generation (single model)
 const GEMINI_MODEL_CREDITS: Record<GeminiImageModel, number> = {
-  'gemini-3-pro': 10,
   'gemini-2.5-flash': 3,
 };
 

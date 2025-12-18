@@ -55,7 +55,7 @@ const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions/v1"));
 const mode_configs_1 = require("./mode-configs");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const MODEL = 'gemini-3-pro-image-preview';
+const MODEL = 'gemini-2.5-flash-image';
 /**
  * Gemini Batch API Client
  */

@@ -9,7 +9,7 @@
  * Supports multiple generation modes for A/B testing different
  * image processing strategies.
  *
- * Uses Gemini 3 Pro Image Preview for consistent multi-view generation
+ * Uses Gemini 2.5 Flash Image for consistent multi-view generation
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -55,7 +55,6 @@ const functions = __importStar(require("firebase-functions"));
 const mode_configs_1 = require("./mode-configs");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GEMINI_MODEL_IDS = {
-    'gemini-3-pro': 'gemini-3-pro-image-preview',
     'gemini-2.5-flash': 'gemini-2.5-flash-image',
 };
 const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
@@ -427,17 +426,10 @@ class MultiViewGenerator {
      */
     async generateSingleView(referenceImageBase64, mimeType, prompt, extractColors, expectedColorCount) {
         const modelId = GEMINI_MODEL_IDS[this.geminiModel];
-        // Build generation config - imageConfig only supported by Pro model
+        // Build generation config for Flash model
         const generationConfig = {
             responseModalities: ['TEXT', 'IMAGE'],
         };
-        // Only add imageConfig for Pro model (Flash doesn't support it)
-        if (this.geminiModel === 'gemini-3-pro') {
-            generationConfig.imageConfig = {
-                aspectRatio: '1:1',
-                imageSize: '1K',
-            };
-        }
         const response = await axios_1.default.post(`${GEMINI_API_BASE}/${modelId}:generateContent`, {
             contents: [
                 {

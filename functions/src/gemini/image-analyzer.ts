@@ -17,7 +17,7 @@ import type { PrinterType, KeyFeatures } from '../rodin/types';
 import { type StyleId, isValidStyleId } from '../config/styles';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-3-pro-image-preview';
+const MODEL = 'gemini-3-flash-preview';
 
 /**
  * 3D Print friendliness assessment

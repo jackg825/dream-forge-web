@@ -68,7 +68,6 @@ import {
   PROVIDER_OPTIONS,
   GEMINI_MODEL_OPTIONS,
 } from '@/types';
-import { GeminiModelSelector } from './GeminiModelSelector';
 import { ProviderSelector } from './ProviderSelector';
 
 interface PipelineFlowProps {
@@ -557,17 +556,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             />
           )}
 
-          {/* Gemini model selector and Start button - only show after analysis completes */}
+          {/* Start button - only show after analysis completes */}
           {imageAnalysis && (
-            <>
-              {/* Gemini model selection for image generation */}
-              <GeminiModelSelector
-                value={geminiModel}
-                onChange={setGeminiModel}
-                disabled={actionLoading}
-              />
-
-              <div className="flex justify-center">
+            <div className="flex justify-center">
                 <Button
                   size="lg"
                   onClick={handleStartPipeline}
@@ -586,8 +577,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                     </>
                   )}
                 </Button>
-              </div>
-            </>
+            </div>
           )}
         </>
       ) : (
@@ -688,16 +678,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             disabled={actionLoading}
           />
         )}
-
-        {/* Model selection based on current state */}
-        {!hasSomeImages ? (
-          // No multi-view images yet - show Gemini selector for image generation
-          <GeminiModelSelector
-            value={geminiModel}
-            onChange={setGeminiModel}
-            disabled={actionLoading || isGeneratingImages}
-          />
-        ) : null /* Provider selector hidden - defaulting to Hunyuan3D v3.0 */}
 
         {/* Action buttons */}
         <div className="flex justify-center gap-4 pt-4">

@@ -70,9 +70,8 @@ const PIPELINE_CREDITS = {
     MESH: 5, // Default (overridden by provider)
     TEXTURE: 10, // Meshy Retexture only
 };
-// Credit costs per Gemini model for view generation
+// Credit cost for Gemini view generation (single model)
 const GEMINI_MODEL_CREDITS = {
-    'gemini-3-pro': 10,
     'gemini-2.5-flash': 3,
 };
 // Maximum regenerations allowed per pipeline (credits only charged once)

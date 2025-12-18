@@ -15,7 +15,7 @@ import type {
 } from './types';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-3-pro-image-preview';
+const MODEL = 'gemini-2.5-flash-image';
 
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;

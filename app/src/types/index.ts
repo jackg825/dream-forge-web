@@ -736,14 +736,12 @@ export const GENERATION_MODE_OPTIONS: Record<GenerationModeId, {
 export const DEFAULT_GENERATION_MODE: GenerationModeId = 'simplified-mesh';
 
 /**
- * Gemini model selection for image generation
- * - gemini-3-pro: Higher quality, slower, more expensive
- * - gemini-2.5-flash: Faster, cheaper, good for testing
+ * Gemini model for image generation (single model, no selection needed)
  */
-export type GeminiModelId = 'gemini-3-pro' | 'gemini-2.5-flash';
+export type GeminiModelId = 'gemini-2.5-flash';
 
 /**
- * Gemini model options for UI display
+ * Gemini model options for reference
  */
 export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
   id: GeminiModelId;
@@ -753,13 +751,6 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
   estimatedTime: string;
   creditCost: number;
 }> = {
-  'gemini-3-pro': {
-    id: 'gemini-3-pro',
-    name: 'Gemini 3.0 Pro',
-    description: '高品質圖片生成，適合細節要求高的物件',
-    estimatedTime: '約 2-3 分鐘',
-    creditCost: 10,
-  },
   'gemini-2.5-flash': {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
