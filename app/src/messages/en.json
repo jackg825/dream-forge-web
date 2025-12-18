@@ -566,6 +566,14 @@
       "meshCost": "5 credits",
       "textureCost": "10 credits"
     },
+    "buttons": {
+      "generateViewsWithCredits": "Generate Multi-View Images ({credits} credits)",
+      "nextStepWithCredits": "Next: Generate 3D Mesh ({credits} credits)",
+      "generating": "Generating...",
+      "processing": "Processing...",
+      "pleaseSignIn": "Please sign in to upload images",
+      "signIn": "Sign In"
+    },
     "status": {
       "draft": "Draft",
       "batchQueued": "Queued",
@@ -1107,19 +1115,35 @@
     "selectThisStyle": "Select This Style",
     "bobblehead": {
       "name": "Bobblehead",
-      "description": "Classic bobblehead with oversized head on spring neck"
+      "description": "Classic bobblehead with oversized head on spring neck",
+      "headRatio": "3-4x body size",
+      "bodyStyle": "Compact with base",
+      "faceEmphasis": "Exaggerated facial features",
+      "colorApproach": "Clean solid colors, glossy finish"
     },
     "chibi": {
       "name": "Chibi",
-      "description": "Cute Japanese-style with big eyes and small body"
+      "description": "Cute Japanese-style with big eyes and small body",
+      "headRatio": "2-3 head proportion",
+      "bodyStyle": "Rounded stubby limbs",
+      "faceEmphasis": "Large eyes, cute expression",
+      "colorApproach": "Soft gradients, anime style"
     },
     "cartoon": {
       "name": "Cartoon",
-      "description": "Pixar/Disney style with expressive personality"
+      "description": "Pixar/Disney style with expressive personality",
+      "headRatio": "1.5-2x normal proportion",
+      "bodyStyle": "Stylized but complete",
+      "faceEmphasis": "Personality expression, vivid",
+      "colorApproach": "Vibrant saturated, 3D look"
     },
     "emoji": {
       "name": "Emoji",
-      "description": "Minimalist spherical design, expression-focused"
+      "description": "Minimalist spherical design, expression-focused",
+      "headRatio": "Head is body (spherical)",
+      "bodyStyle": "Minimal geometric shape",
+      "faceEmphasis": "Expression only, no details",
+      "colorApproach": "3-4 colors, solid blocks"
     }
   },
   "imageAnalysis": {

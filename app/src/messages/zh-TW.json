@@ -566,6 +566,14 @@
       "meshCost": "5 點",
       "textureCost": "10 點"
     },
+    "buttons": {
+      "generateViewsWithCredits": "生成多視角圖片 ({credits} 點)",
+      "nextStepWithCredits": "下一步: 生成 3D 網格 ({credits} 點)",
+      "generating": "生成中...",
+      "processing": "處理中...",
+      "pleaseSignIn": "請先登入以上傳圖片",
+      "signIn": "登入"
+    },
     "status": {
       "draft": "草稿",
       "batchQueued": "排隊中",
@@ -1107,19 +1115,35 @@
     "selectThisStyle": "選擇此風格",
     "bobblehead": {
       "name": "搖頭公仔",
-      "description": "經典搖頭公仔，超大頭配彈簧頸"
+      "description": "經典搖頭公仔，超大頭配彈簧頸",
+      "headRatio": "3-4x 身體大小",
+      "bodyStyle": "小巧緊湊，有底座",
+      "faceEmphasis": "誇張的臉部特徵",
+      "colorApproach": "乾淨的實色，光澤質感"
     },
     "chibi": {
       "name": "Q版",
-      "description": "日式可愛風，大眼睛小身體"
+      "description": "日式可愛風，大眼睛小身體",
+      "headRatio": "2-3 頭身比例",
+      "bodyStyle": "圓潤短小的四肢",
+      "faceEmphasis": "大眼睛，可愛表情",
+      "colorApproach": "柔和漸層，動漫風格"
     },
     "cartoon": {
       "name": "卡通",
-      "description": "皮克斯/迪士尼風格，表情豐富"
+      "description": "皮克斯/迪士尼風格，表情豐富",
+      "headRatio": "1.5-2x 正常比例",
+      "bodyStyle": "風格化但完整",
+      "faceEmphasis": "個性表情，生動傳神",
+      "colorApproach": "鮮豔飽和，立體感"
     },
     "emoji": {
       "name": "表情符號",
-      "description": "極簡球形設計，專注表情呈現"
+      "description": "極簡球形設計，專注表情呈現",
+      "headRatio": "頭即身體（球形）",
+      "bodyStyle": "極簡幾何形狀",
+      "faceEmphasis": "只有表情，沒有細節",
+      "colorApproach": "3-4 色，純色塊"
     }
   },
   "imageAnalysis": {

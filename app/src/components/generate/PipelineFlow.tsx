@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -135,6 +135,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const searchParams = useSearchParams();
   const pipelineIdParam = searchParams.get('id');
   const locale = useLocale();
+  const t = useTranslations('pipeline');
 
   const { user, loading: authLoading } = useAuth();
   const { credits, loading: creditsLoading } = useCredits(user?.uid);
@@ -568,12 +569,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   {actionLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      處理中...
+                      {t('buttons.processing')}
                     </>
                   ) : (
                     <>
                       <Images className="mr-2 h-4 w-4" />
-                      生成多視角圖片 ({GEMINI_MODEL_OPTIONS[geminiModel].creditCost} 點)
+                      {t('buttons.generateViewsWithCredits', { credits: GEMINI_MODEL_OPTIONS[geminiModel].creditCost })}
                     </>
                   )}
                 </Button>
@@ -584,9 +585,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         <Card>
           <CardContent className="py-12 text-center">
             <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground mb-4">請先登入以上傳圖片</p>
+            <p className="text-muted-foreground mb-4">{t('buttons.pleaseSignIn')}</p>
             <Button onClick={() => router.push('/auth')}>
-              登入
+              {t('buttons.signIn')}
             </Button>
           </CardContent>
         </Card>
@@ -617,7 +618,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         {/* Reference image preview */}
         {pipeline?.inputImages && pipeline.inputImages.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">參考圖片</h3>
+            <h3 className="text-sm font-medium text-muted-foreground">{t('images.referenceImages')}</h3>
             <div className="flex gap-3">
               {pipeline.inputImages.map((img, idx) => (
                 <div key={idx} className="w-24 h-24 rounded-lg overflow-hidden bg-black">
@@ -692,12 +693,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               {actionLoading || isGeneratingImages ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  生成中...
+                  {t('buttons.generating')}
                 </>
               ) : (
                 <>
                   <Images className="mr-2 h-4 w-4" />
-                  生成多視角圖片 ({GEMINI_MODEL_OPTIONS[geminiModel].creditCost} 點)
+                  {t('buttons.generateViewsWithCredits', { credits: GEMINI_MODEL_OPTIONS[geminiModel].creditCost })}
                 </>
               )}
             </Button>
@@ -712,12 +713,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               {actionLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  處理中...
+                  {t('buttons.processing')}
                 </>
               ) : (
                 <>
                   <Box className="mr-2 h-4 w-4" />
-                  下一步: 生成 3D 網格 ({PROVIDER_OPTIONS[selectedProvider].creditCost} 點)
+                  {t('buttons.nextStepWithCredits', { credits: PROVIDER_OPTIONS[selectedProvider].creditCost })}
                 </>
               )}
             </Button>
@@ -735,7 +736,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                {actionLoading || isGeneratingImages ? '生成中...' : '重新生成全部視角'}
+                {actionLoading || isGeneratingImages ? t('buttons.generating') : t('step1.regenerateAll')}
               </Button>
               <Button
                 size="lg"
@@ -744,7 +745,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 className="px-8"
               >
                 <Box className="mr-2 h-4 w-4" />
-                下一步: 生成 3D 網格 ({PROVIDER_OPTIONS[selectedProvider].creditCost} 點)
+                {t('buttons.nextStepWithCredits', { credits: PROVIDER_OPTIONS[selectedProvider].creditCost })}
               </Button>
             </>
           )}
@@ -767,7 +768,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         {/* Reference images - collapsed */}
         {pipeline?.inputImages && pipeline.inputImages.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground">參考圖片</h3>
+            <h3 className="text-sm font-medium text-muted-foreground">{t('images.referenceImages')}</h3>
             <div className="flex gap-2">
               {pipeline.inputImages.map((img, idx) => (
                 <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden bg-black">
@@ -787,7 +788,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           {/* Mesh images */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-medium">網格用圖片</h4>
+              <h4 className="text-sm font-medium">{t('images.meshImages')}</h4>
               <Badge variant="outline" className="text-xs">{modeInfo?.meshStyle || '7色優化'}</Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -812,16 +813,16 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                         disabled={actionLoading || regenerateLoading || !canRegenerate}
                       >
                         <RefreshCw className="h-4 w-4 mr-1" />
-                        重新生成
+                        {t('images.regenerate')}
                       </Button>
                       {canRegenerate ? (
-                        <span className="text-xs text-white/70">剩餘 {regenerationsRemaining} 次</span>
+                        <span className="text-xs text-white/70">{t('images.remaining', { count: regenerationsRemaining })}</span>
                       ) : (
-                        <span className="text-xs text-red-300">已達上限</span>
+                        <span className="text-xs text-red-300">{t('images.limitReached')}</span>
                       )}
                     </div>
                     <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
-                      {angle === 'front' ? '正面' : angle === 'back' ? '背面' : angle === 'left' ? '左側' : '右側'}
+                      {t(`angles.${angle}`)}
                     </span>
                   </div>
                 );
@@ -887,12 +888,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             {actionLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                處理中...
+                {t('buttons.processing')}
               </>
             ) : (
               <>
                 <Box className="mr-2 h-4 w-4" />
-                下一步: 生成 3D 網格 ({PROVIDER_OPTIONS[selectedProvider].creditCost} 點)
+                {t('buttons.nextStepWithCredits', { credits: PROVIDER_OPTIONS[selectedProvider].creditCost })}
               </>
             )}
           </Button>
@@ -913,8 +914,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const phase = progress?.phase ?? 'mesh-views';
 
     // View labels for display (used in realtime mode grid)
-    const meshLabels = ['正面', '背面', '左側', '右側'];
-    const textureLabels = ['正面', '背面'];
+    const meshLabels = [t('angles.front'), t('angles.back'), t('angles.left'), t('angles.right')];
+    const textureLabels = [t('angles.front'), t('angles.back')];
 
     // For submitting (draft) and batch modes, use the unified indicator
     if (pipeline?.status === 'draft' || isBatch) {
@@ -945,13 +946,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
           </div>
         </div>
-        <p className="text-lg font-medium mt-6">正在生成視角圖片</p>
+        <p className="text-lg font-medium mt-6">{t('processing.generatingViews')}</p>
         <p className="text-sm text-muted-foreground mt-2">
           {phase === 'mesh-views'
-            ? `正在生成網格用圖片 (${meshCompleted}/4)...`
+            ? `${t('processing.meshViews')} (${meshCompleted}/4)...`
             : phase === 'texture-views'
-              ? `正在生成貼圖用圖片 (${textureCompleted}/2)...`
-              : 'AI 正在分析您的圖片並生成多角度視圖'}
+              ? `${t('processing.textureViews')} (${textureCompleted}/2)...`
+              : t('processing.aiAnalyzing')}
         </p>
 
         {/* Visual progress grid - 6 boxes: 4 green (mesh) + 2 blue (texture) */}
@@ -960,7 +961,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           <div className="mb-4">
             <div className="flex items-center gap-2 mb-2">
               <Box className="h-4 w-4 text-green-500" />
-              <span className="text-sm font-medium">網格視圖</span>
+              <span className="text-sm font-medium">{t('processing.meshViewsLabel')}</span>
               <span className="text-xs text-muted-foreground">({meshCompleted}/4)</span>
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -998,7 +999,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Palette className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium">貼圖視圖</span>
+              <span className="text-sm font-medium">{t('processing.textureViewsLabel')}</span>
               <span className="text-xs text-muted-foreground">({textureCompleted}/2)</span>
             </div>
             <div className="grid grid-cols-4 gap-2">
@@ -1178,7 +1179,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 ) : (
                   <Box className="h-3 w-3" />
                 )}
-                下載 GLB 檔案
+                {t('step2.downloadGlb')}
               </button>
             </div>
           </>
@@ -1203,12 +1204,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 {actionLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    處理中...
+                    {t('buttons.processing')}
                   </>
                 ) : (
                   <>
                     <Palette className="mr-2 h-4 w-4" />
-                    添加貼圖 (+{TEXTURE_COST} 點)
+                    {t('step2.addTexture')} (+{TEXTURE_COST} {t('credits.points')})
                   </>
                 )}
               </Button>
@@ -1218,7 +1219,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 onClick={() => router.push('/dashboard')}
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
-                完成 (僅網格)
+                {t('step2.finishMeshOnly')}
               </Button>
             </div>
           </div>
@@ -1310,7 +1311,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 ) : (
                   <Box className="h-3 w-3" />
                 )}
-                下載 GLB 檔案
+                {t('step2.downloadGlb')}
               </button>
             </div>
           </>
@@ -1321,7 +1322,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 <CheckCircle className="h-14 w-14 text-green-500" />
               </div>
               <p className="text-xl font-semibold">
-                {hasTexture ? '3D 模型已完成' : '3D 網格已完成'}
+                {hasTexture ? t('step3.completed') : t('step2.title')}
               </p>
             </div>
           </div>
@@ -1337,14 +1338,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   <Printer className="h-4 w-4 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium">步驟 4: 列印&配送</h4>
+                  <h4 className="text-sm font-medium">{t('step4.title')}</h4>
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 mt-0.5">
-                    Coming Soon
+                    {t('step4.comingSoon')}
                   </Badge>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                很快你就可以直接訂購 3D 列印成品並寄送到府
+                {t('step4.description')}
               </p>
             </div>
 
@@ -1363,14 +1364,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   router.push('/generate', { scroll: false });
                 }}
               >
-                創建新作品
+                {t('completion.createNew')}
               </Button>
               <Button
                 variant="outline"
                 className="flex-1"
                 onClick={() => router.push('/dashboard')}
               >
-                查看我的作品
+                {t('completion.viewHistory')}
               </Button>
             </div>
           </div>
@@ -1413,15 +1414,15 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         <div className="bg-destructive/10 p-4 rounded-full mb-4">
           <AlertCircle className="h-10 w-10 text-destructive" />
         </div>
-        <p className="text-lg font-medium mb-2">處理失敗</p>
+        <p className="text-lg font-medium mb-2">{t('error.title')}</p>
         <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
-          {error || pipeline?.error || '發生錯誤，請重試'}
+          {error || pipeline?.error || t('error.defaultMessage')}
         </p>
         {errorStep && (
           <p className="text-xs text-muted-foreground mb-6">
-            失敗步驟: {errorStep === 'generating-images' ? '生成視角圖片' :
-                     errorStep === 'generating-mesh' ? '生成 3D 網格' :
-                     errorStep === 'generating-texture' ? '生成貼圖' : errorStep}
+            {t('error.failedStep')}: {errorStep === 'generating-images' ? t('error.steps.generatingImages') :
+                     errorStep === 'generating-mesh' ? t('error.steps.generatingMesh') :
+                     errorStep === 'generating-texture' ? t('error.steps.generatingTexture') : errorStep}
           </p>
         )}
         <div className="flex justify-center gap-4">
@@ -1434,12 +1435,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               {actionLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  重試中...
+                  {t('error.retrying')}
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  重試
+                  {t('error.retry')}
                 </>
               )}
             </Button>
@@ -1452,7 +1453,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               router.push('/generate', { scroll: false });
             }}
           >
-            重新開始
+            {t('error.restart')}
           </Button>
         </div>
       </div>

@@ -101,7 +101,7 @@ export function StyleSelector({
               <div className="relative w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden bg-muted">
                 <Image
                   src={style.previewImages[0]}
-                  alt={style.nameZh}
+                  alt={t(`${styleId}.name`)}
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 64px, 80px"
@@ -110,8 +110,8 @@ export function StyleSelector({
 
               {/* Style Name */}
               <div className="flex flex-col items-center gap-0.5">
-                <span className="text-sm font-semibold">{style.nameZh}</span>
-                <span className="text-xs text-muted-foreground">{style.name}</span>
+                <span className="text-sm font-semibold">{t(`${styleId}.name`)}</span>
+                <span className="text-xs text-muted-foreground">{t(`${styleId}.description`)}</span>
               </div>
 
               {/* View Examples Button */}
@@ -138,11 +138,10 @@ export function StyleSelector({
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {previewStyle?.nameZh}
-              <Badge variant="outline">{previewStyle?.name}</Badge>
+              {previewStyle && t(`${previewStyle.id}.name`)}
             </DialogTitle>
             <DialogDescription>
-              {previewStyle?.descriptionZh}
+              {previewStyle && t(`${previewStyle.id}.description`)}
             </DialogDescription>
           </DialogHeader>
 
@@ -151,19 +150,19 @@ export function StyleSelector({
             <div className="grid grid-cols-2 gap-3 py-3 border-y">
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">{t('headRatio')}</div>
-                <div className="text-sm font-medium">{previewStyle.characteristics.headRatio}</div>
+                <div className="text-sm font-medium">{t(`${previewStyle.id}.headRatio`)}</div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">{t('bodyStyle')}</div>
-                <div className="text-sm font-medium">{previewStyle.characteristics.bodyStyle}</div>
+                <div className="text-sm font-medium">{t(`${previewStyle.id}.bodyStyle`)}</div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">{t('faceEmphasis')}</div>
-                <div className="text-sm font-medium">{previewStyle.characteristics.faceEmphasis}</div>
+                <div className="text-sm font-medium">{t(`${previewStyle.id}.faceEmphasis`)}</div>
               </div>
               <div className="space-y-1">
                 <div className="text-xs text-muted-foreground">{t('colorApproach')}</div>
-                <div className="text-sm font-medium">{previewStyle.characteristics.colorApproach}</div>
+                <div className="text-sm font-medium">{t(`${previewStyle.id}.colorApproach`)}</div>
               </div>
             </div>
           )}
@@ -178,7 +177,7 @@ export function StyleSelector({
                 >
                   <Image
                     src={src}
-                    alt={`${previewStyle.nameZh} example ${idx + 1}`}
+                    alt={`${t(`${previewStyle.id}.name`)} example ${idx + 1}`}
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 100px, 150px"
