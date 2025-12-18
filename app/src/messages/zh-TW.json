@@ -518,6 +518,11 @@
       "createNew": "創建新作品",
       "viewHistory": "查看我的作品"
     },
+    "outputs": {
+      "generatedBy": "生成自:",
+      "viewImages": "視角圖片",
+      "meshImages": "網格用圖片"
+    },
     "processing": {
       "generatingViews": "正在生成視角圖片",
       "meshViews": "正在生成網格用圖片",

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Images, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
+import { useTranslations } from 'next-intl';
 import type { Pipeline, PipelineMeshAngle, PipelineTextureAngle } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
 
@@ -26,6 +27,7 @@ export function PreviousOutputs({
   defaultCollapsed = false,
   children,
 }: PreviousOutputsProps) {
+  const t = useTranslations('pipeline.outputs');
   const [imagesExpanded, setImagesExpanded] = useState(!defaultCollapsed);
   const [meshExpanded, setMeshExpanded] = useState(!defaultCollapsed);
 
@@ -84,7 +86,7 @@ export function PreviousOutputs({
           {/* Provider context header */}
           {pipeline.settings.provider && (
             <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-sm text-muted-foreground">
-              <span>生成自:</span>
+              <span>{t('generatedBy')}</span>
               <ProviderBadge provider={pipeline.settings.provider} />
             </div>
           )}
@@ -99,7 +101,7 @@ export function PreviousOutputs({
               >
                 <div className="flex items-center gap-2">
                   <Images className="h-4 w-4 text-green-500" />
-                  <span className="text-sm font-medium">視角圖片</span>
+                  <span className="text-sm font-medium">{t('viewImages')}</span>
                 </div>
                 {imagesExpanded ? (
                   <ChevronUp className="h-4 w-4" />
@@ -113,7 +115,7 @@ export function PreviousOutputs({
               {/* Mesh images - 4 columns */}
               {hasMeshImages && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">網格用圖片</p>
+                  <p className="text-xs text-muted-foreground mb-2">{t('meshImages')}</p>
                   <div className="grid grid-cols-4 gap-1.5">
                     {meshAngles.map((angle) => {
                       const image = pipeline.meshImages[angle];
