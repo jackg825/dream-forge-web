@@ -38,7 +38,15 @@ export function validateReferer(request: Request, env: Env): boolean {
     if (request.headers.get('Authorization')) {
       return true;
     }
-    // 對於沒有 referer 也沒有 auth 的請求，拒絕
+    // 檢查是否有有效的 Origin header (瀏覽器 CORS 請求)
+    // 瀏覽器可能因為 Referrer-Policy 而移除 Referer，但仍會發送 Origin
+    if (validateOrigin(request, env)) {
+      const origin = request.headers.get('Origin');
+      if (origin) {
+        return true;
+      }
+    }
+    // 對於沒有 referer 也沒有 auth 也沒有有效 origin 的請求，拒絕
     return false;
   }
 

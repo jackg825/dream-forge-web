@@ -25,7 +25,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { ModelViewer, type ModelViewerRef } from '@/components/viewer/ModelViewer';
-import { ModelViewerErrorBoundary } from '@/components/viewer/ModelViewerErrorBoundary';
+import { TranslatedModelViewerErrorBoundary } from '@/components/viewer/ModelViewerErrorBoundary';
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
 import { usePipeline } from '@/hooks/usePipeline';
 import type { ViewMode, StyleId } from '@/types';
@@ -1136,7 +1136,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               ref={meshContainerRef}
               className="relative aspect-[4/3] lg:aspect-[16/9] bg-muted/30 rounded-2xl overflow-hidden border border-border/50"
             >
-              <ModelViewerErrorBoundary>
+              <TranslatedModelViewerErrorBoundary>
                 <ModelViewer
                   ref={meshViewerRef}
                   modelUrl={pipeline.meshUrl}
@@ -1146,7 +1146,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   showAxes={meshShowAxes}
                   autoRotate={meshAutoRotate}
                 />
-              </ModelViewerErrorBoundary>
+              </TranslatedModelViewerErrorBoundary>
               <ViewerToolbar
                 viewMode={meshViewMode}
                 onViewModeChange={setMeshViewMode}
@@ -1264,7 +1264,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               ref={texturedContainerRef}
               className="relative aspect-[4/3] lg:aspect-[16/9] bg-muted/30 rounded-2xl overflow-hidden border border-green-500/20"
             >
-              <ModelViewerErrorBoundary>
+              <TranslatedModelViewerErrorBoundary>
                 <ModelViewer
                   ref={texturedViewerRef}
                   modelUrl={modelUrl}
@@ -1274,7 +1274,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   showAxes={texturedShowAxes}
                   autoRotate={texturedAutoRotate}
                 />
-              </ModelViewerErrorBoundary>
+              </TranslatedModelViewerErrorBoundary>
               <ViewerToolbar
                 viewMode={texturedViewMode}
                 onViewModeChange={setTexturedViewMode}

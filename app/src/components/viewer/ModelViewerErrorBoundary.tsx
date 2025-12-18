@@ -3,6 +3,7 @@
 import { Component, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useTranslations } from 'next-intl';
 
 interface Props {
   children: ReactNode;
@@ -48,10 +49,10 @@ export class ModelViewerErrorBoundary extends Component<Props, State> {
                           this.state.error?.message?.includes('Could not load');
 
       const {
-        fallbackMessage = '無法載入 3D 模型',
-        urlExpiredMessage = '模型連結已過期，請重新整理頁面',
-        loadErrorMessage = '載入時發生錯誤，請稍後再試',
-        retryLabel = '重試',
+        fallbackMessage = 'Could not load 3D model',
+        urlExpiredMessage = 'Model link has expired, please refresh the page',
+        loadErrorMessage = 'An error occurred while loading, please try again later',
+        retryLabel = 'Retry',
       } = this.props;
 
       return (
@@ -81,4 +82,30 @@ export class ModelViewerErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
+}
+
+/**
+ * Wrapper component that provides i18n translations to the error boundary.
+ * Use this instead of ModelViewerErrorBoundary for automatic translation support.
+ */
+export function TranslatedModelViewerErrorBoundary({
+  children,
+  onRetry,
+}: {
+  children: ReactNode;
+  onRetry?: () => void;
+}) {
+  const t = useTranslations('viewer.errorBoundary');
+
+  return (
+    <ModelViewerErrorBoundary
+      fallbackMessage={t('cannotLoadModel')}
+      urlExpiredMessage={t('urlExpired')}
+      loadErrorMessage={t('loadError')}
+      retryLabel={t('retry')}
+      onRetry={onRetry}
+    >
+      {children}
+    </ModelViewerErrorBoundary>
+  );
 }
