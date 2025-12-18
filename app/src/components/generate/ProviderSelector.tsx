@@ -38,7 +38,7 @@ export function ProviderSelector({
   showCredits = true,
   providers: providerFilter,
 }: ProviderSelectorProps) {
-  const t = useTranslations('generate.provider');
+  const t = useTranslations('upload.provider');
 
   // Filter providers if specified, otherwise show all
   const providers = providerFilter
