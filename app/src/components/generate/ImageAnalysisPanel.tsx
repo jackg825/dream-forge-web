@@ -12,6 +12,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2, Sparkles, RefreshCw, Plus, X, Palette, AlertTriangle, Lightbulb, Package, RotateCcw, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -136,6 +137,7 @@ export function ImageAnalysisPanel({
   disabled,
   printerType = 'fdm',
 }: ImageAnalysisPanelProps) {
+  const t = useTranslations('imageAnalysis');
   const [printAssessmentOpen, setPrintAssessmentOpen] = useState(false);
 
   // Before analysis
@@ -146,15 +148,15 @@ export function ImageAnalysisPanel({
           <div className="flex-1">
             <h3 className="font-medium text-foreground flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary" />
-              AI 圖片分析
+              {t('title')}
             </h3>
             <p className="text-sm text-muted-foreground mt-1">
-              分析圖片以提取色號、物體描述和 3D 列印建議
+              {t('subtitle')}
             </p>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">色號數量</span>
+              <span className="text-sm text-muted-foreground">{t('colorCount')}</span>
               <div className="w-24">
                 <Slider
                   value={[colorCount]}
@@ -172,7 +174,7 @@ export function ImageAnalysisPanel({
               disabled={disabled}
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              分析圖片
+              {t('analyzeButton')}
             </Button>
           </div>
         </div>
@@ -191,7 +193,7 @@ export function ImageAnalysisPanel({
       <div className="border border-primary/20 rounded-lg p-6 bg-primary/10">
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          <span className="text-primary">正在分析圖片...</span>
+          <span className="text-primary">{t('analyzing')}</span>
         </div>
         <div className="mt-4 space-y-2">
           <div className="h-4 bg-primary/20 rounded animate-pulse" />
@@ -208,10 +210,10 @@ export function ImageAnalysisPanel({
       <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
         <h3 className="font-medium text-foreground flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-primary" />
-          分析結果
+          {t('results')}
           {hasEdits && (
             <Badge variant="secondary" className="text-xs">
-              已編輯
+              {t('edited')}
             </Badge>
           )}
         </h3>
@@ -224,7 +226,7 @@ export function ImageAnalysisPanel({
               className="text-muted-foreground"
             >
               <RotateCcw className="w-4 h-4 mr-1" />
-              重置
+              {t('resetButton')}
             </Button>
           )}
           <Button
@@ -234,7 +236,7 @@ export function ImageAnalysisPanel({
             disabled={disabled || loading}
           >
             <RefreshCw className="w-4 h-4 mr-1" />
-            重新分析
+            {t('reanalyzeButton')}
           </Button>
         </div>
       </div>
@@ -243,14 +245,14 @@ export function ImageAnalysisPanel({
         {/* Description */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-2">
-            物體描述
+            {t('objectDescription')}
           </label>
           <Textarea
             value={analysis?.description || ''}
             onChange={(e) => onDescriptionChange(e.target.value)}
             rows={3}
             className="resize-none"
-            placeholder="AI 生成的物體描述..."
+            placeholder={t('descriptionPlaceholder')}
             disabled={disabled}
           />
         </div>
@@ -260,7 +262,7 @@ export function ImageAnalysisPanel({
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-foreground flex items-center gap-2">
               <Palette className="w-4 h-4" />
-              色板 ({analysis?.colorPalette.length || 0})
+              {t('colorPalette')} ({analysis?.colorPalette.length || 0})
             </label>
             {(analysis?.colorPalette.length || 0) < 12 && (
               <Button
@@ -270,7 +272,7 @@ export function ImageAnalysisPanel({
                 disabled={disabled}
               >
                 <Plus className="w-4 h-4 mr-1" />
-                新增
+                {t('addColor')}
               </Button>
             )}
           </div>
@@ -287,7 +289,7 @@ export function ImageAnalysisPanel({
             ))}
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            點擊色塊可選擇新顏色，hover 可刪除
+            {t('colorTip')}
           </p>
         </div>
 
@@ -296,10 +298,10 @@ export function ImageAnalysisPanel({
           <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
               <Star className="w-4 h-4 text-primary fill-primary" />
-              <span className="text-sm font-medium text-foreground">AI 推薦風格</span>
+              <span className="text-sm font-medium text-foreground">{t('recommendedStyle')}</span>
               {analysis.styleConfidence !== undefined && analysis.styleConfidence > 0.5 && (
                 <span className="text-xs text-muted-foreground">
-                  ({Math.round(analysis.styleConfidence * 100)}% 信心度)
+                  ({Math.round(analysis.styleConfidence * 100)}% {t('confidence')})
                 </span>
               )}
             </div>
@@ -325,7 +327,7 @@ export function ImageAnalysisPanel({
             <button className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium text-foreground">3D 列印評估</span>
+                <span className="font-medium text-foreground">{t('printAssessment')}</span>
                 <StarRating score={analysis?.printFriendliness.score || 0} />
                 <span className="text-sm text-muted-foreground">
                   ({analysis?.printFriendliness.score}/5)
@@ -342,7 +344,7 @@ export function ImageAnalysisPanel({
               <div>
                 <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
                   <Palette className="w-4 h-4 text-blue-500 dark:text-blue-400" />
-                  色彩建議
+                  {t('colorSuggestions')}
                 </h4>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.colorSuggestions.map((suggestion, i) => (
@@ -357,7 +359,7 @@ export function ImageAnalysisPanel({
               <div>
                 <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
                   <AlertTriangle className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />
-                  結構問題
+                  {t('structuralConcerns')}
                 </h4>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.structuralConcerns.map((concern, i) => (
@@ -372,7 +374,7 @@ export function ImageAnalysisPanel({
               <div>
                 <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
                   <Package className="w-4 h-4 text-green-500 dark:text-green-400" />
-                  材質推薦
+                  {t('materialRecommendations')}
                 </h4>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.materialRecommendations.map((rec, i) => (
@@ -387,7 +389,7 @@ export function ImageAnalysisPanel({
               <div>
                 <h4 className="text-sm font-medium text-foreground flex items-center gap-2 mb-2">
                   <Lightbulb className="w-4 h-4 text-primary" />
-                  列印方向
+                  {t('orientationTips')}
                 </h4>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {analysis.printFriendliness.orientationTips.map((tip, i) => (
@@ -402,7 +404,7 @@ export function ImageAnalysisPanel({
         {/* Object Info */}
         <div className="flex flex-wrap gap-2">
           <Badge variant="outline" className="text-sm">
-            類型: {analysis?.objectType || 'unknown'}
+            {t('objectType')} {analysis?.objectType || 'unknown'}
           </Badge>
           {analysis?.detectedMaterials.map((material) => (
             <Badge key={material} variant="secondary" className="text-sm">

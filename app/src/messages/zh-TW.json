@@ -1121,5 +1121,29 @@
       "name": "表情符號",
       "description": "極簡球形設計，專注表情呈現"
     }
+  },
+  "imageAnalysis": {
+    "title": "AI 圖片分析",
+    "subtitle": "分析圖片以提取色號、物體描述和 3D 列印建議",
+    "colorCount": "色號數量",
+    "analyzeButton": "分析圖片",
+    "analyzing": "正在分析圖片...",
+    "results": "分析結果",
+    "edited": "已編輯",
+    "resetButton": "重置",
+    "reanalyzeButton": "重新分析",
+    "objectDescription": "物體描述",
+    "descriptionPlaceholder": "AI 生成的物體描述...",
+    "colorPalette": "色板",
+    "addColor": "新增",
+    "colorTip": "點擊色塊可選擇新顏色，hover 可刪除",
+    "printAssessment": "3D 列印評估",
+    "colorSuggestions": "色彩建議",
+    "structuralConcerns": "結構問題",
+    "materialRecommendations": "材質推薦",
+    "orientationTips": "列印方向",
+    "objectType": "類型:",
+    "recommendedStyle": "AI 推薦風格",
+    "confidence": "信心度"
   }
 }

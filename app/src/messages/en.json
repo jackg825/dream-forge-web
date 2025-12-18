@@ -1121,5 +1121,29 @@
       "name": "Emoji",
       "description": "Minimalist spherical design, expression-focused"
     }
+  },
+  "imageAnalysis": {
+    "title": "AI Image Analysis",
+    "subtitle": "Analyze images to extract colors, object description, and 3D printing recommendations",
+    "colorCount": "Color count",
+    "analyzeButton": "Analyze Image",
+    "analyzing": "Analyzing image...",
+    "results": "Analysis Results",
+    "edited": "Edited",
+    "resetButton": "Reset",
+    "reanalyzeButton": "Re-analyze",
+    "objectDescription": "Object Description",
+    "descriptionPlaceholder": "AI-generated object description...",
+    "colorPalette": "Color Palette",
+    "addColor": "Add",
+    "colorTip": "Click to change color, hover to delete",
+    "printAssessment": "3D Print Assessment",
+    "colorSuggestions": "Color Suggestions",
+    "structuralConcerns": "Structural Concerns",
+    "materialRecommendations": "Material Recommendations",
+    "orientationTips": "Orientation Tips",
+    "objectType": "Type:",
+    "recommendedStyle": "AI Recommended Style",
+    "confidence": "confidence"
   }
 }

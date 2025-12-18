@@ -217,11 +217,11 @@ export const createPipeline = functions
         format: settings?.format || 'glb',
         generationMode: modeId,
         geminiModel: geminiModel || 'gemini-2.5-flash',  // Default to fast model
-        colorCount: settings?.colorCount,
-        selectedStyle: selectedStyle,  // User-selected figure style
+        ...(settings?.colorCount !== undefined && { colorCount: settings.colorCount }),
+        ...(selectedStyle !== undefined && { selectedStyle }),  // User-selected figure style
       },
       userDescription: userDescription || null,
-      imageAnalysis: imageAnalysis || undefined,
+      ...(imageAnalysis !== undefined && { imageAnalysis }),
       createdAt: now,
       updatedAt: now,
     };
