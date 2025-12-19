@@ -368,9 +368,9 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
   }));
 
   const meshImages = MESH_ANGLES
-    .filter((angle) => pipeline.meshImages[angle])
+    .filter((angle) => pipeline.meshImages?.[angle])
     .map((angle) => ({
-      url: pipeline.meshImages[angle]!.url,
+      url: pipeline.meshImages![angle]!.url,
       label: angle,
       angle,
     }));
