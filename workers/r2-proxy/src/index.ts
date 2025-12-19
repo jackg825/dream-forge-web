@@ -283,9 +283,9 @@ async function handleDownload(
     return createErrorResponse('Missing file key', 'INVALID_REQUEST', 400);
   }
 
-  // 公開路徑：pipelines/* 和 uploads/* 允許公開訪問
+  // 公開路徑：pipelines/*, uploads/*, optimized/* 允許公開訪問
   // 路徑格式包含 userId，所以需要知道完整路徑才能訪問
-  const isPublicPath = key.startsWith('pipelines/') || key.startsWith('uploads/');
+  const isPublicPath = key.startsWith('pipelines/') || key.startsWith('uploads/') || key.startsWith('optimized/');
 
   if (isPublicPath) {
     // 公開路徑：只驗證 Referer 防止 hotlinking
