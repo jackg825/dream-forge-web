@@ -616,6 +616,10 @@
       "generatingTexture": "Generating Texture",
       "completed": "Completed",
       "failed": "Failed"
+    },
+    "styles": {
+      "reanalyzeRequired": "Style changed. Re-analyze to apply the new style.",
+      "reanalyze": "Re-analyze"
     }
   },
   "selectors": {

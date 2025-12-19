@@ -616,6 +616,10 @@
       "generatingTexture": "生成貼圖中",
       "completed": "已完成",
       "failed": "失敗"
+    },
+    "styles": {
+      "reanalyzeRequired": "風格已變更，需要重新分析以套用新風格",
+      "reanalyze": "重新分析"
     }
   },
   "selectors": {
