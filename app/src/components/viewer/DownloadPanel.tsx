@@ -6,13 +6,23 @@ import type { OutputFormat, DownloadFile } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Download, Loader2, Check, X, Printer, ChevronDown, ImageIcon } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Download, Loader2, Check, X, Printer, ChevronDown, ImageIcon, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { OptimizePanel } from './OptimizePanel';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DownloadPanelProps {
   modelUrl: string;
   downloadFiles?: DownloadFile[];
   jobId: string;
+  pipelineId?: string;
   currentFormat: OutputFormat;
 }
 
@@ -75,12 +85,17 @@ export function DownloadPanel({
   modelUrl,
   downloadFiles,
   jobId,
+  pipelineId,
   currentFormat,
 }: DownloadPanelProps) {
   const t = useTranslations('download');
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const [showTextures, setShowTextures] = useState(false);
   const [stlConversionStatus, setStlConversionStatus] = useState<ConversionStatus>('idle');
+  const [showOptimizeDialog, setShowOptimizeDialog] = useState(false);
+  const [optimizedUrl, setOptimizedUrl] = useState<string | null>(null);
 
   const handleDownload = async (url: string, fileName: string) => {
     setDownloadingFile(fileName);
@@ -248,6 +263,47 @@ export function DownloadPanel({
             >
               {getStlButtonContent()}
             </Button>
+          </div>
+        )}
+
+        {/* 3D Print Optimization (Admin Only) */}
+        {isAdmin && isGlbFormat && glbUrl && (
+          <div className="border-t pt-3">
+            <Dialog open={showOptimizeDialog} onOpenChange={setShowOptimizeDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <Wrench className="h-4 w-4 mr-2" />
+                  {t('printOptimization.button')}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{t('printOptimization.title')}</DialogTitle>
+                </DialogHeader>
+                <OptimizePanel
+                  modelUrl={glbUrl}
+                  pipelineId={pipelineId}
+                  jobId={jobId}
+                  onOptimized={(url) => {
+                    setOptimizedUrl(url);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+
+            {/* Show optimized download if available */}
+            {optimizedUrl && (
+              <Button
+                variant="default"
+                className="w-full mt-2"
+                asChild
+              >
+                <a href={optimizedUrl} download="optimized_model.stl">
+                  <Download className="h-4 w-4 mr-2" />
+                  {t('printOptimization.downloadOptimized')}
+                </a>
+              </Button>
+            )}
           </div>
         )}
 

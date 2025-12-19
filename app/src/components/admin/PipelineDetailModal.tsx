@@ -43,6 +43,7 @@ import { ProviderBadge } from '@/components/ui/provider-badge';
 import { PROVIDER_OPTIONS } from '@/types';
 import { useAdminPipelineRegeneration } from '@/hooks/useAdminPipelineRegeneration';
 import { downloadFile } from '@/lib/download';
+import { OptimizePanel } from '@/components/viewer/OptimizePanel';
 
 interface PipelineDetailModalProps {
   pipeline: AdminPipeline | null;
@@ -263,6 +264,7 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
   const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('meshy');
   const [activeTab, setActiveTab] = useState('input');
   const [downloading, setDownloading] = useState(false);
+  const [showOptimizeDialog, setShowOptimizeDialog] = useState(false);
 
   // Download handler - uses fetch to preserve Referer header
   const handleDownload = async (url: string, fileName: string) => {
@@ -719,6 +721,29 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
                       )}
                       下載貼圖模型
                     </Button>
+                  )}
+                  {/* 3D Print Optimization */}
+                  {pipeline.meshUrl && (
+                    <Dialog open={showOptimizeDialog} onOpenChange={setShowOptimizeDialog}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowOptimizeDialog(true)}
+                        className="gap-2"
+                      >
+                        <Wrench className="h-4 w-4" />
+                        最佳化模型
+                      </Button>
+                      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>3D 列印優化</DialogTitle>
+                        </DialogHeader>
+                        <OptimizePanel
+                          modelUrl={pipeline.meshUrl}
+                          pipelineId={pipeline.id}
+                        />
+                      </DialogContent>
+                    </Dialog>
                   )}
                 </div>
               </div>

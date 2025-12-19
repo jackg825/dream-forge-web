@@ -413,6 +413,51 @@
     "texture": {
       "title": "貼圖",
       "none": "無貼圖"
+    },
+    "printOptimization": {
+      "title": "3D 列印優化",
+      "button": "優化以便列印",
+      "downloadOptimized": "下載優化後的 STL"
+    }
+  },
+  "optimize": {
+    "title": "3D 列印優化",
+    "analysis": {
+      "title": "網格分析",
+      "faces": "面",
+      "watertight": "水密封閉",
+      "notWatertight": "非水密",
+      "issues": "個問題"
+    },
+    "simplify": {
+      "title": "網格簡化",
+      "ratio": "目標比例",
+      "description": "減少多邊形數量，讓切片更容易、列印更快速"
+    },
+    "repair": {
+      "title": "網格修復",
+      "fillHoles": "填補孔洞",
+      "fixNormals": "修復法線",
+      "makeWatertight": "確保水密"
+    },
+    "scale": {
+      "title": "尺寸縮放",
+      "description": "調整尺寸以符合列印床大小（單位：mm）"
+    },
+    "preview": {
+      "button": "預覽",
+      "comparison": "優化預覽",
+      "before": "優化前",
+      "after": "優化後",
+      "faces": "面",
+      "nowWatertight": "網格現已水密封閉",
+      "warnings": "個警告"
+    },
+    "optimize": {
+      "button": "執行優化"
+    },
+    "download": {
+      "button": "下載優化後的 STL"
     }
   },
   "modelInfo": {

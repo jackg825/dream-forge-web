@@ -67,3 +67,9 @@ export { submitGeminiBatch } from './handlers/gemini-batch';
 
 // Image analysis (pre-upload Gemini analysis)
 export { analyzeUploadedImage } from './handlers/analyze';
+
+// 3D Print mesh optimization
+export {
+  optimizeMeshForPrint,
+  analyzeMeshForPrint,
+} from './handlers/optimize';

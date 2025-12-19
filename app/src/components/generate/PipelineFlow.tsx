@@ -23,10 +23,19 @@ import {
   Printer,
   RotateCcw,
   Eye,
+  Wrench,
 } from 'lucide-react';
 import { ModelViewer, type ModelViewerRef } from '@/components/viewer/ModelViewer';
 import { TranslatedModelViewerErrorBoundary } from '@/components/viewer/ModelViewerErrorBoundary';
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
+import { OptimizePanel } from '@/components/viewer/OptimizePanel';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { usePipeline } from '@/hooks/usePipeline';
 import type { ViewMode, StyleId } from '@/types';
 import { DEFAULT_STYLE } from '@/types/styles';
@@ -134,8 +143,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const pipelineIdParam = searchParams.get('id');
   const locale = useLocale();
   const t = useTranslations('pipeline');
+  const tDownload = useTranslations('download');
 
   const { user, loading: authLoading } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const { credits, loading: creditsLoading } = useCredits(user?.uid);
 
   const [pipelineId, setPipelineId] = useState<string | null>(pipelineIdParam);
@@ -214,6 +225,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Download state
   const [downloading, setDownloading] = useState(false);
+
+  // 3D Print Optimization dialog state (Admin only)
+  const [showOptimizeDialog, setShowOptimizeDialog] = useState(false);
 
   const {
     pipeline,
@@ -1214,8 +1228,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               />
             </div>
 
-            {/* Download link */}
-            <div className="text-center">
+            {/* Download and optimization links */}
+            <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() => handleDownload(pipeline.meshUrl!, 'mesh-model.glb')}
                 disabled={downloading}
@@ -1228,6 +1242,31 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 )}
                 {t('step2.downloadGlb')}
               </button>
+
+              {/* 3D Print Optimization (Admin Only) */}
+              {isAdmin && (
+                <Dialog open={showOptimizeDialog} onOpenChange={setShowOptimizeDialog}>
+                  <DialogTrigger asChild>
+                    <button className="text-primary hover:underline text-sm inline-flex items-center gap-1">
+                      <Wrench className="h-3 w-3" />
+                      {tDownload('printOptimization.button')}
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{tDownload('printOptimization.title')}</DialogTitle>
+                    </DialogHeader>
+                    <OptimizePanel
+                      modelUrl={pipeline.meshUrl!}
+                      pipelineId={pipelineId || undefined}
+                      jobId={pipeline.meshyMeshTaskId}
+                      onOptimized={(url) => {
+                        console.log('Optimized model URL:', url);
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </>
         ) : (
@@ -1324,8 +1363,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               />
             </div>
 
-            {/* Download link */}
-            <div className="text-center">
+            {/* Download and optimization links */}
+            <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() =>
                   handleDownload(modelUrl, hasTexture ? 'textured-model.glb' : 'mesh-model.glb')
@@ -1342,6 +1381,31 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 )}
                 {t('step2.downloadGlb')}
               </button>
+
+              {/* 3D Print Optimization (Admin Only) */}
+              {isAdmin && modelUrl && (
+                <Dialog open={showOptimizeDialog} onOpenChange={setShowOptimizeDialog}>
+                  <DialogTrigger asChild>
+                    <button className="text-primary hover:underline text-sm inline-flex items-center gap-1">
+                      <Wrench className="h-3 w-3" />
+                      {tDownload('printOptimization.button')}
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{tDownload('printOptimization.title')}</DialogTitle>
+                    </DialogHeader>
+                    <OptimizePanel
+                      modelUrl={modelUrl}
+                      pipelineId={pipelineId || undefined}
+                      jobId={pipeline?.meshyMeshTaskId}
+                      onOptimized={(url) => {
+                        console.log('Optimized model URL:', url);
+                      }}
+                    />
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </>
         ) : (

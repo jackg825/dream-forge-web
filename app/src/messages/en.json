@@ -413,6 +413,51 @@
     "texture": {
       "title": "Texture",
       "none": "No texture"
+    },
+    "printOptimization": {
+      "title": "3D Print Optimization",
+      "button": "Optimize for Printing",
+      "downloadOptimized": "Download Optimized STL"
+    }
+  },
+  "optimize": {
+    "title": "Optimize for 3D Printing",
+    "analysis": {
+      "title": "Mesh Analysis",
+      "faces": "faces",
+      "watertight": "Watertight",
+      "notWatertight": "Not Watertight",
+      "issues": "issues detected"
+    },
+    "simplify": {
+      "title": "Mesh Simplification",
+      "ratio": "Target Ratio",
+      "description": "Reduce polygon count for easier slicing and faster printing"
+    },
+    "repair": {
+      "title": "Mesh Repair",
+      "fillHoles": "Fill Holes",
+      "fixNormals": "Fix Normals",
+      "makeWatertight": "Make Watertight"
+    },
+    "scale": {
+      "title": "Size Scaling",
+      "description": "Adjust dimensions to fit your print bed (in mm)"
+    },
+    "preview": {
+      "button": "Preview",
+      "comparison": "Optimization Preview",
+      "before": "Before",
+      "after": "After",
+      "faces": "faces",
+      "nowWatertight": "Mesh is now watertight",
+      "warnings": "warnings"
+    },
+    "optimize": {
+      "button": "Optimize"
+    },
+    "download": {
+      "button": "Download Optimized STL"
     }
   },
   "modelInfo": {
