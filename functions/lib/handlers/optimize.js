@@ -85,13 +85,18 @@ async function getModelBuffer(pipelineId, jobId, modelUrl) {
             return { error: 'Pipeline not found' };
         }
         const pipeline = pipelineDoc.data();
-        const modelPath = pipeline?.result?.modelPath || pipeline?.steps?.generation?.result?.modelPath;
-        if (!modelPath) {
+        // Use meshUrl or texturedModelUrl from the Pipeline document
+        const pipelineModelUrl = pipeline?.meshUrl || pipeline?.texturedModelUrl;
+        if (!pipelineModelUrl) {
             return { error: 'Pipeline has no model' };
         }
         try {
-            const buffer = await (0, storage_1.downloadFile)(modelPath);
-            return { buffer, storagePath: modelPath };
+            // Download from URL
+            const response = await axios_1.default.get(pipelineModelUrl, {
+                responseType: 'arraybuffer',
+                timeout: 120000,
+            });
+            return { buffer: Buffer.from(response.data) };
         }
         catch (e) {
             return { error: `Failed to download model: ${e}` };

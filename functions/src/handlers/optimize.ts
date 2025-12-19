@@ -20,7 +20,7 @@ import {
   previewOptimization,
   type MeshStats,
 } from '../optimize/mesh-optimizer';
-import { uploadBuffer, downloadFile } from '../storage';
+import { uploadBuffer } from '../storage';
 
 const db = admin.firestore();
 
@@ -147,15 +147,20 @@ async function getModelBuffer(
     }
 
     const pipeline = pipelineDoc.data();
-    const modelPath = pipeline?.result?.modelPath || pipeline?.steps?.generation?.result?.modelPath;
+    // Use meshUrl or texturedModelUrl from the Pipeline document
+    const pipelineModelUrl = pipeline?.meshUrl || pipeline?.texturedModelUrl;
 
-    if (!modelPath) {
+    if (!pipelineModelUrl) {
       return { error: 'Pipeline has no model' };
     }
 
     try {
-      const buffer = await downloadFile(modelPath);
-      return { buffer, storagePath: modelPath };
+      // Download from URL
+      const response = await axios.get(pipelineModelUrl, {
+        responseType: 'arraybuffer',
+        timeout: 120000,
+      });
+      return { buffer: Buffer.from(response.data) };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
     }
