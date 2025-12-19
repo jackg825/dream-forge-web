@@ -603,7 +603,8 @@
       "generating": "生成中...",
       "processing": "處理中...",
       "pleaseSignIn": "請先登入以上傳圖片",
-      "signIn": "登入"
+      "signIn": "登入",
+      "cancel": "取消"
     },
     "status": {
       "draft": "草稿",

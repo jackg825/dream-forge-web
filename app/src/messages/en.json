@@ -603,7 +603,8 @@
       "generating": "Generating...",
       "processing": "Processing...",
       "pleaseSignIn": "Please sign in to upload images",
-      "signIn": "Sign In"
+      "signIn": "Sign In",
+      "cancel": "Cancel"
     },
     "status": {
       "draft": "Draft",
