@@ -24,6 +24,40 @@ export type { StyleConfig } from '@/types/styles';
  * Test different phrasings and adjust for optimal output quality.
  */
 export const STYLE_CONFIGS: Record<StyleId, StyleConfig> = {
+  none: {
+    id: 'none',
+    name: 'None',
+    nameZh: '無',
+    description: 'Preserve original photo style without transformation',
+    descriptionZh: '保持上傳照片原始模樣及風格',
+    promptModifiers: {
+      meshStyle:
+        'Preserve the original appearance and style of the subject exactly as shown. ' +
+        'Do not apply any stylization or transformation. ' +
+        'Maintain realistic proportions and natural appearance. ' +
+        'Keep all details, textures, and characteristics as they are.',
+      textureStyle:
+        'Preserve original textures and materials exactly as shown. ' +
+        'Maintain natural skin tones, fabric textures, and surface details. ' +
+        'No stylization - keep photorealistic appearance.',
+      proportions:
+        'Maintain original realistic proportions. ' +
+        'No exaggeration or stylization of body parts. ' +
+        'Keep natural human proportions.',
+      features:
+        'Preserve all original features without modification. ' +
+        'Maintain natural facial features and expressions. ' +
+        'Keep clothing and accessories as they appear.',
+    },
+    previewImages: [], // No preview images - shows original style
+    characteristics: {
+      headRatio: '原始比例',
+      bodyStyle: '保持原貌',
+      faceEmphasis: '自然外觀',
+      colorApproach: '原始色彩',
+    },
+  },
+
   bobblehead: {
     id: 'bobblehead',
     name: 'Bobblehead',

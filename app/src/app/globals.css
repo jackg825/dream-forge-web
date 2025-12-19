@@ -142,6 +142,52 @@
   --accent-yellow: oklch(85% 0.15 85);
 }
 
+/* Figure style accent colors (store parameters for alpha compositing) */
+:root {
+  --style-none: 70% 0.02 0;           /* Neutral gray */
+  --style-bobblehead: 75% 0.2 45;     /* Warm coral/orange */
+  --style-chibi: 72% 0.22 330;        /* Vibrant pink */
+  --style-cartoon: 68% 0.22 265;      /* Royal blue/violet */
+  --style-emoji: 82% 0.18 90;         /* Sunny yellow */
+}
+
+.dark {
+  --style-none: 55% 0.02 0;
+  --style-bobblehead: 70% 0.22 45;
+  --style-chibi: 68% 0.25 330;
+  --style-cartoon: 62% 0.25 265;
+  --style-emoji: 78% 0.2 90;
+}
+
+/* Style card animations */
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 0.8;
+  }
+}
+
+@keyframes card-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--glow-color, transparent);
+  }
+  50% {
+    box-shadow: 0 0 20px 2px var(--glow-color, transparent);
+  }
+}
+
+.animate-sparkle {
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.style-card-glow {
+  animation: card-glow 2s ease-in-out infinite;
+}
+
 /* Floating animation for decorative shapes */
 @keyframes float {
   0%, 100% {

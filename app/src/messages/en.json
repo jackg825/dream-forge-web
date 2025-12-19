@@ -1223,6 +1223,14 @@
       "faceEmphasis": "Expression only, no details",
       "colorApproach": "3-4 colors, solid blocks"
     },
+    "none": {
+      "name": "None",
+      "description": "Preserve original photo style without transformation",
+      "headRatio": "Original proportions",
+      "bodyStyle": "As photographed",
+      "faceEmphasis": "Natural appearance",
+      "colorApproach": "Original colors"
+    },
     "locked": "Locked",
     "change": "Change",
     "reanalyzeRequired": "Style changed. Re-analyze to apply the new style.",

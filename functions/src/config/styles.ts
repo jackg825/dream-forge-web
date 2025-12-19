@@ -7,8 +7,13 @@
 
 /**
  * Available style identifiers
+ * - none: Preserve original photo style without transformation
+ * - bobblehead: Large head, spring neck, vinyl finish
+ * - chibi: Anime style, cute proportions
+ * - cartoon: Pixar/Disney style, expressive
+ * - emoji: Minimalist, spherical, expression-focused
  */
-export type StyleId = 'bobblehead' | 'chibi' | 'cartoon' | 'emoji';
+export type StyleId = 'none' | 'bobblehead' | 'chibi' | 'cartoon' | 'emoji';
 
 /**
  * Prompt modifiers for different generation stages
@@ -32,7 +37,7 @@ export interface StyleConfig {
 /**
  * All available style IDs
  */
-export const STYLE_IDS: StyleId[] = ['bobblehead', 'chibi', 'cartoon', 'emoji'];
+export const STYLE_IDS: StyleId[] = ['none', 'bobblehead', 'chibi', 'cartoon', 'emoji'];
 
 /**
  * Default style when none selected
@@ -50,6 +55,30 @@ export function isValidStyleId(value: string | undefined): value is StyleId {
  * Style configurations with prompt engineering
  */
 export const STYLE_CONFIGS: Record<StyleId, StyleConfig> = {
+  none: {
+    id: 'none',
+    name: 'None',
+    promptModifiers: {
+      meshStyle:
+        'Preserve the original appearance and style of the subject exactly as shown. ' +
+        'Do not apply any stylization or transformation. ' +
+        'Maintain realistic proportions and natural appearance. ' +
+        'Keep all details, textures, and characteristics as they are.',
+      textureStyle:
+        'Preserve original textures and materials exactly as shown. ' +
+        'Maintain natural skin tones, fabric textures, and surface details. ' +
+        'No stylization - keep photorealistic appearance.',
+      proportions:
+        'Maintain original realistic proportions. ' +
+        'No exaggeration or stylization of body parts. ' +
+        'Keep natural human proportions.',
+      features:
+        'Preserve all original features without modification. ' +
+        'Maintain natural facial features and expressions. ' +
+        'Keep clothing and accessories as they appear.',
+    },
+  },
+
   bobblehead: {
     id: 'bobblehead',
     name: 'Bobblehead',

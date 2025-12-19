@@ -10,8 +10,13 @@
 
 /**
  * Available style identifiers
+ * - none: Preserve original photo style without transformation
+ * - bobblehead: Large head, spring neck, vinyl finish
+ * - chibi: Anime style, cute proportions
+ * - cartoon: Pixar/Disney style, expressive
+ * - emoji: Minimalist, spherical, expression-focused
  */
-export type StyleId = 'bobblehead' | 'chibi' | 'cartoon' | 'emoji';
+export type StyleId = 'none' | 'bobblehead' | 'chibi' | 'cartoon' | 'emoji';
 
 /**
  * Prompt modifiers for different generation stages
@@ -78,7 +83,7 @@ export const DEFAULT_STYLE: StyleId = 'chibi';
 /**
  * All available style IDs for validation
  */
-export const STYLE_IDS: StyleId[] = ['bobblehead', 'chibi', 'cartoon', 'emoji'];
+export const STYLE_IDS: StyleId[] = ['none', 'bobblehead', 'chibi', 'cartoon', 'emoji'];
 
 /**
  * Validate if a string is a valid StyleId

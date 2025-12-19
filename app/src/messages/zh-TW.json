@@ -1223,6 +1223,14 @@
       "faceEmphasis": "只有表情，沒有細節",
       "colorApproach": "3-4 色，純色塊"
     },
+    "none": {
+      "name": "無",
+      "description": "保持上傳照片原始模樣及風格",
+      "headRatio": "原始比例",
+      "bodyStyle": "保持原貌",
+      "faceEmphasis": "自然外觀",
+      "colorApproach": "原始色彩"
+    },
     "locked": "已鎖定",
     "change": "變更",
     "reanalyzeRequired": "風格已變更，需要重新分析以套用新風格",
