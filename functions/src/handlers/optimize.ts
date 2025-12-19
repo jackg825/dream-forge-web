@@ -20,7 +20,7 @@ import {
   previewOptimization,
   type MeshStats,
 } from '../optimize/mesh-optimizer';
-import { uploadBuffer } from '../storage';
+import { uploadBuffer, downloadFile } from '../storage';
 
 const db = admin.firestore();
 
@@ -147,20 +147,17 @@ async function getModelBuffer(
     }
 
     const pipeline = pipelineDoc.data();
-    // Use meshUrl or texturedModelUrl from the Pipeline document
-    const pipelineModelUrl = pipeline?.meshUrl || pipeline?.texturedModelUrl;
+    // Use storagePath to download directly from R2 (bypasses HTTP proxy with hotlink protection)
+    const storagePath = pipeline?.meshStoragePath || pipeline?.texturedModelStoragePath;
 
-    if (!pipelineModelUrl) {
-      return { error: 'Pipeline has no model' };
+    if (!storagePath) {
+      return { error: 'Pipeline has no model storage path' };
     }
 
     try {
-      // Download from URL
-      const response = await axios.get(pipelineModelUrl, {
-        responseType: 'arraybuffer',
-        timeout: 120000,
-      });
-      return { buffer: Buffer.from(response.data) };
+      // Download directly from R2 using S3 client
+      const buffer = await downloadFile(storagePath);
+      return { buffer, storagePath };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
     }
@@ -225,6 +222,10 @@ export const optimizeMeshForPrint = functions
   .runWith({
     timeoutSeconds: 540, // 9 minutes for large meshes
     memory: '2GB',
+    secrets: [
+      'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY',
+      'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
+    ],
   })
   .https.onCall(
     async (
@@ -424,6 +425,10 @@ export const analyzeMeshForPrint = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
+    secrets: [
+      'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY',
+      'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
+    ],
   })
   .https.onCall(
     async (

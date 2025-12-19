@@ -204,10 +204,25 @@ export function OptimizePanel({
             </div>
 
             {analysis.issues.length > 0 && (
-              <div className="flex items-start gap-1 text-xs text-yellow-600">
-                <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                <span>{analysis.issues.length} {t('analysis.issues')}</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 text-xs text-yellow-600">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  <span>{analysis.issues.length} {t('analysis.issues')}</span>
+                </div>
+                <ul className="text-xs text-muted-foreground pl-4 space-y-0.5">
+                  {analysis.issues.map((issue, i) => (
+                    <li key={i}>• {issue}</li>
+                  ))}
+                </ul>
               </div>
+            )}
+
+            {analysis.recommendations && analysis.recommendations.length > 0 && (
+              <ul className="text-xs text-blue-600 pl-4 space-y-0.5">
+                {analysis.recommendations.map((rec, i) => (
+                  <li key={i}>💡 {rec}</li>
+                ))}
+              </ul>
             )}
           </div>
         )}
@@ -378,9 +393,16 @@ export function OptimizePanel({
             )}
 
             {preview.warnings.length > 0 && (
-              <div className="text-xs text-yellow-600">
-                <AlertTriangle className="h-3 w-3 inline mr-1" />
-                {preview.warnings.length} {t('preview.warnings')}
+              <div className="space-y-1">
+                <div className="text-xs text-yellow-600">
+                  <AlertTriangle className="h-3 w-3 inline mr-1" />
+                  {preview.warnings.length} {t('preview.warnings')}
+                </div>
+                <ul className="text-xs text-muted-foreground pl-4 space-y-0.5">
+                  {preview.warnings.map((warning, i) => (
+                    <li key={i}>• {warning}</li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
