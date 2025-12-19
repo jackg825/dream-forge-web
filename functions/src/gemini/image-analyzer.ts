@@ -14,7 +14,7 @@
 import axios from 'axios';
 import * as functions from 'firebase-functions';
 import type { PrinterType, KeyFeatures } from '../rodin/types';
-import { type StyleId, isValidStyleId } from '../config/styles';
+import { type StyleId, isValidStyleId, getStyleConfig } from '../config/styles';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MODEL = 'gemini-3-flash-preview';
@@ -46,6 +46,10 @@ export interface ImageAnalysisResult {
   recommendedStyle?: StyleId;         // AI-recommended figure style
   styleConfidence?: number;           // Confidence score 0-1
   styleReasoning?: string;            // Why this style was recommended
+  // Style context (when user selected a style before analysis)
+  analyzedWithStyle?: StyleId;        // The style used for context-aware analysis
+  styleSuitability?: number;          // How well the image fits the selected style (0-1)
+  styleSuitabilityReason?: string;    // Explanation if suitability is low
   analyzedAt: FirebaseFirestore.Timestamp;
 }
 
@@ -56,6 +60,7 @@ export interface AnalyzeImageOptions {
   colorCount: number;       // Number of colors to extract (3-12)
   printerType: PrinterType; // Printer type affects recommendations
   locale?: string;          // User's locale for response language (default: 'zh-TW')
+  selectedStyle?: StyleId;  // User-selected style for context-aware analysis
 }
 
 /**
@@ -179,7 +184,9 @@ ASYMMETRIC: [comma-separated asymmetric features in English, or "none"]
 SURFACE_TEXTURES: [comma-separated texture descriptions in English]
 RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
 STYLE_CONFIDENCE: [0.0-1.0]
-STYLE_REASONING: [Brief explanation in English]`,
+STYLE_REASONING: [Brief explanation in English]
+STYLE_SUITABILITY: [0.0-1.0, only if target style was specified]
+STYLE_SUITABILITY_REASON: [Brief explanation if suitability < 0.5, or "none"]`,
       },
     };
   }
@@ -262,21 +269,80 @@ ASYMMETRIC: [逗號分隔的不對稱特徵清單，使用繁體中文，若無�
 SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]
 RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
 STYLE_CONFIDENCE: [0.0-1.0]
-STYLE_REASONING: [簡短解釋，使用繁體中文]`,
+STYLE_REASONING: [簡短解釋，使用繁體中文]
+STYLE_SUITABILITY: [0.0-1.0，僅當指定了目標風格時填寫]
+STYLE_SUITABILITY_REASON: [如果適合度 < 0.5 請簡短說明原因，使用繁體中文，否則填 none]`,
     },
   };
 }
 
 /**
+ * Build style context block for the prompt when user has selected a style
+ */
+function buildStyleContextBlock(selectedStyle: StyleId, locale: string): string {
+  const styleConfig = getStyleConfig(selectedStyle);
+  const { meshStyle, proportions, features } = styleConfig.promptModifiers;
+
+  const isEnglish = locale === 'en' || locale.startsWith('en-');
+
+  if (isEnglish) {
+    return `
+=== TARGET STYLE: ${styleConfig.name.toUpperCase()} ===
+The user has selected the "${styleConfig.name}" style for their 3D figure.
+
+**Style Characteristics:**
+- Mesh Style: ${meshStyle}
+- Proportions: ${proportions}
+- Feature Emphasis: ${features}
+
+**IMPORTANT Instructions:**
+1. Generate your PROMPT_DESCRIPTION specifically tailored for this ${styleConfig.name} style
+2. Your STYLE_HINTS should complement the ${styleConfig.name} aesthetic
+3. Assess STYLE_SUITABILITY: How well does this image subject fit the ${styleConfig.name} style? (0.0-1.0)
+4. If suitability < 0.5, explain why in STYLE_SUITABILITY_REASON
+
+=== END TARGET STYLE ===
+`;
+  }
+
+  // Traditional Chinese
+  return `
+=== 目標風格: ${styleConfig.name.toUpperCase()} ===
+用戶已選擇「${styleConfig.name}」風格來生成 3D 公仔。
+
+**風格特徵：**
+- 網格風格: ${meshStyle}
+- 比例特徵: ${proportions}
+- 強調特點: ${features}
+
+**重要指示：**
+1. 請根據 ${styleConfig.name} 風格特點來生成 PROMPT_DESCRIPTION
+2. STYLE_HINTS 應該配合 ${styleConfig.name} 的美學風格
+3. 評估 STYLE_SUITABILITY：這張圖片的主體有多適合 ${styleConfig.name} 風格？(0.0-1.0)
+4. 如果適合度 < 0.5，請在 STYLE_SUITABILITY_REASON 中說明原因
+
+=== 目標風格結束 ===
+`;
+}
+
+/**
  * Build the analysis prompt for Gemini
  */
-function buildAnalysisPrompt(colorCount: number, printerType: PrinterType, locale: string = 'zh-TW'): string {
+function buildAnalysisPrompt(
+  colorCount: number,
+  printerType: PrinterType,
+  locale: string = 'zh-TW',
+  selectedStyle?: StyleId
+): string {
   const lang = getLanguageStrings(locale);
   const printerDescription = lang.printerTypes[printerType] || lang.printerTypes.fdm;
   const i = lang.instructions;
 
-  return `${i.intro}
+  // Build style context block if user selected a style
+  const styleContext = selectedStyle ? buildStyleContextBlock(selectedStyle, locale) : '';
 
+  return `${i.intro}
+${styleContext}
 ${i.promptDescription}
 
 ${i.styleHints}
@@ -410,6 +476,18 @@ function parseAnalysisResponse(
 
   const styleReasoning = extractField('STYLE_REASONING') || undefined;
 
+  // Extract style suitability (when user selected a target style)
+  const styleSuitabilityRaw = extractField('STYLE_SUITABILITY');
+  const styleSuitability = styleSuitabilityRaw
+    ? Math.min(1, Math.max(0, parseFloat(styleSuitabilityRaw) || 0))
+    : undefined;
+
+  const styleSuitabilityReasonRaw = extractField('STYLE_SUITABILITY_REASON');
+  const styleSuitabilityReason =
+    styleSuitabilityReasonRaw && styleSuitabilityReasonRaw.toLowerCase() !== 'none'
+      ? styleSuitabilityReasonRaw
+      : undefined;
+
   return {
     description,
     ...(promptDescription && { promptDescription }),
@@ -429,6 +507,9 @@ function parseAnalysisResponse(
     ...(recommendedStyle && { recommendedStyle }),
     ...(styleConfidence !== undefined && { styleConfidence }),
     ...(styleReasoning && { styleReasoning }),
+    // Style suitability fields (when target style was specified)
+    ...(styleSuitability !== undefined && { styleSuitability }),
+    ...(styleSuitabilityReason && { styleSuitabilityReason }),
   };
 }
 
@@ -459,15 +540,18 @@ export async function analyzeImage(
 
   const locale = options.locale || 'zh-TW';
 
+  const selectedStyle = options.selectedStyle;
+
   functions.logger.info('Starting image analysis', {
     model: MODEL,
     colorCount,
     printerType: options.printerType,
     locale,
     mimeType,
+    selectedStyle: selectedStyle || 'none',
   });
 
-  const prompt = buildAnalysisPrompt(colorCount, options.printerType, locale);
+  const prompt = buildAnalysisPrompt(colorCount, options.printerType, locale, selectedStyle);
 
   try {
     const response = await axios.post<GeminiAnalysisResponse>(
@@ -550,9 +634,16 @@ export async function analyzeImage(
       // Style recommendation logging
       recommendedStyle: result.recommendedStyle ?? 'none',
       styleConfidence: result.styleConfidence ?? 0,
+      // Style context logging (when user selected a style)
+      analyzedWithStyle: selectedStyle ?? 'none',
+      styleSuitability: result.styleSuitability ?? 'n/a',
     });
 
-    return result;
+    // Include analyzedWithStyle in result if style was provided
+    return {
+      ...result,
+      ...(selectedStyle && { analyzedWithStyle: selectedStyle }),
+    };
   } catch (error) {
     if (error instanceof functions.https.HttpsError) {
       throw error;

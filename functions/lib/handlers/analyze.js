@@ -94,7 +94,7 @@ exports.analyzeUploadedImage = functions
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to analyze images');
     }
-    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW' } = data;
+    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW', selectedStyle } = data;
     // Validate input
     if (!imageUrl) {
         throw new functions.https.HttpsError('invalid-argument', 'imageUrl is required');
@@ -105,6 +105,7 @@ exports.analyzeUploadedImage = functions
         userId: context.auth.uid,
         colorCount: validColorCount,
         printerType,
+        selectedStyle: selectedStyle || 'none',
     });
     try {
         // Download image
@@ -113,11 +114,12 @@ exports.analyzeUploadedImage = functions
             mimeType,
             base64Length: base64.length,
         });
-        // Analyze image
+        // Analyze image with optional style context
         const analysisResult = await (0, image_analyzer_1.analyzeImage)(base64, mimeType, {
             colorCount: validColorCount,
             printerType,
             locale,
+            selectedStyle,
         });
         // Add timestamp
         const analysis = {

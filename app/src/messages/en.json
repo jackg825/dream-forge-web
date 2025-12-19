@@ -1175,7 +1175,12 @@
       "bodyStyle": "Minimal geometric shape",
       "faceEmphasis": "Expression only, no details",
       "colorApproach": "3-4 colors, solid blocks"
-    }
+    },
+    "locked": "Locked",
+    "change": "Change",
+    "reanalyzeRequired": "Style changed. Re-analyze to apply the new style.",
+    "reanalyze": "Re-analyze",
+    "suitabilityWarning": "This image may not be ideal for {style} style"
   },
   "imageAnalysis": {
     "title": "AI Image Analysis",

@@ -159,6 +159,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   // Style selection state - default to chibi, auto-set from AI recommendation
   const [selectedStyle, setSelectedStyle] = useState<StyleId>(DEFAULT_STYLE);
 
+  // Style change flow state - tracks when user wants to change style after analysis
+  const [styleChangeRequested, setStyleChangeRequested] = useState(false);
+
   // Image analysis hook
   const {
     analysis: imageAnalysis,
@@ -274,12 +277,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   }, [pipeline, imageAnalysis, setAnalysis, uploadedImages.length]);
 
-  // Auto-select recommended style when analysis provides a recommendation
-  useEffect(() => {
-    if (imageAnalysis?.recommendedStyle) {
-      setSelectedStyle(imageAnalysis.recommendedStyle);
-    }
-  }, [imageAnalysis?.recommendedStyle]);
+  // Note: We no longer auto-select recommended style since user now selects style BEFORE analysis
+  // The analysis uses the user's selected style for context-aware generation
+  // Keep the recommendedStyle visible in the UI for reference, but don't auto-switch
 
   // Start polling when generating
   useEffect(() => {
@@ -389,16 +389,18 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     if (!user || uploadedImages.length === 0) return;
 
     try {
-      // Run analysis with current locale for language-appropriate results
-      const result = await analyzeImage(uploadedImages[0].url, colorCount, 'fdm', locale);
+      // Run analysis with current locale and selected style for context-aware results
+      const result = await analyzeImage(uploadedImages[0].url, colorCount, 'fdm', locale, selectedStyle);
+
+      // Reset style change request flag after successful analysis
+      setStyleChangeRequested(false);
 
       // Create draft pipeline with analysis results
-      // Use recommended style from analysis, or default if not available
-      const styleToUse = result.recommendedStyle || selectedStyle;
+      // Use the user's selected style (which was passed to analysis)
       const imageUrls = uploadedImages.map((img) => img.url);
       const newPipelineId = await createPipeline(
         imageUrls,
-        { meshPrecision, colorCount, selectedStyle: styleToUse },
+        { meshPrecision, colorCount, selectedStyle },
         generationMode,
         processingMode,
         result.description,
@@ -413,6 +415,28 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       console.error('Analysis failed:', err);
       // Error is handled by useImageAnalysis hook
     }
+  };
+
+  // Handle style change request (when user wants to change style after analysis)
+  const handleStyleChangeRequest = () => {
+    setStyleChangeRequested(true);
+  };
+
+  // Handle style change confirmation - re-analyze with new style
+  const handleStyleChangeConfirm = async () => {
+    // Clear analysis and re-run with new style
+    resetAnalysis();
+    setStyleChangeRequested(false);
+    // The user will need to click "Analyze" again
+  };
+
+  // Handle style change cancel - revert to original style
+  const handleStyleChangeCancel = () => {
+    // Revert to the style that was used for analysis
+    if (imageAnalysis?.analyzedWithStyle) {
+      setSelectedStyle(imageAnalysis.analyzedWithStyle);
+    }
+    setStyleChangeRequested(false);
   };
 
   // Handle mesh generation with provider selection
@@ -503,6 +527,39 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             disabled={actionLoading}
           />
 
+          {/* Style Selector - shows after images uploaded, BEFORE analysis */}
+          {uploadedImages.length > 0 && (
+            <StyleSelector
+              value={selectedStyle}
+              onChange={setSelectedStyle}
+              recommendedStyle={imageAnalysis?.recommendedStyle}
+              styleConfidence={imageAnalysis?.styleConfidence}
+              disabled={actionLoading || analysisLoading}
+              locked={!!imageAnalysis && !styleChangeRequested}
+              onRequestUnlock={handleStyleChangeRequest}
+              styleSuitability={imageAnalysis?.styleSuitability}
+              styleSuitabilityReason={imageAnalysis?.styleSuitabilityReason}
+            />
+          )}
+
+          {/* Re-analyze prompt when style changed after analysis */}
+          {styleChangeRequested && imageAnalysis && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="text-sm text-amber-800 dark:text-amber-200 flex-1">
+                {t('styles.reanalyzeRequired')}
+              </span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleStyleChangeCancel}>
+                  {t('buttons.cancel')}
+                </Button>
+                <Button size="sm" onClick={handleStyleChangeConfirm}>
+                  {t('styles.reanalyze')}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Image Analysis Panel - shows after images uploaded */}
           {uploadedImages.length > 0 && (
             <ImageAnalysisPanel
@@ -526,24 +583,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             />
           )}
 
-          {/* Style Selector - shows after analysis completes */}
-          {imageAnalysis && (
-            <StyleSelector
-              value={selectedStyle}
-              onChange={setSelectedStyle}
-              recommendedStyle={imageAnalysis.recommendedStyle}
-              styleConfidence={imageAnalysis.styleConfidence}
-              disabled={actionLoading}
-            />
-          )}
-
-          {/* Start button - only show after analysis completes */}
-          {imageAnalysis && (
+          {/* Start button - only show after analysis completes and no style change pending */}
+          {/* Style selector is now shown before analysis */}
+          {imageAnalysis && !styleChangeRequested && (
             <div className="flex justify-center">
                 <Button
                   size="lg"
                   onClick={handleStartPipeline}
-                  disabled={uploadedImages.length === 0 || actionLoading || authLoading}
+                  disabled={uploadedImages.length === 0 || actionLoading || authLoading || styleChangeRequested}
                   className="px-8"
                 >
                   {actionLoading ? (
@@ -613,6 +660,37 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           </div>
         )}
 
+        {/* Style Selector - shows before analysis panel, with locked state */}
+        <StyleSelector
+          value={selectedStyle}
+          onChange={setSelectedStyle}
+          recommendedStyle={imageAnalysis?.recommendedStyle}
+          styleConfidence={imageAnalysis?.styleConfidence}
+          disabled={actionLoading || analysisLoading}
+          locked={!!imageAnalysis && !styleChangeRequested}
+          onRequestUnlock={handleStyleChangeRequest}
+          styleSuitability={imageAnalysis?.styleSuitability}
+          styleSuitabilityReason={imageAnalysis?.styleSuitabilityReason}
+        />
+
+        {/* Re-analyze prompt when style changed after analysis */}
+        {styleChangeRequested && imageAnalysis && (
+          <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+            <span className="text-sm text-amber-800 dark:text-amber-200 flex-1">
+              {t('styles.reanalyzeRequired')}
+            </span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={handleStyleChangeCancel}>
+                {t('buttons.cancel')}
+              </Button>
+              <Button size="sm" onClick={handleStyleChangeConfirm}>
+                {t('styles.reanalyze')}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Image Analysis Panel - editable */}
         <ImageAnalysisPanel
           analysis={imageAnalysis}
@@ -633,17 +711,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           hasEdits={analysisHasEdits}
           disabled={actionLoading}
         />
-
-        {/* Style Selector - shows after analysis completes */}
-        {imageAnalysis && (
-          <StyleSelector
-            value={selectedStyle}
-            onChange={setSelectedStyle}
-            recommendedStyle={imageAnalysis.recommendedStyle}
-            styleConfidence={imageAnalysis.styleConfidence}
-            disabled={actionLoading}
-          />
-        )}
 
         {/* Multi-view grid (if images exist) - only show mesh images for 3D printing */}
         {hasSomeImages && (

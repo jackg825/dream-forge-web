@@ -1175,7 +1175,12 @@
       "bodyStyle": "極簡幾何形狀",
       "faceEmphasis": "只有表情，沒有細節",
       "colorApproach": "3-4 色，純色塊"
-    }
+    },
+    "locked": "已鎖定",
+    "change": "變更",
+    "reanalyzeRequired": "風格已變更，需要重新分析以套用新風格",
+    "reanalyze": "重新分析",
+    "suitabilityWarning": "這張圖片可能不太適合 {style} 風格"
   },
   "imageAnalysis": {
     "title": "AI 圖片分析",

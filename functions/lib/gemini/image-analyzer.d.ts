@@ -37,6 +37,9 @@ export interface ImageAnalysisResult {
     recommendedStyle?: StyleId;
     styleConfidence?: number;
     styleReasoning?: string;
+    analyzedWithStyle?: StyleId;
+    styleSuitability?: number;
+    styleSuitabilityReason?: string;
     analyzedAt: FirebaseFirestore.Timestamp;
 }
 /**
@@ -46,6 +49,7 @@ export interface AnalyzeImageOptions {
     colorCount: number;
     printerType: PrinterType;
     locale?: string;
+    selectedStyle?: StyleId;
 }
 /**
  * Analyze an image using Gemini

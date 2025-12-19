@@ -1090,6 +1090,10 @@ export interface ImageAnalysisResult {
   recommendedStyle?: import('./styles').StyleId;  // AI-recommended figure style
   styleConfidence?: number;           // Confidence score 0-1
   styleReasoning?: string;            // Why this style was recommended
+  // Style context (when user selected a style before analysis)
+  analyzedWithStyle?: import('./styles').StyleId; // The style used for context-aware analysis
+  styleSuitability?: number;          // How well image fits selected style (0-1)
+  styleSuitabilityReason?: string;    // Explanation if suitability < 0.5
   analyzedAt: Date;
 }
 
@@ -1100,6 +1104,7 @@ export interface AnalyzeImageRequest {
   imageUrl: string;
   colorCount?: number;      // 3-12, default: 7
   printerType?: PrinterType;
+  selectedStyle?: import('./styles').StyleId;  // User-selected style for context-aware analysis
 }
 
 /**

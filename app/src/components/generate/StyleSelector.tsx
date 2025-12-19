@@ -11,7 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Sparkles, Eye, Check } from 'lucide-react';
+import { Sparkles, Eye, Check, Pencil, AlertTriangle } from 'lucide-react';
 import { type StyleId, STYLE_IDS } from '@/types/styles';
 import { STYLE_CONFIGS, type StyleConfig } from '@/config/styles';
 import { useTranslations } from 'next-intl';
@@ -23,6 +23,14 @@ interface StyleSelectorProps {
   recommendedStyle?: StyleId;
   styleConfidence?: number;
   disabled?: boolean;
+  /** When true, selector is locked after analysis */
+  locked?: boolean;
+  /** Callback when user requests to unlock/change style */
+  onRequestUnlock?: () => void;
+  /** Style suitability score from analysis (0-1) */
+  styleSuitability?: number;
+  /** Explanation if style suitability is low */
+  styleSuitabilityReason?: string;
 }
 
 /**
@@ -38,27 +46,77 @@ export function StyleSelector({
   recommendedStyle,
   styleConfidence,
   disabled,
+  locked,
+  onRequestUnlock,
+  styleSuitability,
+  styleSuitabilityReason,
 }: StyleSelectorProps) {
   const t = useTranslations('styles');
   const [previewStyle, setPreviewStyle] = useState<StyleConfig | null>(null);
+
+  // Selector is effectively disabled when disabled OR locked
+  const isDisabled = disabled || locked;
+  // Show suitability warning when score is below threshold
+  const showSuitabilityWarning = styleSuitability !== undefined && styleSuitability < 0.5;
 
   return (
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="text-sm font-medium text-muted-foreground">
-          {t('selectStyle')}
-        </div>
-        {recommendedStyle && styleConfidence && styleConfidence > 0.5 && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span>{t('aiRecommended')}</span>
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-medium text-muted-foreground">
+            {t('selectStyle')}
           </div>
-        )}
+          {locked && (
+            <Badge variant="secondary" className="text-xs">
+              {t('locked')}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {locked && onRequestUnlock && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs h-7 px-2 gap-1"
+              onClick={onRequestUnlock}
+            >
+              <Pencil className="w-3 h-3" />
+              {t('change')}
+            </Button>
+          )}
+          {!locked && recommendedStyle && styleConfidence && styleConfidence > 0.5 && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>{t('aiRecommended')}</span>
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Style Suitability Warning */}
+      {showSuitabilityWarning && (
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              {t('suitabilityWarning', { style: t(`${value}.name`) })}
+            </p>
+            {styleSuitabilityReason && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                {styleSuitabilityReason}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Style Grid - 2x2 on mobile, 4 columns on desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className={cn(
+        "grid grid-cols-2 md:grid-cols-4 gap-3 transition-opacity",
+        locked && "opacity-60"
+      )}>
         {STYLE_IDS.map((styleId) => {
           const style = STYLE_CONFIGS[styleId];
           const isSelected = value === styleId;
@@ -69,14 +127,15 @@ export function StyleSelector({
               key={styleId}
               type="button"
               onClick={() => onChange(styleId)}
-              disabled={disabled}
+              disabled={isDisabled}
               className={cn(
                 'relative flex flex-col items-center gap-2 rounded-xl border-2 p-3 text-center transition-all',
                 'hover:border-primary/50 hover:bg-accent/50',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 isSelected
                   ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                  : 'border-border bg-background'
+                  : 'border-border bg-background',
+                locked && 'pointer-events-none'
               )}
             >
               {/* AI Recommended Badge */}

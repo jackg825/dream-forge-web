@@ -14,6 +14,7 @@ import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { analyzeImage, type ImageAnalysisResult } from '../gemini/image-analyzer';
 import type { PrinterType } from '../rodin/types';
+import type { StyleId } from '../config/styles';
 
 // ============================================
 // Request/Response Types
@@ -24,6 +25,7 @@ interface AnalyzeUploadedImageData {
   colorCount?: number;     // Number of colors to extract (3-12, default: 7)
   printerType?: PrinterType; // Printer type for recommendations (default: 'fdm')
   locale?: string;         // User's locale for response language (default: 'zh-TW')
+  selectedStyle?: StyleId; // User-selected figure style for context-aware analysis
 }
 
 interface AnalyzeUploadedImageResponse {
@@ -82,7 +84,7 @@ export const analyzeUploadedImage = functions
       );
     }
 
-    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW' } = data;
+    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW', selectedStyle } = data;
 
     // Validate input
     if (!imageUrl) {
@@ -99,6 +101,7 @@ export const analyzeUploadedImage = functions
       userId: context.auth.uid,
       colorCount: validColorCount,
       printerType,
+      selectedStyle: selectedStyle || 'none',
     });
 
     try {
@@ -110,11 +113,12 @@ export const analyzeUploadedImage = functions
         base64Length: base64.length,
       });
 
-      // Analyze image
+      // Analyze image with optional style context
       const analysisResult = await analyzeImage(base64, mimeType, {
         colorCount: validColorCount,
         printerType,
         locale,
+        selectedStyle,
       });
 
       // Add timestamp
