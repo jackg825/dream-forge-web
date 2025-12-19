@@ -74,11 +74,10 @@ interface PipelineFlowProps {
   onNoCredits: () => void;
 }
 
-// Map pipeline status to step (new 4-step flow)
+// Map pipeline status to step (3-step flow - texture step removed)
 // Step 1: 準備圖片 (draft → images-ready)
-// Step 2: 生成網格 (generating-mesh → mesh-ready)
-// Step 3: 生成貼圖 (generating-texture → completed)
-// Step 4: 打印配送 (Coming Soon - no status maps here)
+// Step 2: 生成網格 (generating-mesh → completed)
+// Step 3: 打印配送 (Coming Soon - no status maps here)
 const getStepFromStatus = (status: string | undefined, hasId: boolean): number => {
   if (!hasId) return 1;
   switch (status) {
@@ -90,10 +89,9 @@ const getStepFromStatus = (status: string | undefined, hasId: boolean): number =
       return 1; // 準備多視角圖片
     case 'generating-mesh':
     case 'mesh-ready':
-      return 2; // 生成 3D 網格
     case 'generating-texture':
     case 'completed':
-      return 3; // 生成貼圖 (completed 也停在 step 3，顯示 step 4 Coming Soon)
+      return 2; // 生成 3D 網格 (texture now included)
     default:
       return 1;
   }
@@ -233,7 +231,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Credit costs
   const MESH_COST = 5;
-  const TEXTURE_COST = 10;
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -430,23 +427,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       await startMeshGeneration(selectedProvider, providerOptions);
     } catch (err) {
       console.error('Failed to start mesh generation:', err);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Handle texture generation
-  const handleStartTexture = async () => {
-    if (credits < TEXTURE_COST) {
-      onNoCredits();
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      await startTextureGeneration();
-    } catch (err) {
-      console.error('Failed to start texture generation:', err);
     } finally {
       setActionLoading(false);
     }
@@ -1193,33 +1173,15 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             {/* Previous outputs with provider badge */}
             <PreviousOutputs pipeline={pipeline} showImages={true} defaultCollapsed={false} />
 
-            {/* Action buttons */}
+            {/* Action button - complete and go to dashboard */}
             <div className="flex flex-col gap-3">
               <Button
                 className="flex-1"
                 size="lg"
-                onClick={handleStartTexture}
-                disabled={actionLoading}
-              >
-                {actionLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('buttons.processing')}
-                  </>
-                ) : (
-                  <>
-                    <Palette className="mr-2 h-4 w-4" />
-                    {t('step2.addTexture')} (+{TEXTURE_COST} {t('credits.points')})
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
                 onClick={() => router.push('/dashboard')}
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
-                {t('step2.finishMeshOnly')}
+                {t('step2.finish')}
               </Button>
             </div>
           </div>

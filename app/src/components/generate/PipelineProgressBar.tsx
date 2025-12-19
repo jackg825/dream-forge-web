@@ -1,17 +1,17 @@
 'use client';
 
-import { CheckCircle, Circle, Loader2, Coins, Image, Box, Palette, Truck, RotateCcw } from 'lucide-react';
+import { CheckCircle, Circle, Loader2, Coins, Image, Box, Truck, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from 'next-intl';
 import type { ResetTargetStep } from '@/hooks/usePipeline';
 
 // Step icons and reset targets (labels come from translations)
+// Note: Generate Texture step removed - texture is now generated with mesh
 const STEP_CONFIG = [
   { id: 1, labelKey: 'prepareImages', icon: Image, resetTarget: 'images-ready' as ResetTargetStep },
   { id: 2, labelKey: 'generateMesh', icon: Box, resetTarget: 'mesh-ready' as ResetTargetStep },
-  { id: 3, labelKey: 'generateTexture', icon: Palette, resetTarget: null },
-  { id: 4, labelKey: 'printDelivery', icon: Truck, comingSoon: true, resetTarget: null },
+  { id: 3, labelKey: 'printDelivery', icon: Truck, comingSoon: true, resetTarget: null },
 ] as const;
 
 interface PipelineProgressBarProps {

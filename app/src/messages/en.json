@@ -463,7 +463,11 @@
     "screenshot": "Screenshot",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit Fullscreen",
-    "resetCamera": "Reset Camera"
+    "resetCamera": "Reset Camera",
+    "noTextureData": "No texture data",
+    "lighting": "Lighting",
+    "lightingControl": "Lighting Controls",
+    "arPreview": "AR Preview"
   },
   "credits": {
     "badge": "{count} credits",
@@ -573,6 +577,7 @@
       "meshPreview": "Mesh Preview",
       "addTexture": "Add Texture",
       "finishMeshOnly": "Finish (Mesh Only)",
+      "finish": "Finish",
       "downloadGlb": "Download GLB File"
     },
     "step3": {

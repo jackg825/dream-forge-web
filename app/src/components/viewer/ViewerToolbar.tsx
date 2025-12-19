@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import {
   Eye,
-  Palette,
   Grid3X3,
   Axis3D,
   RotateCw,
@@ -14,6 +13,7 @@ import {
   ChevronDown,
   Check,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
@@ -58,18 +58,18 @@ interface ViewerToolbarProps {
   portalContainer?: HTMLElement | null;
 }
 
-const VIEW_MODES: { value: ViewMode; label: string; icon: string }[] = [
-  { value: 'clay', label: '實色', icon: '◼' },
-  { value: 'textured', label: '材質', icon: '◧' },
-  { value: 'wireframe', label: '線框', icon: '▦' },
-];
+const VIEW_MODES = [
+  { value: 'clay' as ViewMode, labelKey: 'viewMode.clay', icon: '◼' },
+  { value: 'textured' as ViewMode, labelKey: 'viewMode.textured', icon: '◧' },
+  { value: 'wireframe' as ViewMode, labelKey: 'viewMode.wireframe', icon: '▦' },
+] as const;
 
 const BACKGROUND_COLORS = [
-  { value: '#ffffff', label: '白', ring: 'ring-gray-300' },
-  { value: '#f3f4f6', label: '灰', ring: 'ring-gray-400' },
-  { value: '#1f2937', label: '深', ring: 'ring-gray-600' },
-  { value: '#000000', label: '黑', ring: 'ring-gray-800' },
-];
+  { value: '#ffffff', labelKey: 'backgroundColor.white', ring: 'ring-gray-300' },
+  { value: '#f3f4f6', labelKey: 'backgroundColor.gray', ring: 'ring-gray-400' },
+  { value: '#1f2937', labelKey: 'backgroundColor.dark', ring: 'ring-gray-600' },
+  { value: '#000000', labelKey: 'backgroundColor.black', ring: 'ring-gray-800' },
+] as const;
 
 export function ViewerToolbar({
   viewMode,
@@ -89,6 +89,7 @@ export function ViewerToolbar({
   onReset,
   portalContainer,
 }: ViewerToolbarProps) {
+  const t = useTranslations('controls');
   const [viewModeOpen, setViewModeOpen] = useState(false);
   const [bgOpen, setBgOpen] = useState(false);
 
@@ -117,14 +118,14 @@ export function ViewerToolbar({
                   >
                     <Eye className="w-4 h-4" />
                     <span className="hidden sm:inline">
-                      {VIEW_MODES.find(m => m.value === viewMode)?.label}
+                      {t(VIEW_MODES.find(m => m.value === viewMode)?.labelKey ?? 'viewMode.clay')}
                     </span>
                     <ChevronDown className="w-3 h-3 opacity-50" />
                   </Button>
                 </PopoverTrigger>
               </TooltipTrigger>
               <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-                視圖模式
+                {t('viewMode.textured')}
               </TooltipContent>
             </Tooltip>
             <PopoverContent
@@ -152,7 +153,7 @@ export function ViewerToolbar({
                                ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     <span className="font-mono text-base">{mode.icon}</span>
-                    <span>{mode.label}</span>
+                    <span>{t(mode.labelKey)}</span>
                     {viewMode === mode.value && (
                       <Check className="w-4 h-4 ml-auto" />
                     )}
@@ -161,7 +162,7 @@ export function ViewerToolbar({
               })}
               {!hasTextures && (
                 <p className="px-3 py-2 text-xs text-white/40 border-t border-white/10 mt-1">
-                  無材質資料
+                  {t('noTextureData')}
                 </p>
               )}
             </PopoverContent>
@@ -185,7 +186,7 @@ export function ViewerToolbar({
                 </PopoverTrigger>
               </TooltipTrigger>
               <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-                背景色
+                {t('background')}
               </TooltipContent>
             </Tooltip>
             <PopoverContent
@@ -206,7 +207,7 @@ export function ViewerToolbar({
                                  ? 'ring-indigo-400 scale-110'
                                  : 'ring-white/20'}`}
                     style={{ backgroundColor: color.value }}
-                    title={color.label}
+                    title={t(color.labelKey)}
                   />
                 ))}
               </div>
@@ -229,7 +230,7 @@ export function ViewerToolbar({
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-              參考網格
+              {t('grid')}
             </TooltipContent>
           </Tooltip>
 
@@ -247,7 +248,7 @@ export function ViewerToolbar({
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-              座標軸
+              {t('axes')}
             </TooltipContent>
           </Tooltip>
 
@@ -266,7 +267,7 @@ export function ViewerToolbar({
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-              自動旋轉
+              {t('autoRotate')}
             </TooltipContent>
           </Tooltip>
 
@@ -285,7 +286,7 @@ export function ViewerToolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-              截圖
+              {t('screenshot')}
             </TooltipContent>
           </Tooltip>
 
@@ -306,7 +307,7 @@ export function ViewerToolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-              {isFullscreen ? '退出全螢幕' : '全螢幕'}
+              {isFullscreen ? t('exitFullscreen') : t('fullscreen')}
             </TooltipContent>
           </Tooltip>
 
@@ -323,14 +324,14 @@ export function ViewerToolbar({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-              重設視角
+              {t('resetCamera')}
             </TooltipContent>
           </Tooltip>
         </div>
 
         {/* Keyboard hint */}
         <p className="text-center text-[10px] text-white/40 mt-2 font-mono tracking-wider">
-          拖曳旋轉 • 滾輪縮放 • Shift+拖曳平移
+          {t('helpText')}
         </p>
       </div>
     </TooltipProvider>

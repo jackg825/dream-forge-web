@@ -16,6 +16,7 @@ import {
   Box,
   Loader2,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { Separator } from '@/components/ui/separator';
@@ -82,18 +83,18 @@ interface UnifiedViewerToolbarProps {
   variant?: 'full' | 'compact';
 }
 
-const VIEW_MODES: { value: ViewMode; label: string; icon: string }[] = [
-  { value: 'clay', label: '實色', icon: '◼' },
-  { value: 'textured', label: '材質', icon: '◧' },
-  { value: 'wireframe', label: '線框', icon: '▦' },
-];
+const VIEW_MODES = [
+  { value: 'clay' as ViewMode, labelKey: 'viewMode.clay', icon: '◼' },
+  { value: 'textured' as ViewMode, labelKey: 'viewMode.textured', icon: '◧' },
+  { value: 'wireframe' as ViewMode, labelKey: 'viewMode.wireframe', icon: '▦' },
+] as const;
 
 const BACKGROUND_COLORS = [
-  { value: '#ffffff', label: '白', ring: 'ring-gray-300' },
-  { value: '#f3f4f6', label: '灰', ring: 'ring-gray-400' },
-  { value: '#1f2937', label: '深', ring: 'ring-gray-600' },
-  { value: '#000000', label: '黑', ring: 'ring-gray-800' },
-];
+  { value: '#ffffff', labelKey: 'backgroundColor.white', ring: 'ring-gray-300' },
+  { value: '#f3f4f6', labelKey: 'backgroundColor.gray', ring: 'ring-gray-400' },
+  { value: '#1f2937', labelKey: 'backgroundColor.dark', ring: 'ring-gray-600' },
+  { value: '#000000', labelKey: 'backgroundColor.black', ring: 'ring-gray-800' },
+] as const;
 
 /**
  * UnifiedViewerToolbar - Combined toolbar for both Viewer and Preview pages
@@ -164,6 +165,7 @@ export function UnifiedViewerToolbar({
   // Variant
   variant = 'full',
 }: UnifiedViewerToolbarProps) {
+  const t = useTranslations('controls');
   const [viewModeOpen, setViewModeOpen] = useState(false);
   const [bgOpen, setBgOpen] = useState(false);
   const [lightingOpen, setLightingOpen] = useState(false);
@@ -203,7 +205,7 @@ export function UnifiedViewerToolbar({
                       <Eye className="w-4 h-4" />
                       {!isCompact && (
                         <span className="hidden sm:inline">
-                          {VIEW_MODES.find((m) => m.value === viewMode)?.label}
+                          {t(VIEW_MODES.find((m) => m.value === viewMode)?.labelKey ?? 'viewMode.clay')}
                         </span>
                       )}
                       <ChevronDown className="w-3 h-3 opacity-50" />
@@ -215,7 +217,7 @@ export function UnifiedViewerToolbar({
                   className="bg-black/90 text-white border-white/10"
                   {...portalProps}
                 >
-                  視圖模式
+                  {t('viewMode.textured')}
                 </TooltipContent>
               </Tooltip>
               <PopoverContent
@@ -245,14 +247,14 @@ export function UnifiedViewerToolbar({
                                  ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
                       <span className="font-mono text-base">{mode.icon}</span>
-                      <span>{mode.label}</span>
+                      <span>{t(mode.labelKey)}</span>
                       {viewMode === mode.value && <Check className="w-4 h-4 ml-auto" />}
                     </button>
                   );
                 })}
                 {!hasTextures && (
                   <p className="px-3 py-2 text-xs text-white/40 border-t border-white/10 mt-1">
-                    無材質資料
+                    {t('noTextureData')}
                   </p>
                 )}
               </PopoverContent>
@@ -281,7 +283,7 @@ export function UnifiedViewerToolbar({
                 className="bg-black/90 text-white border-white/10"
                 {...portalProps}
               >
-                背景色
+                {t('background')}
               </TooltipContent>
             </Tooltip>
             <PopoverContent
@@ -304,7 +306,7 @@ export function UnifiedViewerToolbar({
                                    : 'ring-white/20'
                                }`}
                     style={{ backgroundColor: color.value }}
-                    title={color.label}
+                    title={t(color.labelKey)}
                   />
                 ))}
               </div>
@@ -328,7 +330,7 @@ export function UnifiedViewerToolbar({
                                    ${hasLightingChanges ? 'text-amber-400' : ''}`}
                       >
                         <Sun className="w-4 h-4" />
-                        {!isCompact && <span className="hidden sm:inline">燈光</span>}
+                        {!isCompact && <span className="hidden sm:inline">{t('lighting')}</span>}
                         <ChevronDown className="w-3 h-3 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -338,7 +340,7 @@ export function UnifiedViewerToolbar({
                     className="bg-black/90 text-white border-white/10"
                     {...portalProps}
                   >
-                    燈光控制
+                    {t('lightingControl')}
                   </TooltipContent>
                 </Tooltip>
                 <PopoverContent
@@ -384,7 +386,7 @@ export function UnifiedViewerToolbar({
                     className="bg-black/90 text-white border-white/10"
                     {...portalProps}
                   >
-                    參考網格
+                    {t('grid')}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -408,7 +410,7 @@ export function UnifiedViewerToolbar({
                     className="bg-black/90 text-white border-white/10"
                     {...portalProps}
                   >
-                    座標軸
+                    {t('axes')}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -435,7 +437,7 @@ export function UnifiedViewerToolbar({
                     className="bg-black/90 text-white border-white/10"
                     {...portalProps}
                   >
-                    自動旋轉
+                    {t('autoRotate')}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -461,7 +463,7 @@ export function UnifiedViewerToolbar({
               className="bg-black/90 text-white border-white/10"
               {...portalProps}
             >
-              截圖
+              {t('screenshot')}
             </TooltipContent>
           </Tooltip>
 
@@ -488,7 +490,7 @@ export function UnifiedViewerToolbar({
                 className="bg-black/90 text-white border-white/10"
                 {...portalProps}
               >
-                AR 預覽
+                {t('arPreview')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -515,7 +517,7 @@ export function UnifiedViewerToolbar({
                 className="bg-black/90 text-white border-white/10"
                 {...portalProps}
               >
-                {isFullscreen ? '退出全螢幕' : '全螢幕'}
+                {isFullscreen ? t('exitFullscreen') : t('fullscreen')}
               </TooltipContent>
             </Tooltip>
           )}
@@ -537,14 +539,14 @@ export function UnifiedViewerToolbar({
               className="bg-black/90 text-white border-white/10"
               {...portalProps}
             >
-              重設視角
+              {t('resetCamera')}
             </TooltipContent>
           </Tooltip>
         </div>
 
         {/* Keyboard hint */}
         <p className="text-center text-[10px] text-white/40 mt-2 font-mono tracking-wider">
-          拖曳旋轉 • 滾輪縮放 • Shift+拖曳平移
+          {t('helpText')}
         </p>
       </div>
     </TooltipProvider>

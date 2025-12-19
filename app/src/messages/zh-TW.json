@@ -463,7 +463,11 @@
     "screenshot": "截圖",
     "fullscreen": "全螢幕",
     "exitFullscreen": "退出全螢幕",
-    "resetCamera": "重設視角"
+    "resetCamera": "重設視角",
+    "noTextureData": "無材質資料",
+    "lighting": "燈光",
+    "lightingControl": "燈光控制",
+    "arPreview": "AR 預覽"
   },
   "credits": {
     "badge": "{count} 點",
@@ -573,6 +577,7 @@
       "meshPreview": "網格預覽",
       "addTexture": "添加貼圖",
       "finishMeshOnly": "完成 (僅網格)",
+      "finish": "完成",
       "downloadGlb": "下載 GLB 檔案"
     },
     "step3": {
