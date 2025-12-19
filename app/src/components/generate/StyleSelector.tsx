@@ -116,7 +116,7 @@ export function StyleSelector({
 
       {/* Horizontal Style Cards */}
       <div className={cn(
-        "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 transition-opacity duration-300",
+        "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 transition-opacity duration-300",
         locked && "opacity-60 pointer-events-none"
       )}>
         {STYLE_IDS.map((styleId) => {
@@ -137,7 +137,7 @@ export function StyleSelector({
               } as React.CSSProperties}
               className={cn(
                 // Base styles
-                'group relative flex items-center gap-3 p-3 rounded-2xl border-2 text-left',
+                'group relative flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl border-2 text-left',
                 'transition-all duration-300 ease-out',
                 'hover:scale-[1.02] hover:-translate-y-0.5',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
@@ -221,7 +221,7 @@ export function StyleSelector({
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className="font-display text-sm font-bold truncate"
+                    className="font-display text-sm font-bold"
                     style={{ color: isSelected ? `oklch(${colorValue})` : undefined }}
                   >
                     {t(`${styleId}.name`)}

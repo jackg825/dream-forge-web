@@ -12,7 +12,7 @@ exports.getStyleConfig = getStyleConfig;
 /**
  * All available style IDs
  */
-exports.STYLE_IDS = ['bobblehead', 'chibi', 'cartoon', 'emoji'];
+exports.STYLE_IDS = ['none', 'bobblehead', 'chibi', 'cartoon', 'emoji'];
 /**
  * Default style when none selected
  */
@@ -27,6 +27,25 @@ function isValidStyleId(value) {
  * Style configurations with prompt engineering
  */
 exports.STYLE_CONFIGS = {
+    none: {
+        id: 'none',
+        name: 'None',
+        promptModifiers: {
+            meshStyle: 'Preserve the original appearance and style of the subject exactly as shown. ' +
+                'Do not apply any stylization or transformation. ' +
+                'Maintain realistic proportions and natural appearance. ' +
+                'Keep all details, textures, and characteristics as they are.',
+            textureStyle: 'Preserve original textures and materials exactly as shown. ' +
+                'Maintain natural skin tones, fabric textures, and surface details. ' +
+                'No stylization - keep photorealistic appearance.',
+            proportions: 'Maintain original realistic proportions. ' +
+                'No exaggeration or stylization of body parts. ' +
+                'Keep natural human proportions.',
+            features: 'Preserve all original features without modification. ' +
+                'Maintain natural facial features and expressions. ' +
+                'Keep clothing and accessories as they appear.',
+        },
+    },
     bobblehead: {
         id: 'bobblehead',
         name: 'Bobblehead',

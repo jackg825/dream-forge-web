@@ -6,8 +6,13 @@
  */
 /**
  * Available style identifiers
+ * - none: Preserve original photo style without transformation
+ * - bobblehead: Large head, spring neck, vinyl finish
+ * - chibi: Anime style, cute proportions
+ * - cartoon: Pixar/Disney style, expressive
+ * - emoji: Minimalist, spherical, expression-focused
  */
-export type StyleId = 'bobblehead' | 'chibi' | 'cartoon' | 'emoji';
+export type StyleId = 'none' | 'bobblehead' | 'chibi' | 'cartoon' | 'emoji';
 /**
  * Prompt modifiers for different generation stages
  */
