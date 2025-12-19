@@ -3,11 +3,11 @@
  *
  * Cloud Functions for the new simplified 3D generation workflow:
  * 1. createPipeline - Initialize pipeline with uploaded images
- * 2. generatePipelineImages - Generate 6 views via Gemini (10 credits for Pro / 3 credits for Flash)
- * 3. regeneratePipelineImage - Regenerate a single view (free, max 4 times)
+ * 2. generatePipelineImages - Generate 4 mesh views via Gemini (3 credits)
+ * 3. regeneratePipelineImage - Regenerate a single mesh view (free, max 4 times)
  * 4. startPipelineMesh - Start mesh generation (5-8 credits depending on provider)
  * 5. checkPipelineStatus - Poll status
- * 6. startPipelineTexture - Start texture generation (10 credits)
+ * 6. startPipelineTexture - Start texture generation on model (10 credits)
  */
 import * as functions from 'firebase-functions/v1';
 /**

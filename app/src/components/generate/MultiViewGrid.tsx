@@ -3,9 +3,8 @@
 /**
  * MultiViewGrid Component
  *
- * Displays a 6-view grid for multi-angle images:
+ * Displays a 4-view grid for mesh reference images:
  * - 4 Mesh Views: front, back, left, right
- * - 2 Texture Views: front, back
  *
  * Supports:
  * - AI-generated images display
@@ -21,7 +20,6 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type {
   PipelineMeshAngle,
-  PipelineTextureAngle,
   PipelineProcessedImage,
 } from '@/types';
 
@@ -31,11 +29,6 @@ const MESH_VIEWS: { angle: PipelineMeshAngle; label: string }[] = [
   { angle: 'back', label: '背面' },
   { angle: 'left', label: '左側' },
   { angle: 'right', label: '右側' },
-];
-
-const TEXTURE_VIEWS: { angle: PipelineTextureAngle; label: string }[] = [
-  { angle: 'front', label: '正面' },
-  { angle: 'back', label: '背面' },
 ];
 
 interface ViewSlotProps {
@@ -176,18 +169,16 @@ function ViewSlot({
 
 interface MultiViewGridProps {
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-  textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
   isGenerating: boolean;
-  generatingPhase?: 'mesh-views' | 'texture-views';
-  onUploadView: (viewType: 'mesh' | 'texture', angle: string, file: File) => void;
-  onRegenerateView?: (viewType: 'mesh' | 'texture', angle: string) => void;
+  generatingPhase?: 'mesh-views' | 'complete';
+  onUploadView: (viewType: 'mesh', angle: string, file: File) => void;
+  onRegenerateView?: (viewType: 'mesh', angle: string) => void;
   disabled?: boolean;
-  uploadingView?: { type: 'mesh' | 'texture'; angle: string } | null;
+  uploadingView?: { type: 'mesh'; angle: string } | null;
 }
 
 export function MultiViewGrid({
   meshImages,
-  textureImages,
   isGenerating,
   generatingPhase,
   onUploadView,
@@ -197,14 +188,9 @@ export function MultiViewGrid({
 }: MultiViewGridProps) {
   // Count completed images
   const meshCount = Object.keys(meshImages).length;
-  const textureCount = Object.keys(textureImages).length;
-  // Show texture section only if textureImages is not empty (for simplified 3D printing workflow)
-  const showTextureSection = textureCount > 0 || (generatingPhase === 'texture-views' && isGenerating);
-  const totalRequired = showTextureSection ? 6 : 4;
-  const totalCount = meshCount + (showTextureSection ? textureCount : 0);
-  const allComplete = showTextureSection
-    ? (meshCount === 4 && textureCount === 2)
-    : (meshCount === 4);
+  const totalRequired = 4;
+  const totalCount = meshCount;
+  const allComplete = meshCount === 4;
 
   return (
     <div className="space-y-4">
@@ -220,7 +206,7 @@ export function MultiViewGrid({
         {isGenerating && (
           <Badge variant="outline" className="gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
-            {generatingPhase === 'mesh-views' ? '生成網格視角...' : '生成貼圖視角...'}
+            生成網格視角...
           </Badge>
         )}
       </div>
@@ -244,30 +230,6 @@ export function MultiViewGrid({
           ))}
         </div>
       </div>
-
-      {/* Texture Views (2 columns, centered) - only show if textureImages is provided */}
-      {showTextureSection && (
-        <div>
-          <h4 className="text-sm text-muted-foreground mb-2">貼圖用圖片</h4>
-          <div className="grid grid-cols-4 gap-3">
-            <div /> {/* Empty for centering */}
-            {TEXTURE_VIEWS.map(({ angle, label }) => (
-              <ViewSlot
-                key={`texture-${angle}`}
-                angle={angle}
-                label={label}
-                image={textureImages[angle]}
-                isGenerating={isGenerating && generatingPhase === 'texture-views' && !textureImages[angle]}
-                onUpload={(file) => onUploadView('texture', angle, file)}
-                onRegenerate={onRegenerateView ? () => onRegenerateView('texture', angle) : undefined}
-                disabled={disabled}
-                uploadingAngle={uploadingView?.type === 'texture' ? uploadingView.angle : undefined}
-              />
-            ))}
-            <div /> {/* Empty for centering */}
-          </div>
-        </div>
-      )}
 
       {/* Help text */}
       <p className="text-xs text-muted-foreground">

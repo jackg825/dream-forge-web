@@ -350,7 +350,6 @@ export interface PipelineProcessedImage {
  * View types for pipeline images
  */
 export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
-export type PipelineTextureAngle = 'front' | 'back';
 
 /**
  * Generation mode for A/B testing different image processing strategies
@@ -415,11 +414,9 @@ export interface PipelineDocument {
     uploadedAt: FirebaseFirestore.Timestamp;
   }>;
 
-  // Step 2-3: Gemini-generated images
+  // Step 2: Gemini-generated mesh reference images
   // 4 mesh-optimized images (7-color simplified for 3D mesh)
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-  // 2 texture-ready images (full color for texture mapping)
-  textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
 
   // Aggregated color palette from all mesh views (for texture consistency)
   aggregatedColorPalette?: {
@@ -429,9 +426,8 @@ export interface PipelineDocument {
 
   // Real-time generation progress tracking
   generationProgress?: {
-    phase: 'mesh-views' | 'texture-views' | 'complete';
+    phase: 'mesh-views' | 'complete';
     meshViewsCompleted: number;     // 0-4
-    textureViewsCompleted: number;  // 0-2
   };
 
   // Step 4-5: Mesh generation (provider-agnostic)
@@ -518,7 +514,6 @@ export interface AdminAction {
 export interface AdminPreview {
   // Image previews (per-view regeneration)
   meshImages?: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-  textureImages?: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
 
   // Mesh preview (full mesh regeneration)
   meshUrl?: string;

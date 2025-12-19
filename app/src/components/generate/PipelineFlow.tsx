@@ -58,7 +58,6 @@ import { MultiViewGrid } from './MultiViewGrid';
 import { useImageAnalysis } from '@/hooks/useImageAnalysis';
 import type {
   PipelineMeshAngle,
-  PipelineTextureAngle,
   GenerationModeId,
   ProcessingMode,
   MeshPrecision,
@@ -641,13 +640,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const renderDraftWithAnalysis = () => {
     const hasAllMeshImages = pipeline?.meshImages &&
       Object.keys(pipeline.meshImages).length === 4;
-    const hasAllTextureImages = pipeline?.textureImages &&
-      Object.keys(pipeline.textureImages).length === 2;
-    const hasAllImages = hasAllMeshImages && hasAllTextureImages;
 
     // Check if any multi-view images exist
-    const hasSomeImages = (pipeline?.meshImages && Object.keys(pipeline.meshImages).length > 0) ||
-      (pipeline?.textureImages && Object.keys(pipeline.textureImages).length > 0);
+    const hasSomeImages = (pipeline?.meshImages && Object.keys(pipeline.meshImages).length > 0);
 
     // Check if image generation is in progress (prevents double-click)
     const isGeneratingImages = pipeline?.status === 'generating-images' ||
@@ -730,7 +725,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         {hasSomeImages && (
           <MultiViewGrid
             meshImages={pipeline?.meshImages || {}}
-            textureImages={{}} // Hide texture images for simplified 3D printing workflow
             isGenerating={false}
             onUploadView={(viewType, angle, file) => {
               // TODO: Implement view upload
@@ -763,8 +757,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 </>
               )}
             </Button>
-          ) : hasAllImages ? (
-            // All 6 images ready - proceed to mesh generation
+          ) : hasAllMeshImages ? (
+            // All 4 mesh images ready - proceed to mesh generation
             <Button
               size="lg"
               onClick={handleStartMesh}
@@ -815,10 +809,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     );
   };
 
-  // Step 1c: Images ready - preview all 6 views, can replace individual, then proceed to mesh
+  // Step 1c: Images ready - preview all 4 mesh views, can replace individual, then proceed to mesh
   const renderImagesReadyStep = () => {
     const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
-    const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
 
     // Get mode info for display
     const currentMode = pipeline?.generationMode || generationMode;
@@ -890,46 +883,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               })}
             </div>
           </div>
-
-          {/* Texture images - hidden for simplified 3D printing workflow */}
-          {/* <div>
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-medium">貼圖用圖片</h4>
-              <Badge variant="outline" className="text-xs">{modeInfo?.textureStyle || '全彩'}</Badge>
-            </div>
-            <div className="grid grid-cols-2 gap-3 max-w-sm">
-              {textureAngles.map((angle) => {
-                const image = pipeline?.textureImages[angle];
-                return (
-                  <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
-                    {image ? (
-                      <img
-                        src={image.url}
-                        alt={`${angle} texture view`}
-                        className="w-full aspect-square object-cover"
-                      />
-                    ) : (
-                      <Skeleton className="w-full aspect-square" />
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openRegenerateDialog('texture', angle)}
-                        disabled={actionLoading || regenerateLoading}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-1" />
-                        重新生成
-                      </Button>
-                    </div>
-                    <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
-                      {angle === 'front' ? '正面' : '背面'}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div> */}
         </div>
 
         {/* 3D 生成引擎選擇 */}
@@ -969,14 +922,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const isBatch = pipeline?.processingMode === 'batch' || isBatchProcessing;
     const progress = pipeline?.generationProgress;
 
-    // Progress values: mesh (0-4), texture (0-2)
+    // Progress values: mesh (0-4)
     const meshCompleted = progress?.meshViewsCompleted ?? 0;
-    const textureCompleted = progress?.textureViewsCompleted ?? 0;
     const phase = progress?.phase ?? 'mesh-views';
 
     // View labels for display (used in realtime mode grid)
     const meshLabels = [t('angles.front'), t('angles.back'), t('angles.left'), t('angles.right')];
-    const textureLabels = [t('angles.front'), t('angles.back')];
 
     // For submitting (draft) and batch modes, use the unified indicator
     if (pipeline?.status === 'draft' || isBatch) {
@@ -987,7 +938,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             processingMode={pipeline?.processingMode || 'batch'}
             progress={{
               meshViewsCompleted: meshCompleted,
-              textureViewsCompleted: textureCompleted,
               phase,
               batchProgress: pipeline?.batchProgress,
             }}
@@ -1011,15 +961,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         <p className="text-sm text-muted-foreground mt-2">
           {phase === 'mesh-views'
             ? `${t('processing.meshViews')} (${meshCompleted}/4)...`
-            : phase === 'texture-views'
-              ? `${t('processing.textureViews')} (${textureCompleted}/2)...`
-              : t('processing.aiAnalyzing')}
+            : t('processing.aiAnalyzing')}
         </p>
 
-        {/* Visual progress grid - 6 boxes: 4 green (mesh) + 2 blue (texture) */}
+        {/* Visual progress grid - 4 mesh view boxes */}
         <div className="w-full max-w-lg mt-8">
           {/* Mesh views - green theme */}
-          <div className="mb-4">
+          <div>
             <div className="flex items-center gap-2 mb-2">
               <Box className="h-4 w-4 text-green-500" />
               <span className="text-sm font-medium">{t('processing.meshViewsLabel')}</span>
@@ -1053,47 +1001,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   </div>
                 );
               })}
-            </div>
-          </div>
-
-          {/* Texture views - blue theme */}
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Palette className="h-4 w-4 text-blue-500" />
-              <span className="text-sm font-medium">{t('processing.textureViewsLabel')}</span>
-              <span className="text-xs text-muted-foreground">({textureCompleted}/2)</span>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {textureLabels.map((label, index) => {
-                const isCompleted = index < textureCompleted;
-                const isProcessingView = index === textureCompleted && phase === 'texture-views';
-                return (
-                  <div
-                    key={`texture-${index}`}
-                    className={`
-                      aspect-square rounded-lg border-2 flex flex-col items-center justify-center
-                      transition-all duration-300
-                      ${isCompleted
-                        ? 'border-blue-500 bg-blue-500/10'
-                        : isProcessingView
-                          ? 'border-blue-500/50 bg-blue-500/5 animate-pulse'
-                          : 'border-border bg-muted/30'}
-                    `}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle className="h-6 w-6 text-blue-500" />
-                    ) : isProcessingView ? (
-                      <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                    ) : (
-                      <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
-                    )}
-                    <span className="text-xs text-muted-foreground mt-1">{label}</span>
-                  </div>
-                );
-              })}
-              {/* Empty slots to maintain grid alignment */}
-              <div className="aspect-square" />
-              <div className="aspect-square" />
             </div>
           </div>
         </div>

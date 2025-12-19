@@ -9,8 +9,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GENERATION_MODES = exports.DEFAULT_MODE = void 0;
 exports.getMode = getMode;
 exports.getMeshPrompt = getMeshPrompt;
-exports.getTexturePrompt = getTexturePrompt;
-exports.getTexturePromptWithColors = getTexturePromptWithColors;
 const styles_1 = require("../config/styles");
 /**
  * Default generation mode
@@ -101,25 +99,6 @@ Render in cel-shaded style with approximately ${colorCount || 7} distinct, high-
 
 === END FIGURE STYLE ===`;
 }
-/**
- * Generate style-specific prompt block for texture generation
- *
- * @param selectedStyle - The user's selected style (or default)
- * @param colorCount - Number of colors for simplified rendering
- * @returns Style prompt block for texture generation
- */
-function getStylePromptBlockForTexture(selectedStyle, colorCount) {
-    const style = (0, styles_1.getStyleConfig)(selectedStyle || styles_1.DEFAULT_STYLE);
-    const { textureStyle } = style.promptModifiers;
-    return `=== FIGURE STYLE: ${style.name.toUpperCase()} ===
-
-**Texture Style**: ${textureStyle}
-
-Create a flat, albedo-like texture reference with exactly ${colorCount || 6} distinct solid colors.
-No lighting effects, no shadows, no highlights - pure surface color only.
-
-=== END FIGURE STYLE ===`;
-}
 // =============================================================================
 // Prompt Templates
 // =============================================================================
@@ -131,10 +110,6 @@ const ANGLE_PROMPTS = {
     back: 'BACK',
     left: 'LEFT SIDE',
     right: 'RIGHT SIDE',
-};
-const TEXTURE_ANGLE_PROMPTS = {
-    front: 'FRONT',
-    back: 'BACK',
 };
 /**
  * Get viewpoint information using CLOCK SYSTEM
@@ -446,140 +421,5 @@ Goal: A photogrammetry reference image - detailed for 3D reconstruction, optimiz
 
 Generate the actual ${angleDisplay} view image now.`;
     }
-}
-/**
- * Generate texture view prompt based on mode and angle
- * Uses narrative style following Gemini's best practice:
- * "Describe the scene, don't just list keywords"
- *
- * @param mode - The generation mode configuration
- * @param angle - The view angle to generate
- * @param userDescription - Optional user-provided description of the object
- * @param hint - Optional regeneration hint for adjustments
- * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
- */
-function getTexturePrompt(mode, angle, userDescription, hint, selectedStyle) {
-    const angleDisplay = TEXTURE_ANGLE_PROMPTS[angle];
-    const clockPos = angle === 'front' ? '6 o\'clock' : '12 o\'clock';
-    const rotation = angle === 'front' ? 0 : 180;
-    // Build user description as narrative context
-    const subjectContext = userDescription
-        ? `\n\n=== SUBJECT ===\nThis is ${userDescription}. Preserve its key visual features and identity.\n=== END SUBJECT ===\n`
-        : '';
-    // Build regeneration hint
-    const hintContext = hint
-        ? `\n=== USER ADJUSTMENT ===\nThe user requests: "${hint}"\nApply this while maintaining the correct viewing angle.\n=== END USER ADJUSTMENT ===\n`
-        : '';
-    // Background isolation block
-    const backgroundBlock = buildBackgroundIsolationBlock();
-    // Style-specific texture block
-    const styleBlock = getStylePromptBlockForTexture(selectedStyle, mode.texture.colorCount);
-    if (mode.texture.simplified) {
-        // Simplified mode: vector art / sticker art style for H2C printing
-        return `=== CAMERA POSITION ===
-**CLOCK SYSTEM**: Subject at center, front facing 6 o'clock.
-**CAMERA**: ${clockPos}, looking at center
-**ROTATION**: ${rotation}° from front
-**VIEW**: ${angleDisplay}
-=== END CAMERA POSITION ===
-${subjectContext}
-${backgroundBlock}
-${hintContext}
-${styleBlock}
-
-=== TEXTURE REQUIREMENTS ===
-
-Create a texture map for multi-color 3D PRINTING in flat vector illustration style.
-
-**COLOR CONSTRAINTS**:
-- Use EXACTLY ${mode.texture.colorCount} solid, distinct colors
-- NO gradients, NO shading, NO soft transitions
-- Each color zone is a crisp block with sharp edges
-- Like a paint-by-numbers template or screen print design
-
-**LIGHTING**: COMPLETELY FLAT AND UNLIT
-- NO shadows of any kind
-- NO highlights or specular reflections
-- NO ambient occlusion
-- Every pixel shows the TRUE BASE COLOR for printing
-
-**TECHNICAL**:
-- Orthographic projection from ${clockPos}
-- Subject fills 90% of frame
-- Proportions match mesh views exactly
-- Color regions large enough for physical printing
-
-=== END TEXTURE REQUIREMENTS ===
-
-After generating, list colors: COLORS: #RRGGBB, #RRGGBB, ...
-
-Generate the actual ${angleDisplay} texture view now.`;
-    }
-    else {
-        // Full color mode: Albedo Map (Base Color) for PBR
-        return `=== CAMERA POSITION ===
-**CLOCK SYSTEM**: Subject at center, front facing 6 o'clock.
-**CAMERA**: ${clockPos}, looking at center
-**ROTATION**: ${rotation}° from front
-**VIEW**: ${angleDisplay}
-=== END CAMERA POSITION ===
-${subjectContext}
-${backgroundBlock}
-${hintContext}
-=== ALBEDO TEXTURE MAP ===
-
-Create an albedo (base color) texture map for 3D printing.
-
-**COLOR CAPTURE**:
-- True surface colors WITHOUT any lighting effects
-- Full color with natural saturation
-- High-frequency texture details as color information
-- Fabric weave, wood grain, skin variations, surface scratches
-
-**LIGHTING**: STRICTLY UNLIT
-- NO shadows, NO highlights
-- NO ambient occlusion, NO reflections
-- Each pixel = exact pigment color to be printed
-
-**TECHNICAL**:
-- Orthographic projection from ${clockPos}
-- Subject fills 90% of frame
-- Proportions match mesh views for UV alignment
-
-Result: A flat, unlit texture map for 3D printing workflow.
-
-=== END ALBEDO TEXTURE MAP ===
-
-Generate the actual ${angleDisplay} texture view now.`;
-    }
-}
-/**
- * Generate texture view prompt with color palette hints for consistency
- * Used when generating texture views after mesh views are complete
- *
- * @param mode - The generation mode configuration
- * @param angle - The view angle to generate
- * @param colorPalette - Color palette extracted from mesh views for consistency
- * @param userDescription - Optional user-provided description of the object
- * @param hint - Optional regeneration hint for adjustments
- * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
- */
-function getTexturePromptWithColors(mode, angle, colorPalette, userDescription, hint, selectedStyle) {
-    const basePrompt = getTexturePrompt(mode, angle, userDescription, hint, selectedStyle);
-    // If no color palette or mode doesn't use simplified mesh, return base prompt
-    if (colorPalette.length === 0) {
-        return basePrompt;
-    }
-    // Inject color consistency instruction as narrative
-    const colorHint = `
-
-For visual consistency with the mesh views, use only these specific colors: ${colorPalette.join(', ')}. These exact shades have been extracted from the mesh reference images. Stay strictly within this palette - do not introduce any new colors.`;
-    // Insert color hint before the final "Generate the actual image" line
-    const insertPoint = basePrompt.lastIndexOf('Generate the actual image');
-    if (insertPoint > 0) {
-        return basePrompt.slice(0, insertPoint) + colorHint + '\n\n' + basePrompt.slice(insertPoint);
-    }
-    // Fallback: append to end
-    return basePrompt + colorHint;
 }
 //# sourceMappingURL=mode-configs.js.map

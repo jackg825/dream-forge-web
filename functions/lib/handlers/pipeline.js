@@ -4,11 +4,11 @@
  *
  * Cloud Functions for the new simplified 3D generation workflow:
  * 1. createPipeline - Initialize pipeline with uploaded images
- * 2. generatePipelineImages - Generate 6 views via Gemini (10 credits for Pro / 3 credits for Flash)
- * 3. regeneratePipelineImage - Regenerate a single view (free, max 4 times)
+ * 2. generatePipelineImages - Generate 4 mesh views via Gemini (3 credits)
+ * 3. regeneratePipelineImage - Regenerate a single mesh view (free, max 4 times)
  * 4. startPipelineMesh - Start mesh generation (5-8 credits depending on provider)
  * 5. checkPipelineStatus - Poll status
- * 6. startPipelineTexture - Start texture generation (10 credits)
+ * 6. startPipelineTexture - Start texture generation on model (10 credits)
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -149,7 +149,6 @@ exports.createPipeline = functions
             uploadedAt: uploadTime,
         })),
         meshImages: {},
-        textureImages: {},
         creditsCharged: {
             mesh: 0,
             texture: 0,
@@ -306,12 +305,11 @@ exports.generatePipelineImages = functions
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate all 6 views using the pipeline's generation mode and user description
         // Uses staggered parallel execution for better performance (~18s vs ~50s)
-        // If imageAnalysis exists, use its color palette and key features for consistency
+        // If imageAnalysis exists, use its key features for consistency
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
-        const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
         // geminiModel is already declared above for credit calculation
         const selectedStyle = pipeline.settings?.selectedStyle;
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel, selectedStyle);
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel, selectedStyle);
         // Create progress callback to update Firestore in real-time
         const onProgress = async (type, angle, completed, total) => {
             const progress = type === 'mesh'
@@ -331,7 +329,6 @@ exports.generatePipelineImages = functions
         });
         const now = admin.firestore.FieldValue.serverTimestamp();
         const meshImages = {};
-        const textureImages = {};
         // Upload mesh views
         for (const [angle, view] of Object.entries(views.meshViews)) {
             const ext = getExtensionFromMimeType(view.mimeType);
@@ -349,18 +346,6 @@ exports.generatePipelineImages = functions
             }
             meshImages[angle] = meshImage;
         }
-        // Upload texture views
-        for (const [angle, view] of Object.entries(views.textureViews)) {
-            const ext = getExtensionFromMimeType(view.mimeType);
-            const storagePath = `pipelines/${userId}/${pipelineId}/texture_${angle}.${ext}`;
-            const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-            textureImages[angle] = {
-                url,
-                storagePath,
-                source: 'gemini',
-                generatedAt: now,
-            };
-        }
         // Build aggregated color palette for Firestore
         const aggregatedColorPalette = views.aggregatedPalette
             ? {
@@ -372,25 +357,21 @@ exports.generatePipelineImages = functions
         await pipelineRef.update({
             status: 'images-ready',
             meshImages,
-            textureImages,
             ...(aggregatedColorPalette && { aggregatedColorPalette }),
             generationProgress: {
                 phase: 'complete',
                 meshViewsCompleted: 4,
-                textureViewsCompleted: 2,
             },
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         functions.logger.info('Pipeline images generated', {
             pipelineId,
             meshViewCount: Object.keys(meshImages).length,
-            textureViewCount: Object.keys(textureImages).length,
             dominantColorCount: aggregatedColorPalette?.dominantColors?.length || 0,
         });
         return {
             status: 'images-ready',
             meshImages,
-            textureImages,
             aggregatedColorPalette,
         };
     }
@@ -437,12 +418,11 @@ exports.regeneratePipelineImage = functions
     const { pipelineId, viewType, angle, hint } = data;
     // Validate viewType and angle
     const validMeshAngles = ['front', 'back', 'left', 'right'];
-    const validTextureAngles = ['front', 'back'];
-    if (viewType === 'mesh' && !validMeshAngles.includes(angle)) {
-        throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
+    if (viewType !== 'mesh') {
+        throw new functions.https.HttpsError('invalid-argument', 'Only mesh view regeneration is supported');
     }
-    if (viewType === 'texture' && !validTextureAngles.includes(angle)) {
-        throw new functions.https.HttpsError('invalid-argument', 'Invalid texture angle');
+    if (!validMeshAngles.includes(angle)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
     }
     // Get pipeline
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
@@ -467,13 +447,12 @@ exports.regeneratePipelineImage = functions
         const referenceImageUrl = pipeline.inputImages[0].url;
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate single view using the pipeline's generation mode
-        // Pass userDescription from pipeline, color palette, imageAnalysis, and optional hint for adjustments
+        // Pass userDescription from pipeline, imageAnalysis, and optional hint for adjustments
         // Use the same geminiModel that was selected when creating the pipeline
         const modeId = pipeline.generationMode || mode_configs_1.DEFAULT_MODE;
-        const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
         const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash');
         const selectedStyle = pipeline.settings?.selectedStyle;
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel, selectedStyle);
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel, selectedStyle);
         const now = admin.firestore.FieldValue.serverTimestamp();
         if (viewType === 'mesh') {
             // Regenerate mesh view
@@ -491,12 +470,6 @@ exports.regeneratePipelineImage = functions
             if (view.colorPalette && view.colorPalette.length > 0) {
                 processedMeshImage.colorPalette = view.colorPalette;
             }
-            // Update the mesh image and increment regeneration counter
-            await pipelineRef.update({
-                [`meshImages.${angle}`]: processedMeshImage,
-                regenerationsUsed: admin.firestore.FieldValue.increment(1),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
             // Re-aggregate color palette from all mesh views (including the new one)
             const updatedPipelineDoc = await pipelineRef.get();
             const updatedPipeline = updatedPipelineDoc.data();
@@ -519,71 +492,27 @@ exports.regeneratePipelineImage = functions
                 unified: sortedColors,
                 dominantColors: sortedColors.slice(0, 7),
             };
-            // Auto-regenerate ALL texture views with the new color palette
-            functions.logger.info('Auto-regenerating texture views with new color palette', {
-                pipelineId,
-                dominantColors: newAggregatedPalette.dominantColors,
-            });
-            const textureViews = await generator.generateTextureViewsWithColors(base64, mimeType, newAggregatedPalette.dominantColors);
-            // Upload new texture images
-            const textureImages = {};
-            for (const [texAngle, texView] of Object.entries(textureViews)) {
-                const texExt = getExtensionFromMimeType(texView.mimeType);
-                const texStoragePath = `pipelines/${userId}/${pipelineId}/texture_${texAngle}.${texExt}`;
-                const texUrl = await uploadImageToStorage(texView.imageBase64, texView.mimeType, texStoragePath);
-                textureImages[texAngle] = {
-                    url: texUrl,
-                    storagePath: texStoragePath,
-                    source: 'gemini',
-                    generatedAt: now,
-                };
-            }
-            // Update pipeline with new texture images and color palette
+            // Update the mesh image, color palette, and increment regeneration counter
             await pipelineRef.update({
-                textureImages,
+                [`meshImages.${angle}`]: processedMeshImage,
                 aggregatedColorPalette: newAggregatedPalette,
+                regenerationsUsed: admin.firestore.FieldValue.increment(1),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
-            functions.logger.info('Pipeline mesh image regenerated with auto-texture update', {
+            functions.logger.info('Pipeline mesh image regenerated', {
                 pipelineId,
                 angle,
-                texturesRegenerated: Object.keys(textureImages).length,
             });
             return {
                 viewType,
                 angle,
                 image: processedMeshImage,
-                regeneratedTextures: true,
-                textureImages,
                 aggregatedColorPalette: newAggregatedPalette,
             };
         }
         else {
-            // Regenerate texture view only (no auto-linkage needed)
-            const view = await generator.generateTextureView(base64, mimeType, angle, hint);
-            // Upload texture image
-            const ext = getExtensionFromMimeType(view.mimeType);
-            const storagePath = `pipelines/${userId}/${pipelineId}/texture_${angle}.${ext}`;
-            const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-            const processedImage = {
-                url,
-                storagePath,
-                source: 'gemini',
-                generatedAt: now,
-            };
-            // Update texture image and increment regeneration counter
-            await pipelineRef.update({
-                [`textureImages.${angle}`]: processedImage,
-                regenerationsUsed: admin.firestore.FieldValue.increment(1),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-            functions.logger.info('Pipeline texture image regenerated', { pipelineId, angle });
-            return {
-                viewType,
-                angle,
-                image: processedImage,
-                regeneratedTextures: false,
-            };
+            // Texture view regeneration is no longer supported
+            throw new functions.https.HttpsError('invalid-argument', 'Texture view regeneration is not supported. Only mesh views can be regenerated.');
         }
     }
     catch (error) {
@@ -954,9 +883,9 @@ exports.startPipelineTexture = functions
     if (!pipeline.meshyMeshTaskId) {
         throw new functions.https.HttpsError('failed-precondition', 'Mesh generation must complete before texturing');
     }
-    // Verify we have texture reference images
-    if (!pipeline.textureImages.front) {
-        throw new functions.https.HttpsError('failed-precondition', 'Missing front texture reference image');
+    // Verify we have mesh reference images for style reference
+    if (!pipeline.meshImages.front) {
+        throw new functions.https.HttpsError('failed-precondition', 'Missing front mesh reference image');
     }
     // Deduct credits
     try {
@@ -972,8 +901,8 @@ exports.startPipelineTexture = functions
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
     try {
-        // Use front texture image as style reference
-        const styleImageUrl = pipeline.textureImages.front.url;
+        // Use front mesh image as style reference
+        const styleImageUrl = pipeline.meshImages.front.url;
         // Build texture prompt from image analysis (if available)
         // This enhances Meshy's texture generation with material context
         let textStylePrompt;
@@ -1135,7 +1064,6 @@ exports.resetPipelineStep = functions
             case 'draft':
                 // Clear all generated content
                 updateData.meshImages = {};
-                updateData.textureImages = {};
                 updateData.aggregatedColorPalette = admin.firestore.FieldValue.delete();
                 updateData.generationProgress = admin.firestore.FieldValue.delete();
             /* falls through */

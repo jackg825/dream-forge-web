@@ -14,8 +14,8 @@
 
 import axios, { AxiosError } from 'axios';
 import * as functions from 'firebase-functions/v1';
-import type { PipelineMeshAngle, PipelineTextureAngle } from '../rodin/types';
-import { getMode, getMeshPrompt, getTexturePrompt, type GenerationModeId } from './mode-configs';
+import type { PipelineMeshAngle } from '../rodin/types';
+import { getMode, getMeshPrompt, type GenerationModeId } from './mode-configs';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const MODEL = 'gemini-2.5-flash-image';
@@ -127,7 +127,7 @@ export class GeminiBatchClient {
   }
 
   /**
-   * Build batch requests for all 6 views
+   * Build batch requests for all 4 mesh views
    */
   buildBatchRequests(
     referenceImageBase64: string,
@@ -137,7 +137,6 @@ export class GeminiBatchClient {
   ): BatchRequest[] {
     const modeConfig = getMode(modeId);
     const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
-    const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
 
     const requests: BatchRequest[] = [];
 
@@ -147,15 +146,6 @@ export class GeminiBatchClient {
         viewType: 'mesh',
         angle,
         prompt: getMeshPrompt(modeConfig, angle, userDescription),
-      });
-    }
-
-    // Add texture view requests
-    for (const angle of textureAngles) {
-      requests.push({
-        viewType: 'texture',
-        angle,
-        prompt: getTexturePrompt(modeConfig, angle, userDescription),
       });
     }
 

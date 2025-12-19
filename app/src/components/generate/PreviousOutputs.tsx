@@ -5,7 +5,7 @@ import { ChevronDown, ChevronUp, Images, Box } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { useTranslations } from 'next-intl';
-import type { Pipeline, PipelineMeshAngle, PipelineTextureAngle } from '@/types';
+import type { Pipeline, PipelineMeshAngle } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
 
 interface PreviousOutputsProps {
@@ -37,29 +37,18 @@ export function PreviousOutputs({
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
-  const textureAngles: PipelineTextureAngle[] = ['front', 'back'];
 
   const hasMeshImages = Object.keys(pipeline.meshImages || {}).length > 0;
-  const hasTextureImages = Object.keys(pipeline.textureImages || {}).length > 0;
   const hasMesh = !!pipeline.meshUrl;
 
   // Build all images for lightbox
-  const allImages: { src: string; alt: string; type: 'mesh' | 'texture' }[] = [];
+  const allImages: { src: string; alt: string }[] = [];
 
   if (hasMeshImages) {
     meshAngles.forEach((angle) => {
       const image = pipeline.meshImages[angle];
       if (image) {
-        allImages.push({ src: image.url, alt: `網格 - ${angle}`, type: 'mesh' });
-      }
-    });
-  }
-
-  if (hasTextureImages) {
-    textureAngles.forEach((angle) => {
-      const image = pipeline.textureImages[angle];
-      if (image) {
-        allImages.push({ src: image.url, alt: `貼圖 - ${angle}`, type: 'texture' });
+        allImages.push({ src: image.url, alt: `網格 - ${angle}` });
       }
     });
   }
@@ -73,7 +62,7 @@ export function PreviousOutputs({
     }
   };
 
-  const showImagesSection = showImages && (hasMeshImages || hasTextureImages);
+  const showImagesSection = showImages && hasMeshImages;
   const showMeshSection = showMesh && hasMesh;
 
   if (!showImagesSection && !showMeshSection && !children) return null;
@@ -112,63 +101,34 @@ export function PreviousOutputs({
 
               {imagesExpanded && (
                 <div className="px-4 pb-4 space-y-3">
-              {/* Mesh images - 4 columns */}
-              {hasMeshImages && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">{t('meshImages')}</p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {meshAngles.map((angle) => {
-                      const image = pipeline.meshImages[angle];
-                      return image ? (
-                        <button
-                          key={angle}
-                          onClick={() => handleImageClick(image.url)}
-                          className="relative aspect-square rounded-md overflow-hidden bg-muted
-                                     ring-offset-background transition-all
-                                     hover:ring-2 hover:ring-primary hover:ring-offset-2
-                                     focus-visible:outline-none focus-visible:ring-2
-                                     focus-visible:ring-primary focus-visible:ring-offset-2"
-                        >
-                          <img
-                            src={image.url}
-                            alt={angle}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Texture images - 2 images in 4 columns grid */}
-              {hasTextureImages && (
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2">貼圖用圖片</p>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {textureAngles.map((angle) => {
-                      const image = pipeline.textureImages[angle];
-                      return image ? (
-                        <button
-                          key={angle}
-                          onClick={() => handleImageClick(image.url)}
-                          className="relative aspect-square rounded-md overflow-hidden bg-muted
-                                     ring-offset-background transition-all
-                                     hover:ring-2 hover:ring-primary hover:ring-offset-2
-                                     focus-visible:outline-none focus-visible:ring-2
-                                     focus-visible:ring-primary focus-visible:ring-offset-2"
-                        >
-                          <img
-                            src={image.url}
-                            alt={angle}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
+                  {/* Mesh images - 4 columns */}
+                  {hasMeshImages && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-2">{t('meshImages')}</p>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {meshAngles.map((angle) => {
+                          const image = pipeline.meshImages[angle];
+                          return image ? (
+                            <button
+                              key={angle}
+                              onClick={() => handleImageClick(image.url)}
+                              className="relative aspect-square rounded-md overflow-hidden bg-muted
+                                         ring-offset-background transition-all
+                                         hover:ring-2 hover:ring-primary hover:ring-offset-2
+                                         focus-visible:outline-none focus-visible:ring-2
+                                         focus-visible:ring-primary focus-visible:ring-offset-2"
+                            >
+                              <img
+                                src={image.url}
+                                alt={angle}
+                                className="w-full h-full object-cover"
+                              />
+                            </button>
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

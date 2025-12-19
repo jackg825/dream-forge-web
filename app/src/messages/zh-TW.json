@@ -575,15 +575,12 @@
     "processing": {
       "generatingViews": "正在生成視角圖片",
       "meshViews": "正在生成網格用圖片",
-      "textureViews": "正在生成貼圖用圖片",
       "aiAnalyzing": "AI 正在分析您的圖片並生成多角度視圖",
       "processing": "處理中...",
-      "meshViewsLabel": "網格視圖",
-      "textureViewsLabel": "貼圖視圖"
+      "meshViewsLabel": "網格視圖"
     },
     "images": {
       "meshImages": "網格用圖片",
-      "textureImages": "貼圖用圖片",
       "referenceImages": "參考圖片",
       "regenerate": "重新生成",
       "remaining": "剩餘 {count} 次",

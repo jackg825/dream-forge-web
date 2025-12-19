@@ -202,7 +202,6 @@ export interface PipelineProcessedImage {
  * View types for pipeline images
  */
 export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
-export type PipelineTextureAngle = 'front' | 'back';
 /**
  * Generation mode for A/B testing different image processing strategies
  */
@@ -254,15 +253,13 @@ export interface PipelineDocument {
         uploadedAt: FirebaseFirestore.Timestamp;
     }>;
     meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-    textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
     aggregatedColorPalette?: {
         unified: string[];
         dominantColors: string[];
     };
     generationProgress?: {
-        phase: 'mesh-views' | 'texture-views' | 'complete';
+        phase: 'mesh-views' | 'complete';
         meshViewsCompleted: number;
-        textureViewsCompleted: number;
     };
     providerTaskId?: string;
     meshyMeshTaskId?: string;
@@ -313,7 +310,6 @@ export interface AdminAction {
  */
 export interface AdminPreview {
     meshImages?: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-    textureImages?: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
     meshUrl?: string;
     meshStoragePath?: string;
     meshDownloadFiles?: DownloadFile[];

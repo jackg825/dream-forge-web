@@ -6,7 +6,6 @@ import { functions } from '@/lib/firebase';
 import type {
   AdminPreview,
   PipelineMeshAngle,
-  PipelineTextureAngle,
   PipelineProcessedImage,
   ModelProvider,
   ProviderOptions,
@@ -25,8 +24,8 @@ interface UseAdminPipelineRegenerationReturn {
   // Image regeneration
   regenerateImage: (
     pipelineId: string,
-    viewType: 'mesh' | 'texture',
-    angle: PipelineMeshAngle | PipelineTextureAngle,
+    viewType: 'mesh',
+    angle: PipelineMeshAngle,
     hint?: string
   ) => Promise<PipelineProcessedImage | null>;
 
@@ -49,13 +48,13 @@ interface UseAdminPipelineRegenerationReturn {
   // Confirm/Reject
   confirmPreview: (
     pipelineId: string,
-    targetField: 'meshImages' | 'textureImages' | 'mesh',
+    targetField: 'meshImages' | 'mesh',
     angle?: string
   ) => Promise<boolean>;
 
   rejectPreview: (
     pipelineId: string,
-    targetField: 'meshImages' | 'textureImages' | 'mesh' | 'all',
+    targetField: 'meshImages' | 'mesh' | 'all',
     angle?: string
   ) => Promise<boolean>;
 
@@ -67,7 +66,7 @@ interface UseAdminPipelineRegenerationReturn {
 // Response types for Cloud Functions
 interface RegenerateImageResponse {
   success: boolean;
-  viewType: 'mesh' | 'texture';
+  viewType: 'mesh';
   angle: string;
   previewImage: PipelineProcessedImage;
 }
@@ -106,8 +105,8 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
 
   const regenerateImage = useCallback(async (
     pipelineId: string,
-    viewType: 'mesh' | 'texture',
-    angle: PipelineMeshAngle | PipelineTextureAngle,
+    viewType: 'mesh',
+    angle: PipelineMeshAngle,
     hint?: string
   ): Promise<PipelineProcessedImage | null> => {
     if (!functions) {
@@ -136,17 +135,10 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
         // Update local preview data
         setPreviewData((prev) => {
           const updated = { ...prev } as AdminPreview;
-          if (viewType === 'mesh') {
-            updated.meshImages = {
-              ...updated.meshImages,
-              [angle]: result.data.previewImage,
-            };
-          } else {
-            updated.textureImages = {
-              ...updated.textureImages,
-              [angle]: result.data.previewImage,
-            };
-          }
+          updated.meshImages = {
+            ...updated.meshImages,
+            [angle]: result.data.previewImage,
+          };
           return updated;
         });
         setPreviewStatus('ready');
@@ -269,7 +261,7 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
 
   const confirmPreview = useCallback(async (
     pipelineId: string,
-    targetField: 'meshImages' | 'textureImages' | 'mesh',
+    targetField: 'meshImages' | 'mesh',
     angle?: string
   ): Promise<boolean> => {
     if (!functions) {
@@ -302,10 +294,6 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
             if (updated.meshImages) {
               delete updated.meshImages[angle as PipelineMeshAngle];
             }
-          } else if (targetField === 'textureImages' && angle) {
-            if (updated.textureImages) {
-              delete updated.textureImages[angle as PipelineTextureAngle];
-            }
           } else if (targetField === 'mesh') {
             delete updated.meshUrl;
             delete updated.meshStoragePath;
@@ -318,7 +306,6 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
           // Check if preview is now empty
           const hasContent =
             (updated.meshImages && Object.keys(updated.meshImages).length > 0) ||
-            (updated.textureImages && Object.keys(updated.textureImages).length > 0) ||
             updated.meshUrl;
 
           return hasContent ? updated : null;
@@ -341,7 +328,7 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
 
   const rejectPreview = useCallback(async (
     pipelineId: string,
-    targetField: 'meshImages' | 'textureImages' | 'mesh' | 'all',
+    targetField: 'meshImages' | 'mesh' | 'all',
     angle?: string
   ): Promise<boolean> => {
     if (!functions) {
@@ -375,10 +362,6 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
               if (updated.meshImages) {
                 delete updated.meshImages[angle as PipelineMeshAngle];
               }
-            } else if (targetField === 'textureImages' && angle) {
-              if (updated.textureImages) {
-                delete updated.textureImages[angle as PipelineTextureAngle];
-              }
             } else if (targetField === 'mesh') {
               delete updated.meshUrl;
               delete updated.meshStoragePath;
@@ -390,7 +373,6 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
 
             const hasContent =
               (updated.meshImages && Object.keys(updated.meshImages).length > 0) ||
-              (updated.textureImages && Object.keys(updated.textureImages).length > 0) ||
               updated.meshUrl;
 
             return hasContent ? updated : null;

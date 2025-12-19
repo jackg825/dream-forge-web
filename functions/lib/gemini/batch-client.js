@@ -65,12 +65,11 @@ class GeminiBatchClient {
         this.apiKey = apiKey;
     }
     /**
-     * Build batch requests for all 6 views
+     * Build batch requests for all 4 mesh views
      */
     buildBatchRequests(referenceImageBase64, mimeType, modeId, userDescription) {
         const modeConfig = (0, mode_configs_1.getMode)(modeId);
         const meshAngles = ['front', 'back', 'left', 'right'];
-        const textureAngles = ['front', 'back'];
         const requests = [];
         // Add mesh view requests
         for (const angle of meshAngles) {
@@ -78,14 +77,6 @@ class GeminiBatchClient {
                 viewType: 'mesh',
                 angle,
                 prompt: (0, mode_configs_1.getMeshPrompt)(modeConfig, angle, userDescription),
-            });
-        }
-        // Add texture view requests
-        for (const angle of textureAngles) {
-            requests.push({
-                viewType: 'texture',
-                angle,
-                prompt: (0, mode_configs_1.getTexturePrompt)(modeConfig, angle, userDescription),
             });
         }
         return requests;

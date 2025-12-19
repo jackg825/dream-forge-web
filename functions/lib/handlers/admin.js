@@ -372,7 +372,6 @@ exports.listAllPipelines = functions
                 generationMode: pipelineData.generationMode,
                 inputImages: pipelineData.inputImages || [],
                 meshImages: pipelineData.meshImages || {},
-                textureImages: pipelineData.textureImages || {},
                 meshUrl: pipelineData.meshUrl || null,
                 texturedModelUrl: pipelineData.texturedModelUrl || null,
                 creditsCharged: pipelineData.creditsCharged || { mesh: 0, texture: 0 },
@@ -708,14 +707,13 @@ exports.adminRegeneratePipelineImage = functions
     const adminId = context.auth.uid;
     const adminEmail = await getAdminEmail(adminId);
     const { pipelineId, viewType, angle, hint } = data;
-    // Validate viewType and angle
+    // Validate viewType and angle - only mesh views can be regenerated
     const validMeshAngles = ['front', 'back', 'left', 'right'];
-    const validTextureAngles = ['front', 'back'];
-    if (viewType === 'mesh' && !validMeshAngles.includes(angle)) {
-        throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
+    if (viewType !== 'mesh') {
+        throw new functions.https.HttpsError('invalid-argument', 'Only mesh views can be regenerated');
     }
-    if (viewType === 'texture' && !validTextureAngles.includes(angle)) {
-        throw new functions.https.HttpsError('invalid-argument', 'Invalid texture angle');
+    if (!validMeshAngles.includes(angle)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
     }
     // Get pipeline (no ownership check - admin can access any pipeline)
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
@@ -730,55 +728,35 @@ exports.adminRegeneratePipelineImage = functions
         const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
         // Generate view using pipeline's settings
         const modeId = pipeline.generationMode || 'simplified-texture';
-        const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
         const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash');
-        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
+        const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel);
         const now = admin.firestore.FieldValue.serverTimestamp();
-        let processedImage;
-        const previousUrl = viewType === 'mesh'
-            ? pipeline.meshImages[angle]?.url
-            : pipeline.textureImages[angle]?.url;
-        if (viewType === 'mesh') {
-            const view = await generator.generateMeshView(base64, mimeType, angle, hint);
-            const ext = getExtensionFromMimeType(view.mimeType);
-            // Store in preview/ subdirectory
-            const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/mesh_${angle}.${ext}`;
-            const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-            processedImage = {
-                url,
-                storagePath,
-                source: 'gemini',
-                generatedAt: now,
-            };
-            if (view.colorPalette?.length) {
-                processedImage.colorPalette = view.colorPalette;
-            }
-            // Update adminPreview
-            await pipelineRef.update({
-                [`adminPreview.meshImages.${angle}`]: processedImage,
-                'adminPreview.createdAt': now,
-                'adminPreview.createdBy': adminId,
-                updatedAt: now,
-            });
+        // Only mesh views can be regenerated
+        if (viewType !== 'mesh') {
+            throw new functions.https.HttpsError('invalid-argument', 'Texture view regeneration is not supported. Only mesh views can be regenerated.');
         }
-        else {
-            const view = await generator.generateTextureView(base64, mimeType, angle, hint);
-            const ext = getExtensionFromMimeType(view.mimeType);
-            const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/texture_${angle}.${ext}`;
-            const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-            processedImage = {
-                url,
-                storagePath,
-                source: 'gemini',
-                generatedAt: now,
-            };
-            await pipelineRef.update({
-                [`adminPreview.textureImages.${angle}`]: processedImage,
-                'adminPreview.createdAt': now,
-                'adminPreview.createdBy': adminId,
-                updatedAt: now,
-            });
+        const previousUrl = pipeline.meshImages[angle]?.url;
+        const view = await generator.generateMeshView(base64, mimeType, angle, hint);
+        const ext = getExtensionFromMimeType(view.mimeType);
+        // Store in preview/ subdirectory
+        const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/mesh_${angle}.${ext}`;
+        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+        const processedImage = {
+            url,
+            storagePath,
+            source: 'gemini',
+            generatedAt: now,
+        };
+        if (view.colorPalette?.length) {
+            processedImage.colorPalette = view.colorPalette;
         }
+        // Update adminPreview
+        await pipelineRef.update({
+            [`adminPreview.meshImages.${angle}`]: processedImage,
+            'adminPreview.createdAt': now,
+            'adminPreview.createdBy': adminId,
+            updatedAt: now,
+        });
         // Add audit trail
         await addAdminAction(pipelineRef, {
             adminId,
@@ -1074,15 +1052,6 @@ exports.adminConfirmPreview = functions
         updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
         confirmedField = `meshImages.${angle}`;
     }
-    else if (targetField === 'textureImages' && angle) {
-        const previewImage = preview.textureImages?.[angle];
-        if (!previewImage) {
-            throw new functions.https.HttpsError('failed-precondition', `No preview for textureImages.${angle}`);
-        }
-        updates[`textureImages.${angle}`] = previewImage;
-        updates[`adminPreview.textureImages.${angle}`] = admin.firestore.FieldValue.delete();
-        confirmedField = `textureImages.${angle}`;
-    }
     else if (targetField === 'mesh') {
         if (!preview.meshUrl) {
             throw new functions.https.HttpsError('failed-precondition', 'No mesh preview to confirm');
@@ -1158,10 +1127,6 @@ exports.adminRejectPreview = functions
     else if (targetField === 'meshImages' && angle) {
         updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
         rejectedField = `meshImages.${angle}`;
-    }
-    else if (targetField === 'textureImages' && angle) {
-        updates[`adminPreview.textureImages.${angle}`] = admin.firestore.FieldValue.delete();
-        rejectedField = `textureImages.${angle}`;
     }
     else if (targetField === 'mesh') {
         updates['adminPreview.meshUrl'] = admin.firestore.FieldValue.delete();

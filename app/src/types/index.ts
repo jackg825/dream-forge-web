@@ -273,7 +273,6 @@ export interface AdminAction {
 export interface AdminPreview {
   // Image previews
   meshImages?: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-  textureImages?: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
 
   // Mesh preview
   meshUrl?: string;
@@ -307,7 +306,6 @@ export interface AdminPipeline {
   generationMode: GenerationModeId;
   inputImages: Array<{ url: string; storagePath: string; uploadedAt: string }>;
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-  textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
   meshUrl: string | null;
   texturedModelUrl: string | null;
   creditsCharged: { mesh: number; texture: number };
@@ -851,11 +849,6 @@ export const PIPELINE_CREDIT_COSTS = {
 export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
 
 /**
- * Pipeline texture angle (2 views)
- */
-export type PipelineTextureAngle = 'front' | 'back';
-
-/**
  * Processed image from Gemini
  */
 export interface PipelineProcessedImage {
@@ -957,9 +950,8 @@ export interface Pipeline {
     uploadedAt: Date;
   }>;
 
-  // Gemini-generated images
+  // Gemini-generated mesh reference images
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
-  textureImages: Partial<Record<PipelineTextureAngle, PipelineProcessedImage>>;
 
   // Aggregated color palette from mesh views (for texture consistency)
   aggregatedColorPalette?: {
@@ -969,9 +961,8 @@ export interface Pipeline {
 
   // Real-time generation progress tracking
   generationProgress?: {
-    phase: 'mesh-views' | 'texture-views' | 'complete';
+    phase: 'mesh-views' | 'complete';
     meshViewsCompleted: number;     // 0-4
-    textureViewsCompleted: number;  // 0-2
   };
 
   // Meshy mesh generation
@@ -1031,12 +1022,11 @@ export interface CreatePipelineResponse {
 export interface GeneratePipelineImagesResponse {
   status: PipelineStatus;
   meshImages: Record<PipelineMeshAngle, PipelineProcessedImage>;
-  textureImages: Record<PipelineTextureAngle, PipelineProcessedImage>;
 }
 
 export interface RegeneratePipelineImageRequest {
   pipelineId: string;
-  viewType: 'mesh' | 'texture';
+  viewType: 'mesh';
   angle: string;
 }
 

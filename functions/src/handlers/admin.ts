@@ -5,7 +5,6 @@ import type {
   TransactionDocument,
   PipelineDocument,
   PipelineMeshAngle,
-  PipelineTextureAngle,
   PipelineProcessedImage,
   AdminAction,
 } from '../rodin/types';
@@ -471,7 +470,6 @@ export const listAllPipelines = functions
           generationMode: pipelineData.generationMode,
           inputImages: pipelineData.inputImages || [],
           meshImages: pipelineData.meshImages || {},
-          textureImages: pipelineData.textureImages || {},
           meshUrl: pipelineData.meshUrl || null,
           texturedModelUrl: pipelineData.texturedModelUrl || null,
           creditsCharged: pipelineData.creditsCharged || { mesh: 0, texture: 0 },
@@ -921,16 +919,15 @@ export const adminRegeneratePipelineImage = functions
     const adminEmail = await getAdminEmail(adminId);
     const { pipelineId, viewType, angle, hint } = data;
 
-    // Validate viewType and angle
+    // Validate viewType and angle - only mesh views can be regenerated
     const validMeshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
-    const validTextureAngles: PipelineTextureAngle[] = ['front', 'back'];
 
-    if (viewType === 'mesh' && !validMeshAngles.includes(angle as PipelineMeshAngle)) {
-      throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
+    if (viewType !== 'mesh') {
+      throw new functions.https.HttpsError('invalid-argument', 'Only mesh views can be regenerated');
     }
 
-    if (viewType === 'texture' && !validTextureAngles.includes(angle as PipelineTextureAngle)) {
-      throw new functions.https.HttpsError('invalid-argument', 'Invalid texture angle');
+    if (!validMeshAngles.includes(angle as PipelineMeshAngle)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
     }
 
     // Get pipeline (no ownership check - admin can access any pipeline)
@@ -950,60 +947,43 @@ export const adminRegeneratePipelineImage = functions
 
       // Generate view using pipeline's settings
       const modeId = pipeline.generationMode || 'simplified-texture';
-      const preAnalyzedColors = pipeline.imageAnalysis?.colorPalette;
       const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
-      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, preAnalyzedColors, pipeline.imageAnalysis, geminiModel);
+      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel);
       const now = admin.firestore.FieldValue.serverTimestamp();
 
-      let processedImage: PipelineProcessedImage;
-      const previousUrl = viewType === 'mesh'
-        ? pipeline.meshImages[angle as PipelineMeshAngle]?.url
-        : pipeline.textureImages[angle as PipelineTextureAngle]?.url;
-
-      if (viewType === 'mesh') {
-        const view = await generator.generateMeshView(base64, mimeType, angle as PipelineMeshAngle, hint);
-        const ext = getExtensionFromMimeType(view.mimeType);
-        // Store in preview/ subdirectory
-        const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/mesh_${angle}.${ext}`;
-        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-
-        processedImage = {
-          url,
-          storagePath,
-          source: 'gemini',
-          generatedAt: now as unknown as FirebaseFirestore.Timestamp,
-        };
-        if (view.colorPalette?.length) {
-          processedImage.colorPalette = view.colorPalette;
-        }
-
-        // Update adminPreview
-        await pipelineRef.update({
-          [`adminPreview.meshImages.${angle}`]: processedImage,
-          'adminPreview.createdAt': now,
-          'adminPreview.createdBy': adminId,
-          updatedAt: now,
-        });
-      } else {
-        const view = await generator.generateTextureView(base64, mimeType, angle as PipelineTextureAngle, hint);
-        const ext = getExtensionFromMimeType(view.mimeType);
-        const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/texture_${angle}.${ext}`;
-        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-
-        processedImage = {
-          url,
-          storagePath,
-          source: 'gemini',
-          generatedAt: now as unknown as FirebaseFirestore.Timestamp,
-        };
-
-        await pipelineRef.update({
-          [`adminPreview.textureImages.${angle}`]: processedImage,
-          'adminPreview.createdAt': now,
-          'adminPreview.createdBy': adminId,
-          updatedAt: now,
-        });
+      // Only mesh views can be regenerated
+      if (viewType !== 'mesh') {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Texture view regeneration is not supported. Only mesh views can be regenerated.'
+        );
       }
+
+      const previousUrl = pipeline.meshImages[angle as PipelineMeshAngle]?.url;
+
+      const view = await generator.generateMeshView(base64, mimeType, angle as PipelineMeshAngle, hint);
+      const ext = getExtensionFromMimeType(view.mimeType);
+      // Store in preview/ subdirectory
+      const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/mesh_${angle}.${ext}`;
+      const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+      const processedImage: PipelineProcessedImage = {
+        url,
+        storagePath,
+        source: 'gemini',
+        generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+      };
+      if (view.colorPalette?.length) {
+        processedImage.colorPalette = view.colorPalette;
+      }
+
+      // Update adminPreview
+      await pipelineRef.update({
+        [`adminPreview.meshImages.${angle}`]: processedImage,
+        'adminPreview.createdAt': now,
+        'adminPreview.createdBy': adminId,
+        updatedAt: now,
+      });
 
       // Add audit trail
       await addAdminAction(pipelineRef, {
@@ -1294,8 +1274,8 @@ export const adminCheckPreviewStatus = functions
 
 interface AdminConfirmPreviewData {
   pipelineId: string;
-  targetField: 'meshImages' | 'textureImages' | 'mesh';
-  angle?: string; // Required for image fields
+  targetField: 'meshImages' | 'mesh';
+  angle?: string; // Required for meshImages
 }
 
 /**
@@ -1350,14 +1330,6 @@ export const adminConfirmPreview = functions
       updates[`meshImages.${angle}`] = previewImage;
       updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
       confirmedField = `meshImages.${angle}`;
-    } else if (targetField === 'textureImages' && angle) {
-      const previewImage = preview.textureImages?.[angle as PipelineTextureAngle];
-      if (!previewImage) {
-        throw new functions.https.HttpsError('failed-precondition', `No preview for textureImages.${angle}`);
-      }
-      updates[`textureImages.${angle}`] = previewImage;
-      updates[`adminPreview.textureImages.${angle}`] = admin.firestore.FieldValue.delete();
-      confirmedField = `textureImages.${angle}`;
     } else if (targetField === 'mesh') {
       if (!preview.meshUrl) {
         throw new functions.https.HttpsError('failed-precondition', 'No mesh preview to confirm');
@@ -1402,7 +1374,7 @@ export const adminConfirmPreview = functions
 
 interface AdminRejectPreviewData {
   pipelineId: string;
-  targetField: 'meshImages' | 'textureImages' | 'mesh' | 'all';
+  targetField: 'meshImages' | 'mesh' | 'all';
   angle?: string;
 }
 
@@ -1450,9 +1422,6 @@ export const adminRejectPreview = functions
     } else if (targetField === 'meshImages' && angle) {
       updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
       rejectedField = `meshImages.${angle}`;
-    } else if (targetField === 'textureImages' && angle) {
-      updates[`adminPreview.textureImages.${angle}`] = admin.firestore.FieldValue.delete();
-      rejectedField = `textureImages.${angle}`;
     } else if (targetField === 'mesh') {
       updates['adminPreview.meshUrl'] = admin.firestore.FieldValue.delete();
       updates['adminPreview.meshStoragePath'] = admin.firestore.FieldValue.delete();

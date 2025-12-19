@@ -19,7 +19,6 @@ import type {
   CheckPipelineStatusResponse,
   StartPipelineTextureResponse,
   PipelineMeshAngle,
-  PipelineTextureAngle,
   GenerationModeId,
   GeminiModelId,
   ProcessingMode,

@@ -47,10 +47,8 @@ const PROVIDER_DISPLAY_NAMES: Record<ModelProvider, string> = {
 interface ProgressData {
   /** Image generation: mesh views completed (0-4) */
   meshViewsCompleted?: number;
-  /** Image generation: texture views completed (0-2) */
-  textureViewsCompleted?: number;
-  /** Current phase: mesh-views, texture-views, or complete */
-  phase?: 'mesh-views' | 'texture-views' | 'complete';
+  /** Current phase: mesh-views or complete */
+  phase?: 'mesh-views' | 'complete';
   /** Batch API progress */
   batchProgress?: BatchProgress;
   /** Mesh generation progress (0-100) from Meshy API */
@@ -132,11 +130,10 @@ function calculateProgress(
     return total > 0 ? ((completed + failed) / total) * 100 : 0;
   }
 
-  // Realtime image generation
+  // Realtime image generation (4 mesh views)
   if (status === 'generating-images' && progress) {
     const meshDone = progress.meshViewsCompleted ?? 0;
-    const textureDone = progress.textureViewsCompleted ?? 0;
-    return ((meshDone + textureDone) / 6) * 100;
+    return (meshDone / 4) * 100;
   }
 
   // Mesh generation (if backend provides progress)

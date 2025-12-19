@@ -35,7 +35,6 @@ import type {
   AdminPipeline,
   PipelineStatus,
   PipelineMeshAngle,
-  PipelineTextureAngle,
   ModelProvider,
   AdminAction,
 } from '@/types';
@@ -70,7 +69,6 @@ const STATUS_CONFIG: Record<
 };
 
 const MESH_ANGLES: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
-const TEXTURE_ANGLES: PipelineTextureAngle[] = ['front', 'back'];
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
@@ -341,26 +339,13 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
     await regenerateImage(pipeline.id, 'mesh', angle as PipelineMeshAngle);
   };
 
-  const handleRegenerateTextureImage = async (angle: string) => {
-    await regenerateImage(pipeline.id, 'texture', angle as PipelineTextureAngle);
-  };
-
   const handleConfirmMeshImage = async (angle: string) => {
     const success = await confirmPreview(pipeline.id, 'meshImages', angle);
     if (success) onPipelineUpdated?.();
   };
 
-  const handleConfirmTextureImage = async (angle: string) => {
-    const success = await confirmPreview(pipeline.id, 'textureImages', angle);
-    if (success) onPipelineUpdated?.();
-  };
-
   const handleRejectMeshImage = async (angle: string) => {
     await rejectPreview(pipeline.id, 'meshImages', angle);
-  };
-
-  const handleRejectTextureImage = async (angle: string) => {
-    await rejectPreview(pipeline.id, 'textureImages', angle);
   };
 
   const handleRegenerateMesh = async () => {
@@ -390,25 +375,9 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
       angle,
     }));
 
-  const textureImages = TEXTURE_ANGLES
-    .filter((angle) => pipeline.textureImages[angle])
-    .map((angle) => ({
-      url: pipeline.textureImages[angle]!.url,
-      label: angle,
-      angle,
-    }));
-
   // Preview images
   const meshPreviewImages = previewData?.meshImages
     ? Object.entries(previewData.meshImages).map(([angle, img]) => ({
-        url: img!.url,
-        label: angle,
-        angle,
-      }))
-    : [];
-
-  const texturePreviewImages = previewData?.textureImages
-    ? Object.entries(previewData.textureImages).map(([angle, img]) => ({
         url: img!.url,
         label: angle,
         angle,
@@ -509,7 +478,7 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
 
             {/* Images tabs with admin actions */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full grid grid-cols-4">
+              <TabsList className="w-full grid grid-cols-3">
                 <TabsTrigger value="input" className="gap-1 text-xs">
                   <ImageIcon className="h-3 w-3" />
                   輸入 ({inputImages.length})
@@ -517,10 +486,6 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
                 <TabsTrigger value="mesh" className="gap-1 text-xs">
                   <Box className="h-3 w-3" />
                   網格 ({meshImages.length})
-                </TabsTrigger>
-                <TabsTrigger value="texture" className="gap-1 text-xs">
-                  <Palette className="h-3 w-3" />
-                  貼圖 ({textureImages.length})
                 </TabsTrigger>
                 <TabsTrigger value="admin" className="gap-1 text-xs">
                   <Wrench className="h-3 w-3" />
@@ -540,19 +505,6 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
                   onRegenerate={handleRegenerateMeshImage}
                   onConfirm={handleConfirmMeshImage}
                   onReject={handleRejectMeshImage}
-                  isRegenerating={isRegenerating}
-                  showActions={true}
-                />
-              </TabsContent>
-
-              <TabsContent value="texture" className="mt-4">
-                <ImageGallery
-                  images={textureImages}
-                  title="貼圖圖片"
-                  previewImages={texturePreviewImages}
-                  onRegenerate={handleRegenerateTextureImage}
-                  onConfirm={handleConfirmTextureImage}
-                  onReject={handleRejectTextureImage}
                   isRegenerating={isRegenerating}
                   showActions={true}
                 />

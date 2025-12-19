@@ -575,15 +575,12 @@
     "processing": {
       "generatingViews": "Generating view images",
       "meshViews": "Generating mesh view images",
-      "textureViews": "Generating texture view images",
       "aiAnalyzing": "AI is analyzing your image and generating multiple views",
       "processing": "Processing...",
-      "meshViewsLabel": "Mesh Views",
-      "textureViewsLabel": "Texture Views"
+      "meshViewsLabel": "Mesh Views"
     },
     "images": {
       "meshImages": "Mesh Images",
-      "textureImages": "Texture Images",
       "referenceImages": "Reference Images",
       "regenerate": "Regenerate",
       "remaining": "{count} remaining",

@@ -68,7 +68,6 @@ export function usePipelines(
               uploadedAt: img.uploadedAt?.toDate?.() || new Date(),
             })),
             meshImages: data.meshImages || {},
-            textureImages: data.textureImages || {},
             meshyMeshTaskId: data.meshyMeshTaskId,
             meshUrl: data.meshUrl,
             meshStoragePath: data.meshStoragePath,

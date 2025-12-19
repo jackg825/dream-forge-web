@@ -104,7 +104,7 @@ export declare class GeminiBatchClient {
     private apiKey;
     constructor(apiKey: string);
     /**
-     * Build batch requests for all 6 views
+     * Build batch requests for all 4 mesh views
      */
     buildBatchRequests(referenceImageBase64: string, mimeType: string, modeId: GenerationModeId, userDescription?: string): BatchRequest[];
     /**

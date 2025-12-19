@@ -4,7 +4,7 @@
  * Defines different image generation modes for A/B testing 3D model quality.
  * Each mode specifies how mesh and texture images should be processed.
  */
-import type { PipelineMeshAngle, PipelineTextureAngle, ImageAnalysisResult } from '../rodin/types';
+import type { PipelineMeshAngle, ImageAnalysisResult } from '../rodin/types';
 import { type StyleId } from '../config/styles';
 /**
  * Available generation mode IDs
@@ -62,27 +62,3 @@ export declare function getMode(id: GenerationModeId): ModeConfig;
  * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
 export declare function getMeshPrompt(mode: ModeConfig, angle: PipelineMeshAngle, userDescription?: string | null, hint?: string, imageAnalysis?: ImageAnalysisResult | null, selectedStyle?: StyleId): string;
-/**
- * Generate texture view prompt based on mode and angle
- * Uses narrative style following Gemini's best practice:
- * "Describe the scene, don't just list keywords"
- *
- * @param mode - The generation mode configuration
- * @param angle - The view angle to generate
- * @param userDescription - Optional user-provided description of the object
- * @param hint - Optional regeneration hint for adjustments
- * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
- */
-export declare function getTexturePrompt(mode: ModeConfig, angle: PipelineTextureAngle, userDescription?: string | null, hint?: string, selectedStyle?: StyleId): string;
-/**
- * Generate texture view prompt with color palette hints for consistency
- * Used when generating texture views after mesh views are complete
- *
- * @param mode - The generation mode configuration
- * @param angle - The view angle to generate
- * @param colorPalette - Color palette extracted from mesh views for consistency
- * @param userDescription - Optional user-provided description of the object
- * @param hint - Optional regeneration hint for adjustments
- * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
- */
-export declare function getTexturePromptWithColors(mode: ModeConfig, angle: PipelineTextureAngle, colorPalette: string[], userDescription?: string | null, hint?: string, selectedStyle?: StyleId): string;
