@@ -245,6 +245,11 @@
         "label": "Tripo3D v3.0",
         "description": "Native multi-view support",
         "estimatedTime": "About 2-4 minutes"
+      },
+      "hitem3d": {
+        "label": "HiTem3D v1.5",
+        "description": "High precision multi-resolution generation",
+        "estimatedTime": "About 3-5 minutes"
       }
     },
     "dragDrop": "Drag and drop your photo here",

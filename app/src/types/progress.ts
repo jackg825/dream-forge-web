@@ -132,6 +132,7 @@ const PROVIDER_DISPLAY_NAMES: Record<ModelProvider, string> = {
   hunyuan: 'Hunyuan 3D',
   rodin: 'Rodin',
   tripo: 'Tripo3D',
+  hitem3d: 'HiTem3D',
 };
 
 /**

@@ -11,6 +11,7 @@ const PROVIDER_COLORS: Record<ModelProvider, string> = {
   hunyuan: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
   tripo: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
   rodin: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30',
+  hitem3d: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
 };
 
 /**

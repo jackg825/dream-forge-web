@@ -245,6 +245,11 @@
         "label": "Tripo3D v3.0",
         "description": "原生多視角支援",
         "estimatedTime": "約 2-4 分鐘"
+      },
+      "hitem3d": {
+        "label": "HiTem3D v1.5",
+        "description": "高精度多解析度生成",
+        "estimatedTime": "約 3-5 分鐘"
       }
     },
     "dragDrop": "拖放照片到此處",

@@ -24,7 +24,7 @@ export type PrinterType = 'fdm' | 'sla' | 'resin';
 export type InputMode = 'single' | 'multi' | 'ai-generated';
 
 // 3D Model Generation Provider
-export type ModelProvider = 'rodin' | 'meshy' | 'hunyuan' | 'tripo';
+export type ModelProvider = 'rodin' | 'meshy' | 'hunyuan' | 'tripo' | 'hitem3d';
 
 // Provider-specific options
 export interface ProviderOptions {
@@ -99,6 +99,16 @@ export const PROVIDER_OPTIONS: Record<ModelProvider, ProviderCapability> = {
     estimatedTime: '約 2-4 分鐘',
     creditCost: 5,  // API: ~$0.16 (estimated) → Total: $0.41
     capabilities: { maxPolygons: '200K', multiview: true, texturedMesh: true },
+  },
+  hitem3d: {
+    id: 'hitem3d',
+    label: 'HiTem3D v1.5',
+    description: '高精度多解析度生成',
+    badge: '新功能',
+    badgeVariant: 'secondary',
+    estimatedTime: '約 3-5 分鐘',
+    creditCost: 6,  // Similar to Hunyuan
+    capabilities: { maxPolygons: '2M', multiview: true, texturedMesh: true },
   },
 };
 
