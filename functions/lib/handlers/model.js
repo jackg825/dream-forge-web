@@ -75,7 +75,7 @@ exports.startSessionModelGeneration = functions
     .runWith({
     timeoutSeconds: 300,
     memory: '1GB',
-    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     // Verify authentication
@@ -225,7 +225,7 @@ exports.checkSessionModelStatus = functions
     .runWith({
     timeoutSeconds: 540, // 9 minutes for model download
     memory: '1GB',
-    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     // Verify authentication

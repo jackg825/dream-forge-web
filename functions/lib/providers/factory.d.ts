@@ -23,6 +23,7 @@ export declare class ProviderFactory {
     private static createMeshyProvider;
     private static createHunyuanProvider;
     private static createTripoProvider;
+    private static createHitem3DProvider;
     /**
      * Clear cached instances (for testing)
      */

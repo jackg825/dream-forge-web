@@ -10,9 +10,9 @@ import * as functions from 'firebase-functions';
 import type { I3DProvider, ProviderType } from './types';
 import { RodinProvider } from './rodin/client';
 import { MeshyProvider } from './meshy/client';
-// New providers - will be implemented
 import { HunyuanProvider } from './hunyuan/client';
 import { TripoProvider } from './tripo/client';
+import { Hitem3DProvider } from './hitem3d/client';
 
 /**
  * Factory for creating provider instances
@@ -43,6 +43,8 @@ export class ProviderFactory {
         return this.createHunyuanProvider();
       case 'tripo':
         return this.createTripoProvider();
+      case 'hitem3d':
+        return this.createHitem3DProvider();
       default:
         throw new functions.https.HttpsError(
           'invalid-argument',
@@ -97,6 +99,18 @@ export class ProviderFactory {
     return new TripoProvider(apiKey);
   }
 
+  private static createHitem3DProvider(): I3DProvider {
+    const accessKey = process.env.HITEM_ACCESS_KEY;
+    const secretKey = process.env.HITEM_SECRET_KEY;
+    if (!accessKey || !secretKey) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'HiTem3D credentials not configured (HITEM_ACCESS_KEY, HITEM_SECRET_KEY)'
+      );
+    }
+    return new Hitem3DProvider(accessKey, secretKey);
+  }
+
   /**
    * Clear cached instances (for testing)
    */
@@ -115,7 +129,7 @@ export function createProvider(type: ProviderType = 'meshy'): I3DProvider {
 /**
  * All valid provider types
  */
-const VALID_PROVIDERS: ProviderType[] = ['rodin', 'meshy', 'hunyuan', 'tripo'];
+const VALID_PROVIDERS: ProviderType[] = ['rodin', 'meshy', 'hunyuan', 'tripo', 'hitem3d'];
 
 /**
  * Validate provider type

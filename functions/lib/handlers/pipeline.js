@@ -65,6 +65,7 @@ const PROVIDER_CREDIT_COSTS = {
     hunyuan: 6, // API: ¥2.40 (~$0.33) → Total: $0.58
     rodin: 8, // API: $0.50 → Total: $0.75
     tripo: 5, // API: ~$0.16 → Total: $0.41
+    hitem3d: 6, // API: TBD → Estimated similar to Hunyuan
 };
 const PIPELINE_CREDITS = {
     MESH: 5, // Default (overridden by provider)
@@ -531,7 +532,7 @@ exports.startPipelineMesh = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
-    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY'],
+    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {

@@ -2,9 +2,9 @@
  * Provider Abstraction Layer Types
  *
  * Defines common interfaces for 3D model generation providers.
- * Supports: Rodin Gen-2, Meshy AI, Hunyuan 3D, Tripo3D
+ * Supports: Rodin Gen-2, Meshy AI, Hunyuan 3D, Tripo3D, HiTem3D
  */
-export type ProviderType = 'rodin' | 'meshy' | 'hunyuan' | 'tripo';
+export type ProviderType = 'rodin' | 'meshy' | 'hunyuan' | 'tripo' | 'hitem3d';
 export type ProviderTaskStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type ProviderQuality = 'draft' | 'standard' | 'fine';
 export type ProviderOutputFormat = 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz';
@@ -22,11 +22,19 @@ export interface TripoOptions {
     mode?: 'image_to_model' | 'multiview_to_model';
 }
 /**
+ * Provider-specific options for HiTem3D
+ */
+export interface Hitem3DOptions {
+    resolution?: 512 | 1024 | 1536 | '1536pro';
+    model?: 'hitem3dv1' | 'hitem3dv1.5' | 'scene-portraitv1.5';
+}
+/**
  * Container for all provider-specific options (nested format for API calls)
  */
 export interface ProviderSpecificOptions {
     hunyuan?: HunyuanOptions;
     tripo?: TripoOptions;
+    hitem3d?: Hitem3DOptions;
 }
 /**
  * Flat provider options (user-facing format from frontend)

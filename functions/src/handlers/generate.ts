@@ -70,7 +70,7 @@ export const generateModel = functions
   .runWith({
     timeoutSeconds: 120,  // Increased for Gemini + provider API
     memory: '1GB',        // Increased for image processing
-    secrets: ['RODIN_API_KEY', 'GEMINI_API_KEY', 'MESHY_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'GEMINI_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
   })
   .https.onCall(async (data: GenerateModelData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
@@ -105,7 +105,7 @@ export const generateModel = functions
     if (!isValidProvider(provider)) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Invalid provider. Use: rodin, meshy'
+        'Invalid provider. Use: rodin, meshy, hunyuan, tripo, hitem3d'
       );
     }
 
@@ -353,7 +353,7 @@ export const checkJobStatus = functions
   .runWith({
     timeoutSeconds: 540, // 9 minutes for model download/upload
     memory: '1GB',
-    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
   })
   .https.onCall(async (data: CheckJobStatusData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
@@ -608,7 +608,7 @@ export const retryFailedJob = functions
   .runWith({
     timeoutSeconds: 540,
     memory: '1GB',
-    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY'],
+    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
   })
   .https.onCall(async (data: RetryFailedJobData, context: functions.https.CallableContext) => {
     // 1. Verify authentication
