@@ -13,7 +13,7 @@
 
 import axios from 'axios';
 import * as functions from 'firebase-functions';
-import type { PrinterType, KeyFeatures } from '../rodin/types';
+import type { PrinterType, KeyFeatures, ViewAngle } from '../rodin/types';
 import { type StyleId, isValidStyleId, getStyleConfig } from '../config/styles';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -42,6 +42,8 @@ export interface ImageAnalysisResult {
   objectType: string;                 // Object classification (plush toy, figurine)
   printFriendliness: PrintFriendlinessAssessment;
   keyFeatures?: KeyFeatures;          // Key features for multi-view consistency
+  // View angle detection (for styled reference generation)
+  detectedViewAngle?: ViewAngle;      // Detected camera angle of the reference image
   // Style recommendation (new in v2)
   recommendedStyle?: StyleId;         // AI-recommended figure style
   styleConfidence?: number;           // Confidence score 0-1
@@ -100,6 +102,7 @@ function getLanguageStrings(locale: string): {
     materials: string;
     objectType: string;
     keyFeatures: string;
+    viewDetection: string;
     styleRecommendation: string;
     outputFormat: string;
   };
@@ -152,7 +155,16 @@ Please provide the following analysis (respond in English unless otherwise speci
    - DISTINCTIVE_MARKS: Any unique patterns, markings, if none write "none"
    - ASYMMETRIC: Any asymmetrical features, if none write "none"
    - SURFACE_TEXTURES: Surface texture description (e.g., fluffy, smooth, rough)`,
-        styleRecommendation: `9. **Style Recommendation** (RECOMMENDED_STYLE) - Suggest the best 3D figure style
+        viewDetection: `9. **View Angle Detection** (DETECTED_VIEW)
+   Determine which view angle the camera is positioned at in this image:
+   - front: Subject is facing directly toward the camera
+   - back: Subject is facing away from the camera (we see the back)
+   - left: Camera is positioned to the subject's left side
+   - right: Camera is positioned to the subject's right side
+   - top: Camera is looking down from above
+
+   Choose the SINGLE best matching angle. If the angle is oblique (e.g., front-left), choose the dominant component.`,
+        styleRecommendation: `10. **Style Recommendation** (RECOMMENDED_STYLE) - Suggest the best 3D figure style
    Based on the image content, recommend ONE style from these options:
    - bobblehead: Best for people/celebrities with distinctive faces, larger head proportions (3-4x body)
    - chibi: Best for anime characters, cute mascots, fantasy characters (2-3 head proportion)
@@ -182,6 +194,7 @@ ACCESSORIES: [comma-separated accessory list in English, or "none"]
 DISTINCTIVE_MARKS: [comma-separated marks in English, or "none"]
 ASYMMETRIC: [comma-separated asymmetric features in English, or "none"]
 SURFACE_TEXTURES: [comma-separated texture descriptions in English]
+DETECTED_VIEW: [front|back|left|right|top]
 RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
 STYLE_CONFIDENCE: [0.0-1.0]
 STYLE_REASONING: [Brief explanation in English]
@@ -237,7 +250,16 @@ STYLE_SUITABILITY_REASON: [Brief explanation if suitability < 0.5, or "none"]`,
    - DISTINCTIVE_MARKS: 任何獨特的圖案、花紋、標記，若無則填 none
    - ASYMMETRIC: 任何左右不對稱的特徵，若無則填 none
    - SURFACE_TEXTURES: 表面質感描述（如：毛茸茸、光滑、粗糙）`,
-      styleRecommendation: `9. **風格推薦** (RECOMMENDED_STYLE) - 推薦最適合的 3D 公仔風格
+      viewDetection: `9. **視角偵測** (DETECTED_VIEW)
+   判斷這張圖片的拍攝角度：
+   - front: 主體正面朝向相機
+   - back: 主體背對相機（看到背面）
+   - left: 相機在主體的左側
+   - right: 相機在主體的右側
+   - top: 相機從上方俯視
+
+   選擇最接近的單一角度。若為斜角（如左前方），請選擇主要成分。`,
+      styleRecommendation: `10. **風格推薦** (RECOMMENDED_STYLE) - 推薦最適合的 3D 公仔風格
    根據圖片內容，從以下選項中推薦一種最適合的風格：
    - bobblehead: 最適合人物/名人、有鮮明臉部特徵者（頭身比 3-4 倍）
    - chibi: 最適合動漫角色、可愛吉祥物、奇幻角色（2-3 頭身比例）
@@ -267,6 +289,7 @@ ACCESSORIES: [逗號分隔的配件清單，使用繁體中文，若無則填 no
 DISTINCTIVE_MARKS: [逗號分隔的標記清單，使用繁體中文，若無則填 none]
 ASYMMETRIC: [逗號分隔的不對稱特徵清單，使用繁體中文，若無則填 none]
 SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]
+DETECTED_VIEW: [front|back|left|right|top]
 RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
 STYLE_CONFIDENCE: [0.0-1.0]
 STYLE_REASONING: [簡短解釋，使用繁體中文]
@@ -358,6 +381,8 @@ ${i.materials}
 ${i.objectType}
 
 ${i.keyFeatures}
+
+${i.viewDetection}
 
 ${i.styleRecommendation}
 
@@ -465,6 +490,13 @@ function parseAnalysisResponse(
   // Only include keyFeatures if it has any content
   const hasKeyFeatures = Object.keys(keyFeatures).length > 0;
 
+  // Extract detected view angle
+  const validViewAngles: ViewAngle[] = ['front', 'back', 'left', 'right', 'top'];
+  const detectedViewRaw = extractField('DETECTED_VIEW').toLowerCase().trim();
+  const detectedViewAngle = validViewAngles.includes(detectedViewRaw as ViewAngle)
+    ? (detectedViewRaw as ViewAngle)
+    : undefined;
+
   // Extract style recommendation (new in v2)
   const recommendedStyleRaw = extractField('RECOMMENDED_STYLE').toLowerCase().trim();
   const recommendedStyle = isValidStyleId(recommendedStyleRaw) ? recommendedStyleRaw : undefined;
@@ -503,6 +535,8 @@ function parseAnalysisResponse(
       orientationTips,
     },
     ...(hasKeyFeatures && { keyFeatures }),
+    // View angle detection (for styled reference generation)
+    ...(detectedViewAngle && { detectedViewAngle }),
     // Style recommendation fields
     ...(recommendedStyle && { recommendedStyle }),
     ...(styleConfidence !== undefined && { styleConfidence }),
@@ -631,6 +665,8 @@ export async function analyzeImage(
       keyFeaturesCount: result.keyFeatures ? Object.keys(result.keyFeatures).length : 0,
       hasPromptDescription: !!result.promptDescription,
       styleHintsCount: result.styleHints?.length ?? 0,
+      // View angle detection
+      detectedViewAngle: result.detectedViewAngle ?? 'none',
       // Style recommendation logging
       recommendedStyle: result.recommendedStyle ?? 'none',
       styleConfidence: result.styleConfidence ?? 0,

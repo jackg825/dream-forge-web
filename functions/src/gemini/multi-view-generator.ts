@@ -13,14 +13,14 @@
 import axios from 'axios';
 import * as functions from 'firebase-functions';
 import type { GeminiResponse, GeminiResponseAnalysis } from './types';
-import type { PipelineMeshAngle, GenerationModeId, ImageAnalysisResult } from '../rodin/types';
+import type { PipelineMeshAngle, GenerationModeId, ImageAnalysisResult, ViewAngle } from '../rodin/types';
 import {
   type ModeConfig,
   DEFAULT_MODE,
   getMode,
   getMeshPrompt,
 } from './mode-configs';
-import { type StyleId } from '../config/styles';
+import { type StyleId, getStyleConfig } from '../config/styles';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -404,6 +404,244 @@ export class MultiViewGenerator {
       this.modeConfig.mesh.extractColors,
       this.modeConfig.mesh.colorCount
     );
+  }
+
+  /**
+   * Generate remaining view angles from a styled reference image
+   *
+   * This is Phase 2 of the two-phase generation flow:
+   * - Phase 1 generates a styled reference at the detected angle
+   * - Phase 2 (this method) generates the remaining 3 angles from that reference
+   *
+   * The key difference from generateAllViews: the prompt emphasizes maintaining
+   * EXACT style consistency with the reference, not applying style transformation.
+   *
+   * @param styledReferenceBase64 - Base64 encoded styled reference image
+   * @param mimeType - MIME type of the reference image
+   * @param sourceAngle - The angle of the styled reference (will be excluded)
+   * @param referenceColorPalette - Color palette from the styled reference
+   * @param onProgress - Optional callback for progress updates
+   * @returns Views for the 3 remaining angles (excluding sourceAngle)
+   */
+  async generateViewsFromStyledReference(
+    styledReferenceBase64: string,
+    mimeType: string,
+    sourceAngle: ViewAngle,
+    referenceColorPalette: string[],
+    onProgress?: ViewProgressCallback
+  ): Promise<Partial<Record<PipelineMeshAngle, GeneratedViewResult>>> {
+    // Determine which angles to generate (all except sourceAngle)
+    const allAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
+    const targetAngles = allAngles.filter((a) => a !== sourceAngle);
+
+    functions.logger.info('Starting views from styled reference', {
+      model: GEMINI_MODEL_IDS[this.geminiModel],
+      sourceAngle,
+      targetAngles,
+      colorPaletteCount: referenceColorPalette.length,
+      selectedStyle: this.selectedStyle,
+    });
+
+    // Staggered parallel generation
+    let completed = 0;
+    const promises = targetAngles.map((angle, index) =>
+      this.generateViewFromReferenceWithDelay(
+        styledReferenceBase64,
+        mimeType,
+        sourceAngle,
+        angle,
+        referenceColorPalette,
+        index * MIN_DELAY_BETWEEN_CALLS_MS // 0, 500, 1000ms
+      ).then(async (result) => {
+        completed++;
+        if (onProgress) {
+          await onProgress('mesh', angle, completed, targetAngles.length);
+        }
+        return { angle, result };
+      })
+    );
+
+    const results = await Promise.all(promises);
+
+    // Build result record
+    const views: Partial<Record<PipelineMeshAngle, GeneratedViewResult>> = {};
+    for (const { angle, result } of results) {
+      views[angle] = result;
+    }
+
+    functions.logger.info('Views from styled reference complete', {
+      sourceAngle,
+      generatedViews: Object.keys(views),
+      viewCount: Object.keys(views).length,
+    });
+
+    return views;
+  }
+
+  /**
+   * Generate a single view from styled reference with delay
+   */
+  private async generateViewFromReferenceWithDelay(
+    styledReferenceBase64: string,
+    mimeType: string,
+    sourceAngle: ViewAngle,
+    targetAngle: PipelineMeshAngle,
+    referenceColorPalette: string[],
+    delayMs: number
+  ): Promise<GeneratedViewResult> {
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+
+    functions.logger.info(`Generating view from reference: ${targetAngle}`, {
+      sourceAngle,
+      targetAngle,
+      delayMs,
+    });
+
+    const prompt = this.buildFromReferencePrompt(sourceAngle, targetAngle, referenceColorPalette);
+    return this.generateSingleView(
+      styledReferenceBase64,
+      mimeType,
+      prompt,
+      true, // Always extract colors for consistency
+      7
+    );
+  }
+
+  /**
+   * Generate a single view from styled reference (for regeneration)
+   *
+   * @param styledReferenceBase64 - Base64 encoded styled reference image
+   * @param mimeType - MIME type of the reference image
+   * @param sourceAngle - The angle of the styled reference
+   * @param targetAngle - The angle to generate
+   * @param referenceColorPalette - Color palette from the styled reference
+   * @param hint - Optional regeneration hint
+   */
+  async generateSingleViewFromReference(
+    styledReferenceBase64: string,
+    mimeType: string,
+    sourceAngle: ViewAngle,
+    targetAngle: PipelineMeshAngle,
+    referenceColorPalette: string[],
+    hint?: string
+  ): Promise<GeneratedViewResult> {
+    const prompt = this.buildFromReferencePrompt(sourceAngle, targetAngle, referenceColorPalette, hint);
+    return this.generateSingleView(
+      styledReferenceBase64,
+      mimeType,
+      prompt,
+      true,
+      7
+    );
+  }
+
+  /**
+   * Build prompt for generating a view from styled reference
+   *
+   * Key differences from regular mesh prompt:
+   * - Input is already styled (no style transformation needed)
+   * - Emphasizes EXACT consistency with reference (same style, proportions, colors)
+   * - Only changes camera angle
+   */
+  private buildFromReferencePrompt(
+    sourceAngle: ViewAngle,
+    targetAngle: PipelineMeshAngle,
+    referenceColorPalette: string[],
+    hint?: string
+  ): string {
+    const styleConfig = this.selectedStyle ? getStyleConfig(this.selectedStyle) : null;
+    const styleName = styleConfig?.name || 'styled';
+
+    // Get view info for target angle
+    const targetInfo = this.getAngleInfo(targetAngle);
+    const sourceInfo = this.getAngleInfo(sourceAngle as PipelineMeshAngle);
+
+    // Build color reference block
+    const colorBlock = referenceColorPalette.length > 0
+      ? `\nREFERENCE COLORS (use EXACTLY these colors):\n${referenceColorPalette.join(', ')}\n`
+      : '';
+
+    // Build hint block if provided
+    const hintBlock = hint
+      ? `\n=== USER ADJUSTMENT ===\nThe user requests: "${hint}"\nApply this adjustment while maintaining style consistency and correct angle.\n=== END USER ADJUSTMENT ===\n`
+      : '';
+
+    return `You are generating the ${targetAngle.toUpperCase()} VIEW from a styled reference image.
+
+=== CRITICAL: STYLE CONSISTENCY ===
+
+The reference image shows a ${styleName} figure from the ${sourceAngle.toUpperCase()} view.
+You must generate the ${targetAngle.toUpperCase()} view of the EXACT SAME figure.
+
+DO NOT CHANGE:
+- The overall style or proportions
+- The color palette (use exactly the same colors)
+- Any distinctive features or accessories
+- The level of detail or simplification
+
+ONLY CHANGE:
+- The camera angle: rotate from ${sourceAngle} (${sourceInfo.degrees}°) to ${targetAngle} (${targetInfo.degrees}°)
+
+=== END STYLE CONSISTENCY ===
+${colorBlock}
+=== CAMERA POSITION ===
+
+**SOURCE VIEW**: ${sourceAngle.toUpperCase()} (${sourceInfo.degrees}° - this is the reference image)
+**TARGET VIEW**: ${targetAngle.toUpperCase()} (${targetInfo.degrees}° - generate this view)
+**ROTATION**: ${Math.abs(targetInfo.degrees - sourceInfo.degrees)}° rotation
+
+${targetInfo.description}
+
+${targetInfo.sideCheck || ''}
+
+=== END CAMERA POSITION ===
+
+=== REQUIREMENTS ===
+
+1. EXACT same figure appearance as the reference - same style, same colors, same proportions
+2. Pure white background (#FFFFFF) - no shadows, no ground plane
+3. Orthographic projection from ${targetAngle} position
+4. Subject centered, fills 90% of frame
+5. Completely flat lighting - no cast shadows
+${hintBlock}
+=== END REQUIREMENTS ===
+
+After generating the image, output the colors used:
+COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+
+Generate the ${targetAngle.toUpperCase()} view now.`;
+  }
+
+  /**
+   * Get angle information for prompt building
+   */
+  private getAngleInfo(angle: PipelineMeshAngle): { degrees: number; description: string; sideCheck?: string } {
+    switch (angle) {
+      case 'front':
+        return {
+          degrees: 0,
+          description: 'Front view: Face and front body visible, camera at 6 o\'clock position.',
+        };
+      case 'back':
+        return {
+          degrees: 180,
+          description: 'Back view: Back of head/body visible, NO face visible, camera at 12 o\'clock position.',
+        };
+      case 'left':
+        return {
+          degrees: 90,
+          description: 'Left side view: Subject\'s LEFT side visible, camera at 3 o\'clock position.',
+          sideCheck: '⚠️ For characters: LEFT ear visible, nose points toward LEFT edge of image.',
+        };
+      case 'right':
+        return {
+          degrees: 270,
+          description: 'Right side view: Subject\'s RIGHT side visible, camera at 9 o\'clock position.',
+          sideCheck: '⚠️ For characters: RIGHT ear visible, nose points toward RIGHT edge of image.',
+        };
+    }
   }
 
   /**

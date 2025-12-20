@@ -341,7 +341,7 @@ export const PIPELINE_CREDIT_COSTS = {
 export interface PipelineProcessedImage {
   url: string;
   storagePath: string;
-  source: 'gemini' | 'upload';  // AI-generated or user-uploaded
+  source: 'gemini' | 'upload' | 'gemini-styled-reference' | 'gemini-from-reference';
   colorPalette?: string[];       // 7 HEX colors for H2C mesh images
   generatedAt: FirebaseFirestore.Timestamp;
 }
@@ -660,5 +660,6 @@ export interface ImageAnalysisResult {
   objectType: string;                 // Object classification (plush toy, figurine)
   printFriendliness: PrintFriendlinessAssessment;
   keyFeatures?: KeyFeatures;          // Key features for multi-view consistency (optional)
+  detectedViewAngle?: ViewAngle;      // Detected camera angle of the reference image
   analyzedAt: FirebaseFirestore.Timestamp;
 }

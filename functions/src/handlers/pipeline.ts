@@ -14,6 +14,7 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createMultiViewGenerator, type GeminiImageModel } from '../gemini/multi-view-generator';
+import { generateStyledReference } from '../gemini/styled-reference-generator';
 import { MeshyProvider, type MeshGenerationOptions } from '../providers/meshy/client';
 import { TripoProvider } from '../providers/tripo/client';
 import { HunyuanProvider } from '../providers/hunyuan/client';
@@ -30,6 +31,7 @@ import type {
   GenerationModeId,
   ProviderType,
   ProviderOptions,
+  ViewAngle,
 } from '../rodin/types';
 import { DEFAULT_MODE } from '../gemini/mode-configs';
 
@@ -392,75 +394,191 @@ export const generatePipelineImages = functions
       const referenceImageUrl = pipeline.inputImages[0].url;
       const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
 
-      // Generate all 6 views using the pipeline's generation mode and user description
-      // Uses staggered parallel execution for better performance (~18s vs ~50s)
-      // If imageAnalysis exists, use its key features for consistency
       const modeId = pipeline.generationMode || DEFAULT_MODE;
-      // geminiModel is already declared above for credit calculation
       const selectedStyle = pipeline.settings?.selectedStyle;
       const generator = createMultiViewGenerator(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel, selectedStyle);
 
-      // Create progress callback to update Firestore in real-time
-      const onProgress = async (
-        type: 'mesh' | 'texture',
-        angle: string,
-        completed: number,
-        total: number
-      ) => {
-        const progress = type === 'mesh'
-          ? { phase: 'mesh-views' as const, meshViewsCompleted: completed, textureViewsCompleted: 0 }
-          : { phase: 'texture-views' as const, meshViewsCompleted: 4, textureViewsCompleted: completed };
-
-        await pipelineRef.update({
-          generationProgress: progress,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-      };
-
-      const views = await generator.generateAllViewsParallel(base64, mimeType, onProgress);
-
-      functions.logger.info('Using generation mode with parallel execution', {
-        pipelineId,
-        mode: modeId,
-        hasUserDescription: !!pipeline.userDescription,
-        dominantColors: views.aggregatedPalette?.dominantColors?.length || 0,
-      });
+      // Determine if we should use two-phase flow for style consistency
+      // Two-phase is used when: image analysis detected a view angle AND a style is selected
+      const detectedViewAngle = pipeline.imageAnalysis?.detectedViewAngle as ViewAngle | undefined;
+      const useTwoPhaseFlow = detectedViewAngle && selectedStyle;
 
       const now = admin.firestore.FieldValue.serverTimestamp();
       const meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>> = {};
+      let styledReferenceAngle: ViewAngle | undefined;
+      let aggregatedColorPalette: { unified: string[]; dominantColors: string[] } | undefined;
 
-      // Upload mesh views
-      for (const [angle, view] of Object.entries(views.meshViews)) {
-        const ext = getExtensionFromMimeType(view.mimeType);
-        const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
-        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+      if (useTwoPhaseFlow) {
+        // =====================================================
+        // TWO-PHASE FLOW: Styled Reference → Remaining Views
+        // Ensures all 4 views have consistent styling
+        // =====================================================
 
-        // Build mesh image object, only include colorPalette if it exists
-        const meshImage: PipelineProcessedImage = {
-          url,
-          storagePath,
-          source: 'gemini',
+        functions.logger.info('Using two-phase flow for style consistency', {
+          pipelineId,
+          detectedViewAngle,
+          selectedStyle,
+        });
+
+        // Phase 1: Generate styled reference at detected angle
+        await pipelineRef.update({
+          generationProgress: {
+            phase: 'styled-reference' as const,
+            meshViewsCompleted: 0,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        const styledRef = await generateStyledReference(base64, mimeType, {
+          detectedAngle: detectedViewAngle,
+          style: selectedStyle,
+          imageAnalysis: pipeline.imageAnalysis,
+          userDescription: pipeline.userDescription,
+        });
+
+        styledReferenceAngle = styledRef.sourceAngle;
+
+        // Upload styled reference as one of the mesh images
+        const refAngle = styledRef.sourceAngle as PipelineMeshAngle;
+        const refExt = getExtensionFromMimeType(styledRef.mimeType);
+        const refPath = `pipelines/${userId}/${pipelineId}/mesh_${refAngle}.${refExt}`;
+        const refUrl = await uploadImageToStorage(styledRef.imageBase64, styledRef.mimeType, refPath);
+
+        meshImages[refAngle] = {
+          url: refUrl,
+          storagePath: refPath,
+          source: 'gemini-styled-reference',
           generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+          colorPalette: styledRef.colorPalette,
         };
-        if (view.colorPalette && view.colorPalette.length > 0) {
-          meshImage.colorPalette = view.colorPalette;
-        }
-        meshImages[angle as PipelineMeshAngle] = meshImage;
-      }
 
-      // Build aggregated color palette for Firestore
-      const aggregatedColorPalette = views.aggregatedPalette
-        ? {
-            unified: views.aggregatedPalette.unified,
-            dominantColors: views.aggregatedPalette.dominantColors,
+        // Update progress: 1 of 4 complete
+        await pipelineRef.update({
+          generationProgress: {
+            phase: 'mesh-views' as const,
+            meshViewsCompleted: 1,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Phase 2: Generate remaining 3 views from styled reference
+        const onProgress = async (
+          _type: 'mesh' | 'texture',
+          _angle: string,
+          completed: number,
+          _total: number
+        ) => {
+          await pipelineRef.update({
+            generationProgress: {
+              phase: 'mesh-views' as const,
+              meshViewsCompleted: 1 + completed, // +1 for styled reference
+            },
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        };
+
+        const remainingViews = await generator.generateViewsFromStyledReference(
+          styledRef.imageBase64,
+          styledRef.mimeType,
+          styledRef.sourceAngle,
+          styledRef.colorPalette,
+          onProgress
+        );
+
+        // Upload remaining views
+        for (const [angle, view] of Object.entries(remainingViews)) {
+          const ext = getExtensionFromMimeType(view.mimeType);
+          const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
+          const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+          const meshImage: PipelineProcessedImage = {
+            url,
+            storagePath,
+            source: 'gemini-from-reference',
+            generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+          };
+          if (view.colorPalette && view.colorPalette.length > 0) {
+            meshImage.colorPalette = view.colorPalette;
           }
-        : undefined;
+          meshImages[angle as PipelineMeshAngle] = meshImage;
+        }
+
+        // Build aggregated color palette from styled reference (primary source)
+        aggregatedColorPalette = {
+          unified: styledRef.colorPalette,
+          dominantColors: styledRef.colorPalette.slice(0, 7),
+        };
+
+        functions.logger.info('Two-phase generation complete', {
+          pipelineId,
+          styledReferenceAngle,
+          viewCount: Object.keys(meshImages).length,
+          colorPaletteCount: styledRef.colorPalette.length,
+        });
+
+      } else {
+        // =====================================================
+        // SINGLE-PHASE FLOW: Original behavior
+        // Generate all 4 views independently in parallel
+        // =====================================================
+
+        functions.logger.info('Using single-phase flow (no style or no detected angle)', {
+          pipelineId,
+          hasDetectedAngle: !!detectedViewAngle,
+          selectedStyle: selectedStyle || 'none',
+        });
+
+        const onProgress = async (
+          type: 'mesh' | 'texture',
+          _angle: string,
+          completed: number,
+          _total: number
+        ) => {
+          const progress = type === 'mesh'
+            ? { phase: 'mesh-views' as const, meshViewsCompleted: completed, textureViewsCompleted: 0 }
+            : { phase: 'texture-views' as const, meshViewsCompleted: 4, textureViewsCompleted: completed };
+
+          await pipelineRef.update({
+            generationProgress: progress,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        };
+
+        const views = await generator.generateAllViewsParallel(base64, mimeType, onProgress);
+
+        // Upload mesh views
+        for (const [angle, view] of Object.entries(views.meshViews)) {
+          const ext = getExtensionFromMimeType(view.mimeType);
+          const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
+          const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+          const meshImage: PipelineProcessedImage = {
+            url,
+            storagePath,
+            source: 'gemini',
+            generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+          };
+          if (view.colorPalette && view.colorPalette.length > 0) {
+            meshImage.colorPalette = view.colorPalette;
+          }
+          meshImages[angle as PipelineMeshAngle] = meshImage;
+        }
+
+        // Build aggregated color palette for Firestore
+        aggregatedColorPalette = views.aggregatedPalette
+          ? {
+              unified: views.aggregatedPalette.unified,
+              dominantColors: views.aggregatedPalette.dominantColors,
+            }
+          : undefined;
+      }
 
       // Update pipeline with generated images and color palette
       await pipelineRef.update({
         status: 'images-ready',
         meshImages,
         ...(aggregatedColorPalette && { aggregatedColorPalette }),
+        ...(styledReferenceAngle && { styledReferenceAngle }),
         generationProgress: {
           phase: 'complete',
           meshViewsCompleted: 4,
@@ -472,6 +590,8 @@ export const generatePipelineImages = functions
         pipelineId,
         meshViewCount: Object.keys(meshImages).length,
         dominantColorCount: aggregatedColorPalette?.dominantColors?.length || 0,
+        usedTwoPhaseFlow: !!useTwoPhaseFlow,
+        styledReferenceAngle: styledReferenceAngle || 'none',
       });
 
       return {
@@ -568,20 +688,190 @@ export const regeneratePipelineImage = functions
     }
 
     try {
-      // Download reference image
-      const referenceImageUrl = pipeline.inputImages[0].url;
-      const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
-
-      // Generate single view using the pipeline's generation mode
-      // Pass userDescription from pipeline, imageAnalysis, and optional hint for adjustments
-      // Use the same geminiModel that was selected when creating the pipeline
       const modeId = pipeline.generationMode || DEFAULT_MODE;
       const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
       const selectedStyle = pipeline.settings?.selectedStyle;
       const generator = createMultiViewGenerator(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel, selectedStyle);
       const now = admin.firestore.FieldValue.serverTimestamp();
 
-      if (viewType === 'mesh') {
+      if (viewType !== 'mesh') {
+        throw new functions.https.HttpsError(
+          'invalid-argument',
+          'Texture view regeneration is not supported. Only mesh views can be regenerated.'
+        );
+      }
+
+      // Check if this pipeline used two-phase flow
+      const styledReferenceAngle = (pipeline as PipelineDocument & { styledReferenceAngle?: ViewAngle }).styledReferenceAngle;
+      const isRegeneratingStyledReference = styledReferenceAngle === angle;
+
+      let processedMeshImage: PipelineProcessedImage;
+      let newAggregatedPalette: { unified: string[]; dominantColors: string[] };
+
+      if (styledReferenceAngle && !isRegeneratingStyledReference) {
+        // =====================================================
+        // TWO-PHASE REGENERATION: Regenerate from styled reference
+        // The styled reference already exists - just regenerate this view from it
+        // =====================================================
+
+        functions.logger.info('Regenerating view from styled reference', {
+          pipelineId,
+          angle,
+          styledReferenceAngle,
+        });
+
+        // Download the styled reference image
+        const styledRefImage = pipeline.meshImages[styledReferenceAngle as PipelineMeshAngle];
+        if (!styledRefImage?.url) {
+          throw new functions.https.HttpsError(
+            'internal',
+            'Styled reference image not found - falling back to original'
+          );
+        }
+        const { base64: refBase64, mimeType: refMimeType } = await downloadImageAsBase64(styledRefImage.url);
+        const referenceColorPalette = styledRefImage.colorPalette || [];
+
+        // Generate single view from styled reference
+        const view = await generator.generateSingleViewFromReference(
+          refBase64,
+          refMimeType,
+          styledReferenceAngle,
+          angle as PipelineMeshAngle,
+          referenceColorPalette,
+          hint
+        );
+
+        // Upload mesh image
+        const ext = getExtensionFromMimeType(view.mimeType);
+        const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
+        const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+        processedMeshImage = {
+          url,
+          storagePath,
+          source: 'gemini-from-reference',
+          generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+        };
+        if (view.colorPalette && view.colorPalette.length > 0) {
+          processedMeshImage.colorPalette = view.colorPalette;
+        }
+
+        // Use styled reference color palette as the base
+        newAggregatedPalette = {
+          unified: referenceColorPalette,
+          dominantColors: referenceColorPalette.slice(0, 7),
+        };
+
+      } else if (styledReferenceAngle && isRegeneratingStyledReference) {
+        // =====================================================
+        // TWO-PHASE REGENERATION: Regenerate styled reference
+        // This is expensive - we need to regenerate all views
+        // =====================================================
+
+        functions.logger.warn('Regenerating styled reference - this will regenerate all views', {
+          pipelineId,
+          angle,
+          styledReferenceAngle,
+        });
+
+        // Download original image
+        const referenceImageUrl = pipeline.inputImages[0].url;
+        const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
+        const detectedViewAngle = pipeline.imageAnalysis?.detectedViewAngle as ViewAngle | undefined;
+
+        if (!detectedViewAngle || !selectedStyle) {
+          throw new functions.https.HttpsError(
+            'internal',
+            'Cannot regenerate styled reference without detected angle and style'
+          );
+        }
+
+        // Regenerate styled reference
+        const styledRef = await generateStyledReference(base64, mimeType, {
+          detectedAngle: detectedViewAngle,
+          style: selectedStyle,
+          imageAnalysis: pipeline.imageAnalysis,
+          userDescription: pipeline.userDescription,
+        });
+
+        // Upload styled reference
+        const refAngle = styledRef.sourceAngle as PipelineMeshAngle;
+        const refExt = getExtensionFromMimeType(styledRef.mimeType);
+        const refPath = `pipelines/${userId}/${pipelineId}/mesh_${refAngle}.${refExt}`;
+        const refUrl = await uploadImageToStorage(styledRef.imageBase64, styledRef.mimeType, refPath);
+
+        const meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>> = {};
+        meshImages[refAngle] = {
+          url: refUrl,
+          storagePath: refPath,
+          source: 'gemini-styled-reference',
+          generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+          colorPalette: styledRef.colorPalette,
+        };
+
+        // Regenerate all other views from new styled reference
+        const remainingViews = await generator.generateViewsFromStyledReference(
+          styledRef.imageBase64,
+          styledRef.mimeType,
+          styledRef.sourceAngle,
+          styledRef.colorPalette
+        );
+
+        for (const [viewAngle, view] of Object.entries(remainingViews)) {
+          const ext = getExtensionFromMimeType(view.mimeType);
+          const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${viewAngle}.${ext}`;
+          const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+          meshImages[viewAngle as PipelineMeshAngle] = {
+            url,
+            storagePath,
+            source: 'gemini-from-reference',
+            generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+            colorPalette: view.colorPalette || undefined,
+          };
+        }
+
+        newAggregatedPalette = {
+          unified: styledRef.colorPalette,
+          dominantColors: styledRef.colorPalette.slice(0, 7),
+        };
+
+        // Update ALL mesh images (this is the expensive path)
+        await pipelineRef.update({
+          meshImages,
+          aggregatedColorPalette: newAggregatedPalette,
+          regenerationsUsed: admin.firestore.FieldValue.increment(1),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        functions.logger.info('All views regenerated from new styled reference', {
+          pipelineId,
+          viewCount: Object.keys(meshImages).length,
+        });
+
+        return {
+          viewType,
+          angle,
+          image: meshImages[angle as PipelineMeshAngle]!,
+          aggregatedColorPalette: newAggregatedPalette,
+          regeneratedAllViews: true,
+        };
+
+      } else {
+        // =====================================================
+        // SINGLE-PHASE REGENERATION: Original behavior
+        // No styled reference - regenerate from original image
+        // =====================================================
+
+        functions.logger.info('Regenerating from original image (single-phase)', {
+          pipelineId,
+          angle,
+        });
+
+        // Download reference image
+        const referenceImageUrl = pipeline.inputImages[0].url;
+        const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
+
         // Regenerate mesh view
         const view = await generator.generateMeshView(base64, mimeType, angle as PipelineMeshAngle, hint);
 
@@ -590,7 +880,7 @@ export const regeneratePipelineImage = functions
         const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
         const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
 
-        const processedMeshImage: PipelineProcessedImage = {
+        processedMeshImage = {
           url,
           storagePath,
           source: 'gemini',
@@ -600,11 +890,10 @@ export const regeneratePipelineImage = functions
           processedMeshImage.colorPalette = view.colorPalette;
         }
 
-        // Re-aggregate color palette from all mesh views (including the new one)
+        // Re-aggregate color palette from all mesh views
         const updatedPipelineDoc = await pipelineRef.get();
         const updatedPipeline = updatedPipelineDoc.data() as PipelineDocument;
 
-        // Collect colors from all mesh views
         const colorFrequency = new Map<string, number>();
         const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
         for (const meshAngle of meshAngles) {
@@ -621,37 +910,32 @@ export const regeneratePipelineImage = functions
           .sort((a, b) => b[1] - a[1])
           .map(([color]) => color);
 
-        const newAggregatedPalette = {
+        newAggregatedPalette = {
           unified: sortedColors,
           dominantColors: sortedColors.slice(0, 7),
         };
-
-        // Update the mesh image, color palette, and increment regeneration counter
-        await pipelineRef.update({
-          [`meshImages.${angle}`]: processedMeshImage,
-          aggregatedColorPalette: newAggregatedPalette,
-          regenerationsUsed: admin.firestore.FieldValue.increment(1),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        functions.logger.info('Pipeline mesh image regenerated', {
-          pipelineId,
-          angle,
-        });
-
-        return {
-          viewType,
-          angle,
-          image: processedMeshImage,
-          aggregatedColorPalette: newAggregatedPalette,
-        };
-      } else {
-        // Texture view regeneration is no longer supported
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Texture view regeneration is not supported. Only mesh views can be regenerated.'
-        );
       }
+
+      // Update the mesh image, color palette, and increment regeneration counter
+      await pipelineRef.update({
+        [`meshImages.${angle}`]: processedMeshImage,
+        aggregatedColorPalette: newAggregatedPalette,
+        regenerationsUsed: admin.firestore.FieldValue.increment(1),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      functions.logger.info('Pipeline mesh image regenerated', {
+        pipelineId,
+        angle,
+        usedStyledReference: !!styledReferenceAngle && !isRegeneratingStyledReference,
+      });
+
+      return {
+        viewType,
+        angle,
+        image: processedMeshImage,
+        aggregatedColorPalette: newAggregatedPalette,
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       functions.logger.error('Pipeline image regeneration failed', { pipelineId, viewType, angle, error: errorMessage });

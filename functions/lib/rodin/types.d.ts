@@ -194,7 +194,7 @@ export declare const PIPELINE_CREDIT_COSTS: {
 export interface PipelineProcessedImage {
     url: string;
     storagePath: string;
-    source: 'gemini' | 'upload';
+    source: 'gemini' | 'upload' | 'gemini-styled-reference' | 'gemini-from-reference';
     colorPalette?: string[];
     generatedAt: FirebaseFirestore.Timestamp;
 }
@@ -415,5 +415,6 @@ export interface ImageAnalysisResult {
     objectType: string;
     printFriendliness: PrintFriendlinessAssessment;
     keyFeatures?: KeyFeatures;
+    detectedViewAngle?: ViewAngle;
     analyzedAt: FirebaseFirestore.Timestamp;
 }

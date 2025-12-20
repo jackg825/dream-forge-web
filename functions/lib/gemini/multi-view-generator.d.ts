@@ -9,7 +9,7 @@
  *
  * Uses Gemini 2.5 Flash Image for consistent multi-view generation
  */
-import type { PipelineMeshAngle, GenerationModeId, ImageAnalysisResult } from '../rodin/types';
+import type { PipelineMeshAngle, GenerationModeId, ImageAnalysisResult, ViewAngle } from '../rodin/types';
 import { type ModeConfig } from './mode-configs';
 import { type StyleId } from '../config/styles';
 export type GeminiImageModel = 'gemini-2.5-flash';
@@ -96,6 +96,52 @@ export declare class MultiViewGenerator {
      * @param hint - Optional regeneration hint for adjustments
      */
     generateMeshView(referenceImageBase64: string, mimeType: string, angle: PipelineMeshAngle, hint?: string): Promise<GeneratedViewResult>;
+    /**
+     * Generate remaining view angles from a styled reference image
+     *
+     * This is Phase 2 of the two-phase generation flow:
+     * - Phase 1 generates a styled reference at the detected angle
+     * - Phase 2 (this method) generates the remaining 3 angles from that reference
+     *
+     * The key difference from generateAllViews: the prompt emphasizes maintaining
+     * EXACT style consistency with the reference, not applying style transformation.
+     *
+     * @param styledReferenceBase64 - Base64 encoded styled reference image
+     * @param mimeType - MIME type of the reference image
+     * @param sourceAngle - The angle of the styled reference (will be excluded)
+     * @param referenceColorPalette - Color palette from the styled reference
+     * @param onProgress - Optional callback for progress updates
+     * @returns Views for the 3 remaining angles (excluding sourceAngle)
+     */
+    generateViewsFromStyledReference(styledReferenceBase64: string, mimeType: string, sourceAngle: ViewAngle, referenceColorPalette: string[], onProgress?: ViewProgressCallback): Promise<Partial<Record<PipelineMeshAngle, GeneratedViewResult>>>;
+    /**
+     * Generate a single view from styled reference with delay
+     */
+    private generateViewFromReferenceWithDelay;
+    /**
+     * Generate a single view from styled reference (for regeneration)
+     *
+     * @param styledReferenceBase64 - Base64 encoded styled reference image
+     * @param mimeType - MIME type of the reference image
+     * @param sourceAngle - The angle of the styled reference
+     * @param targetAngle - The angle to generate
+     * @param referenceColorPalette - Color palette from the styled reference
+     * @param hint - Optional regeneration hint
+     */
+    generateSingleViewFromReference(styledReferenceBase64: string, mimeType: string, sourceAngle: ViewAngle, targetAngle: PipelineMeshAngle, referenceColorPalette: string[], hint?: string): Promise<GeneratedViewResult>;
+    /**
+     * Build prompt for generating a view from styled reference
+     *
+     * Key differences from regular mesh prompt:
+     * - Input is already styled (no style transformation needed)
+     * - Emphasizes EXACT consistency with reference (same style, proportions, colors)
+     * - Only changes camera angle
+     */
+    private buildFromReferencePrompt;
+    /**
+     * Get angle information for prompt building
+     */
+    private getAngleInfo;
     /**
      * Generate a single view with the given prompt
      */
