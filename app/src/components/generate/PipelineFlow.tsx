@@ -892,7 +892,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             onChange={setSelectedProvider}
             disabled={actionLoading}
             showCredits={true}
-            providers={['tripo', 'hunyuan']}
+            providers={['tripo', 'hunyuan', 'hitem3d']}
           />
         </div>
 
