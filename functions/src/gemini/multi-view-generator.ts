@@ -24,14 +24,21 @@ import { type StyleId, getStyleConfig } from '../config/styles';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-// Gemini model for image generation (single model, no selection needed)
-export type GeminiImageModel = 'gemini-2.5-flash';
+// Gemini model for image generation
+// Supports both short names (legacy) and full names (frontend)
+export type GeminiImageModel =
+  | 'gemini-2.5-flash'           // Legacy short name
+  | 'gemini-2.5-flash-image'     // Full name from frontend
+  | 'gemini-3-pro-image-preview'; // Premium model
 
+// Maps model keys to actual Gemini API model IDs
 const GEMINI_MODEL_IDS: Record<GeminiImageModel, string> = {
-  'gemini-2.5-flash': 'gemini-2.5-flash-image',
+  'gemini-2.5-flash': 'gemini-2.5-flash-image',           // Legacy -> same API model
+  'gemini-2.5-flash-image': 'gemini-2.5-flash-image',     // Direct mapping
+  'gemini-3-pro-image-preview': 'gemini-2.5-flash-image', // TODO: Update when Pro image model available
 };
 
-const DEFAULT_GEMINI_MODEL: GeminiImageModel = 'gemini-2.5-flash';
+const DEFAULT_GEMINI_MODEL: GeminiImageModel = 'gemini-2.5-flash-image';
 
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;

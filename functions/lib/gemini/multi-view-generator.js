@@ -54,10 +54,13 @@ const functions = __importStar(require("firebase-functions"));
 const mode_configs_1 = require("./mode-configs");
 const styles_1 = require("../config/styles");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+// Maps model keys to actual Gemini API model IDs
 const GEMINI_MODEL_IDS = {
-    'gemini-2.5-flash': 'gemini-2.5-flash-image',
+    'gemini-2.5-flash': 'gemini-2.5-flash-image', // Legacy -> same API model
+    'gemini-2.5-flash-image': 'gemini-2.5-flash-image', // Direct mapping
+    'gemini-3-pro-image-preview': 'gemini-2.5-flash-image', // TODO: Update when Pro image model available
 };
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-image';
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;
 /**

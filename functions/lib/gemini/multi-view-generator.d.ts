@@ -12,7 +12,7 @@
 import type { PipelineMeshAngle, GenerationModeId, ImageAnalysisResult, ViewAngle } from '../rodin/types';
 import { type ModeConfig } from './mode-configs';
 import { type StyleId } from '../config/styles';
-export type GeminiImageModel = 'gemini-2.5-flash';
+export type GeminiImageModel = 'gemini-2.5-flash' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
 /**
  * Result of a single view generation
  */
