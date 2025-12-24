@@ -73,9 +73,12 @@ const PIPELINE_CREDITS = {
     MESH: 5, // Default (overridden by provider)
     TEXTURE: 10, // Meshy Retexture only
 };
-// Credit cost for Gemini view generation (single model)
+// Credit cost for Gemini view generation
+// Supports both short names (backend) and full names (frontend)
 const GEMINI_MODEL_CREDITS = {
     'gemini-2.5-flash': 3,
+    'gemini-2.5-flash-image': 3, // Full ID from frontend
+    'gemini-3-pro-image-preview': 5, // Premium model
 };
 // Maximum regenerations allowed per pipeline (credits only charged once)
 const MAX_REGENERATIONS = 4;
@@ -162,7 +165,7 @@ exports.createPipeline = functions
             printerType: settings?.printerType || 'fdm',
             format: settings?.format || 'glb',
             generationMode: modeId,
-            geminiModel: geminiModel || 'gemini-2.5-flash', // Default to fast model
+            geminiModel: geminiModel || 'gemini-2.5-flash-image', // Default to fast model
             ...(settings?.colorCount !== undefined && { colorCount: settings.colorCount }),
             ...(selectedStyle !== undefined && { selectedStyle }), // User-selected figure style
         },

@@ -54,9 +54,12 @@ const PIPELINE_CREDITS = {
   TEXTURE: 10,  // Meshy Retexture only
 } as const;
 
-// Credit cost for Gemini view generation (single model)
-const GEMINI_MODEL_CREDITS: Record<GeminiImageModel, number> = {
+// Credit cost for Gemini view generation
+// Supports both short names (backend) and full names (frontend)
+const GEMINI_MODEL_CREDITS: Record<string, number> = {
   'gemini-2.5-flash': 3,
+  'gemini-2.5-flash-image': 3,        // Full ID from frontend
+  'gemini-3-pro-image-preview': 5,    // Premium model
 };
 
 // ============================================
@@ -69,7 +72,7 @@ interface CreatePipelineData {
   generationMode?: GenerationModeId;  // A/B testing mode
   userDescription?: string;  // Optional description of the object for better AI generation
   imageAnalysis?: import('../rodin/types').ImageAnalysisResult;  // Pre-analysis results from Gemini
-  geminiModel?: 'gemini-3-pro' | 'gemini-2.5-flash';  // Gemini model for image generation
+  geminiModel?: 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';  // Gemini model for image generation
   selectedStyle?: import('../config/styles').StyleId;  // User-selected figure style
 }
 
@@ -219,7 +222,7 @@ export const createPipeline = functions
         printerType: settings?.printerType || 'fdm',
         format: settings?.format || 'glb',
         generationMode: modeId,
-        geminiModel: geminiModel || 'gemini-2.5-flash',  // Default to fast model
+        geminiModel: geminiModel || 'gemini-2.5-flash-image',  // Default to fast model
         ...(settings?.colorCount !== undefined && { colorCount: settings.colorCount }),
         ...(selectedStyle !== undefined && { selectedStyle }),  // User-selected figure style
       },

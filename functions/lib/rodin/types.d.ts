@@ -222,7 +222,7 @@ export interface PipelineSettings {
     printerType: PrinterType;
     format: OutputFormat;
     generationMode?: GenerationModeId;
-    geminiModel?: 'gemini-3-pro' | 'gemini-2.5-flash';
+    geminiModel?: 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
     meshPrecision?: MeshPrecision;
     colorCount?: number;
     provider?: ProviderType;

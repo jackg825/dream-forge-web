@@ -15,6 +15,7 @@ export {
   listAllPipelines,
   deductCredits,
   getUserTransactions,
+  updateUserTier,
   // Admin pipeline regeneration functions
   adminRegeneratePipelineImage,
   adminStartPipelineMesh,
