@@ -28,6 +28,8 @@ function AdminDashboardContent() {
     addingCredits,
     deductCredits,
     deductingCredits,
+    updateUserTier,
+    updatingTier,
     transactions,
     transactionsLoading,
     transactionsPagination,
@@ -295,6 +297,9 @@ function AdminDashboardContent() {
                       {t('admin.table.generations')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {t('admin.table.tier')}
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       {t('admin.table.role')}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -346,6 +351,17 @@ function AdminDashboardContent() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {targetUser.totalGenerated}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            targetUser.tier === 'premium'
+                              ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                          }`}
+                        >
+                          {t(`tier.${targetUser.tier || 'free'}`)}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -411,8 +427,10 @@ function AdminDashboardContent() {
         onFetchTransactions={fetchUserTransactions}
         onAddCredits={addCredits}
         onDeductCredits={deductCredits}
+        onUpdateTier={updateUserTier}
         addingCredits={addingCredits}
         deductingCredits={deductingCredits}
+        updatingTier={updatingTier}
       />
     </div>
   );

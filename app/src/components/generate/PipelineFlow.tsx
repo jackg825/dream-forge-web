@@ -78,6 +78,8 @@ import {
   GEMINI_MODEL_OPTIONS,
 } from '@/types';
 import { ProviderSelector } from './ProviderSelector';
+import { ProviderOptionsPanel } from './ProviderOptionsPanel';
+import { ViewModelSelector } from './ViewModelSelector';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -600,6 +602,16 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             />
           )}
 
+          {/* View Model Selector - shows after analysis completes */}
+          {imageAnalysis && !styleChangeRequested && (
+            <ViewModelSelector
+              value={geminiModel}
+              onChange={setGeminiModel}
+              disabled={actionLoading}
+              onUpgradeClick={() => setShowUpgradePrompt(true)}
+            />
+          )}
+
           {/* Start button - only show after analysis completes and no style change pending */}
           {/* Style selector is now shown before analysis */}
           {imageAnalysis && !styleChangeRequested && (
@@ -897,6 +909,17 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             disabled={actionLoading}
             showCredits={true}
             providers={['tripo', 'hunyuan', 'hitem3d']}
+            onUpgradeClick={() => setShowUpgradePrompt(true)}
+          />
+        </div>
+
+        {/* Provider-specific options (Hunyuan face count, HiTem3D resolution) */}
+        <div className="mt-4">
+          <ProviderOptionsPanel
+            provider={selectedProvider}
+            options={providerOptions}
+            onChange={setProviderOptions}
+            disabled={actionLoading}
             onUpgradeClick={() => setShowUpgradePrompt(true)}
           />
         </div>

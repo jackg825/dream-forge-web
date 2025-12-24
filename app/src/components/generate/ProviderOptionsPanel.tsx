@@ -3,18 +3,25 @@
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, Lock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useTierAccess } from '@/hooks/useTierAccess';
 import {
   type ModelProvider,
   type ProviderOptions,
   HUNYUAN_FACE_COUNT_PRESETS,
 } from '@/types';
+import {
+  HITEM3D_RESOLUTION_OPTIONS,
+  type HiTem3DResolution,
+} from '@/config/tiers';
 
 interface ProviderOptionsPanelProps {
   provider: ModelProvider;
   options: ProviderOptions;
   onChange: (options: ProviderOptions) => void;
   disabled?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 /**
@@ -22,6 +29,7 @@ interface ProviderOptionsPanelProps {
  *
  * Shows different options based on selected provider:
  * - Hunyuan: Face count slider (40K - 1.5M)
+ * - HiTem3D: Resolution selector (512³ free, 1024³ premium)
  * - Meshy/Tripo/Rodin: No additional options
  */
 export function ProviderOptionsPanel({
@@ -29,10 +37,104 @@ export function ProviderOptionsPanel({
   options,
   onChange,
   disabled,
+  onUpgradeClick,
 }: ProviderOptionsPanelProps) {
-  // Only Hunyuan has additional options for now
-  if (provider !== 'hunyuan') {
+  const t = useTranslations('resolution');
+  const { isResolutionLocked } = useTierAccess();
+
+  // Providers with additional options
+  if (provider !== 'hunyuan' && provider !== 'hitem3d') {
     return null;
+  }
+
+  // HiTem3D resolution selector
+  if (provider === 'hitem3d') {
+    const resolution = (options.resolution as HiTem3DResolution) || 512;
+    const resolutions = Object.entries(HITEM3D_RESOLUTION_OPTIONS) as [
+      string,
+      typeof HITEM3D_RESOLUTION_OPTIONS[HiTem3DResolution]
+    ][];
+
+    const handleResolutionClick = (res: HiTem3DResolution) => {
+      if (isResolutionLocked(res)) {
+        onUpgradeClick?.();
+      } else {
+        onChange({ ...options, resolution: res });
+      }
+    };
+
+    return (
+      <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">HiTem3D {t('title')}</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {resolutions.map(([resKey, resInfo]) => {
+            const resValue = Number(resKey) as HiTem3DResolution;
+            const isSelected = resolution === resValue;
+            const isLocked = isResolutionLocked(resValue);
+
+            return (
+              <button
+                key={resKey}
+                type="button"
+                onClick={() => handleResolutionClick(resValue)}
+                disabled={disabled}
+                className={cn(
+                  'relative flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-all',
+                  'disabled:cursor-not-allowed disabled:opacity-50',
+                  isLocked
+                    ? 'opacity-70 cursor-pointer border-border bg-muted/30 hover:border-muted-foreground/30'
+                    : 'hover:border-primary/50 hover:bg-accent/50',
+                  isSelected && !isLocked
+                    ? 'border-primary bg-primary/5'
+                    : !isLocked && 'border-border bg-background'
+                )}
+              >
+                <span
+                  className={cn(
+                    'text-sm font-semibold',
+                    isLocked && 'text-muted-foreground'
+                  )}
+                >
+                  {t(`${resKey}.label`)}
+                </span>
+                <span
+                  className={cn(
+                    'text-xs text-muted-foreground',
+                    isLocked && 'opacity-70'
+                  )}
+                >
+                  {t(`${resKey}.description`)}
+                </span>
+
+                {/* Lock indicator for Premium-only resolution */}
+                {isLocked && (
+                  <div className="absolute right-2 top-2 flex items-center gap-1 text-muted-foreground">
+                    <Lock className="h-3.5 w-3.5" />
+                    <span className="text-xs font-medium">Premium</span>
+                  </div>
+                )}
+
+                {/* Selection indicator */}
+                {isSelected && !isLocked && (
+                  <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Tip */}
+        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+          <span>
+            {t('tip')}
+          </span>
+        </div>
+      </div>
+    );
   }
 
   const faceCount = options.faceCount || 200000;

@@ -224,6 +224,7 @@ export interface AdminUser {
   credits: number;
   totalGenerated: number;
   role: UserRole;
+  tier: UserTier;
   createdAt: string | null;
 }
 
@@ -758,9 +759,10 @@ export const GENERATION_MODE_OPTIONS: Record<GenerationModeId, {
 export const DEFAULT_GENERATION_MODE: GenerationModeId = 'simplified-mesh';
 
 /**
- * Gemini model for image generation (single model, no selection needed)
+ * Gemini model for image generation
+ * Note: Type values must match ViewGenerationModel in @/config/tiers
  */
-export type GeminiModelId = 'gemini-2.5-flash';
+export type GeminiModelId = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
 
 /**
  * Gemini model options for reference
@@ -773,20 +775,28 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
   estimatedTime: string;
   creditCost: number;
 }> = {
-  'gemini-2.5-flash': {
-    id: 'gemini-2.5-flash',
+  'gemini-2.5-flash-image': {
+    id: 'gemini-2.5-flash-image',
     name: 'Gemini 2.5 Flash',
-    description: '快速生成，適合快速測試',
+    description: '快速生成，標準品質',
     badge: '推薦',
     estimatedTime: '約 1-2 分鐘',
     creditCost: 3,
   },
+  'gemini-3-pro-image-preview': {
+    id: 'gemini-3-pro-image-preview',
+    name: 'Gemini 3 Pro',
+    description: '高品質生成，更精細的細節',
+    badge: 'Premium',
+    estimatedTime: '約 2-3 分鐘',
+    creditCost: 5,
+  },
 };
 
 /**
- * Default Gemini model
+ * Default Gemini model (Free tier)
  */
-export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-2.5-flash';
+export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-2.5-flash-image';
 
 /**
  * Pipeline status for new simplified workflow

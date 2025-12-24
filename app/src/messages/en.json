@@ -61,6 +61,7 @@
       "user": "User",
       "credits": "Credits",
       "generations": "Generations",
+      "tier": "Tier",
       "role": "Role",
       "joined": "Joined",
       "actions": "Actions"
@@ -1295,6 +1296,29 @@
     "current": "Current Tier",
     "upgrade": "Upgrade",
     "downgrade": "Downgrade"
+  },
+  "viewModel": {
+    "title": "View Generation Model",
+    "gemini-2.5-flash-image": {
+      "label": "Gemini 2.5 Flash",
+      "description": "Fast generation, standard quality"
+    },
+    "gemini-3-pro-image-preview": {
+      "label": "Gemini 3 Pro",
+      "description": "High quality, more detailed output"
+    }
+  },
+  "resolution": {
+    "title": "Generation Resolution",
+    "512": {
+      "label": "Standard 512³",
+      "description": "Suitable for general use"
+    },
+    "1024": {
+      "label": "High Resolution 1024³",
+      "description": "More detail, ideal for precision models"
+    },
+    "tip": "Recommendation: Use 512³ for general use, 1024³ when fine detail is needed"
   },
   "progress": {
     "status": {

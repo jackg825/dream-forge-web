@@ -61,6 +61,7 @@
       "user": "用戶",
       "credits": "點數",
       "generations": "生成次數",
+      "tier": "等級",
       "role": "角色",
       "joined": "加入時間",
       "actions": "操作"
@@ -1295,6 +1296,29 @@
     "current": "目前等級",
     "upgrade": "升級",
     "downgrade": "降級"
+  },
+  "viewModel": {
+    "title": "視角生成模型",
+    "gemini-2.5-flash-image": {
+      "label": "Gemini 2.5 Flash",
+      "description": "快速生成，標準品質"
+    },
+    "gemini-3-pro-image-preview": {
+      "label": "Gemini 3 Pro",
+      "description": "高品質生成，更精細的細節"
+    }
+  },
+  "resolution": {
+    "title": "生成解析度",
+    "512": {
+      "label": "標準 512³",
+      "description": "適合一般用途"
+    },
+    "1024": {
+      "label": "高解析度 1024³",
+      "description": "更多細節，適合精密模型"
+    },
+    "tip": "建議：一般用途選擇 512³，需要精細細節時選擇 1024³"
   },
   "progress": {
     "status": {

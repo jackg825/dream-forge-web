@@ -20,8 +20,12 @@ import {
   History,
   CreditCard,
   User,
+  Crown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
-import type { AdminUser, AdminTransaction, AdminTransactionType } from '@/types';
+import { useTranslations } from 'next-intl';
+import type { AdminUser, AdminTransaction, AdminTransactionType, UserTier } from '@/types';
 
 interface UserDetailModalProps {
   user: AdminUser | null;
@@ -33,8 +37,10 @@ interface UserDetailModalProps {
   onFetchTransactions: (userId: string) => Promise<void>;
   onAddCredits: (userId: string, amount: number, reason?: string) => Promise<boolean>;
   onDeductCredits: (userId: string, amount: number, reason: string) => Promise<boolean>;
+  onUpdateTier: (userId: string, tier: UserTier) => Promise<boolean>;
   addingCredits: boolean;
   deductingCredits: boolean;
+  updatingTier: boolean;
 }
 
 const TRANSACTION_TYPE_CONFIG: Record<
@@ -67,9 +73,12 @@ export function UserDetailModal({
   onFetchTransactions,
   onAddCredits,
   onDeductCredits,
+  onUpdateTier,
   addingCredits,
   deductingCredits,
+  updatingTier,
 }: UserDetailModalProps) {
+  const t = useTranslations();
   const [addAmount, setAddAmount] = useState('10');
   const [addReason, setAddReason] = useState('');
   const [deductAmount, setDeductAmount] = useState('');
@@ -110,7 +119,12 @@ export function UserDetailModal({
     }
   };
 
+  const handleTierChange = async (newTier: UserTier) => {
+    await onUpdateTier(user.uid, newTier);
+  };
+
   const isUnlimited = user.credits >= 999999;
+  const isPremium = user.tier === 'premium';
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
@@ -161,6 +175,52 @@ export function UserDetailModal({
               <p className="text-xs text-muted-foreground mt-1">
                 總生成次數: {user.totalGenerated}
               </p>
+            </div>
+
+            {/* Tier management */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Crown className="h-4 w-4 text-yellow-600" />
+                <h3 className="font-medium">{t('tier.current')}</h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant={isPremium ? 'default' : 'secondary'}
+                  className={isPremium ? 'bg-purple-600' : ''}
+                >
+                  {t(`tier.${user.tier || 'free'}`)}
+                </Badge>
+                {isPremium ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleTierChange('free')}
+                    disabled={updatingTier}
+                    className="gap-1"
+                  >
+                    {updatingTier ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <ArrowDown className="h-3 w-3" />
+                    )}
+                    {t('tier.downgrade')}
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => handleTierChange('premium')}
+                    disabled={updatingTier}
+                    className="gap-1 bg-purple-600 hover:bg-purple-700"
+                  >
+                    {updatingTier ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <ArrowUp className="h-3 w-3" />
+                    )}
+                    {t('tier.upgrade')}
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Add credits */}

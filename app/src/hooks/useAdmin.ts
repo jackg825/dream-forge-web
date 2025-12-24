@@ -13,6 +13,7 @@ import type {
   GetUserTransactionsResponse,
   AllProviderBalancesResponse,
   ProviderBalances,
+  UserTier,
 } from '@/types';
 
 interface UseAdminReturn {
@@ -47,6 +48,10 @@ interface UseAdminReturn {
   addCredits: (targetUserId: string, amount: number, reason?: string) => Promise<boolean>;
   deductingCredits: boolean;
   deductCredits: (targetUserId: string, amount: number, reason: string) => Promise<boolean>;
+
+  // Tier management
+  updatingTier: boolean;
+  updateUserTier: (targetUserId: string, tier: UserTier) => Promise<boolean>;
 
   // Transaction history
   transactions: AdminTransaction[];
@@ -89,6 +94,7 @@ export function useAdmin(): UseAdminReturn {
 
   const [addingCredits, setAddingCredits] = useState(false);
   const [deductingCredits, setDeductingCredits] = useState(false);
+  const [updatingTier, setUpdatingTier] = useState(false);
 
   const [transactions, setTransactions] = useState<AdminTransaction[]>([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
@@ -278,6 +284,40 @@ export function useAdmin(): UseAdminReturn {
     }
   }, [fetchUsers]);
 
+  const updateUserTier = useCallback(async (
+    targetUserId: string,
+    tier: UserTier
+  ): Promise<boolean> => {
+    if (!functions) {
+      setError('Firebase not initialized');
+      return false;
+    }
+
+    setUpdatingTier(true);
+    setError(null);
+
+    try {
+      const updateTierFunc = httpsCallable<
+        { targetUserId: string; tier: UserTier },
+        { success: boolean; tier: UserTier }
+      >(functions, 'updateUserTier');
+
+      await updateTierFunc({ targetUserId, tier });
+
+      // Refresh users list after updating tier
+      await fetchUsers();
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to update tier';
+      setError(message);
+      console.error('Error updating tier:', err);
+      return false;
+    } finally {
+      setUpdatingTier(false);
+    }
+  }, [fetchUsers]);
+
   const fetchUserTransactions = useCallback(async (
     targetUserId: string,
     limit = 50,
@@ -331,6 +371,8 @@ export function useAdmin(): UseAdminReturn {
     addCredits,
     deductingCredits,
     deductCredits,
+    updatingTier,
+    updateUserTier,
     transactions,
     transactionsLoading,
     transactionsPagination,
