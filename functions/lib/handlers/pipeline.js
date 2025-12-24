@@ -58,6 +58,7 @@ const factory_1 = require("../providers/factory");
 const credits_1 = require("../utils/credits");
 const storage_1 = require("../storage");
 const mode_configs_1 = require("../gemini/mode-configs");
+const tiers_1 = require("../config/tiers");
 const db = admin.firestore();
 // Credit costs per provider
 // See docs/cost-analysis.md for detailed breakdown
@@ -758,6 +759,22 @@ exports.startPipelineMesh = functions
     const providerType = requestedProvider && (0, factory_1.isValidProvider)(requestedProvider)
         ? requestedProvider
         : 'meshy';
+    // Get user tier for access validation
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    const userTier = userData?.tier || 'free';
+    const isAdmin = userData?.role === 'admin';
+    // Validate provider access based on tier
+    if (!(0, tiers_1.canAccessProvider)(userTier, providerType, isAdmin)) {
+        throw new functions.https.HttpsError('permission-denied', (0, tiers_1.getTierValidationError)('provider', providerType));
+    }
+    // Validate HiTem3D resolution if applicable
+    if (providerType === 'hitem3d' && providerOptions?.resolution) {
+        const resolution = providerOptions.resolution;
+        if (!(0, tiers_1.canAccessHiTem3DResolution)(userTier, resolution, isAdmin)) {
+            throw new functions.https.HttpsError('permission-denied', (0, tiers_1.getTierValidationError)('resolution', `${resolution}`));
+        }
+    }
     // Get pipeline
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
     const pipelineDoc = await pipelineRef.get();
@@ -920,6 +937,7 @@ exports.checkPipelineStatus = functions
     memory: '512MB',
     secrets: [
         'MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY',
+        'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY',
         'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
     ],
 })

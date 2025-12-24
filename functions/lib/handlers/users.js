@@ -59,6 +59,7 @@ exports.onUserCreate = functionsV1
         credits: 3, // Initial free credits
         totalGenerated: 0,
         role: 'user', // Default role, set to 'admin' in Firestore to grant admin access
+        tier: 'free', // Default tier, upgrade via admin panel
         createdAt: now,
         updatedAt: now,
     };

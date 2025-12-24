@@ -54,6 +54,18 @@ export interface HitemQueryResponse {
  */
 export declare const HITEM_QUALITY_RESOLUTION: Record<string, HitemResolution>;
 /**
+ * Quality to face count mapping
+ *
+ * Maps DreamForge quality levels to HiTem face values.
+ * Valid range: 100,000 - 2,000,000
+ *
+ * Recommended by HiTem docs:
+ * - 512³: 500,000
+ * - 1024³: 1,000,000
+ * - 1536³: 2,000,000
+ */
+export declare const HITEM_QUALITY_FACE_COUNT: Record<string, number>;
+/**
  * Format code mapping
  */
 export declare const HITEM_FORMAT_CODE: Record<string, HitemFormatCode>;

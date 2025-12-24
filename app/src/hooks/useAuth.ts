@@ -72,6 +72,8 @@ export function useAuth(): UseAuthReturn {
             credits: data.credits,
             totalGenerated: data.totalGenerated,
             role: data.role || 'user',
+            tier: data.tier || 'free',
+            subscription: data.subscription,
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate() || new Date(),
           });
@@ -86,6 +88,7 @@ export function useAuth(): UseAuthReturn {
             credits: 0, // Will be updated when doc is created
             totalGenerated: 0,
             role: 'user',
+            tier: 'free', // Default tier for new users
             createdAt: new Date(),
             updatedAt: new Date(),
           });

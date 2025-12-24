@@ -34,6 +34,8 @@ import type {
   ViewAngle,
 } from '../rodin/types';
 import { DEFAULT_MODE } from '../gemini/mode-configs';
+import { canAccessProvider, canAccessHiTem3DResolution, getTierValidationError, type HiTem3DResolution } from '../config/tiers';
+import type { UserTier } from '../rodin/types';
 
 const db = admin.firestore();
 
@@ -968,6 +970,31 @@ export const startPipelineMesh = functions
       ? requestedProvider
       : 'meshy';
 
+    // Get user tier for access validation
+    const userDoc = await db.collection('users').doc(userId).get();
+    const userData = userDoc.data();
+    const userTier: UserTier = (userData?.tier as UserTier) || 'free';
+    const isAdmin = userData?.role === 'admin';
+
+    // Validate provider access based on tier
+    if (!canAccessProvider(userTier, providerType, isAdmin)) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        getTierValidationError('provider', providerType)
+      );
+    }
+
+    // Validate HiTem3D resolution if applicable
+    if (providerType === 'hitem3d' && providerOptions?.resolution) {
+      const resolution = providerOptions.resolution as HiTem3DResolution;
+      if (!canAccessHiTem3DResolution(userTier, resolution, isAdmin)) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          getTierValidationError('resolution', `${resolution}`)
+        );
+      }
+    }
+
     // Get pipeline
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
     const pipelineDoc = await pipelineRef.get();
@@ -1156,6 +1183,7 @@ export const checkPipelineStatus = functions
     memory: '512MB',
     secrets: [
       'MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY',
+      'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY',
       'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
     ],
   })

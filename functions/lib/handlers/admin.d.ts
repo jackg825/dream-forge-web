@@ -10,6 +10,21 @@ import * as functions from 'firebase-functions/v1';
  */
 export declare const addCredits: functions.HttpsFunction & functions.Runnable<any>;
 /**
+ * Cloud Function: updateUserTier
+ *
+ * Admin-only function to update a user's membership tier.
+ * Supports upgrading to Premium or downgrading to Free.
+ *
+ * When upgrading to Premium:
+ * - Sets tier to 'premium'
+ * - Records subscription.startedAt and paymentProvider: 'manual'
+ *
+ * When downgrading to Free:
+ * - Sets tier to 'free'
+ * - Clears subscription metadata
+ */
+export declare const updateUserTier: functions.HttpsFunction & functions.Runnable<any>;
+/**
  * Cloud Function: checkRodinBalance
  *
  * Admin-only function to check remaining Rodin API credits.

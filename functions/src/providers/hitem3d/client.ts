@@ -25,6 +25,7 @@ import {
   HITEM_API_BASE,
   HITEM_DEFAULT_MODEL,
   HITEM_QUALITY_RESOLUTION,
+  HITEM_QUALITY_FACE_COUNT,
   HITEM_FORMAT_CODE,
   HITEM_ERROR_CODES,
 } from './types';
@@ -61,12 +62,14 @@ export class Hitem3DProvider implements I3DProvider {
     try {
       const accessToken = await this.authManager.getAccessToken();
       const resolution = HITEM_QUALITY_RESOLUTION[options.quality] || 1024;
+      const faceCount = HITEM_QUALITY_FACE_COUNT[options.quality] || 1000000;
       const formatCode = this.getFormatCode(options.format);
 
       functions.logger.info('Starting HiTem3D generation', {
         imageCount: imageBuffers.length,
         quality: options.quality,
         resolution,
+        faceCount,
         format: options.format,
         formatCode,
       });
@@ -76,6 +79,7 @@ export class Hitem3DProvider implements I3DProvider {
       formData.append('request_type', '3');  // Both geometry and texture
       formData.append('model', HITEM_DEFAULT_MODEL);
       formData.append('resolution', String(resolution));
+      formData.append('face', String(faceCount));  // Face count (100k-2M)
       formData.append('format', String(formatCode));
 
       // Add images

@@ -1266,6 +1266,36 @@
     "recommendedStyle": "AI Recommended Style",
     "confidence": "confidence"
   },
+  "upgrade": {
+    "title": "Upgrade to Premium",
+    "descriptionWithFeature": "Using \"{feature}\" requires a Premium membership",
+    "descriptionGeneric": "Unlock advanced features to enhance your 3D creation experience",
+    "featuresTitle": "Premium Exclusive Features",
+    "features": {
+      "geminiPro": {
+        "title": "Gemini 3 Pro View Generation",
+        "description": "Higher quality images with more details"
+      },
+      "providers": {
+        "title": "Hunyuan3D & Tripo3D Engines",
+        "description": "More 3D generation options and styles"
+      },
+      "hitem3dHires": {
+        "title": "HiTem3D 1024 High Resolution",
+        "description": "More details, perfect for precision models"
+      }
+    },
+    "contactAdmin": "Contact Admin to Upgrade",
+    "contactNote": "Please contact your system administrator to upgrade your account"
+  },
+  "tier": {
+    "free": "Free",
+    "premium": "Premium",
+    "locked": "Premium Required",
+    "current": "Current Tier",
+    "upgrade": "Upgrade",
+    "downgrade": "Downgrade"
+  },
   "progress": {
     "status": {
       "draft": {

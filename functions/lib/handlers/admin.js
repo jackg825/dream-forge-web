@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.checkAllProviderBalances = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.addCredits = void 0;
+exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.checkAllProviderBalances = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.updateUserTier = exports.addCredits = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
@@ -161,6 +161,86 @@ exports.addCredits = functions
         targetUserId,
         creditsAdded: amount,
         newBalance: newCredits,
+    };
+});
+/**
+ * Cloud Function: updateUserTier
+ *
+ * Admin-only function to update a user's membership tier.
+ * Supports upgrading to Premium or downgrading to Free.
+ *
+ * When upgrading to Premium:
+ * - Sets tier to 'premium'
+ * - Records subscription.startedAt and paymentProvider: 'manual'
+ *
+ * When downgrading to Free:
+ * - Sets tier to 'free'
+ * - Clears subscription metadata
+ */
+exports.updateUserTier = functions
+    .region('asia-east1')
+    .https.onCall(async (data, context) => {
+    // Check authentication
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+    }
+    // Check admin permission
+    if (!(await isAdmin(context))) {
+        throw new functions.https.HttpsError('permission-denied', 'Admin access required');
+    }
+    const { targetUserId, tier, reason } = data;
+    // Validate input
+    if (!targetUserId) {
+        throw new functions.https.HttpsError('invalid-argument', 'Target user ID is required');
+    }
+    if (!tier || !['free', 'premium'].includes(tier)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Tier must be "free" or "premium"');
+    }
+    // Check target user exists
+    const userRef = db.collection('users').doc(targetUserId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Target user not found');
+    }
+    const previousTier = userDoc.data()?.tier || 'free';
+    // No change needed
+    if (previousTier === tier) {
+        return {
+            success: true,
+            targetUserId,
+            tier,
+            message: 'User already has this tier',
+        };
+    }
+    // Update user tier
+    const updateData = {
+        tier,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    // Add subscription metadata when upgrading to premium
+    if (tier === 'premium') {
+        updateData['subscription'] = {
+            startedAt: admin.firestore.FieldValue.serverTimestamp(),
+            paymentProvider: 'manual',
+        };
+    }
+    else {
+        // Clear subscription when downgrading to free
+        updateData['subscription'] = admin.firestore.FieldValue.delete();
+    }
+    await userRef.update(updateData);
+    functions.logger.info('Admin updated user tier', {
+        adminId: context.auth.uid,
+        targetUserId,
+        previousTier,
+        newTier: tier,
+        reason: reason || 'Admin tier change',
+    });
+    return {
+        success: true,
+        targetUserId,
+        previousTier,
+        newTier: tier,
     };
 });
 /**
@@ -301,6 +381,7 @@ exports.listUsers = functions
                 credits: userData.credits,
                 totalGenerated: userData.totalGenerated,
                 role: userData.role || 'user',
+                tier: userData.tier || 'free',
                 createdAt: userData.createdAt?.toDate?.()?.toISOString() || null,
             };
         });

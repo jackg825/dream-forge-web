@@ -1266,6 +1266,36 @@
     "recommendedStyle": "AI 推薦風格",
     "confidence": "信心度"
   },
+  "upgrade": {
+    "title": "升級至 Premium",
+    "descriptionWithFeature": "使用「{feature}」需要 Premium 會員資格",
+    "descriptionGeneric": "解鎖更多進階功能，提升您的 3D 創作體驗",
+    "featuresTitle": "Premium 會員專屬功能",
+    "features": {
+      "geminiPro": {
+        "title": "Gemini 3 Pro 視角生成",
+        "description": "更精細的圖像品質與細節"
+      },
+      "providers": {
+        "title": "Hunyuan3D、Tripo3D 引擎",
+        "description": "更多 3D 生成選項與風格"
+      },
+      "hitem3dHires": {
+        "title": "HiTem3D 1024 高解析度",
+        "description": "更多細節，適合精密模型"
+      }
+    },
+    "contactAdmin": "聯絡管理員升級",
+    "contactNote": "請聯繫系統管理員以升級您的帳戶"
+  },
+  "tier": {
+    "free": "免費版",
+    "premium": "Premium",
+    "locked": "需要 Premium",
+    "current": "目前等級",
+    "upgrade": "升級",
+    "downgrade": "降級"
+  },
   "progress": {
     "status": {
       "draft": {

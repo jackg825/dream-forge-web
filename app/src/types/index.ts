@@ -14,6 +14,16 @@ export type OutputFormat = 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz';
 // User roles
 export type UserRole = 'user' | 'admin';
 
+// User membership tiers
+export type UserTier = 'free' | 'premium';
+
+// Subscription metadata for future payment integration
+export interface SubscriptionMetadata {
+  startedAt?: Date;
+  expiresAt?: Date;
+  paymentProvider?: 'stripe' | 'manual';
+}
+
 // View angles for multi-image support
 export type ViewAngle = 'front' | 'back' | 'left' | 'right' | 'top';
 
@@ -32,6 +42,8 @@ export interface ProviderOptions {
   faceCount?: number;
   /** Tripo: Generation mode */
   tripoMode?: 'image_to_model' | 'multiview_to_model';
+  /** HiTem3D: Output resolution (512, 1024) */
+  resolution?: 512 | 1024;
 }
 
 // Credit costs based on input mode
@@ -197,6 +209,8 @@ export interface User {
   credits: number;
   totalGenerated: number;
   role: UserRole;
+  tier: UserTier;
+  subscription?: SubscriptionMetadata;
   createdAt: Date;
   updatedAt: Date;
 }

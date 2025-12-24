@@ -44,6 +44,8 @@ export interface ProviderOptions {
     faceCount?: number;
     /** Tripo: Generation mode */
     tripoMode?: 'image_to_model' | 'multiview_to_model';
+    /** HiTem3D: Output resolution (512, 1024) */
+    resolution?: 512 | 1024;
 }
 /**
  * Unified generation options (provider-agnostic)

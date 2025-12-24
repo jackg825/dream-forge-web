@@ -75,6 +75,12 @@ export interface RodinDownloadResponse {
     }>;
 }
 export type UserRole = 'user' | 'admin';
+export type UserTier = 'free' | 'premium';
+export interface SubscriptionMetadata {
+    startedAt?: FirebaseFirestore.Timestamp;
+    expiresAt?: FirebaseFirestore.Timestamp;
+    paymentProvider?: 'stripe' | 'manual';
+}
 export interface UserDocument {
     uid: string;
     email: string;
@@ -83,6 +89,8 @@ export interface UserDocument {
     credits: number;
     totalGenerated: number;
     role: UserRole;
+    tier: UserTier;
+    subscription?: SubscriptionMetadata;
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt: FirebaseFirestore.Timestamp;
 }

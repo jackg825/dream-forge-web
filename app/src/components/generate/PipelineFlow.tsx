@@ -50,6 +50,7 @@ import { RegenerateDialog } from './RegenerateDialog';
 import { ResetStepDialog } from './ResetStepDialog';
 import { PipelineErrorState } from './PipelineErrorState';
 import { PipelineProgressBar } from './PipelineProgressBar';
+import { UpgradePrompt } from '@/components/ui/upgrade-prompt';
 import type { ResetTargetStep } from '@/hooks/usePipeline';
 import { UnifiedProgressIndicator } from './UnifiedProgressIndicator';
 import { ImageAnalysisPanel } from './ImageAnalysisPanel';
@@ -171,6 +172,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Style change flow state - tracks when user wants to change style after analysis
   const [styleChangeRequested, setStyleChangeRequested] = useState(false);
+
+  // Upgrade prompt state - shown when user clicks a Premium-only feature
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Image analysis hook
   const {
@@ -893,6 +897,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             disabled={actionLoading}
             showCredits={true}
             providers={['tripo', 'hunyuan', 'hitem3d']}
+            onUpgradeClick={() => setShowUpgradePrompt(true)}
           />
         </div>
 
@@ -1551,6 +1556,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         currentStep={pipeline?.status || 'draft'}
         onConfirm={handleResetStepConfirm}
         loading={resetLoading}
+      />
+
+      {/* Upgrade prompt for Premium-only features */}
+      <UpgradePrompt
+        open={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
       />
     </div>
   );
