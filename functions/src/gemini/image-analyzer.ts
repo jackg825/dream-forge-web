@@ -215,7 +215,12 @@ STYLE_SUITABILITY_REASON: [Brief explanation if suitability < 0.5, or "none"]`,
     instructions: {
       intro: `你是 3D 列印專家和 AI 圖片生成 prompt 專家，分析這張參考圖片以用於多視角 3D 模型生成。
 
-請提供以下分析（除特別標註外，使用繁體中文回覆）：`,
+重要語言要求：
+- PROMPT_DESCRIPTION 和 STYLE_HINTS 必須使用英文（用於 AI 圖片生成）
+- MATERIALS 和 OBJECT_TYPE 必須使用英文（技術術語）
+- 其他所有欄位（DESCRIPTION、STYLE_REASONING 等）必須使用繁體中文，禁止使用英文
+
+請提供以下分析：`,
       promptDescription: `1. **圖片生成用敘事描述** (PROMPT_DESCRIPTION) - 最重要！
    這段描述將直接用於 AI 圖片生成，請遵循以下原則：
    - 使用「敘事型段落」而非「關鍵字列表」
@@ -226,9 +231,10 @@ STYLE_SUITABILITY_REASON: [Brief explanation if suitability < 0.5, or "none"]`,
       styleHints: `2. **風格提示** (STYLE_HINTS)
    - 3-5 個英文風格關鍵詞，用於輔助圖片生成
    - 例如：kawaii, vinyl toy, soft plush, warm tones, friendly character`,
-      description: `3. **物體描述** (DESCRIPTION)
-   - 描述整體形狀、主要特徵、比例（繁體中文）
-   - 提及所有可見的表面材質`,
+      description: `3. **物體描述** (DESCRIPTION) - 必須使用繁體中文
+   - 用繁體中文描述整體形狀、主要特徵、比例
+   - 提及所有可見的表面材質
+   - 此欄位禁止使用英文，必須完全以繁體中文撰寫`,
       colors: `4. **色號提取** (COLORS)
    - 提取正好 {colorCount} 個主要顏色，格式為 HEX
    - 優先選擇高對比度、容易區分的 3D 列印友善實色`,
@@ -273,7 +279,7 @@ STYLE_SUITABILITY_REASON: [Brief explanation if suitability < 0.5, or "none"]`,
       outputFormat: `嚴格按照以下格式輸出（每行一個欄位）：
 PROMPT_DESCRIPTION: [3-5 句英文敘事描述，適合直接用於圖片生成]
 STYLE_HINTS: [逗號分隔的英文風格關鍵詞]
-DESCRIPTION: [你的描述，使用繁體中文]
+DESCRIPTION: [物體描述，必須使用繁體中文撰寫，禁止英文]
 COLORS: #RRGGBB, #RRGGBB, #RRGGBB...
 SCORE: [1-5]
 COLOR_SUGGESTIONS: [逗號分隔的建議清單，使用繁體中文]

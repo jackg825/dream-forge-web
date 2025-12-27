@@ -737,6 +737,16 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           disabled={actionLoading}
         />
 
+        {/* View Model Selector - shows after analysis completes */}
+        {imageAnalysis && !styleChangeRequested && (
+          <ViewModelSelector
+            value={geminiModel}
+            onChange={setGeminiModel}
+            disabled={actionLoading}
+            onUpgradeClick={() => setShowUpgradePrompt(true)}
+          />
+        )}
+
         {/* Multi-view grid (if images exist) - only show mesh images for 3D printing */}
         {hasSomeImages && (
           <MultiViewGrid

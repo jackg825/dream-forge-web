@@ -1306,7 +1306,8 @@
     "gemini-3-pro-image-preview": {
       "label": "Gemini 3 Pro",
       "description": "High quality, more detailed output"
-    }
+    },
+    "credits": "{count} credits"
   },
   "resolution": {
     "title": "Generation Resolution",

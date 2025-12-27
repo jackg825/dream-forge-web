@@ -1306,7 +1306,8 @@
     "gemini-3-pro-image-preview": {
       "label": "Gemini 3 Pro",
       "description": "高品質生成，更精細的細節"
-    }
+    },
+    "credits": "{count} 點"
   },
   "resolution": {
     "title": "生成解析度",

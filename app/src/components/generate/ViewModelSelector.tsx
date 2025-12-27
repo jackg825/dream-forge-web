@@ -9,13 +9,14 @@
 
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Sparkles, Zap } from 'lucide-react';
+import { Coins, Lock, Sparkles, Zap } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTierAccess } from '@/hooks/useTierAccess';
 import {
   VIEW_MODEL_OPTIONS,
   type ViewGenerationModel,
 } from '@/config/tiers';
+import { GEMINI_MODEL_OPTIONS } from '@/types';
 
 interface ViewModelSelectorProps {
   value: ViewGenerationModel;
@@ -106,6 +107,15 @@ export function ViewModelSelector({
               )}>
                 {t(`${modelId}.description`)}
               </p>
+
+              {/* Credit cost */}
+              <div className={cn(
+                'flex items-center gap-1 text-xs',
+                isLocked ? 'text-muted-foreground opacity-70' : 'text-primary'
+              )}>
+                <Coins className="h-3 w-3" />
+                <span>{t('credits', { count: GEMINI_MODEL_OPTIONS[modelId].creditCost })}</span>
+              </div>
 
               {/* Lock indicator for Premium-only models */}
               {isLocked && (
