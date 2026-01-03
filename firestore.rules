@@ -33,5 +33,58 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       allow create, update, delete: if false; // Only Cloud Functions can write
     }
+
+    // ============================================
+    // Print Ordering System
+    // ============================================
+
+    // Orders collection - users can read own orders, admins can read all
+    // All writes via Cloud Functions for security
+    match /orders/{orderId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == resource.data.userId ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+      allow create, update, delete: if false; // Only Cloud Functions can write
+    }
+
+    // Shipping addresses - users can read/write their own addresses
+    match /shippingAddresses/{userId}/addresses/{addressId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Print materials configuration - read by all authenticated, write by admin only
+    match /printConfig/materials {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Print sizes configuration
+    match /printConfig/sizes {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Print colors configuration
+    match /printConfig/colors {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Print pricing configuration
+    match /printConfig/pricing {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Admin notification configuration
+    match /printConfig/notifications {
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
   }
 }

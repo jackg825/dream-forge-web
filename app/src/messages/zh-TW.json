@@ -1321,6 +1321,222 @@
     },
     "tip": "建議：一般用途選擇 512³，需要精細細節時選擇 1024³"
   },
+  "orders": {
+    "orderPrint": "訂購列印",
+    "modal": {
+      "configureTitle": "設定列印訂單",
+      "shippingTitle": "配送資料",
+      "reviewTitle": "確認訂單",
+      "material": "材質",
+      "size": "尺寸",
+      "colors": "顏色",
+      "addColor": "新增顏色",
+      "quantity": "數量",
+      "total": "總計",
+      "savedAddresses": "已儲存地址",
+      "newAddress": "輸入地址",
+      "saveAddress": "儲存此地址",
+      "shippingMethod": "配送方式",
+      "standardShipping": "標準配送",
+      "expressShipping": "快速配送",
+      "days": "天",
+      "orderItems": "訂單商品",
+      "shippingTo": "配送至",
+      "subtotal": "小計",
+      "shipping": "運費",
+      "paymentComingSoon": "付款功能即將推出。您仍可預覽訂單內容。",
+      "cancel": "取消",
+      "continue": "繼續",
+      "back": "返回",
+      "placeOrder": "送出訂單"
+    },
+    "address": {
+      "recipientName": "收件人姓名",
+      "recipientNamePlaceholder": "全名",
+      "phone": "電話",
+      "phonePlaceholder": "+886912345678",
+      "email": "電子郵件（選填）",
+      "emailPlaceholder": "email@example.com",
+      "country": "國家/地區",
+      "state": "州/省",
+      "statePlaceholder": "州或省份",
+      "city": "城市",
+      "cityPlaceholder": "城市名稱",
+      "district": "區域",
+      "districtPlaceholder": "區域（選填）",
+      "postalCode": "郵遞區號",
+      "postalCodePlaceholder": "12345",
+      "addressLine1": "地址第一行",
+      "addressLine1Placeholder": "街道地址",
+      "addressLine2": "地址第二行",
+      "addressLine2Placeholder": "公寓、樓層等（選填）",
+      "label": "地址標籤",
+      "labelPlaceholder": "例如：住家、公司"
+    },
+    "myOrders": {
+      "title": "我的訂單",
+      "subtitle": "查看及管理您的列印訂單",
+      "filter": {
+        "all": "全部",
+        "active": "進行中",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      },
+      "noOrders": "尚無訂單",
+      "noOrdersFiltered": "沒有符合的訂單",
+      "startOrdering": "訂購您的第一個 3D 列印品",
+      "tryAdjustingFilter": "請嘗試調整篩選條件",
+      "item": "件商品",
+      "items": "件商品",
+      "tracking": "追蹤編號",
+      "pagination": {
+        "previous": "上一頁",
+        "next": "下一頁"
+      }
+    },
+    "orderDetails": {
+      "title": "訂單",
+      "backToOrders": "返回訂單列表",
+      "placedOn": "下單時間",
+      "items": "訂單商品",
+      "colors": "顏色",
+      "timeline": "狀態時間軸",
+      "noHistory": "無狀態紀錄",
+      "tracking": "物流資訊",
+      "carrier": "物流商",
+      "trackingNumber": "追蹤編號",
+      "trackPackage": "追蹤包裹",
+      "summary": "訂單摘要",
+      "subtotal": "小計",
+      "shipping": "運費",
+      "total": "總計",
+      "creditsAwarded": "點數已發放",
+      "shippingAddress": "配送地址",
+      "cancelOrder": "取消訂單",
+      "cancelConfirmTitle": "確定要取消此訂單？",
+      "cancelConfirmDescription": "此操作無法復原。您的訂單將被取消。",
+      "keepOrder": "保留訂單",
+      "confirmCancel": "是，取消訂單",
+      "notFound": "找不到訂單",
+      "notFoundDescription": "您查詢的訂單不存在，或您沒有檢視權限。"
+    }
+  },
+  "adminOrders": {
+    "title": "訂單管理",
+    "subtitle": "管理列印訂單、追蹤狀態、更新物流資訊",
+    "refresh": "重新整理",
+    "ordersCount": "筆訂單",
+    "viewMode": {
+      "kanban": "看板",
+      "list": "列表"
+    },
+    "stats": {
+      "todayOrders": "今日訂單",
+      "todayRevenue": "今日營收",
+      "weeklyOrders": "本週訂單",
+      "newCustomers": "新客戶"
+    },
+    "status": {
+      "pending": "待確認",
+      "confirmed": "已確認",
+      "printing": "列印中",
+      "quality_check": "品質檢查",
+      "shipping": "配送中",
+      "delivered": "已送達",
+      "cancelled": "已取消",
+      "refunded": "已退款"
+    },
+    "kanban": {
+      "noOrders": "沒有訂單"
+    },
+    "list": {
+      "noOrders": "找不到訂單",
+      "orderId": "訂單編號",
+      "customer": "客戶",
+      "items": "商品",
+      "status": "狀態",
+      "total": "總計",
+      "date": "日期",
+      "actions": "操作"
+    },
+    "actions": {
+      "viewDetails": "檢視詳情",
+      "confirm": "確認訂單",
+      "startPrinting": "開始列印",
+      "qualityCheck": "品質檢查",
+      "ship": "出貨",
+      "delivered": "標記為已送達",
+      "cancel": "取消訂單"
+    },
+    "detail": {
+      "title": "訂單",
+      "customer": "客戶",
+      "items": "訂單商品",
+      "shippingAddress": "配送地址",
+      "payment": "付款資訊",
+      "subtotal": "小計",
+      "shipping": "運費",
+      "total": "總計",
+      "tracking": "物流追蹤",
+      "carrier": "物流商",
+      "trackingNumber": "追蹤編號",
+      "trackingUrl": "追蹤網址",
+      "trackPackage": "追蹤包裹",
+      "statusHistory": "狀態紀錄",
+      "updateStatus": "更新狀態",
+      "newStatus": "新狀態",
+      "selectStatus": "選擇狀態",
+      "reason": "原因",
+      "reasonPlaceholder": "狀態變更原因（選填）",
+      "adminNotes": "管理員備註",
+      "notesPlaceholder": "內部備註（客戶不可見）",
+      "updateStatusButton": "更新狀態",
+      "addTracking": "新增物流資訊",
+      "addTrackingButton": "新增物流"
+    }
+  },
+  "adminSettings": {
+    "print": {
+      "title": "列印設定",
+      "subtitle": "設定 3D 列印的材質、尺寸、顏色和價格",
+      "refresh": "重新整理",
+      "tabs": {
+        "pricing": "價格",
+        "materials": "材質",
+        "sizes": "尺寸",
+        "colors": "顏色"
+      },
+      "pricing": {
+        "title": "價格矩陣",
+        "description": "設定每種材質和尺寸組合的價格",
+        "material": "材質",
+        "save": "儲存價格"
+      },
+      "materials": {
+        "title": "列印材質",
+        "description": "可用的 3D 列印材質選項",
+        "name": "材質",
+        "description": "說明",
+        "maxColors": "最多顏色",
+        "estimatedDays": "預估天數",
+        "available": "啟用",
+        "editNote": "材質設定由 Firebase 管理。如需修改請聯繫管理員。"
+      },
+      "sizes": {
+        "title": "列印尺寸",
+        "description": "可用的 3D 列印尺寸選項",
+        "name": "尺寸",
+        "dimensions": "尺寸",
+        "available": "啟用",
+        "editNote": "尺寸設定由 Firebase 管理。如需修改請聯繫管理員。"
+      },
+      "colors": {
+        "title": "顏色選項",
+        "description": "可用的列印顏色選項",
+        "editNote": "顏色設定由 Firebase 管理。如需修改請聯繫管理員。"
+      }
+    }
+  },
   "progress": {
     "status": {
       "draft": {

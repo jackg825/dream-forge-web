@@ -17,14 +17,15 @@ interface SelectProps {
   value: string;
   onValueChange: (value: string) => void;
   children: React.ReactNode;
+  disabled?: boolean;
 }
 
-function Select({ value, onValueChange, children }: SelectProps) {
+function Select({ value, onValueChange, children, disabled }: SelectProps) {
   const [open, setOpen] = React.useState(false);
 
   return (
-    <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
-      <div className="relative">{children}</div>
+    <SelectContext.Provider value={{ value, onValueChange, open, setOpen: disabled ? () => {} : setOpen }}>
+      <div className={cn("relative", disabled && "opacity-50 pointer-events-none")}>{children}</div>
     </SelectContext.Provider>
   );
 }

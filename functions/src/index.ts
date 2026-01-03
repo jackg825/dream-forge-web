@@ -74,3 +74,26 @@ export {
   optimizeMeshForPrint,
   analyzeMeshForPrint,
 } from './handlers/optimize';
+
+// Print ordering system
+export {
+  // User functions
+  createOrder,
+  getUserOrders,
+  getOrderDetails,
+  cancelOrder,
+  // Shipping addresses
+  getShippingAddresses,
+  saveShippingAddress,
+  deleteShippingAddress,
+  // Print config
+  getPrintConfig,
+  // Admin functions
+  listAllOrders,
+  getOrdersByStatus,
+  updateOrderStatus,
+  updateTrackingInfo,
+  getOrderStats,
+  updateMaterialConfig,
+  updatePricing,
+} from './handlers/orders';

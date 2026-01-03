@@ -1321,6 +1321,222 @@
     },
     "tip": "Recommendation: Use 512³ for general use, 1024³ when fine detail is needed"
   },
+  "orders": {
+    "orderPrint": "Order Print",
+    "modal": {
+      "configureTitle": "Configure Print Order",
+      "shippingTitle": "Shipping Details",
+      "reviewTitle": "Review Order",
+      "material": "Material",
+      "size": "Size",
+      "colors": "Colors",
+      "addColor": "Add Color",
+      "quantity": "Quantity",
+      "total": "Total",
+      "savedAddresses": "Saved Addresses",
+      "newAddress": "Enter Address",
+      "saveAddress": "Save this address",
+      "shippingMethod": "Shipping Method",
+      "standardShipping": "Standard Shipping",
+      "expressShipping": "Express Shipping",
+      "days": "days",
+      "orderItems": "Order Items",
+      "shippingTo": "Shipping To",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "paymentComingSoon": "Payment processing coming soon. You can still review your order.",
+      "cancel": "Cancel",
+      "continue": "Continue",
+      "back": "Back",
+      "placeOrder": "Place Order"
+    },
+    "address": {
+      "recipientName": "Recipient Name",
+      "recipientNamePlaceholder": "Full name",
+      "phone": "Phone",
+      "phonePlaceholder": "+1234567890",
+      "email": "Email (optional)",
+      "emailPlaceholder": "email@example.com",
+      "country": "Country",
+      "state": "State/Province",
+      "statePlaceholder": "State or province",
+      "city": "City",
+      "cityPlaceholder": "City name",
+      "district": "District",
+      "districtPlaceholder": "District (optional)",
+      "postalCode": "Postal Code",
+      "postalCodePlaceholder": "12345",
+      "addressLine1": "Address Line 1",
+      "addressLine1Placeholder": "Street address",
+      "addressLine2": "Address Line 2",
+      "addressLine2Placeholder": "Apt, suite, etc. (optional)",
+      "label": "Address Label",
+      "labelPlaceholder": "e.g., Home, Office"
+    },
+    "myOrders": {
+      "title": "My Orders",
+      "subtitle": "View and manage your print orders",
+      "filter": {
+        "all": "All",
+        "active": "Active",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "noOrders": "No orders yet",
+      "noOrdersFiltered": "No matching orders",
+      "startOrdering": "Order your first 3D print",
+      "tryAdjustingFilter": "Try adjusting your filter",
+      "item": "item",
+      "items": "items",
+      "tracking": "Tracking",
+      "pagination": {
+        "previous": "Previous",
+        "next": "Next"
+      }
+    },
+    "orderDetails": {
+      "title": "Order",
+      "backToOrders": "Back to Orders",
+      "placedOn": "Placed on",
+      "items": "Order Items",
+      "colors": "Colors",
+      "timeline": "Status Timeline",
+      "noHistory": "No status history",
+      "tracking": "Tracking Info",
+      "carrier": "Carrier",
+      "trackingNumber": "Tracking Number",
+      "trackPackage": "Track Package",
+      "summary": "Order Summary",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "total": "Total",
+      "creditsAwarded": "credits awarded",
+      "shippingAddress": "Shipping Address",
+      "cancelOrder": "Cancel Order",
+      "cancelConfirmTitle": "Cancel this order?",
+      "cancelConfirmDescription": "This action cannot be undone. Your order will be cancelled.",
+      "keepOrder": "Keep Order",
+      "confirmCancel": "Yes, Cancel",
+      "notFound": "Order Not Found",
+      "notFoundDescription": "The order you're looking for doesn't exist or you don't have access."
+    }
+  },
+  "adminOrders": {
+    "title": "Order Management",
+    "subtitle": "Manage print orders, track status, and update shipping",
+    "refresh": "Refresh",
+    "ordersCount": "orders",
+    "viewMode": {
+      "kanban": "Kanban",
+      "list": "List"
+    },
+    "stats": {
+      "todayOrders": "Today's Orders",
+      "todayRevenue": "Today's Revenue",
+      "weeklyOrders": "Weekly Orders",
+      "newCustomers": "New Customers"
+    },
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "printing": "Printing",
+      "quality_check": "Quality Check",
+      "shipping": "Shipping",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded"
+    },
+    "kanban": {
+      "noOrders": "No orders"
+    },
+    "list": {
+      "noOrders": "No orders found",
+      "orderId": "Order ID",
+      "customer": "Customer",
+      "items": "Items",
+      "status": "Status",
+      "total": "Total",
+      "date": "Date",
+      "actions": "Actions"
+    },
+    "actions": {
+      "viewDetails": "View Details",
+      "confirm": "Confirm Order",
+      "startPrinting": "Start Printing",
+      "qualityCheck": "Quality Check",
+      "ship": "Ship Order",
+      "delivered": "Mark Delivered",
+      "cancel": "Cancel Order"
+    },
+    "detail": {
+      "title": "Order",
+      "customer": "Customer",
+      "items": "Order Items",
+      "shippingAddress": "Shipping Address",
+      "payment": "Payment",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "total": "Total",
+      "tracking": "Tracking",
+      "carrier": "Carrier",
+      "trackingNumber": "Tracking Number",
+      "trackingUrl": "Tracking URL",
+      "trackPackage": "Track Package",
+      "statusHistory": "Status History",
+      "updateStatus": "Update Status",
+      "newStatus": "New Status",
+      "selectStatus": "Select status",
+      "reason": "Reason",
+      "reasonPlaceholder": "Optional reason for status change",
+      "adminNotes": "Admin Notes",
+      "notesPlaceholder": "Internal notes (not visible to customer)",
+      "updateStatusButton": "Update Status",
+      "addTracking": "Add Tracking Info",
+      "addTrackingButton": "Add Tracking"
+    }
+  },
+  "adminSettings": {
+    "print": {
+      "title": "Print Configuration",
+      "subtitle": "Configure materials, sizes, colors, and pricing for 3D prints",
+      "refresh": "Refresh",
+      "tabs": {
+        "pricing": "Pricing",
+        "materials": "Materials",
+        "sizes": "Sizes",
+        "colors": "Colors"
+      },
+      "pricing": {
+        "title": "Pricing Matrix",
+        "description": "Set prices for each material and size combination",
+        "material": "Material",
+        "save": "Save Pricing"
+      },
+      "materials": {
+        "title": "Print Materials",
+        "description": "Available material options for 3D printing",
+        "name": "Material",
+        "description": "Description",
+        "maxColors": "Max Colors",
+        "estimatedDays": "Est. Days",
+        "available": "Available",
+        "editNote": "Material configuration is managed via Firebase. Contact admin to modify."
+      },
+      "sizes": {
+        "title": "Print Sizes",
+        "description": "Available size options for 3D prints",
+        "name": "Size",
+        "dimensions": "Dimensions",
+        "available": "Available",
+        "editNote": "Size configuration is managed via Firebase. Contact admin to modify."
+      },
+      "colors": {
+        "title": "Color Options",
+        "description": "Available color options for printing",
+        "editNote": "Color configuration is managed via Firebase. Contact admin to modify."
+      }
+    }
+  },
   "progress": {
     "status": {
       "draft": {
