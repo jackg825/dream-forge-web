@@ -11,7 +11,7 @@ import {
   IPaymentGatewayFactory,
 } from '../../domain/ports/IPaymentGateway';
 import { PaymentMethod } from '../../domain/order/types';
-import { DisabledPaymentAdapter, disabledPaymentAdapter } from './DisabledPaymentAdapter';
+import { disabledPaymentAdapter } from './DisabledPaymentAdapter';
 
 /**
  * Payment Gateway Factory Implementation

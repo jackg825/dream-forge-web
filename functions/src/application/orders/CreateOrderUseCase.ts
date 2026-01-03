@@ -9,7 +9,6 @@ import * as functions from 'firebase-functions';
 import {
   OrderAggregate,
   CreateOrderInput,
-  OrderItem,
   PrintMaterial,
   PrintSizeId,
 } from '../../domain/order';

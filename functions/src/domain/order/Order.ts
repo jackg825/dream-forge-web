@@ -10,8 +10,6 @@ import {
   OrderStatus,
   OrderItem,
   OrderStatusChange,
-  PaymentInfo,
-  ShippingAddress,
   ShippingMethod,
   ShippingTracking,
   CreateOrderInput,

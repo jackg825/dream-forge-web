@@ -33,7 +33,8 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.analyzeMeshForPrint = exports.optimizeMeshForPrint = exports.analyzeUploadedImage = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.updateUserTier = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkAllProviderBalances = exports.checkRodinBalance = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.listAllOrders = exports.getPrintConfig = exports.deleteShippingAddress = exports.saveShippingAddress = exports.getShippingAddresses = exports.cancelOrder = exports.getOrderDetails = exports.getUserOrders = exports.createOrder = exports.analyzeMeshForPrint = exports.optimizeMeshForPrint = exports.analyzeUploadedImage = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.updateUserTier = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkAllProviderBalances = exports.checkRodinBalance = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
+exports.updatePricing = exports.updateMaterialConfig = exports.getOrderStats = exports.updateTrackingInfo = exports.updateOrderStatus = exports.getOrdersByStatus = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
@@ -99,4 +100,25 @@ Object.defineProperty(exports, "analyzeUploadedImage", { enumerable: true, get: 
 var optimize_1 = require("./handlers/optimize");
 Object.defineProperty(exports, "optimizeMeshForPrint", { enumerable: true, get: function () { return optimize_1.optimizeMeshForPrint; } });
 Object.defineProperty(exports, "analyzeMeshForPrint", { enumerable: true, get: function () { return optimize_1.analyzeMeshForPrint; } });
+// Print ordering system
+var orders_1 = require("./handlers/orders");
+// User functions
+Object.defineProperty(exports, "createOrder", { enumerable: true, get: function () { return orders_1.createOrder; } });
+Object.defineProperty(exports, "getUserOrders", { enumerable: true, get: function () { return orders_1.getUserOrders; } });
+Object.defineProperty(exports, "getOrderDetails", { enumerable: true, get: function () { return orders_1.getOrderDetails; } });
+Object.defineProperty(exports, "cancelOrder", { enumerable: true, get: function () { return orders_1.cancelOrder; } });
+// Shipping addresses
+Object.defineProperty(exports, "getShippingAddresses", { enumerable: true, get: function () { return orders_1.getShippingAddresses; } });
+Object.defineProperty(exports, "saveShippingAddress", { enumerable: true, get: function () { return orders_1.saveShippingAddress; } });
+Object.defineProperty(exports, "deleteShippingAddress", { enumerable: true, get: function () { return orders_1.deleteShippingAddress; } });
+// Print config
+Object.defineProperty(exports, "getPrintConfig", { enumerable: true, get: function () { return orders_1.getPrintConfig; } });
+// Admin functions
+Object.defineProperty(exports, "listAllOrders", { enumerable: true, get: function () { return orders_1.listAllOrders; } });
+Object.defineProperty(exports, "getOrdersByStatus", { enumerable: true, get: function () { return orders_1.getOrdersByStatus; } });
+Object.defineProperty(exports, "updateOrderStatus", { enumerable: true, get: function () { return orders_1.updateOrderStatus; } });
+Object.defineProperty(exports, "updateTrackingInfo", { enumerable: true, get: function () { return orders_1.updateTrackingInfo; } });
+Object.defineProperty(exports, "getOrderStats", { enumerable: true, get: function () { return orders_1.getOrderStats; } });
+Object.defineProperty(exports, "updateMaterialConfig", { enumerable: true, get: function () { return orders_1.updateMaterialConfig; } });
+Object.defineProperty(exports, "updatePricing", { enumerable: true, get: function () { return orders_1.updatePricing; } });
 //# sourceMappingURL=index.js.map
