@@ -25,8 +25,17 @@ import {
   Eye,
   Wrench,
 } from 'lucide-react';
-import { ModelViewer, type ModelViewerRef } from '@/components/viewer/ModelViewer';
+import dynamic from 'next/dynamic';
+import type { ModelViewerRef } from '@/components/viewer/ModelViewer';
 import { TranslatedModelViewerErrorBoundary } from '@/components/viewer/ModelViewerErrorBoundary';
+
+// Dynamic import for ModelViewer to reduce initial bundle size
+// Three.js is ~300KB+ and only needed when viewing 3D models
+// Reference: vercel-react-best-practices bundle-dynamic-imports
+const ModelViewer = dynamic(
+  () => import('@/components/viewer/ModelViewer').then((mod) => mod.ModelViewer),
+  { ssr: false }
+);
 import { ViewerToolbar } from '@/components/viewer/ViewerToolbar';
 import { OptimizePanel } from '@/components/viewer/OptimizePanel';
 import {
