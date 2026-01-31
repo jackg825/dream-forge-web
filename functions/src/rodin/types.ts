@@ -353,7 +353,7 @@ export const PIPELINE_CREDIT_COSTS = {
 export interface PipelineProcessedImage {
   url: string;
   storagePath: string;
-  source: 'gemini' | 'upload' | 'gemini-styled-reference' | 'gemini-from-reference';
+  source: 'gemini' | 'upload' | 'gemini-styled-reference' | 'gemini-from-reference' | 'gemini-composite';
   colorPalette?: string[];       // 7 HEX colors for H2C mesh images
   generatedAt: FirebaseFirestore.Timestamp;
 }

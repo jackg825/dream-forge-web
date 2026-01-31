@@ -14,6 +14,7 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 import { createMultiViewGenerator, type GeminiImageModel } from '../gemini/multi-view-generator';
+import { generateCompositeView } from '../gemini/composite-view-generator';
 import { generateStyledReference } from '../gemini/styled-reference-generator';
 import { MeshyProvider, type MeshGenerationOptions } from '../providers/meshy/client';
 import { TripoProvider } from '../providers/tripo/client';
@@ -338,7 +339,6 @@ export const generatePipelineImages = functions
   .runWith({
     timeoutSeconds: 300, // 5 minutes for 6 Gemini calls
     memory: '1GB',
-    secrets: ['GEMINI_API_KEY'],
   })
   .https.onCall(async (data: GeneratePipelineImagesData, context) => {
     if (!context.auth) {
@@ -523,59 +523,68 @@ export const generatePipelineImages = functions
 
       } else {
         // =====================================================
-        // SINGLE-PHASE FLOW: Original behavior
-        // Generate all 4 views independently in parallel
+        // SINGLE-PHASE FLOW: Composite View Generation
+        // Generate all 4 views in a single 2×2 grid image
         // =====================================================
 
-        functions.logger.info('Using single-phase flow (no style or no detected angle)', {
+        functions.logger.info('Using composite view generation (single API call)', {
           pipelineId,
-          hasDetectedAngle: !!detectedViewAngle,
           selectedStyle: selectedStyle || 'none',
         });
 
-        const onProgress = async (
-          type: 'mesh' | 'texture',
-          _angle: string,
-          completed: number,
-          _total: number
-        ) => {
-          const progress = type === 'mesh'
-            ? { phase: 'mesh-views' as const, meshViewsCompleted: completed, textureViewsCompleted: 0 }
-            : { phase: 'texture-views' as const, meshViewsCompleted: 4, textureViewsCompleted: completed };
+        // Update progress: starting
+        await pipelineRef.update({
+          generationProgress: {
+            phase: 'composite-generation' as const,
+            meshViewsCompleted: 0,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
 
-          await pipelineRef.update({
-            generationProgress: progress,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-        };
+        // Generate composite view (single API call)
+        const compositeResult = await generateCompositeView(base64, mimeType, {
+          userDescription: pipeline.userDescription,
+          imageAnalysis: pipeline.imageAnalysis,
+          selectedStyle,
+        });
 
-        const views = await generator.generateAllViewsParallel(base64, mimeType, onProgress);
+        // Update progress: composite done, uploading
+        await pipelineRef.update({
+          generationProgress: {
+            phase: 'uploading' as const,
+            meshViewsCompleted: 4,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
 
-        // Upload mesh views
-        for (const [angle, view] of Object.entries(views.meshViews)) {
+        // Upload all 4 views
+        const viewEntries: [PipelineMeshAngle, { imageBase64: string; mimeType: string }][] = [
+          ['front', compositeResult.front],
+          ['back', compositeResult.back],
+          ['left', compositeResult.left],
+          ['right', compositeResult.right],
+        ];
+
+        for (const [angle, view] of viewEntries) {
           const ext = getExtensionFromMimeType(view.mimeType);
           const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
           const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
 
-          const meshImage: PipelineProcessedImage = {
+          meshImages[angle] = {
             url,
             storagePath,
-            source: 'gemini',
+            source: 'gemini-composite',
             generatedAt: now as unknown as FirebaseFirestore.Timestamp,
           };
-          if (view.colorPalette && view.colorPalette.length > 0) {
-            meshImage.colorPalette = view.colorPalette;
-          }
-          meshImages[angle as PipelineMeshAngle] = meshImage;
         }
 
-        // Build aggregated color palette for Firestore
-        aggregatedColorPalette = views.aggregatedPalette
-          ? {
-              unified: views.aggregatedPalette.unified,
-              dominantColors: views.aggregatedPalette.dominantColors,
-            }
-          : undefined;
+        // No aggregated color palette for composite mode (colors are consistent by design)
+        aggregatedColorPalette = undefined;
+
+        functions.logger.info('Composite view generation complete', {
+          pipelineId,
+          viewCount: Object.keys(meshImages).length,
+        });
       }
 
       // Update pipeline with generated images and color palette
@@ -641,7 +650,6 @@ export const regeneratePipelineImage = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: ['GEMINI_API_KEY'],
   })
   .https.onCall(async (data: RegeneratePipelineImageData, context) => {
     if (!context.auth) {
@@ -958,7 +966,6 @@ export const startPipelineMesh = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
-    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
   })
   .https.onCall(async (data: StartPipelineMeshData, context) => {
     if (!context.auth) {
@@ -1184,11 +1191,6 @@ export const checkPipelineStatus = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: [
-      'MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY',
-      'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY',
-      'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
-    ],
   })
   .https.onCall(async (data: CheckPipelineStatusData, context) => {
     if (!context.auth) {
@@ -1358,7 +1360,6 @@ export const startPipelineTexture = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: ['MESHY_API_KEY'],
   })
   .https.onCall(async (data: StartPipelineTextureData, context) => {
     if (!context.auth) {
