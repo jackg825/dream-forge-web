@@ -23,10 +23,12 @@
     "firebase-functions": "^7.0.1",
     "form-data": "^4.0.5",
     "gltfpack": "^1.0.0",
+    "sharp": "^0.34.5",
     "tencentcloud-sdk-nodejs": "^4.1.152"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "@types/sharp": "^0.31.1",
     "typescript": "^5.0.0"
   },
   "private": true
