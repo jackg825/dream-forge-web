@@ -74,7 +74,6 @@ exports.generateModel = functions
     .runWith({
     timeoutSeconds: 120, // Increased for Gemini + provider API
     memory: '1GB', // Increased for image processing
-    secrets: ['RODIN_API_KEY', 'GEMINI_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     // 1. Verify authentication
@@ -285,7 +284,6 @@ exports.checkJobStatus = functions
     .runWith({
     timeoutSeconds: 540, // 9 minutes for model download/upload
     memory: '1GB',
-    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     // 1. Verify authentication
@@ -484,7 +482,6 @@ exports.retryFailedJob = functions
     .runWith({
     timeoutSeconds: 540,
     memory: '1GB',
-    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     // 1. Verify authentication

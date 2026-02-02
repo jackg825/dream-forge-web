@@ -253,9 +253,6 @@ exports.updateUserTier = functions
  */
 exports.checkRodinBalance = functions
     .region('asia-east1')
-    .runWith({
-    secrets: ['RODIN_API_KEY'],
-})
     .https.onCall(async (_data, context) => {
     // Check authentication
     if (!context.auth) {
@@ -669,9 +666,6 @@ exports.getUserTransactions = functions
  */
 exports.checkAllProviderBalances = functions
     .region('asia-east1')
-    .runWith({
-    secrets: ['RODIN_API_KEY', 'MESHY_API_KEY', 'TRIPO_API_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
-})
     .https.onCall(async (_data, context) => {
     // Check authentication
     if (!context.auth) {
@@ -776,7 +770,6 @@ exports.adminRegeneratePipelineImage = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -877,7 +870,6 @@ exports.adminStartPipelineMesh = functions
     .runWith({
     timeoutSeconds: 180,
     memory: '1GB',
-    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -1007,7 +999,6 @@ exports.adminCheckPreviewStatus = functions
     .runWith({
     timeoutSeconds: 60,
     memory: '512MB',
-    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {

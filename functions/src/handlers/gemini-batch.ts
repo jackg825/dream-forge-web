@@ -13,12 +13,7 @@ import type {
   PipelineDocument,
   GeminiBatchJobDocument,
 } from '../rodin/types';
-import { defineSecret } from 'firebase-functions/params';
-
 const db = admin.firestore();
-
-// Define secret for Gemini API key
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 /**
  * Submit a batch job for image generation
@@ -35,7 +30,6 @@ export const submitGeminiBatch = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: [geminiApiKey],
   })
   .https.onCall(async (data: { pipelineId: string }, context) => {
     // Validate auth
@@ -105,7 +99,7 @@ export const submitGeminiBatch = functions
     const mimeType = imageResponse.headers['content-type'] || 'image/png';
 
     // Create batch client
-    const client = createBatchClient(geminiApiKey.value());
+    const client = createBatchClient(process.env.GEMINI_API_KEY || '');
 
     // Build batch requests
     const requests = client.buildBatchRequests(

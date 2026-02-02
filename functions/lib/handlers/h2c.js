@@ -94,7 +94,6 @@ exports.optimizeColorsForH2C = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
-    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     // 1. Verify authentication

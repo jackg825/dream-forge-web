@@ -47,10 +47,7 @@ const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
 const batch_client_1 = require("../gemini/batch-client");
-const params_1 = require("firebase-functions/params");
 const db = admin.firestore();
-// Define secret for Gemini API key
-const geminiApiKey = (0, params_1.defineSecret)('GEMINI_API_KEY');
 /**
  * Submit a batch job for image generation
  *
@@ -66,7 +63,6 @@ exports.submitGeminiBatch = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: [geminiApiKey],
 })
     .https.onCall(async (data, context) => {
     // Validate auth
@@ -107,7 +103,7 @@ exports.submitGeminiBatch = functions
     const imageBase64 = imageBuffer.toString('base64');
     const mimeType = imageResponse.headers['content-type'] || 'image/png';
     // Create batch client
-    const client = (0, batch_client_1.createBatchClient)(geminiApiKey.value());
+    const client = (0, batch_client_1.createBatchClient)(process.env.GEMINI_API_KEY || '');
     // Build batch requests
     const requests = client.buildBatchRequests(imageBase64, mimeType, pipeline.generationMode, pipeline.userDescription || undefined);
     // Submit batch

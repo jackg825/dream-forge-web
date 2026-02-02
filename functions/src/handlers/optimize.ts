@@ -222,10 +222,6 @@ export const optimizeMeshForPrint = functions
   .runWith({
     timeoutSeconds: 540, // 9 minutes for large meshes
     memory: '2GB',
-    secrets: [
-      'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY',
-      'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
-    ],
   })
   .https.onCall(
     async (
@@ -425,10 +421,6 @@ export const analyzeMeshForPrint = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
-    secrets: [
-      'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY',
-      'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
-    ],
   })
   .https.onCall(
     async (

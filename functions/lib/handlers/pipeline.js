@@ -52,6 +52,7 @@ const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const axios_1 = __importDefault(require("axios"));
 const multi_view_generator_1 = require("../gemini/multi-view-generator");
+const composite_view_generator_1 = require("../gemini/composite-view-generator");
 const styled_reference_generator_1 = require("../gemini/styled-reference-generator");
 const retexture_1 = require("../providers/meshy/retexture");
 const factory_1 = require("../providers/factory");
@@ -264,7 +265,6 @@ exports.generatePipelineImages = functions
     .runWith({
     timeoutSeconds: 300, // 5 minutes for 6 Gemini calls
     memory: '1GB',
-    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -406,47 +406,59 @@ exports.generatePipelineImages = functions
         }
         else {
             // =====================================================
-            // SINGLE-PHASE FLOW: Original behavior
-            // Generate all 4 views independently in parallel
+            // SINGLE-PHASE FLOW: Composite View Generation
+            // Generate all 4 views in a single 2×2 grid image
             // =====================================================
-            functions.logger.info('Using single-phase flow (no style or no detected angle)', {
+            functions.logger.info('Using composite view generation (single API call)', {
                 pipelineId,
-                hasDetectedAngle: !!detectedViewAngle,
                 selectedStyle: selectedStyle || 'none',
             });
-            const onProgress = async (type, _angle, completed, _total) => {
-                const progress = type === 'mesh'
-                    ? { phase: 'mesh-views', meshViewsCompleted: completed, textureViewsCompleted: 0 }
-                    : { phase: 'texture-views', meshViewsCompleted: 4, textureViewsCompleted: completed };
-                await pipelineRef.update({
-                    generationProgress: progress,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                });
-            };
-            const views = await generator.generateAllViewsParallel(base64, mimeType, onProgress);
-            // Upload mesh views
-            for (const [angle, view] of Object.entries(views.meshViews)) {
+            // Update progress: starting
+            await pipelineRef.update({
+                generationProgress: {
+                    phase: 'composite-generation',
+                    meshViewsCompleted: 0,
+                },
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // Generate composite view (single API call)
+            const compositeResult = await (0, composite_view_generator_1.generateCompositeView)(base64, mimeType, {
+                userDescription: pipeline.userDescription,
+                imageAnalysis: pipeline.imageAnalysis,
+                selectedStyle,
+            });
+            // Update progress: composite done, uploading
+            await pipelineRef.update({
+                generationProgress: {
+                    phase: 'uploading',
+                    meshViewsCompleted: 4,
+                },
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // Upload all 4 views
+            const viewEntries = [
+                ['front', compositeResult.front],
+                ['back', compositeResult.back],
+                ['left', compositeResult.left],
+                ['right', compositeResult.right],
+            ];
+            for (const [angle, view] of viewEntries) {
                 const ext = getExtensionFromMimeType(view.mimeType);
                 const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
                 const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
-                const meshImage = {
+                meshImages[angle] = {
                     url,
                     storagePath,
-                    source: 'gemini',
+                    source: 'gemini-composite',
                     generatedAt: now,
                 };
-                if (view.colorPalette && view.colorPalette.length > 0) {
-                    meshImage.colorPalette = view.colorPalette;
-                }
-                meshImages[angle] = meshImage;
             }
-            // Build aggregated color palette for Firestore
-            aggregatedColorPalette = views.aggregatedPalette
-                ? {
-                    unified: views.aggregatedPalette.unified,
-                    dominantColors: views.aggregatedPalette.dominantColors,
-                }
-                : undefined;
+            // No aggregated color palette for composite mode (colors are consistent by design)
+            aggregatedColorPalette = undefined;
+            functions.logger.info('Composite view generation complete', {
+                pipelineId,
+                viewCount: Object.keys(meshImages).length,
+            });
         }
         // Update pipeline with generated images and color palette
         await pipelineRef.update({
@@ -506,7 +518,6 @@ exports.regeneratePipelineImage = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -750,7 +761,6 @@ exports.startPipelineMesh = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
-    secrets: ['MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY', 'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -938,11 +948,6 @@ exports.checkPipelineStatus = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: [
-        'MESHY_API_KEY', 'RODIN_API_KEY', 'TRIPO_API_KEY', 'TENCENT_SECRET_ID', 'TENCENT_SECRET_KEY',
-        'HITEM_ACCESS_KEY', 'HITEM_SECRET_KEY',
-        'STORAGE_BACKEND', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_ACCOUNT_ID', 'R2_BUCKET_NAME', 'R2_PUBLIC_URL',
-    ],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -1086,7 +1091,6 @@ exports.startPipelineTexture = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
-    secrets: ['MESHY_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {

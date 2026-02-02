@@ -202,7 +202,7 @@ export declare const PIPELINE_CREDIT_COSTS: {
 export interface PipelineProcessedImage {
     url: string;
     storagePath: string;
-    source: 'gemini' | 'upload' | 'gemini-styled-reference' | 'gemini-from-reference';
+    source: 'gemini' | 'upload' | 'gemini-styled-reference' | 'gemini-from-reference' | 'gemini-composite';
     colorPalette?: string[];
     generatedAt: FirebaseFirestore.Timestamp;
 }
