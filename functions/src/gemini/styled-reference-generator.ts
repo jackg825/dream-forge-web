@@ -16,7 +16,7 @@ import type { ViewAngle, ImageAnalysisResult } from '../rodin/types';
 import { type StyleId, getStyleConfig } from '../config/styles';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
+const GEMINI_MODEL_ID = 'gemini-3.1-flash-image-preview';
 
 /**
  * Result of styled reference generation

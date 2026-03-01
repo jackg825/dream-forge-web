@@ -9,7 +9,7 @@ import type { ProviderType } from '../providers/types';
 import type { UserTier } from '../rodin/types';
 
 // View generation model options (Gemini image generation)
-export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type ViewGenerationModel = 'gemini-3.1-flash-image-preview' | 'gemini-3-pro-image-preview';
 
 // HiTem3D resolution options
 export type HiTem3DResolution = 512 | 1024;
@@ -30,7 +30,7 @@ export interface TierFeatureConfig {
  * Feature access by tier
  *
  * Free tier:
- * - View generation: gemini-2.5-flash-image only
+ * - View generation: gemini-3.1-flash-image-preview only
  * - Providers: HiTem3D only
  * - HiTem3D resolution: 512 only
  *
@@ -41,12 +41,12 @@ export interface TierFeatureConfig {
  */
 export const TIER_FEATURES: Record<UserTier, TierFeatureConfig> = {
   free: {
-    allowedViewModels: ['gemini-2.5-flash-image'],
+    allowedViewModels: ['gemini-3.1-flash-image-preview'],
     allowedProviders: ['hitem3d'],
     allowedHiTem3DResolutions: [512],
   },
   premium: {
-    allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview'],
+    allowedViewModels: ['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview'],
     allowedProviders: ['hunyuan', 'tripo', 'hitem3d'],
     allowedHiTem3DResolutions: [512, 1024],
   },

@@ -7,7 +7,7 @@
  * Supports multiple generation modes for A/B testing different
  * image processing strategies.
  *
- * Uses Gemini 2.5 Flash Image for consistent multi-view generation
+ * Uses Gemini 3.1 Flash Image for consistent multi-view generation
  */
 
 import axios from 'axios';
@@ -27,18 +27,20 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models
 // Gemini model for image generation
 // Supports both short names (legacy) and full names (frontend)
 export type GeminiImageModel =
-  | 'gemini-2.5-flash'           // Legacy short name
-  | 'gemini-2.5-flash-image'     // Full name from frontend
-  | 'gemini-3-pro-image-preview'; // Premium model
+  | 'gemini-2.5-flash'                // Legacy short name
+  | 'gemini-2.5-flash-image'          // Legacy full name
+  | 'gemini-3.1-flash-image-preview'  // Default flash model
+  | 'gemini-3-pro-image-preview';     // Premium model
 
 // Maps model keys to actual Gemini API model IDs
 const GEMINI_MODEL_IDS: Record<GeminiImageModel, string> = {
-  'gemini-2.5-flash': 'gemini-2.5-flash-image',           // Legacy -> same API model
-  'gemini-2.5-flash-image': 'gemini-2.5-flash-image',     // Direct mapping
-  'gemini-3-pro-image-preview': 'gemini-2.5-flash-image', // TODO: Update when Pro image model available
+  'gemini-2.5-flash': 'gemini-3.1-flash-image-preview',              // Legacy -> new flash model
+  'gemini-2.5-flash-image': 'gemini-3.1-flash-image-preview',        // Legacy -> new flash model
+  'gemini-3.1-flash-image-preview': 'gemini-3.1-flash-image-preview', // Direct mapping
+  'gemini-3-pro-image-preview': 'gemini-3.1-flash-image-preview',    // TODO: Update when Pro image model available
 };
 
-const DEFAULT_GEMINI_MODEL: GeminiImageModel = 'gemini-2.5-flash-image';
+const DEFAULT_GEMINI_MODEL: GeminiImageModel = 'gemini-3.1-flash-image-preview';
 
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;
@@ -783,7 +785,7 @@ Generate the ${targetAngle.toUpperCase()} view now.`;
  * @param modeId - Generation mode ID (default: 'simplified-mesh')
  * @param userDescription - Optional user-provided description of the object
  * @param imageAnalysis - Optional full image analysis result with key features
- * @param geminiModel - Gemini model for image generation (default: 'gemini-2.5-flash')
+ * @param geminiModel - Gemini model for image generation (default: 'gemini-3.1-flash-image-preview')
  * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
 export function createMultiViewGenerator(

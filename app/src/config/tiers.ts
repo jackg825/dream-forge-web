@@ -8,7 +8,7 @@
 import type { ModelProvider, UserTier } from '@/types';
 
 // View generation model options (Gemini image generation)
-export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type ViewGenerationModel = 'gemini-3.1-flash-image-preview' | 'gemini-3-pro-image-preview';
 
 // HiTem3D resolution options
 export type HiTem3DResolution = 512 | 1024;
@@ -29,7 +29,7 @@ export interface TierFeatureConfig {
  * Feature access by tier
  *
  * Free tier:
- * - View generation: gemini-2.5-flash-image only
+ * - View generation: gemini-3.1-flash-image-preview only
  * - Providers: HiTem3D only
  * - HiTem3D resolution: 512 only
  *
@@ -40,12 +40,12 @@ export interface TierFeatureConfig {
  */
 export const TIER_FEATURES: Record<UserTier, TierFeatureConfig> = {
   free: {
-    allowedViewModels: ['gemini-2.5-flash-image'],
+    allowedViewModels: ['gemini-3.1-flash-image-preview'],
     allowedProviders: ['hitem3d'],
     allowedHiTem3DResolutions: [512],
   },
   premium: {
-    allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview'],
+    allowedViewModels: ['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview'],
     allowedProviders: ['hunyuan', 'tripo', 'hitem3d'],
     allowedHiTem3DResolutions: [512, 1024],
   },
@@ -63,8 +63,8 @@ export const VIEW_MODEL_OPTIONS: Record<ViewGenerationModel, {
   description: string;
   badge?: string;
 }> = {
-  'gemini-2.5-flash-image': {
-    label: 'Gemini 2.5 Flash',
+  'gemini-3.1-flash-image-preview': {
+    label: 'Gemini 3.1 Flash',
     description: '快速生成，標準品質',
   },
   'gemini-3-pro-image-preview': {

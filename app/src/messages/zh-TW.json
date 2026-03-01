@@ -1299,8 +1299,8 @@
   },
   "viewModel": {
     "title": "視角生成模型",
-    "gemini-2.5-flash-image": {
-      "label": "Gemini 2.5 Flash",
+    "gemini-3.1-flash-image-preview": {
+      "label": "Gemini 3.1 Flash",
       "description": "快速生成，標準品質"
     },
     "gemini-3-pro-image-preview": {

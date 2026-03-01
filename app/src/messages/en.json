@@ -1299,8 +1299,8 @@
   },
   "viewModel": {
     "title": "View Generation Model",
-    "gemini-2.5-flash-image": {
-      "label": "Gemini 2.5 Flash",
+    "gemini-3.1-flash-image-preview": {
+      "label": "Gemini 3.1 Flash",
       "description": "Fast generation, standard quality"
     },
     "gemini-3-pro-image-preview": {

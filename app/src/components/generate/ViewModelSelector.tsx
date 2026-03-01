@@ -28,7 +28,7 @@ interface ViewModelSelectorProps {
 /**
  * ViewModelSelector - Select Gemini model for view generation
  *
- * Free tier: gemini-2.5-flash-image only
+ * Free tier: gemini-3.1-flash-image-preview only
  * Premium tier: + gemini-3-pro-image-preview
  */
 export function ViewModelSelector({
@@ -53,7 +53,7 @@ export function ViewModelSelector({
   // Icon mapping for each model
   const getModelIcon = (modelId: ViewGenerationModel) => {
     switch (modelId) {
-      case 'gemini-2.5-flash-image':
+      case 'gemini-3.1-flash-image-preview':
         return <Zap className="h-4 w-4 text-blue-500" />;
       case 'gemini-3-pro-image-preview':
         return <Sparkles className="h-4 w-4 text-yellow-500" />;

@@ -1,6 +1,6 @@
 /**
  * Gemini API Client
- * Generates multi-view images from a reference image using Gemini 2.5 Flash Image
+ * Generates multi-view images from a reference image using Gemini 3.1 Flash Image
  *
  * API Documentation: https://ai.google.dev/gemini-api/docs/image-generation
  */
@@ -15,7 +15,7 @@ import type {
 } from './types';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-2.5-flash-image';
+const MODEL = 'gemini-3.1-flash-image-preview';
 
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;

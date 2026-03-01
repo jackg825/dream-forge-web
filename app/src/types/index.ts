@@ -762,7 +762,7 @@ export const DEFAULT_GENERATION_MODE: GenerationModeId = 'simplified-mesh';
  * Gemini model for image generation
  * Note: Type values must match ViewGenerationModel in @/config/tiers
  */
-export type GeminiModelId = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type GeminiModelId = 'gemini-3.1-flash-image-preview' | 'gemini-3-pro-image-preview';
 
 /**
  * Gemini model options for reference
@@ -775,9 +775,9 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
   estimatedTime: string;
   creditCost: number;
 }> = {
-  'gemini-2.5-flash-image': {
-    id: 'gemini-2.5-flash-image',
-    name: 'Gemini 2.5 Flash',
+  'gemini-3.1-flash-image-preview': {
+    id: 'gemini-3.1-flash-image-preview',
+    name: 'Gemini 3.1 Flash',
     description: '快速生成，標準品質',
     badge: '推薦',
     estimatedTime: '約 1-2 分鐘',
@@ -796,7 +796,7 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
 /**
  * Default Gemini model (Free tier)
  */
-export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-2.5-flash-image';
+export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-3.1-flash-image-preview';
 
 /**
  * Pipeline status for new simplified workflow

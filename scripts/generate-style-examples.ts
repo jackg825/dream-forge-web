@@ -1,5 +1,5 @@
 /**
- * Generate Style Example Images using Gemini 2.5 Flash Image
+ * Generate Style Example Images using Gemini 3.1 Flash Image
  *
  * This script generates preview images for each figure style (bobblehead, chibi, cartoon, emoji)
  * using the Gemini image generation API.
@@ -16,7 +16,7 @@ import * as path from 'path';
 
 // Gemini API configuration
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const MODEL = 'gemini-2.5-flash-image';
+const MODEL = 'gemini-3.1-flash-image-preview';
 
 // Output directory (relative to project root)
 const OUTPUT_DIR = path.join(__dirname, '..', 'app', 'public', 'styles');
