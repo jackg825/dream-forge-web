@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dream Forge API Documentation</title>
+    <meta
+      name="description"
+      content="Machine-readable API discovery, authentication notes, and storage proxy documentation for Dream Forge."
+    />
+    <link rel="alternate" type="text/markdown" href="/docs/api/index.md" />
+    <style>
+      body {
+        margin: 0;
+        color: #1b1f24;
+        background: #f7f7f4;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 48px 20px 72px;
+      }
+
+      h1,
+      h2 {
+        line-height: 1.15;
+      }
+
+      a {
+        color: #2459c9;
+      }
+
+      code {
+        border-radius: 4px;
+        background: #ecece6;
+        padding: 2px 5px;
+      }
+
+      pre {
+        overflow: auto;
+        border-radius: 8px;
+        background: #1b1f24;
+        color: #f7f7f4;
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Dream Forge API Documentation</h1>
+      <p>
+        Dream Forge is a photo-to-3D web application. The public API catalog describes
+        machine-readable discovery resources and the R2 storage proxy used by the app.
+        Authenticated app workflows use Firebase Authentication ID tokens.
+      </p>
+
+      <h2>Discovery</h2>
+      <ul>
+        <li><a href="/.well-known/api-catalog">API catalog</a></li>
+        <li><a href="/.well-known/openapi.json">OpenAPI description</a></li>
+        <li><a href="/.well-known/oauth-protected-resource">OAuth protected resource metadata</a></li>
+        <li><a href="/.well-known/agent-skills/index.json">Agent skills index</a></li>
+        <li><a href="/.well-known/mcp/server-card.json">MCP server card</a></li>
+      </ul>
+
+      <h2>Authentication</h2>
+      <p>
+        Protected APIs expect an <code>Authorization: Bearer &lt;Firebase ID token&gt;</code>
+        header. Tokens are issued by <code>https://securetoken.google.com/dreamforge-66998</code>
+        and signed with Google's Secure Token JWKS.
+      </p>
+
+      <h2>Storage Proxy</h2>
+      <p>
+        The storage proxy is available at <code>https://r2-proxy.dreamforge.app</code>.
+        It exposes health checks, authenticated presigned upload creation, upload
+        confirmation, downloads, and authenticated deletes.
+      </p>
+
+      <pre><code>GET https://r2-proxy.dreamforge.app/health</code></pre>
+
+      <h2>Markdown</h2>
+      <p>
+        A markdown version of this document is available at
+        <a href="/docs/api/index.md">/docs/api/index.md</a>. For homepage content,
+        use <a href="/index.md">/index.md</a> or enable Cloudflare Markdown for Agents
+        on the zone to negotiate <code>Accept: text/markdown</code> dynamically.
+      </p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "issuer": "https://securetoken.google.com/dreamforge-66998",
+  "jwks_uri": "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com",
+  "response_types_supported": ["id_token"],
+  "grant_types_supported": [],
+  "scopes_supported": [],
+  "token_endpoint_auth_methods_supported": ["none"],
+  "service_documentation": "https://dreamforge.app/docs/api/"
+}

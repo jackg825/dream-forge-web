@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "dream-forge-create-3d-model",
+      "type": "skill-md",
+      "description": "Guide a user through creating a textured 3D model from photos in Dream Forge.",
+      "url": "https://dreamforge.app/.well-known/agent-skills/create-3d-model.md",
+      "digest": "sha256:da07bfdfb33094a14e827488bfb6d569cf0f278babd9c218e359d75fc73d541f"
+    },
+    {
+      "name": "dream-forge-api-integration",
+      "type": "skill-md",
+      "description": "Discover Dream Forge machine-readable API metadata and authenticated storage proxy behavior.",
+      "url": "https://dreamforge.app/.well-known/agent-skills/api-integration.md",
+      "digest": "sha256:12eba03ead6dcbc88bea792f43c5b6586ac004a6e6fc19a10b77f26b209c98ef"
+    },
+    {
+      "name": "dream-forge-agent-discovery",
+      "type": "skill-md",
+      "description": "Discover Dream Forge crawler preferences, markdown alternates, WebMCP tools, MCP card, and agent skills.",
+      "url": "https://dreamforge.app/.well-known/agent-skills/agent-discovery.md",
+      "digest": "sha256:69565c84ac6133c929767995e8b0a57cb2785d60e7985fb9f7e475f415923e00"
+    }
+  ]
+}

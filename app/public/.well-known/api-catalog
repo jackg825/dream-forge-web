@@ -1,0 +1,52 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://r2-proxy.dreamforge.app",
+      "service-desc": [
+        {
+          "href": "https://dreamforge.app/.well-known/openapi.json",
+          "type": "application/openapi+json",
+          "title": "Dream Forge Storage API OpenAPI description"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://dreamforge.app/docs/api/",
+          "type": "text/html",
+          "title": "Dream Forge API documentation"
+        }
+      ],
+      "status": [
+        {
+          "href": "https://r2-proxy.dreamforge.app/health",
+          "type": "application/json",
+          "title": "Dream Forge R2 proxy health"
+        }
+      ]
+    },
+    {
+      "anchor": "https://dreamforge.app",
+      "service-desc": [
+        {
+          "href": "https://dreamforge.app/.well-known/openapi.json",
+          "type": "application/openapi+json",
+          "title": "Dream Forge API OpenAPI description"
+        }
+      ],
+      "service-doc": [
+        {
+          "href": "https://dreamforge.app/docs/api/",
+          "type": "text/html",
+          "title": "Dream Forge API documentation"
+        }
+      ],
+      "describedby": [
+        {
+          "href": "https://dreamforge.app/.well-known/oauth-protected-resource",
+          "type": "application/json",
+          "title": "OAuth protected resource metadata"
+        }
+      ]
+    }
+  ]
+}
