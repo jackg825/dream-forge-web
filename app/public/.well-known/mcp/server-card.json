@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "2026-04-23",
+  "serverInfo": {
+    "name": "Dream Forge Web Tools",
+    "version": "0.1.0",
+    "description": "Browser-exposed tools for discovering Dream Forge capabilities and helping users begin photo-to-3D model workflows."
+  },
+  "transport": {
+    "type": "webmcp",
+    "endpoint": "https://dreamforge.app/",
+    "description": "Tools are registered in the browser with navigator.modelContext.registerTool() when the Dream Forge page loads."
+  },
+  "transports": [
+    {
+      "type": "webmcp",
+      "endpoint": "https://dreamforge.app/"
+    }
+  ],
+  "capabilities": {
+    "tools": true,
+    "resources": true,
+    "prompts": false
+  },
+  "tools": [
+    {
+      "name": "dreamforge.get_site_summary",
+      "description": "Return a concise summary of Dream Forge public capabilities and important URLs."
+    },
+    {
+      "name": "dreamforge.start_creation",
+      "description": "Navigate the user to the localized 3D model creation flow."
+    },
+    {
+      "name": "dreamforge.get_pricing_summary",
+      "description": "Return a high-level summary of free and premium generation capabilities."
+    }
+  ],
+  "resources": [
+    {
+      "uri": "https://dreamforge.app/.well-known/api-catalog",
+      "name": "API catalog",
+      "mimeType": "application/linkset+json"
+    },
+    {
+      "uri": "https://dreamforge.app/.well-known/agent-skills/index.json",
+      "name": "Agent skills index",
+      "mimeType": "application/json"
+    }
+  ]
+}

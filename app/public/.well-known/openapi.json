@@ -1,0 +1,315 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Dream Forge Public API",
+    "version": "0.1.0",
+    "description": "Machine-readable description of Dream Forge public storage proxy endpoints. Authenticated app workflows use Firebase callable functions and require a Firebase Authentication ID token."
+  },
+  "servers": [
+    {
+      "url": "https://r2-proxy.dreamforge.app",
+      "description": "Dream Forge R2 storage proxy"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "summary": "Return proxy health status",
+        "responses": {
+          "200": {
+            "description": "Proxy is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload/presign": {
+      "post": {
+        "operationId": "createUploadPresign",
+        "summary": "Create a presigned R2 upload URL",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Presigned upload URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/upload/confirm": {
+      "post": {
+        "operationId": "confirmUpload",
+        "summary": "Validate an uploaded R2 object and return its download path",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload confirmation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadConfirmResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      }
+    },
+    "/public/{key}": {
+      "get": {
+        "operationId": "downloadPublicObject",
+        "summary": "Download a public object",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object bytes"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/download/{key}": {
+      "get": {
+        "operationId": "downloadObject",
+        "summary": "Download an object using public, signed, or authenticated access",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {},
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object bytes"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/delete/{key}": {
+      "delete": {
+        "operationId": "deleteObject",
+        "summary": "Delete an authenticated user's object",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "firebaseIdToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase Authentication ID token issued by https://securetoken.google.com/dreamforge-66998."
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing or invalid Firebase Authentication token"
+      },
+      "NotFound": {
+        "description": "Requested object was not found"
+      },
+      "RateLimited": {
+        "description": "Rate limit exceeded"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok"
+          },
+          "timestamp": {
+            "type": "integer"
+          }
+        },
+        "required": ["status", "timestamp"]
+      },
+      "PresignRequest": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": ["filename", "contentType", "size"]
+      },
+      "PresignResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "key": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer"
+          }
+        },
+        "required": ["uploadUrl", "key", "expiresIn"]
+      },
+      "UploadConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": ["key"]
+      },
+      "UploadConfirmResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "downloadUrl": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "contentType": {
+            "type": "string"
+          }
+        },
+        "required": ["success", "key", "downloadUrl", "size", "contentType"]
+      }
+    }
+  }
+}

@@ -36,8 +36,143 @@
     "public": "app/out",
     "ignore": [
       "firebase.json",
-      "**/.*",
+      "**/.DS_Store",
+      "**/.gitkeep",
       "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "/",
+        "headers": [
+          {
+            "key": "Link",
+            "value": "</.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/openapi.json>; rel=\"service-desc\"; type=\"application/openapi+json\", </docs/api/>; rel=\"service-doc\"; type=\"text/html\", </index.md>; rel=\"alternate\"; type=\"text/markdown\", </.well-known/agent-skills/index.json>; rel=\"describedby\"; type=\"application/json\", </.well-known/mcp/server-card.json>; rel=\"describedby\"; type=\"application/json\""
+          },
+          {
+            "key": "Content-Signal",
+            "value": "ai-train=no, search=yes, ai-input=yes"
+          }
+        ]
+      },
+      {
+        "source": "/zh-TW/**",
+        "headers": [
+          {
+            "key": "Link",
+            "value": "</.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/openapi.json>; rel=\"service-desc\"; type=\"application/openapi+json\", </docs/api/>; rel=\"service-doc\"; type=\"text/html\", </zh-TW/index.md>; rel=\"alternate\"; type=\"text/markdown\", </.well-known/agent-skills/index.json>; rel=\"describedby\"; type=\"application/json\", </.well-known/mcp/server-card.json>; rel=\"describedby\"; type=\"application/json\""
+          },
+          {
+            "key": "Content-Signal",
+            "value": "ai-train=no, search=yes, ai-input=yes"
+          }
+        ]
+      },
+      {
+        "source": "/zh-TW/",
+        "headers": [
+          {
+            "key": "Link",
+            "value": "</.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/openapi.json>; rel=\"service-desc\"; type=\"application/openapi+json\", </docs/api/>; rel=\"service-doc\"; type=\"text/html\", </zh-TW/index.md>; rel=\"alternate\"; type=\"text/markdown\", </.well-known/agent-skills/index.json>; rel=\"describedby\"; type=\"application/json\", </.well-known/mcp/server-card.json>; rel=\"describedby\"; type=\"application/json\""
+          },
+          {
+            "key": "Content-Signal",
+            "value": "ai-train=no, search=yes, ai-input=yes"
+          }
+        ]
+      },
+      {
+        "source": "/en/**",
+        "headers": [
+          {
+            "key": "Link",
+            "value": "</.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/openapi.json>; rel=\"service-desc\"; type=\"application/openapi+json\", </docs/api/>; rel=\"service-doc\"; type=\"text/html\", </en/index.md>; rel=\"alternate\"; type=\"text/markdown\", </.well-known/agent-skills/index.json>; rel=\"describedby\"; type=\"application/json\", </.well-known/mcp/server-card.json>; rel=\"describedby\"; type=\"application/json\""
+          },
+          {
+            "key": "Content-Signal",
+            "value": "ai-train=no, search=yes, ai-input=yes"
+          }
+        ]
+      },
+      {
+        "source": "/en/",
+        "headers": [
+          {
+            "key": "Link",
+            "value": "</.well-known/api-catalog>; rel=\"api-catalog\", </.well-known/openapi.json>; rel=\"service-desc\"; type=\"application/openapi+json\", </docs/api/>; rel=\"service-doc\"; type=\"text/html\", </en/index.md>; rel=\"alternate\"; type=\"text/markdown\", </.well-known/agent-skills/index.json>; rel=\"describedby\"; type=\"application/json\", </.well-known/mcp/server-card.json>; rel=\"describedby\"; type=\"application/json\""
+          },
+          {
+            "key": "Content-Signal",
+            "value": "ai-train=no, search=yes, ai-input=yes"
+          }
+        ]
+      },
+      {
+        "source": "/robots.txt",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "text/plain; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "/sitemap.xml",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/xml; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "/.well-known/api-catalog",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/linkset+json; profile=\"https://www.rfc-editor.org/info/rfc9727\"; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "/.well-known/openid-configuration",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "/.well-known/oauth-authorization-server",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "/.well-known/oauth-protected-resource",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "application/json; charset=utf-8"
+          }
+        ]
+      },
+      {
+        "source": "**/*.md",
+        "headers": [
+          {
+            "key": "Content-Type",
+            "value": "text/markdown; charset=utf-8"
+          },
+          {
+            "key": "Content-Signal",
+            "value": "ai-train=no, search=yes, ai-input=yes"
+          }
+        ]
+      }
     ],
     "rewrites": [
       {
