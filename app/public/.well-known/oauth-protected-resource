@@ -1,11 +1,10 @@
 {
-  "resource": "https://dreamforge.app",
-  "resource_name": "Dream Forge",
+  "resource": "https://r2-proxy.dreamforge.app",
+  "resource_name": "Dream Forge R2 Storage Proxy",
   "authorization_servers": [
-    "https://securetoken.google.com/dreamforge-66998",
-    "https://accounts.google.com"
+    "https://securetoken.google.com/dreamforge-66998"
   ],
-  "scopes_supported": ["openid", "email", "profile"],
+  "scopes_supported": [],
   "bearer_methods_supported": ["header"],
   "resource_documentation": "https://dreamforge.app/docs/api/",
   "resource_policy_uri": "https://dreamforge.app/robots.txt"

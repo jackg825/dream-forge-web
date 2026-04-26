@@ -130,6 +130,10 @@
           {
             "key": "Content-Type",
             "value": "application/linkset+json; profile=\"https://www.rfc-editor.org/info/rfc9727\"; charset=utf-8"
+          },
+          {
+            "key": "Link",
+            "value": "</.well-known/api-catalog>; rel=\"api-catalog\"; type=\"application/linkset+json\", </.well-known/openapi.json>; rel=\"service-desc\"; type=\"application/openapi+json\", </docs/api/>; rel=\"service-doc\"; type=\"text/html\", </.well-known/oauth-protected-resource>; rel=\"describedby\"; type=\"application/json\""
           }
         ]
       },

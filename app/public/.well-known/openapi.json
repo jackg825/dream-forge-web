@@ -105,18 +105,20 @@
         }
       }
     },
-    "/public/{key}": {
+    "/public/showcase/{objectName}": {
       "get": {
         "operationId": "downloadPublicObject",
-        "summary": "Download a public object",
+        "summary": "Download a public showcase object",
         "parameters": [
           {
-            "name": "key",
+            "name": "objectName",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "pattern": "^[^/]+$"
+            },
+            "description": "A single object filename under the public/showcase R2 prefix."
           }
         ],
         "responses": {
@@ -129,17 +131,111 @@
         }
       }
     },
-    "/download/{key}": {
+    "/download/{collection}/{userId}/{objectName}": {
       "get": {
-        "operationId": "downloadObject",
-        "summary": "Download an object using public, signed, or authenticated access",
+        "operationId": "downloadUserObject",
+        "summary": "Download a user object stored under a two-level R2 key",
         "parameters": [
           {
-            "name": "key",
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["uploads", "optimized", "h2c"]
+            }
+          },
+          {
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
+            },
+            "description": "A single R2 object filename. Slashes are represented by path segments in this OpenAPI document."
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {},
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object bytes"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/download/{collection}/{userId}/{recordId}/{objectName}": {
+      "get": {
+        "operationId": "downloadRecordObject",
+        "summary": "Download a record-scoped object such as a pipeline model or session model",
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["pipelines", "sessions"]
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
             }
           },
           {
@@ -178,10 +274,142 @@
         }
       }
     },
-    "/delete/{key}": {
+    "/download/sessions/{userId}/{sessionId}/views/{objectName}": {
+      "get": {
+        "operationId": "downloadSessionViewObject",
+        "summary": "Download a generated or uploaded session view image",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
+            }
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {},
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object bytes"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/download/pipelines/{userId}/{pipelineId}/preview/{objectName}": {
+      "get": {
+        "operationId": "downloadPipelinePreviewObject",
+        "summary": "Download an admin pipeline preview object",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
+            }
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exp",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {},
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object bytes"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/delete/{collection}/{userId}/{objectName}": {
       "delete": {
-        "operationId": "deleteObject",
-        "summary": "Delete an authenticated user's object",
+        "operationId": "deleteUserObject",
+        "summary": "Delete an authenticated user's two-level object",
         "security": [
           {
             "firebaseIdToken": []
@@ -189,11 +417,185 @@
         ],
         "parameters": [
           {
-            "name": "key",
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["uploads", "optimized", "h2c"]
+            }
+          },
+          {
+            "name": "userId",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/delete/{collection}/{userId}/{recordId}/{objectName}": {
+      "delete": {
+        "operationId": "deleteRecordObject",
+        "summary": "Delete an authenticated user's record-scoped object",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "collection",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["pipelines", "sessions"]
+            }
+          },
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/delete/sessions/{userId}/{sessionId}/views/{objectName}": {
+      "delete": {
+        "operationId": "deleteSessionViewObject",
+        "summary": "Delete an authenticated user's session view object",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Object deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/delete/pipelines/{userId}/{pipelineId}/preview/{objectName}": {
+      "delete": {
+        "operationId": "deletePipelinePreviewObject",
+        "summary": "Delete an authenticated user's pipeline preview object",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "objectName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[^/]+$"
             }
           }
         ],

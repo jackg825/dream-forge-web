@@ -1,7 +1,6 @@
 'use client';
 
 import { Header } from '@/components/layout/Header';
-import { WebMCPProvider } from '@/components/agent/WebMCPProvider';
 import {
   HeroSection,
   ShowcaseSection,
@@ -33,7 +32,6 @@ import {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
-      <WebMCPProvider />
       <Header />
 
       <main>

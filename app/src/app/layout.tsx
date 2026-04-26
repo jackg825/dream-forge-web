@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { WebMCPProvider } from "@/components/agent/WebMCPProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -26,5 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   // This layout wraps [locale]/layout.tsx which handles <html> and <body>
-  return children;
+  return (
+    <>
+      <WebMCPProvider />
+      {children}
+    </>
+  );
 }
