@@ -113,6 +113,7 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
   if (state === 'complete' && preview) {
     return (
       <div className="relative rounded-lg overflow-hidden border-2 border-green-500 bg-gray-50">
+        {/* eslint-disable-next-line @next/next/no-img-element -- Local object URL previews are not reliably supported by next/image. */}
         <img
           src={preview}
           alt={t('imageUploader.uploadedPreview')}
@@ -149,6 +150,7 @@ export function ImageUploader({ userId, onUploadComplete, onError }: ImageUpload
   if (state === 'uploading' && preview) {
     return (
       <div className="relative rounded-lg overflow-hidden border-2 border-indigo-500 bg-gray-50">
+        {/* eslint-disable-next-line @next/next/no-img-element -- Local object URL previews are not reliably supported by next/image. */}
         <img
           src={preview}
           alt={t('imageUploader.uploadingPreview')}

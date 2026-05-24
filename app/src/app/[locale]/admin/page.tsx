@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdmin } from '@/hooks/useAdmin';
 import { UserDetailModal } from '@/components/admin/UserDetailModal';
 import { LoadingButton } from '@/components/ui/loading-button';
+import { FillImage } from '@/components/ui/fill-image';
 import type { AdminUser } from '@/types';
 
 function AdminDashboardContent() {
@@ -316,11 +317,14 @@ function AdminDashboardContent() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {targetUser.photoURL ? (
-                            <img
-                              className="h-8 w-8 rounded-full"
-                              src={targetUser.photoURL}
-                              alt=""
-                            />
+                            <div className="relative h-8 w-8 overflow-hidden rounded-full">
+                              <FillImage
+                                src={targetUser.photoURL}
+                                alt=""
+                                className="object-cover"
+                                sizes="32px"
+                              />
+                            </div>
                           ) : (
                             <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
                               <span className="text-sm font-medium text-gray-500 dark:text-gray-300">

@@ -18,6 +18,7 @@ import { useTranslations } from 'next-intl';
 import { Upload, Loader2, CheckCircle, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { FillImage } from '@/components/ui/fill-image';
 import { cn } from '@/lib/utils';
 import type {
   PipelineMeshAngle,
@@ -74,7 +75,7 @@ function ViewSlot({
     <div className="relative group">
       <div
         className={cn(
-          'aspect-square rounded-lg border-2 overflow-hidden transition-all',
+          'relative aspect-square rounded-lg border-2 overflow-hidden transition-all',
           'flex items-center justify-center',
           image ? 'border-border bg-black' : 'border-dashed border-muted-foreground/30 bg-muted/30',
           !disabled && !isGenerating && !isUploading && 'cursor-pointer hover:border-primary/50 hover:bg-muted/50',
@@ -88,10 +89,11 @@ function ViewSlot({
             <span className="text-xs">{isUploading ? t('status.uploading') : t('status.generating')}</span>
           </div>
         ) : image ? (
-          <img
+          <FillImage
             src={image.url}
             alt={t('viewAlt', { label })}
-            className="w-full h-full object-contain"
+            className="object-contain"
+            sizes="(min-width: 768px) 25vw, 50vw"
           />
         ) : (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">

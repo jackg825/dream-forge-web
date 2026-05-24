@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PipelineStatus, BatchProgress, ProcessingMode, ModelProvider } from '@/types';
-import { PIPELINE_PROGRESS_MESSAGES, getProgressMessage, getNextStepInfo } from '@/types/progress';
+import { getProgressMessage, getNextStepInfo } from '@/types/progress';
 
 /** Map PipelineStatus to translation key */
 const STATUS_KEY_MAP: Record<PipelineStatus, string> = {

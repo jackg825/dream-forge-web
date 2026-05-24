@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Check, Upload, Image, Eye, Box, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -70,7 +70,6 @@ export function CreateStepper({
   const tStepper = useTranslations('create.stepper');
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const currentStep = getCurrentStep(pathname);
   const accessibleSteps = getAccessibleSteps(sessionStatus);

@@ -5,11 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { FillImage } from '@/components/ui/fill-image';
 import {
   Upload,
   Images,
@@ -19,10 +17,7 @@ import {
   RefreshCw,
   Loader2,
   AlertCircle,
-  ChevronRight,
   Printer,
-  RotateCcw,
-  Eye,
   Wrench,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -51,9 +46,6 @@ import { DEFAULT_STYLE } from '@/types/styles';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
 import { PipelineUploader } from './PipelineUploader';
-import { ModeSelector } from './ModeSelector';
-import { ProcessingModeSelector } from './ProcessingModeSelector';
-import { PrecisionSelector } from './PrecisionSelector';
 import { PreviousOutputs } from './PreviousOutputs';
 import { RegenerateDialog } from './RegenerateDialog';
 import { ResetStepDialog } from './ResetStepDialog';
@@ -79,7 +71,6 @@ import { downloadFile } from '@/lib/download';
 import {
   GENERATION_MODE_OPTIONS,
   DEFAULT_GENERATION_MODE,
-  DEFAULT_PROCESSING_MODE,
   DEFAULT_MESH_PRECISION,
   DEFAULT_GEMINI_MODEL,
   MAX_REGENERATIONS,
@@ -163,11 +154,11 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const [pipelineId, setPipelineId] = useState<string | null>(pipelineIdParam);
   const [uploadedImages, setUploadedImages] = useState<Array<{ url: string; file?: File }>>([]);
   const [actionLoading, setActionLoading] = useState(false);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [generationMode, setGenerationMode] = useState<GenerationModeId>(DEFAULT_GENERATION_MODE);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const generationMode: GenerationModeId = DEFAULT_GENERATION_MODE;
   // Batch mode temporarily disabled - force realtime
-  const [processingMode, setProcessingMode] = useState<ProcessingMode>('realtime');
-  const [meshPrecision, setMeshPrecision] = useState<MeshPrecision>(DEFAULT_MESH_PRECISION);
+  const processingMode = 'realtime' as ProcessingMode;
+  const meshPrecision: MeshPrecision = DEFAULT_MESH_PRECISION;
   const [userDescription, setUserDescription] = useState<string>('');
   const [colorCount, setColorCount] = useState<number>(7);
 
@@ -256,7 +247,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     startTextureGeneration,
     updateAnalysis,
     resetStep,
-    currentStep,
     isBatchProcessing,
   } = usePipeline(pipelineId);
 
@@ -266,11 +256,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   // Cleanup polling on unmount
   useEffect(() => {
     return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     };
-  }, [pollingInterval]);
+  }, []);
 
   // Set initial mesh view mode based on provider capabilities
   useEffect(() => {
@@ -320,13 +311,18 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         }
       }, 3000); // Poll every 3 seconds
 
-      setPollingInterval(interval);
+      pollingIntervalRef.current = interval;
 
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        if (pollingIntervalRef.current === interval) {
+          pollingIntervalRef.current = null;
+        }
+      };
     } else {
-      if (pollingInterval) {
-        clearInterval(pollingInterval);
-        setPollingInterval(null);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     }
   }, [pipeline?.status, checkStatus]);
@@ -682,11 +678,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <h3 className="text-sm font-medium text-muted-foreground">{t('images.referenceImages')}</h3>
             <div className="flex gap-3">
               {pipeline.inputImages.map((img, idx) => (
-                <div key={idx} className="w-24 h-24 rounded-lg overflow-hidden bg-black">
-                  <img
+                <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden bg-black">
+                  <FillImage
                     src={img.url}
                     alt={`Reference ${idx + 1}`}
-                    className="w-full h-full object-contain"
+                    className="object-contain"
+                    sizes="96px"
                   />
                 </div>
               ))}
@@ -860,11 +857,12 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <h3 className="text-sm font-medium text-muted-foreground">{t('images.referenceImages')}</h3>
             <div className="flex gap-2">
               {pipeline.inputImages.map((img, idx) => (
-                <div key={idx} className="w-16 h-16 rounded-lg overflow-hidden bg-black">
-                  <img
+                <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden bg-black">
+                  <FillImage
                     src={img.url}
                     alt={`Reference ${idx + 1}`}
-                    className="w-full h-full object-contain"
+                    className="object-contain"
+                    sizes="64px"
                   />
                 </div>
               ))}
@@ -886,11 +884,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 return (
                   <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
                     {image ? (
-                      <img
-                        src={image.url}
-                        alt={`${angle} view`}
-                        className="w-full aspect-square object-cover"
-                      />
+                      <div className="relative aspect-square w-full">
+                        <FillImage
+                          src={image.url}
+                          alt={`${angle} view`}
+                          className="object-cover"
+                          sizes="(min-width: 768px) 25vw, 50vw"
+                        />
+                      </div>
                     ) : (
                       <Skeleton className="w-full aspect-square" />
                     )}
@@ -1447,64 +1448,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     } finally {
       setActionLoading(false);
     }
-  };
-
-  // Render error state - cleaner design
-  const renderErrorState = () => {
-    const errorStep = pipeline?.errorStep;
-    const canRetry = errorStep === 'generating-images' ||
-                     errorStep === 'generating-mesh' ||
-                     errorStep === 'generating-texture';
-
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="bg-destructive/10 p-4 rounded-full mb-4">
-          <AlertCircle className="h-10 w-10 text-destructive" />
-        </div>
-        <p className="text-lg font-medium mb-2">{t('error.title')}</p>
-        <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
-          {error || pipeline?.error || t('error.defaultMessage')}
-        </p>
-        {errorStep && (
-          <p className="text-xs text-muted-foreground mb-6">
-            {t('error.failedStep')}: {errorStep === 'generating-images' ? t('error.steps.generatingImages') :
-                     errorStep === 'generating-mesh' ? t('error.steps.generatingMesh') :
-                     errorStep === 'generating-texture' ? t('error.steps.generatingTexture') : errorStep}
-          </p>
-        )}
-        <div className="flex justify-center gap-4">
-          {canRetry && (
-            <Button
-              onClick={handleRetry}
-              disabled={actionLoading}
-              variant="default"
-            >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('error.retrying')}
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('error.retry')}
-                </>
-              )}
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            onClick={() => {
-              setPipelineId(null);
-              setUploadedImages([]);
-              router.push('/generate', { scroll: false });
-            }}
-          >
-            {t('error.restart')}
-          </Button>
-        </div>
-      </div>
-    );
   };
 
   // Main render

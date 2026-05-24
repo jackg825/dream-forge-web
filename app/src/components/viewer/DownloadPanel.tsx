@@ -48,7 +48,6 @@ function getTextureTypeKey(fileName: string): string | undefined {
  */
 async function convertGlbToStl(glbUrl: string): Promise<Blob> {
   // Dynamic imports to avoid SSR issues
-  const THREE = await import('three');
   const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
   const { STLExporter } = await import('three/examples/jsm/exporters/STLExporter.js');
 

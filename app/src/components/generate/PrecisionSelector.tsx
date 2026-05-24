@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import {
   type MeshPrecision,
   MESH_PRECISION_OPTIONS,
-  DEFAULT_MESH_PRECISION,
 } from '@/types';
 
 interface PrecisionSelectorProps {
@@ -34,7 +33,6 @@ export function PrecisionSelector({ value, onChange, disabled }: PrecisionSelect
       <div className="grid grid-cols-2 gap-3">
         {precisions.map((precision) => {
           const isSelected = value === precision.id;
-          const isDefault = precision.id === DEFAULT_MESH_PRECISION;
 
           return (
             <button

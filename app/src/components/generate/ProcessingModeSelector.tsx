@@ -7,7 +7,6 @@ import { useTranslations } from 'next-intl';
 import {
   type ProcessingMode,
   PROCESSING_MODE_OPTIONS,
-  DEFAULT_PROCESSING_MODE,
 } from '@/types';
 
 interface ProcessingModeSelectorProps {
@@ -38,7 +37,6 @@ export function ProcessingModeSelector({
       <div className="grid grid-cols-2 gap-3">
         {modes.map((mode) => {
           const isSelected = value === mode.id;
-          const isDefault = mode.id === DEFAULT_PROCESSING_MODE;
           const isBatch = mode.id === 'batch';
 
           return (

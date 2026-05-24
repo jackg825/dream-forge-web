@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface ShowcaseSectionProps {
   className?: string;
@@ -97,16 +98,17 @@ export function ShowcaseSection({ className }: ShowcaseSectionProps) {
               key={example.id}
               onClick={() => setActiveIndex(index)}
               className={cn(
-                'w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300',
+                'relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300',
                 activeIndex === index
                   ? 'border-[var(--accent-violet)] scale-110 shadow-lg'
                   : 'border-transparent opacity-60 hover:opacity-100'
               )}
             >
-              <img
+              <FillImage
                 src={example.beforeImage}
                 alt={t(`showcase.examples.${example.id}.before`)}
-                className="w-full h-full object-cover"
+                className="object-cover"
+                sizes="64px"
               />
             </button>
           ))}

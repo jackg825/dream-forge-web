@@ -1,23 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
 import { AdminGuard } from '@/components/auth/AdminGuard';
 import { AdminHeader } from '@/components/layout/headers';
 import { useAdminPipelines } from '@/hooks/useAdminPipelines';
 import { AdminPipelineCard } from '@/components/admin/AdminPipelineCard';
 import { PipelineDetailModal } from '@/components/admin/PipelineDetailModal';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Loader2, Box, Search, RefreshCw } from 'lucide-react';
+import { Loader2, Box, Search } from 'lucide-react';
 import type { AdminPipeline, PipelineStatus } from '@/types';
 
 type FilterStatus = 'all' | PipelineStatus;
 
 function AdminPipelinesContent() {
-  const t = useTranslations();
   const {
     pipelines,
     loading,
@@ -38,7 +35,7 @@ function AdminPipelinesContent() {
       status: statusFilter === 'all' ? undefined : statusFilter,
       userId: userIdFilter || undefined,
     });
-  }, [statusFilter, fetchPipelines]);
+  }, [statusFilter, userIdFilter, fetchPipelines]);
 
   const handleSearch = () => {
     fetchPipelines(20, 0, {

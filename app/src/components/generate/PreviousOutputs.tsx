@@ -7,6 +7,7 @@ import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { useTranslations } from 'next-intl';
 import type { Pipeline, PipelineMeshAngle } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface PreviousOutputsProps {
   pipeline: Pipeline;
@@ -122,10 +123,11 @@ export function PreviousOutputs({
                                          focus-visible:outline-none focus-visible:ring-2
                                          focus-visible:ring-primary focus-visible:ring-offset-2"
                             >
-                              <img
+                              <FillImage
                                 src={image.url}
                                 alt={angle}
-                                className="w-full h-full object-cover"
+                                className="object-cover"
+                                sizes="96px"
                               />
                             </button>
                           ) : null;

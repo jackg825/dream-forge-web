@@ -31,6 +31,7 @@ import { Loader2, Plus, Minus, ShoppingCart, Lock } from 'lucide-react';
 import { usePrintConfig, useCart, useUserOrders, useShippingAddresses } from '@/hooks/useOrders';
 import { ShippingAddressForm } from './ShippingAddressForm';
 import { deferStateUpdate } from '@/lib/defer-state-update';
+import { FillImage } from '@/components/ui/fill-image';
 import type { PrintMaterial, PrintSizeId, ShippingAddress } from '@/types/order';
 
 interface PrintOrderModalProps {
@@ -188,11 +189,12 @@ export function PrintOrderModal({
               <div className="space-y-6">
                 {/* Model preview */}
                 {modelThumbnail && (
-                  <div className="aspect-square w-32 mx-auto rounded-lg overflow-hidden bg-muted">
-                    <img
+                  <div className="relative aspect-square w-32 mx-auto rounded-lg overflow-hidden bg-muted">
+                    <FillImage
                       src={modelThumbnail}
                       alt={modelName || 'Model'}
-                      className="w-full h-full object-cover"
+                      className="object-cover"
+                      sizes="128px"
                     />
                   </div>
                 )}
@@ -424,11 +426,14 @@ export function PrintOrderModal({
                   {cartItems.map((item, index) => (
                     <div key={index} className="flex items-center gap-4 p-2 border rounded">
                       {item.modelThumbnail && (
-                        <img
-                          src={item.modelThumbnail}
-                          alt=""
-                          className="w-12 h-12 rounded object-cover"
-                        />
+                        <div className="relative w-12 h-12 overflow-hidden rounded">
+                          <FillImage
+                            src={item.modelThumbnail}
+                            alt=""
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        </div>
                       )}
                       <div className="flex-1">
                         <div className="font-medium">{item.modelName || 'Model'}</div>

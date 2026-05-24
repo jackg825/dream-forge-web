@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { FillImage } from '@/components/ui/fill-image';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -230,11 +231,14 @@ function OrderDetailsContent() {
                 {order.items.map((item) => (
                   <div key={item.id} className="flex gap-4">
                     {item.modelThumbnail ? (
-                      <img
-                        src={item.modelThumbnail}
-                        alt={item.modelName || 'Model'}
-                        className="w-20 h-20 rounded-md object-cover ring-1 ring-border bg-black"
-                      />
+                      <div className="relative w-20 h-20 overflow-hidden rounded-md ring-1 ring-border bg-black">
+                        <FillImage
+                          src={item.modelThumbnail}
+                          alt={item.modelName || 'Model'}
+                          className="object-cover"
+                          sizes="80px"
+                        />
+                      </div>
                     ) : (
                       <div className="w-20 h-20 rounded-md bg-muted flex items-center justify-center">
                         <Package className="h-8 w-8 text-muted-foreground" />

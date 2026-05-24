@@ -19,7 +19,6 @@ import {
   Loader2,
   History,
   CreditCard,
-  User,
   Crown,
   ArrowUp,
   ArrowDown,

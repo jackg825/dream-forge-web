@@ -16,6 +16,7 @@ import {
 import { useTranslations } from 'next-intl';
 import type { Pipeline, PipelineStatus } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface PipelineCardProps {
   pipeline: Pipeline;
@@ -75,10 +76,11 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
       {/* Preview image */}
       <div className="aspect-square bg-black relative">
         {previewImage ? (
-          <img
+          <FillImage
             src={previewImage}
             alt="Pipeline preview"
-            className="w-full h-full object-contain"
+            className="object-contain"
+            sizes="(min-width: 768px) 240px, 100vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

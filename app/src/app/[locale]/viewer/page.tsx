@@ -18,6 +18,7 @@ import { deferStateUpdate } from '@/lib/defer-state-update';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { FillImage } from '@/components/ui/fill-image';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -286,11 +287,14 @@ function ViewerContentInner() {
 
                 <div className="mt-6 max-w-md mx-auto">
                   <div className="flex items-center justify-center gap-3 text-sm text-white/50">
-                    <img
-                      src={job.inputImageUrl}
-                      alt="Input"
-                      className="w-12 h-12 rounded-lg object-cover ring-1 ring-white/10"
-                    />
+                    <div className="relative w-12 h-12 overflow-hidden rounded-lg ring-1 ring-white/10">
+                      <FillImage
+                        src={job.inputImageUrl}
+                        alt="Input"
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    </div>
                     <span className="font-mono text-xs">
                       {job.settings.quality === 'fine'
                         ? t('viewer.estimatedTime.fine')
@@ -430,11 +434,14 @@ function ViewerContentInner() {
                 <Card className="bg-white/5 border-white/10">
                   <CardContent className="pt-4">
                     <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
-                    <img
-                      src={job.inputImageUrl}
-                      alt="Source"
-                      className="w-full rounded-lg ring-1 ring-white/10"
-                    />
+                    <div className="relative aspect-square w-full overflow-hidden rounded-lg ring-1 ring-white/10">
+                      <FillImage
+                        src={job.inputImageUrl}
+                        alt="Source"
+                        className="object-contain"
+                        sizes="(min-width: 1024px) 320px, 100vw"
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               </ViewerSidePanel>
@@ -471,11 +478,14 @@ function ViewerContentInner() {
                       <Card className="bg-white/5 border-white/10">
                         <CardContent className="pt-4">
                           <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
-                          <img
-                            src={job.inputImageUrl}
-                            alt="Source"
-                            className="w-full rounded-lg ring-1 ring-white/10"
-                          />
+                          <div className="relative aspect-square w-full overflow-hidden rounded-lg ring-1 ring-white/10">
+                            <FillImage
+                              src={job.inputImageUrl}
+                              alt="Source"
+                              className="object-contain"
+                              sizes="100vw"
+                            />
+                          </div>
                         </CardContent>
                       </Card>
                     </div>

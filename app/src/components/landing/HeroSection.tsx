@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { ArrowRight, Camera, Box, Truck, Sparkles, ChevronDown } from 'lucide-react';
+import { ArrowRight, Camera, Box, Truck, Sparkles } from 'lucide-react';
 
 interface HeroSectionProps {
   className?: string;

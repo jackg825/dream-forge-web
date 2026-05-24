@@ -16,7 +16,6 @@ import { functions } from '@/lib/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -36,7 +35,7 @@ import {
   Package,
   DollarSign,
 } from 'lucide-react';
-import type { MaterialConfig, SizeConfig, ColorOption, PrintMaterial, PrintSizeId } from '@/types/order';
+import type { PrintMaterial, PrintSizeId } from '@/types/order';
 
 const EMPTY_PRICING = {} as Record<PrintMaterial, Record<PrintSizeId, number>>;
 

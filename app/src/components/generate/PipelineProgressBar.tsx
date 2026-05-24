@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, Circle, Loader2, Coins, Image, Box, Truck, RotateCcw } from 'lucide-react';
+import { CheckCircle, Loader2, Coins, Image, Box, Truck, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useTranslations } from 'next-intl';

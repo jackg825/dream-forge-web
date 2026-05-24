@@ -6,7 +6,6 @@
  * Displays orders in a sortable, filterable table format
  */
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +34,7 @@ import {
 } from 'lucide-react';
 import type { AdminOrder, OrderStatus } from '@/types/order';
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface OrderListProps {
   orders: AdminOrder[];
@@ -157,11 +157,14 @@ export function OrderList({
                 <TableCell>
                   <div className="flex items-center gap-3">
                     {order.userPhotoURL ? (
-                      <img
-                        src={order.userPhotoURL}
-                        alt=""
-                        className="w-8 h-8 rounded-full"
-                      />
+                      <div className="relative w-8 h-8 overflow-hidden rounded-full">
+                        <FillImage
+                          src={order.userPhotoURL}
+                          alt=""
+                          className="object-cover"
+                          sizes="32px"
+                        />
+                      </div>
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
                         <span className="text-xs font-medium">
@@ -178,11 +181,14 @@ export function OrderList({
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {thumbnail ? (
-                      <img
-                        src={thumbnail}
-                        alt=""
-                        className="w-10 h-10 rounded object-cover"
-                      />
+                      <div className="relative w-10 h-10 overflow-hidden rounded">
+                        <FillImage
+                          src={thumbnail}
+                          alt=""
+                          className="object-cover"
+                          sizes="40px"
+                        />
+                      </div>
                     ) : (
                       <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
                         <Package className="h-4 w-4 text-muted-foreground" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -36,13 +36,13 @@ import type {
   PipelineStatus,
   PipelineMeshAngle,
   ModelProvider,
-  AdminAction,
 } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
 import { PROVIDER_OPTIONS } from '@/types';
 import { useAdminPipelineRegeneration } from '@/hooks/useAdminPipelineRegeneration';
 import { downloadFile } from '@/lib/download';
 import { OptimizePanel } from '@/components/viewer/OptimizePanel';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface PipelineDetailModalProps {
   pipeline: AdminPipeline | null;
@@ -136,23 +136,29 @@ function ImageGallery({
         <div className="mb-4">
           <div className="flex gap-2 items-stretch">
             {/* Current image */}
-            <div className="flex-1 bg-black rounded-lg overflow-hidden">
-              <p className="text-xs text-center py-1 bg-muted/50">目前</p>
-              <img
-                src={selectedImage}
-                alt="Current"
-                className="w-full h-56 object-contain"
-              />
-            </div>
+              <div className="flex-1 bg-black rounded-lg overflow-hidden">
+                <p className="text-xs text-center py-1 bg-muted/50">目前</p>
+                <div className="relative h-56 w-full">
+                  <FillImage
+                    src={selectedImage}
+                    alt="Current"
+                    className="object-contain"
+                    sizes="50vw"
+                  />
+                </div>
+              </div>
             {/* Preview image (if exists) */}
             {previewForSelected && (
               <div className="flex-1 bg-black rounded-lg overflow-hidden border-2 border-yellow-500">
                 <p className="text-xs text-center py-1 bg-yellow-500/20 text-yellow-600">預覽</p>
-                <img
-                  src={previewForSelected.url}
-                  alt="Preview"
-                  className="w-full h-56 object-contain"
-                />
+                <div className="relative h-56 w-full">
+                  <FillImage
+                    src={previewForSelected.url}
+                    alt="Preview"
+                    className="object-contain"
+                    sizes="50vw"
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -239,10 +245,11 @@ function ImageGallery({
                 selectedImage === img.url ? 'border-primary' : 'border-transparent hover:border-muted'
               }`}
             >
-              <img
+              <FillImage
                 src={img.url}
                 alt={img.label}
-                className="w-full h-full object-contain"
+                className="object-contain"
+                sizes="96px"
               />
               {hasPreview && (
                 <div className="absolute top-1 right-1 w-3 h-3 bg-yellow-500 rounded-full" />

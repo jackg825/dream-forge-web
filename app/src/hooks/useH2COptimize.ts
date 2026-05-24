@@ -15,7 +15,6 @@ import type {
   H2CUploadEditedResponse,
   QualityLevel,
   ModelProvider,
-  H2C_CREDIT_COSTS,
 } from '@/types';
 
 // ============================================

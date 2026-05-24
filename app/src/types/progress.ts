@@ -5,7 +5,7 @@
  * across all pipeline steps for a coherent user experience.
  */
 
-import type { PipelineStatus, ModelProvider, PROVIDER_OPTIONS } from './index';
+import type { PipelineStatus, ModelProvider } from './index';
 
 /**
  * Progress message configuration for each pipeline status

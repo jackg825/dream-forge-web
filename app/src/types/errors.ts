@@ -436,6 +436,9 @@ export function classifyError(
   errorStep?: string,
   additionalContext?: Record<string, unknown>
 ): CategorizedError {
+  void errorStep;
+  void additionalContext;
+
   // Try to match against known patterns
   for (const pattern of ERROR_PATTERNS) {
     if (pattern.pattern.test(rawError)) {

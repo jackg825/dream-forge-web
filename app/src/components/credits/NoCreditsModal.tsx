@@ -12,7 +12,6 @@ interface NoCreditsModalProps {
 
 export function NoCreditsModal({ isOpen, onClose }: NoCreditsModalProps) {
   const t = useTranslations('credits');
-  const tCommon = useTranslations('common');
 
   if (!isOpen) return null;
 

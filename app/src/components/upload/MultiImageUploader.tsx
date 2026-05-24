@@ -12,16 +12,12 @@ interface MultiImageUploaderProps {
   onError?: (error: string) => void;
 }
 
-type UploadState = 'idle' | 'validating' | 'uploading' | 'complete';
-
 // Mode configuration (labels come from translations)
 const INPUT_MODE_CONFIG: Record<InputMode, { labelKey: string; credit: number }> = {
   single: { labelKey: 'single', credit: 1 },
   multi: { labelKey: 'multi', credit: 1 },
   'ai-generated': { labelKey: 'aiGenerated', credit: 2 },
 };
-
-const AVAILABLE_ANGLES: ViewAngle[] = ['front', 'back', 'left', 'right', 'top'];
 
 export function MultiImageUploader({ userId, onImagesChange, onError }: MultiImageUploaderProps) {
   const t = useTranslations();
@@ -169,13 +165,6 @@ export function MultiImageUploader({ userId, onImagesChange, onError }: MultiIma
     fileInputRef.current?.click();
   }, []);
 
-  // Get the angles to display based on mode
-  const getDisplayAngles = (): ViewAngle[] => {
-    if (mode === 'single') return ['front'];
-    if (mode === 'ai-generated') return ['front'];
-    return AVAILABLE_ANGLES;
-  };
-
   // Render single dropzone
   const renderDropzone = (angle: ViewAngle, size: 'large' | 'small' = 'large') => {
     const image = images.get(angle);
@@ -186,6 +175,7 @@ export function MultiImageUploader({ userId, onImagesChange, onError }: MultiIma
     if (image) {
       return (
         <div className={`relative rounded-lg overflow-hidden border-2 border-green-500 bg-gray-50 ${heightClass}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Local object URL previews are not reliably supported by next/image. */}
           <img
             src={URL.createObjectURL(image.file!) || image.url}
             alt={`${angleLabel} view`}

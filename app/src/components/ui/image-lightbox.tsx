@@ -4,6 +4,7 @@ import { useEffect, useCallback, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { deferStateUpdate } from '@/lib/defer-state-update';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface ImageLightboxProps {
   images: { src: string; alt: string }[];
@@ -99,13 +100,14 @@ export function ImageLightbox({
 
       {/* Image */}
       <div
-        className="relative z-10 max-w-[90vw] max-h-[90vh]"
+        className="relative z-10 h-[85vh] w-[90vw] max-w-[90vw] max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <img
+        <FillImage
           src={currentImage.src}
           alt={currentImage.alt}
-          className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+          className="object-contain rounded-lg shadow-2xl"
+          sizes="90vw"
         />
 
         {/* Image counter */}
@@ -130,16 +132,17 @@ export function ImageLightbox({
                 setCurrentIndex(idx);
               }}
               className={cn(
-                'w-12 h-12 rounded-md overflow-hidden transition-all',
+                'relative w-12 h-12 rounded-md overflow-hidden transition-all',
                 idx === currentIndex
                   ? 'ring-2 ring-white scale-110'
                   : 'opacity-50 hover:opacity-80'
               )}
             >
-              <img
+              <FillImage
                 src={img.src}
                 alt={img.alt}
-                className="w-full h-full object-cover"
+                className="object-cover"
+                sizes="48px"
               />
             </button>
           ))}

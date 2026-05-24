@@ -10,6 +10,7 @@ import { Link } from '@/i18n/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FillImage } from '@/components/ui/fill-image';
 import {
   Coins,
   Box,
@@ -233,11 +234,14 @@ function PipelineListItem({ pipeline, getStatusMessage }: { pipeline: Pipeline; 
     >
       {/* Thumbnail */}
       {previewImage ? (
-        <img
-          src={previewImage}
-          alt="Preview"
-          className="w-12 h-12 rounded-md object-cover ring-1 ring-border bg-black"
-        />
+        <div className="relative w-12 h-12 overflow-hidden rounded-md ring-1 ring-border bg-black">
+          <FillImage
+            src={previewImage}
+            alt="Preview"
+            className="object-cover"
+            sizes="48px"
+          />
+        </div>
       ) : (
         <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
           <Box className="h-6 w-6 text-muted-foreground" />

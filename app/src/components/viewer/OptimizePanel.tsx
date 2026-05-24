@@ -76,7 +76,6 @@ export function OptimizePanel({
     analyze,
     previewOptimization,
     optimize,
-    reset,
   } = useMeshOptimization();
 
   // Options state

@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FillImage } from '@/components/ui/fill-image';
 import {
   Package,
   Loader2,
@@ -36,7 +37,7 @@ const ITEMS_PER_PAGE = 10;
 
 function OrdersContent() {
   const t = useTranslations('orders');
-  const { orders, loading, fetchOrders, pagination } = useUserOrders();
+  const { orders, loading, fetchOrders } = useUserOrders();
 
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [page, setPage] = useState(1);
@@ -249,11 +250,14 @@ function OrderListItem({ order }: { order: Order }) {
     >
       {/* Thumbnail */}
       {thumbnail ? (
-        <img
-          src={thumbnail}
-          alt=""
-          className="w-16 h-16 rounded-md object-cover ring-1 ring-border bg-black"
-        />
+        <div className="relative w-16 h-16 overflow-hidden rounded-md ring-1 ring-border bg-black">
+          <FillImage
+            src={thumbnail}
+            alt=""
+            className="object-cover"
+            sizes="64px"
+          />
+        </div>
       ) : (
         <div className="w-16 h-16 rounded-md bg-muted flex items-center justify-center">
           <Package className="h-8 w-8 text-muted-foreground" />

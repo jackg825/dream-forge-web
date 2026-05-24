@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FillImage } from '@/components/ui/fill-image';
 import {
   Select,
   SelectContent,
@@ -35,15 +36,11 @@ import {
   Truck,
   User,
   Clock,
-  CheckCircle2,
-  Printer,
-  AlertTriangle,
-  XCircle,
   Loader2,
   ExternalLink,
 } from 'lucide-react';
 import type { AdminOrder, OrderStatus, UpdateOrderStatusRequest } from '@/types/order';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, CANCELLABLE_STATUSES } from '@/types/order';
+import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
 
 interface OrderDetailPanelProps {
   order: AdminOrder | null;
@@ -176,7 +173,14 @@ export function OrderDetailPanel({
             <CardContent className="py-3">
               <div className="flex items-center gap-3">
                 {order.userPhotoURL ? (
-                  <img src={order.userPhotoURL} alt="" className="w-10 h-10 rounded-full" />
+                  <div className="relative w-10 h-10 overflow-hidden rounded-full">
+                    <FillImage
+                      src={order.userPhotoURL}
+                      alt=""
+                      className="object-cover"
+                      sizes="40px"
+                    />
+                  </div>
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
                     <span className="text-sm font-medium">{order.userDisplayName?.[0] || '?'}</span>
@@ -202,7 +206,14 @@ export function OrderDetailPanel({
               {order.items.map((item) => (
                 <div key={item.id} className="flex gap-3">
                   {item.modelThumbnail ? (
-                    <img src={item.modelThumbnail} alt="" className="w-16 h-16 rounded object-cover" />
+                    <div className="relative w-16 h-16 overflow-hidden rounded">
+                      <FillImage
+                        src={item.modelThumbnail}
+                        alt=""
+                        className="object-cover"
+                        sizes="64px"
+                      />
+                    </div>
                   ) : (
                     <div className="w-16 h-16 rounded bg-muted flex items-center justify-center">
                       <Package className="h-6 w-6 text-muted-foreground" />

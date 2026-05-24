@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import type { AdminOrder, OrderStatus } from '@/types/order';
 import { ORDER_STATUS_LABELS } from '@/types/order';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface OrderKanbanProps {
   orders: AdminOrder[];
@@ -138,11 +139,14 @@ function OrderKanbanCard({ order, onClick, isSelected, formatPrice, formatDate }
       <div className="flex gap-3">
         {/* Thumbnail */}
         {thumbnail ? (
-          <img
-            src={thumbnail}
-            alt=""
-            className="w-12 h-12 rounded object-cover flex-shrink-0"
-          />
+          <div className="relative w-12 h-12 flex-shrink-0 overflow-hidden rounded">
+            <FillImage
+              src={thumbnail}
+              alt=""
+              className="object-cover"
+              sizes="48px"
+            />
+          </div>
         ) : (
           <div className="w-12 h-12 rounded bg-muted flex items-center justify-center flex-shrink-0">
             <Package className="h-5 w-5 text-muted-foreground" />

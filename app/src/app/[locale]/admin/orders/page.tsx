@@ -12,7 +12,7 @@ import { AdminGuard } from '@/components/auth/AdminGuard';
 import { AdminHeader } from '@/components/layout/headers';
 import { useAdminOrders } from '@/hooks/useOrders';
 import { OrderKanban, OrderList, OrderDetailPanel } from '@/components/admin/orders';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';

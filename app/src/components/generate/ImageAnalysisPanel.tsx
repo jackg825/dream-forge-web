@@ -127,7 +127,6 @@ export function ImageAnalysisPanel({
   colorCount,
   onColorCountChange,
   onDescriptionChange,
-  onColorsChange,
   onColorAdd,
   onColorRemove,
   onColorUpdate,
@@ -135,7 +134,6 @@ export function ImageAnalysisPanel({
   onReset,
   hasEdits,
   disabled,
-  printerType = 'fdm',
 }: ImageAnalysisPanelProps) {
   const t = useTranslations('imageAnalysis');
   const [printAssessmentOpen, setPrintAssessmentOpen] = useState(false);

@@ -93,9 +93,6 @@ export function ViewerToolbar({
   const [viewModeOpen, setViewModeOpen] = useState(false);
   const [bgOpen, setBgOpen] = useState(false);
 
-  // Portal props for fullscreen compatibility
-  const portalProps = portalContainer ? { container: portalContainer } : {};
-
   return (
     <TooltipProvider delayDuration={200}>
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">

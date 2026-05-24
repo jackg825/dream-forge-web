@@ -174,6 +174,7 @@ export function PipelineUploader({
               key={index}
               className="relative group aspect-square rounded-lg overflow-hidden border bg-muted"
             >
+              {/* eslint-disable-next-line @next/next/no-img-element -- Local object URL previews are not reliably supported by next/image. */}
               <img
                 src={image.previewUrl || image.url}
                 alt={t('uploadedImage', { index: index + 1 })}

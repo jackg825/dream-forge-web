@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ComingSoonBadge } from '@/components/ui/coming-soon-badge';
+import { FillImage } from '@/components/ui/fill-image';
 import {
   Gamepad2,
   Palette,
@@ -103,14 +104,14 @@ export function UseCasesSection({ className }: UseCasesSectionProps) {
               >
                 {/* Image - shorter on mobile */}
                 <div className="relative h-28 sm:h-36 md:h-40 overflow-hidden">
-                  <img
+                  <FillImage
                     src={useCase.image}
                     alt={t(`useCases.items.${useCase.id}.title`)}
                     className={cn(
-                      'w-full h-full object-cover transition-transform duration-500 md:group-hover:scale-110',
+                      'object-cover transition-transform duration-500 md:group-hover:scale-110',
                       isComingSoon && 'opacity-80'
                     )}
-                    loading="lazy"
+                    sizes="(min-width: 768px) 33vw, 100vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
 

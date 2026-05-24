@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { FillImage } from '@/components/ui/fill-image';
 
 interface BeforeAfterSliderProps {
   beforeImage: string;
@@ -67,11 +68,11 @@ export function BeforeAfterSlider({
     >
       {/* 3D render - full width background (left side) */}
       <div className="absolute inset-0">
-        <img
+        <FillImage
           src={afterImage}
           alt={afterAlt}
-          className="w-full h-full object-cover"
-          loading="eager"
+          className="object-cover"
+          priority
           draggable={false}
         />
         {/* Label */}
@@ -85,11 +86,11 @@ export function BeforeAfterSlider({
         className="absolute inset-0 overflow-hidden"
         style={{ clipPath: `inset(0 0 0 ${sliderPosition}%)` }}
       >
-        <img
+        <FillImage
           src={beforeImage}
           alt={beforeAlt}
-          className="w-full h-full object-cover"
-          loading="eager"
+          className="object-cover"
+          priority
           draggable={false}
         />
         {/* Label */}
