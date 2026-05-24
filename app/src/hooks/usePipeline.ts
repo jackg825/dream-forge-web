@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/lib/firebase';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import type {
   Pipeline,
   PipelineStatus,
@@ -18,7 +19,6 @@ import type {
   StartPipelineMeshResponse,
   CheckPipelineStatusResponse,
   StartPipelineTextureResponse,
-  PipelineMeshAngle,
   GenerationModeId,
   GeminiModelId,
   ProcessingMode,
@@ -138,20 +138,24 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
   // Subscribe to pipeline document
   useEffect(() => {
     if (!pipelineId) {
-      setPipeline(null);
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => {
+        setPipeline(null);
+        setLoading(false);
+      });
     }
 
     // Check if Firebase is available
     if (!db) {
-      setError('Firebase not initialized');
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => {
+        setError('Firebase not initialized');
+        setLoading(false);
+      });
     }
 
-    setLoading(true);
-    setError(null);
+    const cancelPendingState = deferStateUpdate(() => {
+      setLoading(true);
+      setError(null);
+    });
 
     const unsubscribe = onSnapshot(
       doc(db, 'pipelines', pipelineId),
@@ -176,7 +180,10 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      cancelPendingState();
+      unsubscribe();
+    };
   }, [pipelineId]);
 
   // Create new pipeline

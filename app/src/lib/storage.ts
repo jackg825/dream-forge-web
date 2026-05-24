@@ -28,9 +28,8 @@ export interface UploadResult {
 
 interface PresignResponse {
   uploadUrl: string;
-  downloadUrl: string;
-  storagePath: string;
-  expiresAt: string;
+  key: string;
+  expiresIn: number;
 }
 
 /**
@@ -51,9 +50,10 @@ async function getIdToken(): Promise<string> {
  * Request a presigned upload URL from R2 Worker
  */
 async function getPresignedUploadUrl(
-  storagePath: string,
+  filename: string,
   contentType: string,
-  contentLength: number
+  size: number,
+  path = 'uploads'
 ): Promise<PresignResponse> {
   const token = await getIdToken();
 
@@ -64,9 +64,10 @@ async function getPresignedUploadUrl(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      path: storagePath,
+      filename,
       contentType,
-      contentLength,
+      size,
+      path,
     }),
   });
 
@@ -81,7 +82,7 @@ async function getPresignedUploadUrl(
 /**
  * Confirm upload completion with R2 Worker
  */
-async function confirmUpload(storagePath: string): Promise<{ downloadUrl: string }> {
+async function confirmUpload(key: string): Promise<{ downloadUrl: string }> {
   const token = await getIdToken();
 
   const response = await fetch(`${R2_WORKER_URL}/upload/confirm`, {
@@ -90,7 +91,7 @@ async function confirmUpload(storagePath: string): Promise<{ downloadUrl: string
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ path: storagePath }),
+    body: JSON.stringify({ key }),
   });
 
   if (!response.ok) {
@@ -106,14 +107,15 @@ async function confirmUpload(storagePath: string): Promise<{ downloadUrl: string
  */
 async function uploadToR2(
   file: File,
-  storagePath: string,
+  path: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadResult> {
   // Get presigned URL
   const presign = await getPresignedUploadUrl(
-    storagePath,
+    file.name,
     file.type,
-    file.size
+    file.size,
+    path
   );
 
   // Upload using XMLHttpRequest for progress tracking
@@ -134,10 +136,10 @@ async function uploadToR2(
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           // Confirm upload and get final download URL
-          const { downloadUrl } = await confirmUpload(storagePath);
+          const { downloadUrl } = await confirmUpload(presign.key);
           resolve({
             downloadUrl,
-            storagePath: presign.storagePath,
+            storagePath: presign.key,
           });
         } catch (error) {
           reject(error);
@@ -233,15 +235,15 @@ export async function uploadImage(
   userId: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadResult> {
-  // Generate unique filename with timestamp
+  // Use R2 or Firebase based on configuration
+  if (STORAGE_BACKEND === 'r2') {
+    return uploadToR2(file, 'uploads', onProgress);
+  }
+
+  // Generate unique filename with timestamp for Firebase Storage
   const timestamp = Date.now();
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   const storagePath = `uploads/${userId}/${timestamp}_${sanitizedName}`;
-
-  // Use R2 or Firebase based on configuration
-  if (STORAGE_BACKEND === 'r2') {
-    return uploadToR2(file, storagePath, onProgress);
-  }
 
   return uploadToFirebase(file, storagePath, onProgress);
 }
@@ -360,7 +362,7 @@ export async function uploadSessionView(
 
   // Use R2 or Firebase based on configuration
   if (STORAGE_BACKEND === 'r2') {
-    return uploadToR2(file, storagePath);
+    return uploadToR2(file, `sessions/${userId}/${sessionId}/views`);
   }
 
   return uploadToFirebase(file, storagePath);

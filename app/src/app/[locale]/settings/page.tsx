@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { usePathname, useRouter } from '@/i18n/navigation';
+import { useMounted } from '@/hooks/useMounted';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { UserHeader } from '@/components/layout/headers';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,12 +19,7 @@ function SettingsContent() {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch for theme
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   const handleLocaleChange = (newLocale: string) => {
     router.replace(pathname, { locale: newLocale as Locale });

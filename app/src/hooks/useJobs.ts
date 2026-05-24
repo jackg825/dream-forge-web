@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { httpsCallable, HttpsCallable } from 'firebase/functions';
+import { httpsCallable } from 'firebase/functions';
 import {
   collection,
   query,
@@ -13,12 +13,10 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { functions, db } from '@/lib/firebase';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import type {
   Job,
   JobStatus,
-  JobType,
-  QualityLevel,
-  OutputFormat,
   GenerateModelRequest,
   GenerateModelResponse,
   CheckJobStatusResponse,
@@ -34,9 +32,10 @@ export function useJobs(userId: string | undefined) {
   // Subscribe to user's jobs
   useEffect(() => {
     if (!userId || !db) {
-      setJobs([]);
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => {
+        setJobs([]);
+        setLoading(false);
+      });
     }
 
     const jobsQuery = query(
@@ -91,9 +90,10 @@ export function useJob(jobId: string | null) {
 
   useEffect(() => {
     if (!jobId || !db) {
-      setJob(null);
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => {
+        setJob(null);
+        setLoading(false);
+      });
     }
 
     const jobRef = doc(db, 'jobs', jobId);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   AlertCircle,
   ChevronDown,
@@ -24,7 +25,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import {
-  type CategorizedError,
   type ErrorCategory,
   type RecoveryAction,
   formatErrorDisplay,
@@ -126,6 +126,7 @@ export function PipelineErrorState({
   onReset,
   isRetrying = false,
 }: PipelineErrorStateProps) {
+  const t = useTranslations('pipeline.error');
   const router = useRouter();
   const [showDetails, setShowDetails] = useState(false);
 
@@ -141,18 +142,18 @@ export function PipelineErrorState({
         <div className="bg-destructive/10 p-4 rounded-full mb-4">
           <AlertCircle className="h-10 w-10 text-destructive" />
         </div>
-        <p className="text-lg font-medium mb-2">發生錯誤</p>
-        <p className="text-sm text-muted-foreground mb-6">請重試或重新開始</p>
+        <p className="text-lg font-medium mb-2">{t('occurred')}</p>
+        <p className="text-sm text-muted-foreground mb-6">{t('tryAgain')}</p>
         <div className="flex gap-4">
           <Button variant="outline" onClick={onReset}>
-            重新開始
+            {t('restart')}
           </Button>
         </div>
       </div>
     );
   }
 
-  const { categorized, stepLabel, fullMessage } = errorDisplay;
+  const { categorized, stepLabel } = errorDisplay;
   const Icon = CategoryIcon[categorized.category];
   const colors = CategoryColors[categorized.category];
   const categoryInfo = ERROR_CATEGORY_INFO[categorized.category];
@@ -208,14 +209,14 @@ export function PipelineErrorState({
       {/* Step info */}
       {stepLabel && (
         <p className="text-sm text-muted-foreground text-center mb-1">
-          失敗步驟：{stepLabel}
+          {t('failedStepWithValue', { step: stepLabel })}
         </p>
       )}
 
       {/* Severity indicator for non-retryable errors */}
       {!categorized.retryable && (
         <p className="text-xs text-muted-foreground mb-4">
-          此錯誤無法自動恢復
+          {t('noAutoRecovery')}
         </p>
       )}
 
@@ -231,12 +232,12 @@ export function PipelineErrorState({
             {isRetrying ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                重試中...
+                {t('retrying')}
               </>
             ) : (
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                重試
+                {t('retry')}
               </>
             )}
           </Button>
@@ -271,7 +272,7 @@ export function PipelineErrorState({
           onClick={onReset}
           disabled={isRetrying}
         >
-          重新開始
+          {t('restart')}
         </Button>
       </div>
 
@@ -286,12 +287,12 @@ export function PipelineErrorState({
             {showDetails ? (
               <>
                 <ChevronUp className="mr-1 h-4 w-4" />
-                隱藏技術詳情
+                {t('hideDetails')}
               </>
             ) : (
               <>
                 <ChevronDown className="mr-1 h-4 w-4" />
-                查看技術詳情
+                {t('showDetails')}
               </>
             )}
           </Button>
@@ -299,12 +300,12 @@ export function PipelineErrorState({
         <CollapsibleContent className="mt-3">
           <div className="bg-muted/50 rounded-lg p-4 text-xs font-mono max-w-md">
             <div className="space-y-1 text-muted-foreground">
-              <p><span className="font-semibold">錯誤代碼：</span>{categorized.code}</p>
-              <p><span className="font-semibold">類別：</span>{categorized.category}</p>
-              <p><span className="font-semibold">可重試：</span>{categorized.retryable ? '是' : '否'}</p>
-              {errorStep && <p><span className="font-semibold">失敗步驟：</span>{errorStep}</p>}
+              <p><span className="font-semibold">{t('details.code')}</span>{categorized.code}</p>
+              <p><span className="font-semibold">{t('details.category')}</span>{categorized.category}</p>
+              <p><span className="font-semibold">{t('details.retryable')}</span>{categorized.retryable ? t('yes') : t('no')}</p>
+              {errorStep && <p><span className="font-semibold">{t('details.failedStep')}</span>{errorStep}</p>}
               <p className="break-all">
-                <span className="font-semibold">原始錯誤：</span>
+                <span className="font-semibold">{t('details.originalError')}</span>
                 {categorized.technicalMessage}
               </p>
             </div>

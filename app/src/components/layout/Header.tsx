@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { deferStateUpdate } from '@/lib/defer-state-update';
+import { useMounted } from '@/hooks/useMounted';
 import { locales, localeNames, type Locale } from '@/i18n/config';
 import {
   Box,
@@ -48,7 +50,6 @@ import {
   Settings2,
   Wand2,
   Menu,
-  X,
   ChevronRight,
 } from 'lucide-react';
 
@@ -60,17 +61,12 @@ export function Header() {
   const { theme, setTheme } = useTheme();
   const { user, loading, signOut } = useAuth();
   const { credits, loading: creditsLoading } = useCredits(user?.uid);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Avoid hydration mismatch for theme
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Close mobile menu on route change
   useEffect(() => {
-    setMobileMenuOpen(false);
+    return deferStateUpdate(() => setMobileMenuOpen(false));
   }, [pathname]);
 
   const navItems = [
@@ -92,13 +88,6 @@ export function Header() {
 
   const handleLocaleChange = (newLocale: string) => {
     router.replace(pathname, { locale: newLocale as Locale });
-  };
-
-  const getThemeIcon = () => {
-    if (!mounted) return <Settings2 className="h-4 w-4" />;
-    if (theme === 'light') return <Sun className="h-4 w-4" />;
-    if (theme === 'dark') return <Moon className="h-4 w-4" />;
-    return <Monitor className="h-4 w-4" />;
   };
 
   const getThemeLabel = () => {

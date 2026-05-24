@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { doc, onSnapshot, Timestamp } from 'firebase/firestore';
 import { functions, db } from '@/lib/firebase';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import type {
   Session,
   SessionStatus,
@@ -11,7 +12,6 @@ import type {
   SessionViewImage,
   ViewAngle,
   CreateSessionResponse,
-  GetSessionResponse,
 } from '@/types';
 
 /**
@@ -25,12 +25,13 @@ export function useSession(sessionId: string | null) {
   // Subscribe to session updates
   useEffect(() => {
     if (!sessionId || !db) {
-      setSession(null);
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => {
+        setSession(null);
+        setLoading(false);
+      });
     }
 
-    setLoading(true);
+    const cancelPendingState = deferStateUpdate(() => setLoading(true));
     const sessionRef = doc(db, 'sessions', sessionId);
 
     const unsubscribe = onSnapshot(
@@ -68,7 +69,10 @@ export function useSession(sessionId: string | null) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      cancelPendingState();
+      unsubscribe();
+    };
   }, [sessionId]);
 
   return { session, loading, error };

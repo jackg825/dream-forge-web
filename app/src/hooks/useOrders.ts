@@ -19,7 +19,6 @@ import type {
   CreateOrderRequest,
   CreateOrderResponse,
   GetOrdersResponse,
-  GetOrderDetailsResponse,
   CancelOrderResponse,
   PrintConfigResponse,
   MaterialConfig,
@@ -31,6 +30,8 @@ import type {
   UpdateOrderStatusResponse,
   OrderStatsResponse,
 } from '@/types/order';
+
+const EMPTY_PRICING = {} as Record<PrintMaterial, Record<PrintSizeId, number>>;
 
 // ============================================
 // Print Config Hook
@@ -51,7 +52,7 @@ export function usePrintConfig(): UsePrintConfigReturn {
   const [materials, setMaterials] = useState<MaterialConfig[]>([]);
   const [sizes, setSizes] = useState<SizeConfig[]>([]);
   const [colors, setColors] = useState<ColorOption[]>([]);
-  const [pricing, setPricing] = useState<Record<PrintMaterial, Record<PrintSizeId, number>>>({} as any);
+  const [pricing, setPricing] = useState<Record<PrintMaterial, Record<PrintSizeId, number>>>(EMPTY_PRICING);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

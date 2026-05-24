@@ -567,7 +567,20 @@
       "retry": "重試",
       "restart": "重新開始",
       "occurred": "發生錯誤",
-      "tryAgain": "請重試或重新開始"
+      "tryAgain": "請重試或重新開始",
+      "failedStepWithValue": "失敗步驟：{step}",
+      "noAutoRecovery": "此錯誤無法自動恢復",
+      "showDetails": "查看技術詳情",
+      "hideDetails": "隱藏技術詳情",
+      "yes": "是",
+      "no": "否",
+      "details": {
+        "code": "錯誤代碼：",
+        "category": "類別：",
+        "retryable": "可重試：",
+        "failedStep": "失敗步驟：",
+        "originalError": "原始錯誤："
+      }
     },
     "completion": {
       "createNew": "創建新作品",
@@ -576,7 +589,10 @@
     "outputs": {
       "generatedBy": "生成自:",
       "viewImages": "視角圖片",
-      "meshImages": "網格用圖片"
+      "meshImages": "網格用圖片",
+      "meshAlt": "網格 - {angle}",
+      "meshModel": "3D 網格",
+      "viewGlb": "查看 GLB 檔案"
     },
     "processing": {
       "generatingViews": "正在生成視角圖片",
@@ -590,7 +606,8 @@
       "referenceImages": "參考圖片",
       "regenerate": "重新生成",
       "remaining": "剩餘 {count} 次",
-      "limitReached": "已達上限"
+      "limitReached": "已達上限",
+      "defaultMeshStyle": "7色優化"
     },
     "angles": {
       "front": "正面",
@@ -748,6 +765,32 @@
     "uploading": "上傳中... {progress}%",
     "imageCount": "已上傳 {count} / {max} 張圖片"
   },
+  "multiViewGrid": {
+    "title": "多視角圖片",
+    "meshImages": "網格用圖片",
+    "viewAlt": "{label}視角",
+    "help": "點擊空格上傳圖片，或 hover 已有圖片進行替換。AI 生成的圖片標記為「AI」，手動上傳標記為「手動」。",
+    "angles": {
+      "front": "正面",
+      "back": "背面",
+      "left": "左側",
+      "right": "右側"
+    },
+    "status": {
+      "uploading": "上傳中...",
+      "generating": "生成中...",
+      "generatingMeshViews": "生成網格視角..."
+    },
+    "actions": {
+      "upload": "上傳",
+      "replace": "替換",
+      "regenerate": "重新生成"
+    },
+    "source": {
+      "ai": "AI",
+      "manual": "手動"
+    }
+  },
   "adminStatus": {
     "draft": "草稿",
     "batchQueued": "排隊中",
@@ -780,7 +823,34 @@
     }
   },
   "resetDialog": {
-    "clearAndRestart": "清除並重新開始"
+    "clearAndRestart": "清除並重新開始",
+    "title": "返回「{step}」步驟",
+    "steps": {
+      "draft": {
+        "label": "上傳圖片",
+        "description": "返回上傳圖片步驟，可以重新上傳或修改圖片分析設定"
+      },
+      "imagesReady": {
+        "label": "圖片預覽",
+        "description": "返回圖片預覽步驟，可以重新生成視角或選擇不同的 provider"
+      },
+      "meshReady": {
+        "label": "網格預覽",
+        "description": "返回網格預覽步驟，可以重新生成貼圖"
+      }
+    },
+    "keepResults": {
+      "title": "保留已生成的結果",
+      "description": "僅變更狀態，已生成的內容仍可查看"
+    },
+    "clearResults": {
+      "title": "清除並重新開始",
+      "description": "清除該步驟之後的所有生成結果"
+    },
+    "clearWarning": "注意：清除結果後無法恢復，且已扣除的積分不會退還。",
+    "cancel": "取消",
+    "processing": "處理中...",
+    "confirm": "確認返回"
   },
   "photoTips": {
     "title": "最佳拍攝建議",
@@ -1299,11 +1369,11 @@
   },
   "viewModel": {
     "title": "視角生成模型",
-    "gemini-2.5-flash-image": {
+    "gemini25FlashImage": {
       "label": "Gemini 2.5 Flash",
       "description": "快速生成，標準品質"
     },
-    "gemini-3-pro-image-preview": {
+    "gemini3ProImagePreview": {
       "label": "Gemini 3 Pro",
       "description": "高品質生成，更精細的細節"
     },
@@ -1320,6 +1390,14 @@
       "description": "更多細節，適合精密模型"
     },
     "tip": "建議：一般用途選擇 512³，需要精細細節時選擇 1024³"
+  },
+  "providerOptions": {
+    "hunyuan": {
+      "title": "Hunyuan 3D 設定",
+      "badge": "多邊形控制",
+      "faceCount": "多邊形數量",
+      "tip": "建議：3D 列印選擇 200K-500K，較高數值適合展示用途但檔案較大"
+    }
   },
   "orders": {
     "orderPrint": "訂購列印",
@@ -1599,7 +1677,14 @@
     "batch": {
       "completed": "{count} 完成",
       "processing": "{count} 處理中",
-      "failed": "{count} 失敗"
+      "failed": "{count} 失敗",
+      "canLeave": "批次處理中，您可以離開此頁面，稍後回到歷史記錄查看結果。",
+      "status": {
+        "queued": "排隊中，等待處理...",
+        "processing": "正在生成視角圖片 ({completed}/{total})",
+        "completed": "圖片生成完成",
+        "failed": "生成失敗 ({failed}/{total} 失敗)"
+      }
     },
     "ui": {
       "imagesReceived": "圖片已收到",

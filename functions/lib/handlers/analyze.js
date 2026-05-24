@@ -42,30 +42,12 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeUploadedImage = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
-const axios_1 = __importDefault(require("axios"));
 const image_analyzer_1 = require("../gemini/image-analyzer");
-// ============================================
-// Helper Functions
-// ============================================
-/**
- * Download image and convert to base64
- */
-async function downloadImageAsBase64(url) {
-    const response = await axios_1.default.get(url, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-    });
-    const base64 = Buffer.from(response.data).toString('base64');
-    const contentType = response.headers['content-type'] || 'image/png';
-    return { base64, mimeType: contentType };
-}
+const storage_validation_1 = require("../utils/storage-validation");
 // ============================================
 // Cloud Function: analyzeUploadedImage
 // ============================================
@@ -93,6 +75,7 @@ exports.analyzeUploadedImage = functions
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to analyze images');
     }
+    const userId = context.auth.uid;
     const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW', selectedStyle } = data;
     // Validate input
     if (!imageUrl) {
@@ -101,17 +84,18 @@ exports.analyzeUploadedImage = functions
     // Validate color count (3-12)
     const validColorCount = Math.min(12, Math.max(3, colorCount));
     functions.logger.info('Starting image analysis', {
-        userId: context.auth.uid,
+        userId,
         colorCount: validColorCount,
         printerType,
         selectedStyle: selectedStyle || 'none',
     });
     try {
         // Download image
-        const { base64, mimeType } = await downloadImageAsBase64(imageUrl);
+        const { base64, mimeType, storagePath } = await (0, storage_validation_1.downloadValidatedImageAsBase64)(imageUrl, userId, ['uploads']);
         functions.logger.info('Image downloaded', {
             mimeType,
             base64Length: base64.length,
+            storagePath,
         });
         // Analyze image with optional style context
         const analysisResult = await (0, image_analyzer_1.analyzeImage)(base64, mimeType, {
@@ -126,7 +110,7 @@ exports.analyzeUploadedImage = functions
             analyzedAt: admin.firestore.Timestamp.now(),
         };
         functions.logger.info('Image analysis complete', {
-            userId: context.auth.uid,
+            userId,
             colorCount: analysis.colorPalette.length,
             objectType: analysis.objectType,
             printScore: analysis.printFriendliness.score,
@@ -139,7 +123,7 @@ exports.analyzeUploadedImage = functions
         }
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         functions.logger.error('Image analysis failed', {
-            userId: context.auth.uid,
+            userId,
             error: errorMessage,
         });
         throw new functions.https.HttpsError('internal', `Image analysis failed: ${errorMessage}`);

@@ -7,8 +7,8 @@
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
-import axios from 'axios';
 import { createBatchClient } from '../gemini/batch-client';
+import { downloadValidatedImageAsBase64 } from '../utils/storage-validation';
 import type {
   PipelineDocument,
   GeminiBatchJobDocument,
@@ -88,15 +88,18 @@ export const submitGeminiBatch = functions
       );
     }
 
-    // Download reference image
-    const imageResponse = await axios.get(inputImage.url, {
-      responseType: 'arraybuffer',
-      timeout: 30000,
-    });
+    // Download reference image after confirming it belongs to this user.
+    const { base64: imageBase64, mimeType, storagePath } = await downloadValidatedImageAsBase64(
+      inputImage.url,
+      userId,
+      ['uploads']
+    );
 
-    const imageBuffer = Buffer.from(imageResponse.data);
-    const imageBase64 = imageBuffer.toString('base64');
-    const mimeType = imageResponse.headers['content-type'] || 'image/png';
+    functions.logger.info('Batch reference image downloaded', {
+      pipelineId,
+      storagePath,
+      mimeType,
+    });
 
     // Create batch client
     const client = createBatchClient(process.env.GEMINI_API_KEY || '');

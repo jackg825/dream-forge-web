@@ -12,7 +12,6 @@
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
-import axios from 'axios';
 import { createMultiViewGenerator, type GeminiImageModel } from '../gemini/multi-view-generator';
 import { generateCompositeView } from '../gemini/composite-view-generator';
 import { generateStyledReference } from '../gemini/styled-reference-generator';
@@ -21,7 +20,12 @@ import { TripoProvider } from '../providers/tripo/client';
 import { HunyuanProvider } from '../providers/hunyuan/client';
 import { createMeshyRetextureClient } from '../providers/meshy/retexture';
 import { ProviderFactory, isValidProvider } from '../providers/factory';
-import { deductCredits, refundCredits, incrementGenerationCount } from '../utils/credits';
+import { refundCredits, incrementGenerationCount } from '../utils/credits';
+import {
+  assertUserStorageReference,
+  assertUserStorageReferences,
+  downloadValidatedImageAsBase64,
+} from '../utils/storage-validation';
 import { uploadBase64, uploadBuffer } from '../storage';
 import type {
   PipelineDocument,
@@ -35,7 +39,14 @@ import type {
   ViewAngle,
 } from '../rodin/types';
 import { DEFAULT_MODE } from '../gemini/mode-configs';
-import { canAccessProvider, canAccessHiTem3DResolution, getTierValidationError, type HiTem3DResolution } from '../config/tiers';
+import {
+  canAccessProvider,
+  canAccessHiTem3DResolution,
+  canAccessViewModel,
+  getTierValidationError,
+  type HiTem3DResolution,
+  type ViewGenerationModel,
+} from '../config/tiers';
 import type { UserTier } from '../rodin/types';
 
 const db = admin.firestore();
@@ -119,21 +130,6 @@ interface GetUserPipelinesData {
 // ============================================
 
 /**
- * Download image and convert to base64
- */
-async function downloadImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
-  const response = await axios.get(url, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-  });
-
-  const base64 = Buffer.from(response.data).toString('base64');
-  const contentType = response.headers['content-type'] || 'image/png';
-
-  return { base64, mimeType: contentType };
-}
-
-/**
  * Upload image to storage and get URL
  * Uses storage abstraction layer (Firebase or R2)
  */
@@ -155,6 +151,87 @@ function getExtensionFromMimeType(mimeType: string): string {
     'image/webp': 'webp',
   };
   return mimeMap[mimeType] || 'png';
+}
+
+function normalizeGeminiViewModel(model?: string): ViewGenerationModel {
+  if (!model || model === 'gemini-2.5-flash') {
+    return 'gemini-2.5-flash-image';
+  }
+
+  if (model === 'gemini-2.5-flash-image' || model === 'gemini-3-pro-image-preview') {
+    return model;
+  }
+
+  throw new functions.https.HttpsError(
+    'invalid-argument',
+    'Invalid Gemini image model'
+  );
+}
+
+async function getUserAccess(userId: string): Promise<{ userTier: UserTier; isAdmin: boolean }> {
+  const userDoc = await db.collection('users').doc(userId).get();
+  const userData = userDoc.data();
+
+  return {
+    userTier: (userData?.tier as UserTier) || 'free',
+    isAdmin: userData?.role === 'admin',
+  };
+}
+
+async function claimPipelineStepAndDeductCredits(params: {
+  pipelineRef: FirebaseFirestore.DocumentReference;
+  userId: string;
+  pipelineId: string;
+  credits: number;
+  updateData: Record<string, unknown>;
+  validatePipeline: (pipeline: PipelineDocument) => void;
+}): Promise<PipelineDocument> {
+  const { pipelineRef, userId, pipelineId, credits, updateData, validatePipeline } = params;
+  const userRef = db.collection('users').doc(userId);
+  let claimedPipeline: PipelineDocument | null = null;
+
+  await db.runTransaction(async (transaction) => {
+    const pipelineDoc = await transaction.get(pipelineRef);
+    const userDoc = await transaction.get(userRef);
+
+    if (!pipelineDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+    }
+
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError('not-found', 'User not found');
+    }
+
+    const pipeline = pipelineDoc.data() as PipelineDocument;
+    if (pipeline.userId !== userId) {
+      throw new functions.https.HttpsError('permission-denied', 'Not your pipeline');
+    }
+
+    validatePipeline(pipeline);
+
+    const currentCredits = userDoc.data()?.credits || 0;
+    if (currentCredits < credits) {
+      throw new functions.https.HttpsError('resource-exhausted', 'Insufficient credits');
+    }
+
+    transaction.update(userRef, {
+      credits: admin.firestore.FieldValue.increment(-credits),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    transaction.set(db.collection('transactions').doc(), {
+      userId,
+      type: 'consume',
+      amount: -credits,
+      jobId: pipelineId,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    transaction.update(pipelineRef, updateData);
+    claimedPipeline = pipeline;
+  });
+
+  return claimedPipeline!;
 }
 
 // ============================================
@@ -188,6 +265,17 @@ export const createPipeline = functions
       );
     }
 
+    const validatedImages = assertUserStorageReferences(imageUrls, userId, ['uploads'], 4);
+    const selectedGeminiModel = normalizeGeminiViewModel(geminiModel);
+    const { userTier, isAdmin } = await getUserAccess(userId);
+
+    if (!canAccessViewModel(userTier, selectedGeminiModel, isAdmin)) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        getTierValidationError('viewModel', selectedGeminiModel)
+      );
+    }
+
     const pipelineRef = db.collection('pipelines').doc();
     const pipelineId = pipelineRef.id;
 
@@ -207,9 +295,9 @@ export const createPipeline = functions
       status: 'draft',
       processingMode: 'batch', // Default to batch mode (50% cost savings)
       generationMode: modeId,
-      inputImages: imageUrls.map((url) => ({
-        url,
-        storagePath: '', // Will be extracted from URL if needed
+      inputImages: validatedImages.map((image) => ({
+        url: image.url,
+        storagePath: image.storagePath,
         uploadedAt: uploadTime,
       })),
       meshImages: {},
@@ -223,7 +311,7 @@ export const createPipeline = functions
         printerType: settings?.printerType || 'fdm',
         format: settings?.format || 'glb',
         generationMode: modeId,
-        geminiModel: geminiModel || 'gemini-2.5-flash-image',  // Default to fast model
+        geminiModel: selectedGeminiModel,  // Default to fast model
         ...(settings?.colorCount !== undefined && { colorCount: settings.colorCount }),
         ...(selectedStyle !== undefined && { selectedStyle }),  // User-selected figure style
       },
@@ -238,11 +326,12 @@ export const createPipeline = functions
     functions.logger.info('Pipeline created', {
       pipelineId,
       userId,
-      imageCount: imageUrls.length,
+      imageCount: validatedImages.length,
       generationMode: modeId,
       hasUserDescription: !!userDescription,
       hasImageAnalysis: !!imageAnalysis,
       analysisColorCount: imageAnalysis?.colorPalette?.length,
+      geminiModel: selectedGeminiModel,
     });
 
     return {
@@ -372,40 +461,68 @@ export const generatePipelineImages = functions
     }
 
     // Get Gemini model and calculate credits
-    const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
+    const geminiViewModel = normalizeGeminiViewModel(pipeline.settings?.geminiModel);
+    const geminiModel = geminiViewModel as GeminiImageModel;
     const viewCredits = GEMINI_MODEL_CREDITS[geminiModel];
 
-    // Deduct credits (throws if insufficient)
-    try {
-      await deductCredits(userId, viewCredits, pipelineId);
-    } catch (error) {
+    if (!viewCredits) {
       throw new functions.https.HttpsError(
-        'resource-exhausted',
-        `Insufficient credits for view generation (${viewCredits} credits required for ${geminiModel})`
+        'invalid-argument',
+        'Invalid Gemini image model'
       );
     }
 
-    // Update status (clear error if retrying)
-    await pipelineRef.update({
-      status: 'generating-images',
-      'creditsCharged.views': viewCredits,
-      error: admin.firestore.FieldValue.delete(),
-      errorStep: admin.firestore.FieldValue.delete(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    const { userTier, isAdmin } = await getUserAccess(userId);
+    if (!canAccessViewModel(userTier, geminiViewModel, isAdmin)) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        getTierValidationError('viewModel', geminiViewModel)
+      );
+    }
+
+    const claimedPipeline = await claimPipelineStepAndDeductCredits({
+      pipelineRef,
+      userId,
+      pipelineId,
+      credits: viewCredits,
+      updateData: {
+        status: 'generating-images',
+        'creditsCharged.views': viewCredits,
+        error: admin.firestore.FieldValue.delete(),
+        errorStep: admin.firestore.FieldValue.delete(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      validatePipeline: (currentPipeline) => {
+        const retryingImages = currentPipeline.status === 'failed' && currentPipeline.errorStep === 'generating-images';
+        if (
+          currentPipeline.status !== 'draft' &&
+          currentPipeline.status !== 'images-ready' &&
+          !retryingImages
+        ) {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            `Cannot generate images in status: ${currentPipeline.status}`
+          );
+        }
+      },
     });
 
     try {
       // Download reference image (use first uploaded image)
-      const referenceImageUrl = pipeline.inputImages[0].url;
-      const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
+      const referenceImageUrl = claimedPipeline.inputImages[0].url;
+      const { base64, mimeType } = await downloadValidatedImageAsBase64(
+        referenceImageUrl,
+        userId,
+        ['uploads']
+      );
 
-      const modeId = pipeline.generationMode || DEFAULT_MODE;
-      const selectedStyle = pipeline.settings?.selectedStyle;
-      const generator = createMultiViewGenerator(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel, selectedStyle);
+      const modeId = claimedPipeline.generationMode || DEFAULT_MODE;
+      const selectedStyle = claimedPipeline.settings?.selectedStyle;
+      const generator = createMultiViewGenerator(modeId, claimedPipeline.userDescription, claimedPipeline.imageAnalysis, geminiModel, selectedStyle);
 
       // Determine if we should use two-phase flow for style consistency
       // Two-phase is used when: image analysis detected a view angle AND a style is selected
-      const detectedViewAngle = pipeline.imageAnalysis?.detectedViewAngle as ViewAngle | undefined;
+      const detectedViewAngle = claimedPipeline.imageAnalysis?.detectedViewAngle as ViewAngle | undefined;
       const useTwoPhaseFlow = detectedViewAngle && selectedStyle;
 
       const now = admin.firestore.FieldValue.serverTimestamp();
@@ -437,8 +554,8 @@ export const generatePipelineImages = functions
         const styledRef = await generateStyledReference(base64, mimeType, {
           detectedAngle: detectedViewAngle,
           style: selectedStyle,
-          imageAnalysis: pipeline.imageAnalysis,
-          userDescription: pipeline.userDescription,
+          imageAnalysis: claimedPipeline.imageAnalysis,
+          userDescription: claimedPipeline.userDescription,
         });
 
         styledReferenceAngle = styledRef.sourceAngle;
@@ -543,8 +660,8 @@ export const generatePipelineImages = functions
 
         // Generate composite view (single API call)
         const compositeResult = await generateCompositeView(base64, mimeType, {
-          userDescription: pipeline.userDescription,
-          imageAnalysis: pipeline.imageAnalysis,
+          userDescription: claimedPipeline.userDescription,
+          imageAnalysis: claimedPipeline.imageAnalysis,
           selectedStyle,
         });
 
@@ -702,7 +819,7 @@ export const regeneratePipelineImage = functions
 
     try {
       const modeId = pipeline.generationMode || DEFAULT_MODE;
-      const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash') as GeminiImageModel;
+      const geminiModel = normalizeGeminiViewModel(pipeline.settings?.geminiModel) as GeminiImageModel;
       const selectedStyle = pipeline.settings?.selectedStyle;
       const generator = createMultiViewGenerator(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel, selectedStyle);
       const now = admin.firestore.FieldValue.serverTimestamp();
@@ -741,7 +858,11 @@ export const regeneratePipelineImage = functions
             'Styled reference image not found - falling back to original'
           );
         }
-        const { base64: refBase64, mimeType: refMimeType } = await downloadImageAsBase64(styledRefImage.url);
+        const { base64: refBase64, mimeType: refMimeType } = await downloadValidatedImageAsBase64(
+          styledRefImage.url,
+          userId,
+          ['pipelines']
+        );
         const referenceColorPalette = styledRefImage.colorPalette || [];
 
         // Generate single view from styled reference
@@ -789,7 +910,11 @@ export const regeneratePipelineImage = functions
 
         // Download original image
         const referenceImageUrl = pipeline.inputImages[0].url;
-        const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
+        const { base64, mimeType } = await downloadValidatedImageAsBase64(
+          referenceImageUrl,
+          userId,
+          ['uploads']
+        );
         const detectedViewAngle = pipeline.imageAnalysis?.detectedViewAngle as ViewAngle | undefined;
 
         if (!detectedViewAngle || !selectedStyle) {
@@ -883,7 +1008,11 @@ export const regeneratePipelineImage = functions
 
         // Download reference image
         const referenceImageUrl = pipeline.inputImages[0].url;
-        const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
+        const { base64, mimeType } = await downloadValidatedImageAsBase64(
+          referenceImageUrl,
+          userId,
+          ['uploads']
+        );
 
         // Regenerate mesh view
         const view = await generator.generateMeshView(base64, mimeType, angle as PipelineMeshAngle, hint);
@@ -980,11 +1109,7 @@ export const startPipelineMesh = functions
       ? requestedProvider
       : 'meshy';
 
-    // Get user tier for access validation
-    const userDoc = await db.collection('users').doc(userId).get();
-    const userData = userDoc.data();
-    const userTier: UserTier = (userData?.tier as UserTier) || 'free';
-    const isAdmin = userData?.role === 'admin';
+    const { userTier, isAdmin } = await getUserAccess(userId);
 
     // Validate provider access based on tier
     if (!canAccessProvider(userTier, providerType, isAdmin)) {
@@ -1029,14 +1154,6 @@ export const startPipelineMesh = functions
       );
     }
 
-    // Clear error state when retrying
-    if (canRetryMesh) {
-      await pipelineRef.update({
-        error: admin.firestore.FieldValue.delete(),
-        errorStep: admin.firestore.FieldValue.delete(),
-      });
-    }
-
     // Verify we have all 4 mesh images
     const meshAngles: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
     const missingAngles = meshAngles.filter((angle) => !pipeline.meshImages[angle]);
@@ -1050,28 +1167,45 @@ export const startPipelineMesh = functions
 
     // Deduct credits (provider-specific)
     const meshCredits = PROVIDER_CREDIT_COSTS[providerType];
-    try {
-      await deductCredits(userId, meshCredits, pipelineId);
-    } catch (error) {
-      throw new functions.https.HttpsError(
-        'resource-exhausted',
-        `Insufficient credits for mesh generation (${meshCredits} credits required for ${providerType})`
-      );
-    }
+    const claimedPipeline = await claimPipelineStepAndDeductCredits({
+      pipelineRef,
+      userId,
+      pipelineId,
+      credits: meshCredits,
+      updateData: {
+        status: 'generating-mesh',
+        'creditsCharged.mesh': meshCredits,
+        'settings.provider': providerType,
+        'settings.providerOptions': providerOptions || {},
+        error: admin.firestore.FieldValue.delete(),
+        errorStep: admin.firestore.FieldValue.delete(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      validatePipeline: (currentPipeline) => {
+        const retryingMesh = currentPipeline.status === 'failed' && currentPipeline.errorStep === 'generating-mesh';
+        if (currentPipeline.status !== 'images-ready' && !retryingMesh) {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            `Cannot start mesh generation in status: ${currentPipeline.status}`
+          );
+        }
 
-    // Update status and save provider settings BEFORE API call
-    // This ensures retry uses the correct provider even if API fails
-    await pipelineRef.update({
-      status: 'generating-mesh',
-      'creditsCharged.mesh': meshCredits,
-      'settings.provider': providerType,
-      'settings.providerOptions': providerOptions || {},
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        const currentMissingAngles = meshAngles.filter((angle) => !currentPipeline.meshImages[angle]);
+        if (currentMissingAngles.length > 0) {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            `Missing mesh images for: ${currentMissingAngles.join(', ')}`
+          );
+        }
+      },
     });
 
     try {
       // Get image URLs from pipeline (no need to download anymore!)
-      const imageUrls = meshAngles.map(angle => pipeline.meshImages[angle]!.url);
+      const imageUrls = meshAngles.map((angle) => {
+        const imageUrl = claimedPipeline.meshImages[angle]!.url;
+        return assertUserStorageReference(imageUrl, userId, ['pipelines']).url;
+      });
 
       // Get provider via factory pattern
       const provider = ProviderFactory.getProvider(providerType);
@@ -1089,8 +1223,8 @@ export const startPipelineMesh = functions
         // Tripo: use generateFromUrls
         const tripoProvider = provider as TripoProvider;
         result = await tripoProvider.generateFromUrls(imageUrls, {
-          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
-          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          quality: claimedPipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: claimedPipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
           enableTexture: true,
           enablePBR: true,
         });
@@ -1098,17 +1232,17 @@ export const startPipelineMesh = functions
         // Meshy: use generateMeshOnlyFromUrls
         const meshyProvider = provider as MeshyProvider;
         const meshOptions: MeshGenerationOptions = {
-          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
-          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
-          precision: pipeline.settings.meshPrecision || 'standard',
+          quality: claimedPipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: claimedPipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          precision: claimedPipeline.settings.meshPrecision || 'standard',
         };
         result = await meshyProvider.generateMeshOnlyFromUrls(imageUrls, meshOptions);
       } else if (providerType === 'hunyuan') {
         // Hunyuan: use generateFromUrls
         const hunyuanProvider = provider as HunyuanProvider;
         result = await hunyuanProvider.generateFromUrls(imageUrls, {
-          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
-          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          quality: claimedPipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: claimedPipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
           enablePBR: false,
           providerOptions: providerOptions ? {
             hunyuan: providerOptions.faceCount ? { faceCount: providerOptions.faceCount } : undefined,
@@ -1118,15 +1252,12 @@ export const startPipelineMesh = functions
         // Fallback for unknown providers: download to buffers
         const imageBuffers: Buffer[] = [];
         for (const url of imageUrls) {
-          const response = await axios.get(url, {
-            responseType: 'arraybuffer',
-            timeout: 30000,
-          });
-          imageBuffers.push(Buffer.from(response.data));
+          const image = await downloadValidatedImageAsBase64(url, userId, ['pipelines']);
+          imageBuffers.push(Buffer.from(image.base64, 'base64'));
         }
         result = await provider.generateFromMultipleImages(imageBuffers, {
-          quality: pipeline.settings.quality as 'draft' | 'standard' | 'fine',
-          format: pipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
+          quality: claimedPipeline.settings.quality as 'draft' | 'standard' | 'fine',
+          format: claimedPipeline.settings.format as 'glb' | 'obj' | 'fbx' | 'stl' | 'usdz',
           enableTexture: false,
           enablePBR: false,
         });
@@ -1393,14 +1524,6 @@ export const startPipelineTexture = functions
       );
     }
 
-    // Clear error state when retrying
-    if (canRetryTexture) {
-      await pipelineRef.update({
-        error: admin.firestore.FieldValue.delete(),
-        errorStep: admin.firestore.FieldValue.delete(),
-      });
-    }
-
     if (!pipeline.meshyMeshTaskId) {
       throw new functions.https.HttpsError(
         'failed-precondition',
@@ -1416,45 +1539,78 @@ export const startPipelineTexture = functions
       );
     }
 
-    // Deduct credits
-    try {
-      await deductCredits(userId, PIPELINE_CREDITS.TEXTURE, pipelineId);
-    } catch (error) {
-      throw new functions.https.HttpsError(
-        'resource-exhausted',
-        'Insufficient credits for texture generation (10 credits required)'
-      );
-    }
+    const claimedPipeline = await claimPipelineStepAndDeductCredits({
+      pipelineRef,
+      userId,
+      pipelineId,
+      credits: PIPELINE_CREDITS.TEXTURE,
+      updateData: {
+        status: 'generating-texture',
+        'creditsCharged.texture': PIPELINE_CREDITS.TEXTURE,
+        error: admin.firestore.FieldValue.delete(),
+        errorStep: admin.firestore.FieldValue.delete(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      validatePipeline: (currentPipeline) => {
+        const retryingTexture = currentPipeline.status === 'failed' && currentPipeline.errorStep === 'generating-texture';
+        if (currentPipeline.status !== 'mesh-ready' && !retryingTexture) {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            `Cannot start texture generation in status: ${currentPipeline.status}`
+          );
+        }
 
-    // Update status
-    await pipelineRef.update({
-      status: 'generating-texture',
-      'creditsCharged.texture': PIPELINE_CREDITS.TEXTURE,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        if (!currentPipeline.meshyMeshTaskId) {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            'Mesh generation must complete before texturing'
+          );
+        }
+
+        if (!currentPipeline.meshImages.front) {
+          throw new functions.https.HttpsError(
+            'failed-precondition',
+            'Missing front mesh reference image'
+          );
+        }
+      },
     });
 
     try {
+      const frontMeshImage = claimedPipeline.meshImages.front;
+      const meshyMeshTaskId = claimedPipeline.meshyMeshTaskId;
+      if (!frontMeshImage || !meshyMeshTaskId) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          'Mesh generation must complete before texturing'
+        );
+      }
+
       // Use front mesh image as style reference
-      const styleImageUrl = pipeline.meshImages.front.url;
+      const styleImageUrl = assertUserStorageReference(
+        frontMeshImage.url,
+        userId,
+        ['pipelines']
+      ).url;
 
       // Build texture prompt from image analysis (if available)
       // This enhances Meshy's texture generation with material context
       let textStylePrompt: string | undefined;
-      if (pipeline.imageAnalysis) {
-        const materials = pipeline.imageAnalysis.detectedMaterials.join(', ');
-        textStylePrompt = pipeline.userDescription
-          ? `${pipeline.userDescription}. Materials: ${materials}`
+      if (claimedPipeline.imageAnalysis) {
+        const materials = claimedPipeline.imageAnalysis.detectedMaterials.join(', ');
+        textStylePrompt = claimedPipeline.userDescription
+          ? `${claimedPipeline.userDescription}. Materials: ${materials}`
           : `Materials: ${materials}`;
       }
 
       // Create retexture task
       const retextureClient = createMeshyRetextureClient();
       const taskId = await retextureClient.createFromMeshTask(
-        pipeline.meshyMeshTaskId,
+        meshyMeshTaskId,
         {
           imageStyleUrl: styleImageUrl,
           textStylePrompt, // Enhanced with image analysis
-          enablePBR: pipeline.settings.printerType !== 'fdm', // PBR for SLA/resin
+          enablePBR: claimedPipeline.settings.printerType !== 'fdm', // PBR for SLA/resin
         }
       );
 

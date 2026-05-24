@@ -11,10 +11,10 @@
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
-import axios from 'axios';
 import { analyzeImage, type ImageAnalysisResult } from '../gemini/image-analyzer';
 import type { PrinterType } from '../rodin/types';
 import type { StyleId } from '../config/styles';
+import { downloadValidatedImageAsBase64 } from '../utils/storage-validation';
 
 // ============================================
 // Request/Response Types
@@ -30,25 +30,6 @@ interface AnalyzeUploadedImageData {
 
 interface AnalyzeUploadedImageResponse {
   analysis: ImageAnalysisResult;
-}
-
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Download image and convert to base64
- */
-async function downloadImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
-  const response = await axios.get(url, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-  });
-
-  const base64 = Buffer.from(response.data).toString('base64');
-  const contentType = response.headers['content-type'] || 'image/png';
-
-  return { base64, mimeType: contentType };
 }
 
 // ============================================
@@ -83,6 +64,7 @@ export const analyzeUploadedImage = functions
       );
     }
 
+    const userId = context.auth.uid;
     const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW', selectedStyle } = data;
 
     // Validate input
@@ -97,7 +79,7 @@ export const analyzeUploadedImage = functions
     const validColorCount = Math.min(12, Math.max(3, colorCount));
 
     functions.logger.info('Starting image analysis', {
-      userId: context.auth.uid,
+      userId,
       colorCount: validColorCount,
       printerType,
       selectedStyle: selectedStyle || 'none',
@@ -105,11 +87,16 @@ export const analyzeUploadedImage = functions
 
     try {
       // Download image
-      const { base64, mimeType } = await downloadImageAsBase64(imageUrl);
+      const { base64, mimeType, storagePath } = await downloadValidatedImageAsBase64(
+        imageUrl,
+        userId,
+        ['uploads']
+      );
 
       functions.logger.info('Image downloaded', {
         mimeType,
         base64Length: base64.length,
+        storagePath,
       });
 
       // Analyze image with optional style context
@@ -127,7 +114,7 @@ export const analyzeUploadedImage = functions
       };
 
       functions.logger.info('Image analysis complete', {
-        userId: context.auth.uid,
+        userId,
         colorCount: analysis.colorPalette.length,
         objectType: analysis.objectType,
         printScore: analysis.printFriendliness.score,
@@ -141,7 +128,7 @@ export const analyzeUploadedImage = functions
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       functions.logger.error('Image analysis failed', {
-        userId: context.auth.uid,
+        userId,
         error: errorMessage,
       });
 

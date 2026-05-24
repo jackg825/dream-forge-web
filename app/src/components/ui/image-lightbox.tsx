@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 
 interface ImageLightboxProps {
   images: { src: string; alt: string }[];
@@ -20,7 +21,7 @@ export function ImageLightbox({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
 
   useEffect(() => {
-    setCurrentIndex(initialIndex);
+    return deferStateUpdate(() => setCurrentIndex(initialIndex));
   }, [initialIndex, isOpen]);
 
   const handlePrev = useCallback(() => {

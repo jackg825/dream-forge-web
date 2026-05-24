@@ -38,13 +38,15 @@ import {
 } from 'lucide-react';
 import type { MaterialConfig, SizeConfig, ColorOption, PrintMaterial, PrintSizeId } from '@/types/order';
 
+const EMPTY_PRICING = {} as Record<PrintMaterial, Record<PrintSizeId, number>>;
+
 function PrintSettingsContent() {
   const t = useTranslations('adminSettings');
 
   const { materials, sizes, colors, pricing, loading, refresh } = usePrintConfig();
 
   const [saving, setSaving] = useState(false);
-  const [editedPricing, setEditedPricing] = useState<Record<PrintMaterial, Record<PrintSizeId, number>>>({} as any);
+  const [editedPricing, setEditedPricing] = useState<Record<PrintMaterial, Record<PrintSizeId, number>>>(EMPTY_PRICING);
 
   // Initialize edited pricing from loaded config
   useEffect(() => {

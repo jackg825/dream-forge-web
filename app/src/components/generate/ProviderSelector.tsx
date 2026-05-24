@@ -10,11 +10,12 @@ import {
 } from '@/types';
 import { useTierAccess } from '@/hooks/useTierAccess';
 
-/** Map badge values to translation keys */
-const BADGE_KEY_MAP: Record<string, string> = {
-  '推薦': 'recommended',
-  '新功能': 'newFeature',
-  '全彩': 'fullColor',
+/** Map provider badges to translation keys */
+const BADGE_KEY_BY_PROVIDER: Partial<Record<ModelProvider, string>> = {
+  meshy: 'recommended',
+  hunyuan: 'newFeature',
+  tripo: 'recommended',
+  hitem3d: 'newFeature',
 };
 
 interface ProviderSelectorProps {
@@ -98,10 +99,10 @@ export function ProviderSelector({
                 </span>
                 {provider.badge && !isLocked && (
                   <Badge
-                    variant={provider.badgeVariant as any || 'secondary'}
+                    variant={provider.badgeVariant || 'secondary'}
                     className="text-xs px-1.5 py-0"
                   >
-                    {t(`badges.${BADGE_KEY_MAP[provider.badge] || provider.badge}`)}
+                    {t(`badges.${BADGE_KEY_BY_PROVIDER[provider.id] || provider.badge}`)}
                   </Badge>
                 )}
               </div>

@@ -143,8 +143,13 @@ export function authorizePathAccess(
     return false;
   }
 
+  // Session view uploads are client-writable, but only below the user's view directory.
+  if (action === 'write' && bucket === 'sessions') {
+    return parts.length >= 5 && parts[3] === 'views';
+  }
+
   // 伺服器專用路徑禁止直接寫入
-  const serverOnlyBuckets = ['models', 'sessions', 'pipelines'];
+  const serverOnlyBuckets = ['models', 'pipelines'];
   if (action === 'write' && serverOnlyBuckets.includes(bucket)) {
     return false;
   }

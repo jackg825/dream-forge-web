@@ -53,6 +53,8 @@ export function PipelineUploader({
         return;
       }
 
+      const nextImages = [...images];
+
       for (const file of fileArray) {
         // Validate and auto-compress
         const validation = await validateImage(file);
@@ -80,8 +82,10 @@ export function PipelineUploader({
             previewUrl,
           };
 
-          onImagesChange([...images, newImage]);
+          nextImages.push(newImage);
+          onImagesChange([...nextImages]);
         } catch (err) {
+          URL.revokeObjectURL(previewUrl);
           setError(err instanceof Error ? err.message : t('uploadFailed'));
         } finally {
           setUploadProgress(null);

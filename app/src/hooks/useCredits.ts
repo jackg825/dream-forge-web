@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 
 interface UseCreditsReturn {
   credits: number;
@@ -20,9 +21,10 @@ export function useCredits(userId: string | undefined): UseCreditsReturn {
 
   useEffect(() => {
     if (!userId || !db) {
-      setCredits(0);
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => {
+        setCredits(0);
+        setLoading(false);
+      });
     }
 
     const userRef = doc(db, 'users', userId);

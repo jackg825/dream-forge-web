@@ -32,17 +32,14 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
-const axios_1 = __importDefault(require("axios"));
 const client_1 = require("../gemini/client");
 const factory_1 = require("../providers/factory");
 const credits_1 = require("../utils/credits");
+const storage_validation_1 = require("../utils/storage-validation");
 const storage_1 = require("../storage");
 const db = admin.firestore();
 // Credit costs based on input mode
@@ -51,6 +48,32 @@ const creditCosts = {
     multi: 1,
     'ai-generated': 2,
 };
+async function createJobAndDeductCredits(userId, amount, jobId, jobRef, jobDoc) {
+    const userRef = db.collection('users').doc(userId);
+    await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'User not found');
+        }
+        const currentCredits = userDoc.data()?.credits || 0;
+        if (currentCredits < amount) {
+            throw new functions.https.HttpsError('resource-exhausted', 'Insufficient credits');
+        }
+        transaction.update(userRef, {
+            credits: admin.firestore.FieldValue.increment(-amount),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        transaction.set(db.collection('transactions').doc(), {
+            userId,
+            type: 'consume',
+            amount: -amount,
+            jobId,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        transaction.create(jobRef, jobDoc);
+    });
+    functions.logger.info('Job created and credits deducted', { userId, amount, jobId });
+}
 /**
  * Cloud Function: generateModel
  *
@@ -62,8 +85,8 @@ const creditCosts = {
  * Steps:
  * 1. Verify authentication
  * 2. Calculate credit cost based on input mode
- * 3. Deduct credits
- * 4. Create job document
+ * 3. Create job document and deduct credits atomically
+ * 4. Prepare images
  * 5. Prepare images (download uploaded or generate via Gemini)
  * 6. Call provider API (Rodin or Meshy)
  * 7. Update job with provider task ID
@@ -106,22 +129,15 @@ exports.generateModel = functions
     if (!validInputModes.includes(inputMode)) {
         throw new functions.https.HttpsError('invalid-argument', 'Invalid input mode. Use: single, multi, ai-generated');
     }
+    const validatedInputImages = inputMode === 'multi'
+        ? (0, storage_validation_1.assertUserStorageReferences)(imageUrls?.length ? imageUrls : [imageUrl], userId, ['uploads'], 4)
+        : (0, storage_validation_1.assertUserStorageReferences)([imageUrl], userId, ['uploads'], 1);
+    const validatedPrimaryImage = validatedInputImages[0];
     // 2. Calculate credit cost based on input mode
     const creditCost = creditCosts[inputMode];
-    // 3. Check credits and deduct
+    // 3. Prepare job document
     const jobRef = db.collection('jobs').doc();
     const jobId = jobRef.id;
-    try {
-        await (0, credits_1.deductCredits)(userId, creditCost, jobId);
-    }
-    catch (error) {
-        if (error instanceof functions.https.HttpsError &&
-            error.code === 'resource-exhausted') {
-            throw new functions.https.HttpsError('resource-exhausted', `You need ${creditCost} credit(s) for this generation mode.`);
-        }
-        throw error;
-    }
-    // 4. Create job document
     const now = admin.firestore.FieldValue.serverTimestamp();
     const jobSettings = {
         tier: 'Gen-2',
@@ -136,8 +152,8 @@ exports.generateModel = functions
         userId,
         jobType: 'model',
         status: 'pending',
-        inputImageUrl: imageUrl,
-        inputImageUrls: [imageUrl],
+        inputImageUrl: validatedPrimaryImage.url,
+        inputImageUrls: [validatedPrimaryImage.url],
         viewAngles: ['front'],
         outputModelUrl: null,
         // Provider abstraction fields
@@ -152,20 +168,27 @@ exports.generateModel = functions
         createdAt: now,
         completedAt: null,
     };
-    await jobRef.set(jobDoc);
+    try {
+        await createJobAndDeductCredits(userId, creditCost, jobId, jobRef, jobDoc);
+    }
+    catch (error) {
+        if (error instanceof functions.https.HttpsError &&
+            error.code === 'resource-exhausted') {
+            throw new functions.https.HttpsError('resource-exhausted', `You need ${creditCost} credit(s) for this generation mode.`);
+        }
+        throw error;
+    }
     // 5. Prepare images based on input mode
     try {
         const imageBuffers = [];
         const finalViewAngles = ['front'];
         // Download primary image
-        const primaryResponse = await axios_1.default.get(imageUrl, {
-            responseType: 'arraybuffer',
-            timeout: 30000,
-        });
-        const primaryBuffer = Buffer.from(primaryResponse.data);
+        const primaryImage = await (0, storage_validation_1.downloadValidatedImageAsBase64)(validatedPrimaryImage.url, userId, ['uploads']);
+        const primaryBuffer = Buffer.from(primaryImage.base64, 'base64');
         imageBuffers.push(primaryBuffer);
         functions.logger.info('Primary image downloaded', {
             size: primaryBuffer.length,
+            storagePath: primaryImage.storagePath,
             jobId,
             inputMode,
         });
@@ -179,7 +202,7 @@ exports.generateModel = functions
             });
             const geminiClient = (0, client_1.createGeminiClient)();
             const base64 = primaryBuffer.toString('base64');
-            const generatedViews = await geminiClient.generateViews(base64, 'image/png', generateAngles);
+            const generatedViews = await geminiClient.generateViews(base64, primaryImage.mimeType, generateAngles);
             // Add generated images to buffers
             for (const view of generatedViews) {
                 const buffer = Buffer.from(view.imageBase64, 'base64');
@@ -193,14 +216,11 @@ exports.generateModel = functions
             }
         }
         // Handle multi-upload mode
-        else if (inputMode === 'multi' && imageUrls && imageUrls.length > 1) {
+        else if (inputMode === 'multi' && validatedInputImages.length > 1) {
             // Download additional user-uploaded images (skip first as it's already downloaded)
-            for (let i = 1; i < imageUrls.length; i++) {
-                const response = await axios_1.default.get(imageUrls[i], {
-                    responseType: 'arraybuffer',
-                    timeout: 30000,
-                });
-                const buffer = Buffer.from(response.data);
+            for (let i = 1; i < validatedInputImages.length; i++) {
+                const downloadedImage = await (0, storage_validation_1.downloadValidatedImageAsBase64)(validatedInputImages[i].url, userId, ['uploads']);
+                const buffer = Buffer.from(downloadedImage.base64, 'base64');
                 imageBuffers.push(buffer);
                 finalViewAngles.push(viewAngles?.[i] || 'front');
             }
@@ -211,7 +231,7 @@ exports.generateModel = functions
         }
         // Update job with final image count
         await jobRef.update({
-            inputImageUrls: inputMode === 'multi' ? imageUrls : [imageUrl],
+            inputImageUrls: validatedInputImages.map((image) => image.url),
             viewAngles: finalViewAngles,
             'settings.imageCount': imageBuffers.length,
         });

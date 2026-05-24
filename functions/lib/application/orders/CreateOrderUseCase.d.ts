@@ -57,4 +57,5 @@ export declare class CreateOrderUseCase {
      * Execute the use case
      */
     execute(request: CreateOrderRequest): Promise<CreateOrderResponse>;
+    private validateOrderItems;
 }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db, isFirebaseReady } from '@/lib/firebase';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import {
   signInWithGoogle,
   signInWithEmail,
@@ -39,8 +40,7 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     // Skip if Firebase is not ready (SSR or missing config)
     if (!isFirebaseReady() || !auth) {
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => setLoading(false));
     }
 
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {

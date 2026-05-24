@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Loader2, RotateCcw, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
 import type { ResetTargetStep } from '@/hooks/usePipeline';
 
 interface ResetStepDialogProps {
@@ -23,16 +24,10 @@ interface ResetStepDialogProps {
   loading?: boolean;
 }
 
-const STEP_LABELS: Record<ResetTargetStep, string> = {
-  'draft': '上傳圖片',
-  'images-ready': '圖片預覽',
-  'mesh-ready': '網格預覽',
-};
-
-const STEP_DESCRIPTIONS: Record<ResetTargetStep, string> = {
-  'draft': '返回上傳圖片步驟，可以重新上傳或修改圖片分析設定',
-  'images-ready': '返回圖片預覽步驟，可以重新生成視角或選擇不同的 provider',
-  'mesh-ready': '返回網格預覽步驟，可以重新生成貼圖',
+const STEP_KEYS: Record<ResetTargetStep, string> = {
+  draft: 'draft',
+  'images-ready': 'imagesReady',
+  'mesh-ready': 'meshReady',
 };
 
 /**
@@ -46,10 +41,10 @@ export function ResetStepDialog({
   open,
   onOpenChange,
   targetStep,
-  currentStep,
   onConfirm,
   loading = false,
 }: ResetStepDialogProps) {
+  const t = useTranslations('resetDialog');
   const [keepResults, setKeepResults] = useState(true);
 
   const handleConfirm = () => {
@@ -63,8 +58,9 @@ export function ResetStepDialog({
     }
   };
 
-  const stepLabel = STEP_LABELS[targetStep];
-  const stepDescription = STEP_DESCRIPTIONS[targetStep];
+  const stepKey = STEP_KEYS[targetStep];
+  const stepLabel = t(`steps.${stepKey}.label`);
+  const stepDescription = t(`steps.${stepKey}.description`);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -72,7 +68,7 @@ export function ResetStepDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RotateCcw className="h-5 w-5" />
-            返回「{stepLabel}」步驟
+            {t('title', { step: stepLabel })}
           </DialogTitle>
           <DialogDescription>
             {stepDescription}
@@ -100,9 +96,9 @@ export function ResetStepDialog({
               {keepResults && <Check className="h-3 w-3" />}
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-sm">保留已生成的結果</p>
+              <p className="font-medium text-sm">{t('keepResults.title')}</p>
               <p className="text-xs text-muted-foreground">
-                僅變更狀態，已生成的內容仍可查看
+                {t('keepResults.description')}
               </p>
             </div>
           </button>
@@ -127,9 +123,9 @@ export function ResetStepDialog({
               {!keepResults && <Check className="h-3 w-3" />}
             </div>
             <div className="space-y-1">
-              <p className="font-medium text-sm">清除並重新開始</p>
+              <p className="font-medium text-sm">{t('clearResults.title')}</p>
               <p className="text-xs text-muted-foreground">
-                清除該步驟之後的所有生成結果
+                {t('clearResults.description')}
               </p>
             </div>
           </button>
@@ -138,7 +134,7 @@ export function ResetStepDialog({
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                注意：清除結果後無法恢復，且已扣除的積分不會退還。
+                {t('clearWarning')}
               </p>
             </div>
           )}
@@ -150,7 +146,7 @@ export function ResetStepDialog({
             onClick={handleClose}
             disabled={loading}
           >
-            取消
+            {t('cancel')}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -159,12 +155,12 @@ export function ResetStepDialog({
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                處理中...
+                {t('processing')}
               </>
             ) : (
               <>
                 <RotateCcw className="mr-2 h-4 w-4" />
-                確認返回
+                {t('confirm')}
               </>
             )}
           </Button>

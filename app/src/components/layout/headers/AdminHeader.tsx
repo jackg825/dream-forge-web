@@ -5,8 +5,8 @@ import { useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useCredits } from '@/hooks/useCredits';
-import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import { BaseHeader } from './BaseHeader';
 import {
   DesktopNav,
@@ -29,7 +29,7 @@ export function AdminHeader({ className }: AdminHeaderProps) {
 
   // Close mobile menu on route change
   useEffect(() => {
-    setMobileMenuOpen(false);
+    return deferStateUpdate(() => setMobileMenuOpen(false));
   }, [pathname]);
 
   return (

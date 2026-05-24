@@ -3,7 +3,14 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import type { Pipeline, PipelineStatus } from '@/types';
+
+interface PipelineInputImageData {
+  url: string;
+  storagePath: string;
+  uploadedAt?: { toDate?: () => Date };
+}
 
 interface UsePipelinesReturn {
   pipelines: Pipeline[];
@@ -25,16 +32,19 @@ export function usePipelines(
 
   useEffect(() => {
     if (!userId || !db) {
-      setPipelines([]);
-      setLoading(false);
-      return;
+      return deferStateUpdate(() => {
+        setPipelines([]);
+        setLoading(false);
+      });
     }
 
-    setLoading(true);
-    setError(null);
+    const cancelPendingState = deferStateUpdate(() => {
+      setLoading(true);
+      setError(null);
+    });
 
     // Build query
-    let q = query(
+    const q = query(
       collection(db, 'pipelines'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
@@ -62,7 +72,7 @@ export function usePipelines(
             batchProgress: data.batchProgress,
             estimatedCompletionTime: data.estimatedCompletionTime?.toDate?.(),
             generationMode: data.generationMode || 'simplified-mesh',
-            inputImages: (data.inputImages || []).map((img: any) => ({
+            inputImages: ((data.inputImages || []) as PipelineInputImageData[]).map((img) => ({
               url: img.url,
               storagePath: img.storagePath,
               uploadedAt: img.uploadedAt?.toDate?.() || new Date(),
@@ -102,7 +112,10 @@ export function usePipelines(
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      cancelPendingState();
+      unsubscribe();
+    };
   }, [userId, filterStatus, maxItems]);
 
   return { pipelines, loading, error };

@@ -39,7 +39,8 @@ export function ProviderOptionsPanel({
   disabled,
   onUpgradeClick,
 }: ProviderOptionsPanelProps) {
-  const t = useTranslations('resolution');
+  const resolutionT = useTranslations('resolution');
+  const t = useTranslations('providerOptions');
   const { isResolutionLocked } = useTierAccess();
 
   // Providers with additional options
@@ -66,11 +67,11 @@ export function ProviderOptionsPanel({
     return (
       <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">HiTem3D {t('title')}</span>
+          <span className="text-sm font-medium">HiTem3D {resolutionT('title')}</span>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {resolutions.map(([resKey, resInfo]) => {
+          {resolutions.map(([resKey]) => {
             const resValue = Number(resKey) as HiTem3DResolution;
             const isSelected = resolution === resValue;
             const isLocked = isResolutionLocked(resValue);
@@ -98,7 +99,7 @@ export function ProviderOptionsPanel({
                     isLocked && 'text-muted-foreground'
                   )}
                 >
-                  {t(`${resKey}.label`)}
+                  {resolutionT(`${resKey}.label`)}
                 </span>
                 <span
                   className={cn(
@@ -106,7 +107,7 @@ export function ProviderOptionsPanel({
                     isLocked && 'opacity-70'
                   )}
                 >
-                  {t(`${resKey}.description`)}
+                  {resolutionT(`${resKey}.description`)}
                 </span>
 
                 {/* Lock indicator for Premium-only resolution */}
@@ -130,7 +131,7 @@ export function ProviderOptionsPanel({
         <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
           <span>
-            {t('tip')}
+            {resolutionT('tip')}
           </span>
         </div>
       </div>
@@ -151,16 +152,16 @@ export function ProviderOptionsPanel({
   return (
     <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-4">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">Hunyuan 3D 設定</span>
+        <span className="text-sm font-medium">{t('hunyuan.title')}</span>
         <Badge variant="outline" className="text-xs">
-          多邊形控制
+          {t('hunyuan.badge')}
         </Badge>
       </div>
 
       <div className="space-y-3">
         {/* Face count header */}
         <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">多邊形數量</span>
+          <span className="text-sm text-muted-foreground">{t('hunyuan.faceCount')}</span>
           <span className="text-sm font-mono font-medium text-primary">
             {formatFaceCount(faceCount)}
           </span>
@@ -202,7 +203,7 @@ export function ProviderOptionsPanel({
         <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5">
           <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
           <span>
-            建議：3D 列印選擇 200K-500K，較高數值適合展示用途但檔案較大
+            {t('hunyuan.tip')}
           </span>
         </div>
       </div>

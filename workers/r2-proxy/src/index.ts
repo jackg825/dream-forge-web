@@ -10,6 +10,31 @@ import { checkRateLimit, checkIpRateLimit, createRateLimitResponse } from './rat
 import { validateFile, isAllowedContentType, generateStorageKey, MAX_FILE_SIZE } from './validation';
 import { generatePresignedPutUrl, generatePresignedGetUrl } from './presign';
 
+const CLIENT_WRITABLE_PREFIXES = new Set(['uploads', 'sessions']);
+
+function normalizeClientUploadPrefix(prefix: string | undefined, uid: string): string {
+  const normalized = (prefix || 'uploads').replace(/^\/+|\/+$/g, '');
+  const segments = normalized.split('/').filter(Boolean);
+
+  if (
+    !normalized ||
+    normalized.includes('\\') ||
+    segments.some((segment) => segment === '.' || segment === '..')
+  ) {
+    return '';
+  }
+
+  if (CLIENT_WRITABLE_PREFIXES.has(normalized)) {
+    return normalized;
+  }
+
+  if (normalized.startsWith(`sessions/${uid}/`) && normalized.endsWith('/views')) {
+    return normalized;
+  }
+
+  return '';
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -150,7 +175,11 @@ async function handlePresignUpload(request: Request, env: Env): Promise<Response
   }
 
   // 7. 生成儲存路徑
-  const prefix = customPath || 'uploads';
+  const prefix = normalizeClientUploadPrefix(customPath, auth.uid);
+  if (!prefix) {
+    return createErrorResponse('Upload path is not allowed', 'FORBIDDEN', 403);
+  }
+
   const key = generateStorageKey(auth.uid, filename, prefix);
 
   // 8. 檢查路徑授權
@@ -243,7 +272,7 @@ async function handleUploadConfirm(request: Request, env: Env): Promise<Response
     }
 
     // 生成下載 URL
-    const downloadUrl = `/download/${key}`;
+    const downloadUrl = new URL(`/download/${key}`, request.url).toString();
 
     return new Response(
       JSON.stringify({
@@ -370,7 +399,7 @@ async function handleDownload(
     headers.set('Content-Length', object.size.toString());
 
     // 檢查是否有 body (R2ObjectBody vs R2Object)
-    const body = 'body' in object ? object.body : null;
+    const body = 'body' in object ? (object as R2ObjectBody).body : null;
 
     // 處理 Range 請求 (僅非公開路徑)
     if (!isPublicPath && object.range) {
@@ -486,7 +515,7 @@ async function handlePublicDownload(
     headers.set('Content-Length', object.size.toString());
 
     // 檢查是否有 body
-    const body = 'body' in object ? object.body : null;
+    const body = 'body' in object ? (object as R2ObjectBody).body : null;
 
     return new Response(body, { headers });
   } catch (error) {

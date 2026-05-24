@@ -8,6 +8,7 @@ import { useCredits } from '@/hooks/useCredits';
 import { CreditBadge } from '@/components/credits/CreditBadge';
 import { Button } from '@/components/ui/button';
 import { Settings2 } from 'lucide-react';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +38,7 @@ export function UserHeader({ className }: UserHeaderProps) {
 
   // Close mobile menu on route change
   useEffect(() => {
-    setMobileMenuOpen(false);
+    return deferStateUpdate(() => setMobileMenuOpen(false));
   }, [pathname]);
 
   // Filter nav items based on auth state

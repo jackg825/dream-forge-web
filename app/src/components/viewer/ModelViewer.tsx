@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
+import type { ElementRef } from 'react';
 import { Canvas, useThree, useLoader } from '@react-three/fiber';
 import { OrbitControls, Environment, useGLTF, Grid, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import * as THREE from 'three';
@@ -499,7 +500,7 @@ function CameraControls({
   distance?: number;
   targetY?: number;
 }) {
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<ElementRef<typeof OrbitControls>>(null);
   const { camera } = useThree();
 
   // Set initial target on mount

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import type { BatchProgress, PipelineStatus } from '@/types';
 
 interface BatchProgressIndicatorProps {
@@ -27,6 +28,7 @@ export function BatchProgressIndicator({
   estimatedCompletionTime,
   className,
 }: BatchProgressIndicatorProps) {
+  const t = useTranslations('progress');
   // Determine if batch is currently processing
   const isProcessing = status === 'batch-queued' || status === 'batch-processing';
 
@@ -41,13 +43,13 @@ export function BatchProgressIndicator({
   const getStatusMessage = () => {
     switch (status) {
       case 'batch-queued':
-        return '排隊中，等待處理...';
+        return t('batch.status.queued');
       case 'batch-processing':
-        return `正在生成視角圖片 (${completed}/${total})`;
+        return t('batch.status.processing', { completed, total });
       case 'images-ready':
-        return '圖片生成完成';
+        return t('batch.status.completed');
       case 'failed':
-        return `生成失敗 (${failed}/${total} 失敗)`;
+        return t('batch.status.failed', { failed, total });
       default:
         return '';
     }
@@ -59,9 +61,9 @@ export function BatchProgressIndicator({
     const diffMs = date.getTime() - now.getTime();
     const diffMins = Math.max(0, Math.ceil(diffMs / 60000));
 
-    if (diffMins === 0) return '即將完成';
-    if (diffMins === 1) return '約 1 分鐘';
-    return `約 ${diffMins} 分鐘`;
+    if (diffMins === 0) return t('time.aboutToComplete');
+    if (diffMins === 1) return t('time.aboutMinute');
+    return t('time.aboutMinutes', { count: diffMins });
   };
 
   // Don't render if not in a batch-related status
@@ -117,7 +119,7 @@ export function BatchProgressIndicator({
           )}
         >
           <CheckCircle2 className="h-3 w-3" />
-          {completed} 完成
+          {t('batch.completed', { count: completed })}
         </Badge>
 
         {/* Pending */}
@@ -127,7 +129,7 @@ export function BatchProgressIndicator({
             className="text-xs gap-1 border-blue-500/50 text-blue-600"
           >
             <Loader2 className="h-3 w-3 animate-spin" />
-            {pending} 處理中
+            {t('batch.processing', { count: pending })}
           </Badge>
         )}
 
@@ -138,7 +140,7 @@ export function BatchProgressIndicator({
             className="text-xs gap-1 border-red-500/50 text-red-600"
           >
             <XCircle className="h-3 w-3" />
-            {failed} 失敗
+            {t('batch.failed', { count: failed })}
           </Badge>
         )}
       </div>
@@ -146,7 +148,7 @@ export function BatchProgressIndicator({
       {/* Info text for batch mode */}
       {isProcessing && (
         <p className="text-xs text-muted-foreground">
-          批次處理中，您可以離開此頁面，稍後回到歷史記錄查看結果。
+          {t('batch.canLeave')}
         </p>
       )}
     </div>

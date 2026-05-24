@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import dynamic from 'next/dynamic';
 import { UserHeader } from '@/components/layout/headers';
@@ -38,6 +38,11 @@ export default function PreviewPage() {
   const t = useTranslations();
   const { state, model, error, loadFile, reset } = useModelLoader();
   const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const [viewerContainer, setViewerContainer] = useState<HTMLDivElement | null>(null);
+  const handleViewerContainerRef = useCallback((node: HTMLDivElement | null) => {
+    viewerContainerRef.current = node;
+    setViewerContainer(node);
+  }, []);
 
   // Viewer state
   const [backgroundColor, setBackgroundColor] = useState('#1f2937');
@@ -170,7 +175,7 @@ export default function PreviewPage() {
                 )}
 
                 <div
-                  ref={viewerContainerRef}
+                  ref={handleViewerContainerRef}
                   className={cn(
                     'relative',
                     isPseudoFullscreen ? 'h-full' : 'h-[500px]'
@@ -232,7 +237,7 @@ export default function PreviewPage() {
                       // TODO: Implement screenshot for preview
                     }}
                     onReset={handleReset}
-                    portalContainer={viewerContainerRef.current}
+                    portalContainer={viewerContainer}
                   />
                 </div>
               </Card>

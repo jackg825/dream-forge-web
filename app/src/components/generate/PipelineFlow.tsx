@@ -878,7 +878,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-sm font-medium">{t('images.meshImages')}</h4>
-              <Badge variant="outline" className="text-xs">{modeInfo?.meshStyle || '7色優化'}</Badge>
+              <Badge variant="outline" className="text-xs">{modeInfo?.meshStyle || t('images.defaultMeshStyle')}</Badge>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {meshAngles.map((angle) => {

@@ -208,5 +208,10 @@ export function generateStorageKey(
   const sanitized = sanitizeFilename(filename);
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
+
+  if (prefix.split('/')[1] === userId) {
+    return `${prefix}/${timestamp}_${random}_${sanitized}`;
+  }
+
   return `${prefix}/${userId}/${timestamp}_${random}_${sanitized}`;
 }

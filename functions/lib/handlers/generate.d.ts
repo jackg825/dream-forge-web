@@ -10,8 +10,8 @@ import * as functions from 'firebase-functions/v1';
  * Steps:
  * 1. Verify authentication
  * 2. Calculate credit cost based on input mode
- * 3. Deduct credits
- * 4. Create job document
+ * 3. Create job document and deduct credits atomically
+ * 4. Prepare images
  * 5. Prepare images (download uploaded or generate via Gemini)
  * 6. Call provider API (Rodin or Meshy)
  * 7. Update job with provider task ID

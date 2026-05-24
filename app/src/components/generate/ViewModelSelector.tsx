@@ -18,6 +18,11 @@ import {
 } from '@/config/tiers';
 import { GEMINI_MODEL_OPTIONS } from '@/types';
 
+const MODEL_TRANSLATION_KEYS: Record<ViewGenerationModel, string> = {
+  'gemini-2.5-flash-image': 'gemini25FlashImage',
+  'gemini-3-pro-image-preview': 'gemini3ProImagePreview',
+};
+
 interface ViewModelSelectorProps {
   value: ViewGenerationModel;
   onChange: (model: ViewGenerationModel) => void;
@@ -96,7 +101,7 @@ export function ViewModelSelector({
                   'text-sm font-semibold',
                   isLocked && 'text-muted-foreground'
                 )}>
-                  {t(`${modelId}.label`)}
+                  {t(`${MODEL_TRANSLATION_KEYS[modelId]}.label`)}
                 </span>
               </div>
 
@@ -105,7 +110,7 @@ export function ViewModelSelector({
                 'text-xs text-muted-foreground',
                 isLocked && 'opacity-70'
               )}>
-                {t(`${modelId}.description`)}
+                {t(`${MODEL_TRANSLATION_KEYS[modelId]}.description`)}
               </p>
 
               {/* Credit cost */}

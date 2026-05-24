@@ -64,6 +64,78 @@ export function useModelLoader(): UseModelLoaderResult {
     }
   }, [objectUrl]);
 
+  function loadSTL(url: string, file: File) {
+    const loader = new STLLoader();
+    loader.load(
+      url,
+      (geometry) => {
+        const info = analyzeGeometry(geometry, file.name, file.size);
+        setModel({ geometry, group: null, info });
+        setState('ready');
+      },
+      undefined,
+      (err) => {
+        console.error('STL loading error:', err);
+        setError('無法載入 STL 檔案。請確認檔案格式正確。');
+        setState('error');
+      }
+    );
+  }
+
+  function loadOBJ(url: string, file: File) {
+    const loader = new OBJLoader();
+    loader.load(
+      url,
+      (group) => {
+        // OBJ returns a Group, extract geometry from first mesh
+        let geometry: THREE.BufferGeometry | null = null;
+        group.traverse((child) => {
+          if (child instanceof THREE.Mesh && !geometry) {
+            geometry = child.geometry;
+          }
+        });
+
+        const info = analyzeGroup(group, file.name, file.size);
+        setModel({ geometry, group, info });
+        setState('ready');
+      },
+      undefined,
+      (err) => {
+        console.error('OBJ loading error:', err);
+        setError('無法載入 OBJ 檔案。請確認檔案格式正確。');
+        setState('error');
+      }
+    );
+  }
+
+  function loadGLTF(url: string, file: File) {
+    const loader = new GLTFLoader();
+    loader.load(
+      url,
+      (gltf) => {
+        const group = gltf.scene;
+
+        // Extract geometry from first mesh for compatibility
+        let geometry: THREE.BufferGeometry | null = null;
+        group.traverse((child) => {
+          if (child instanceof THREE.Mesh && !geometry) {
+            geometry = child.geometry;
+          }
+        });
+
+        const info = analyzeGroup(group, file.name, file.size);
+        setModel({ geometry, group, info });
+        setState('ready');
+      },
+      undefined,
+      (err) => {
+        console.error('GLTF loading error:', err);
+        setError('無法載入 GLB/GLTF 檔案。請確認檔案格式正確。');
+        setState('error');
+      }
+    );
+  }
+
   const loadFile = useCallback((file: File) => {
     // Reset previous state
     setError(null);
@@ -111,78 +183,6 @@ export function useModelLoader(): UseModelLoaderResult {
         setState('error');
     }
   }, []);
-
-  const loadSTL = (url: string, file: File) => {
-    const loader = new STLLoader();
-    loader.load(
-      url,
-      (geometry) => {
-        const info = analyzeGeometry(geometry, file.name, file.size);
-        setModel({ geometry, group: null, info });
-        setState('ready');
-      },
-      undefined,
-      (err) => {
-        console.error('STL loading error:', err);
-        setError('無法載入 STL 檔案。請確認檔案格式正確。');
-        setState('error');
-      }
-    );
-  };
-
-  const loadOBJ = (url: string, file: File) => {
-    const loader = new OBJLoader();
-    loader.load(
-      url,
-      (group) => {
-        // OBJ returns a Group, extract geometry from first mesh
-        let geometry: THREE.BufferGeometry | null = null;
-        group.traverse((child) => {
-          if (child instanceof THREE.Mesh && !geometry) {
-            geometry = child.geometry;
-          }
-        });
-
-        const info = analyzeGroup(group, file.name, file.size);
-        setModel({ geometry, group, info });
-        setState('ready');
-      },
-      undefined,
-      (err) => {
-        console.error('OBJ loading error:', err);
-        setError('無法載入 OBJ 檔案。請確認檔案格式正確。');
-        setState('error');
-      }
-    );
-  };
-
-  const loadGLTF = (url: string, file: File) => {
-    const loader = new GLTFLoader();
-    loader.load(
-      url,
-      (gltf) => {
-        const group = gltf.scene;
-
-        // Extract geometry from first mesh for compatibility
-        let geometry: THREE.BufferGeometry | null = null;
-        group.traverse((child) => {
-          if (child instanceof THREE.Mesh && !geometry) {
-            geometry = child.geometry;
-          }
-        });
-
-        const info = analyzeGroup(group, file.name, file.size);
-        setModel({ geometry, group, info });
-        setState('ready');
-      },
-      undefined,
-      (err) => {
-        console.error('GLTF loading error:', err);
-        setError('無法載入 GLB/GLTF 檔案。請確認檔案格式正確。');
-        setState('error');
-      }
-    );
-  };
 
   return {
     state,

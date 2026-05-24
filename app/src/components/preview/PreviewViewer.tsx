@@ -41,6 +41,10 @@ const PLANE_NORMALS: Record<ClippingAxis, THREE.Vector3> = {
   z: new THREE.Vector3(0, 0, -1),
 };
 
+function setLocalClipping(renderer: THREE.WebGLRenderer, enabled: boolean) {
+  renderer.localClippingEnabled = enabled;
+}
+
 /**
  * Enable local clipping on the renderer
  */
@@ -48,9 +52,9 @@ function ClippingSetup({ enabled }: { enabled: boolean }) {
   const { gl } = useThree();
 
   useEffect(() => {
-    gl.localClippingEnabled = enabled;
+    setLocalClipping(gl, enabled);
     return () => {
-      gl.localClippingEnabled = false;
+      setLocalClipping(gl, false);
     };
   }, [gl, enabled]);
 

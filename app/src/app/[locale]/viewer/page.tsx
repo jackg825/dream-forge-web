@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { LoadingSpinner } from '@/components/viewer/LoadingSpinner';
 import { useJob, useJobStatusPolling } from '@/hooks/useJobs';
 import { Link, useRouter } from '@/i18n/navigation';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -91,7 +92,7 @@ function ViewerContentInner() {
   useEffect(() => {
     const saved = localStorage.getItem('viewerPanelOpen');
     if (saved !== null) {
-      setIsPanelOpen(JSON.parse(saved));
+      return deferStateUpdate(() => setIsPanelOpen(JSON.parse(saved)));
     }
   }, []);
 
@@ -102,6 +103,11 @@ function ViewerContentInner() {
   // Refs
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const modelViewerRef = useRef<ModelViewerRef>(null);
+  const [viewerContainer, setViewerContainer] = useState<HTMLDivElement | null>(null);
+  const handleViewerContainerRef = useCallback((node: HTMLDivElement | null) => {
+    viewerContainerRef.current = node;
+    setViewerContainer(node);
+  }, []);
 
   // Check if GLB is available for textured mode
   const hasTextures = Boolean(
@@ -114,7 +120,7 @@ function ViewerContentInner() {
     if (job?.settings.printerType) {
       const defaultMode: ViewMode =
         job.settings.printerType === 'fdm' ? 'clay' : hasTextures ? 'textured' : 'clay';
-      setViewMode(defaultMode);
+      return deferStateUpdate(() => setViewMode(defaultMode));
     }
   }, [job?.settings.printerType, hasTextures]);
 
@@ -338,7 +344,7 @@ function ViewerContentInner() {
 
             {/* Full-width 3D Viewer */}
             <div
-              ref={viewerContainerRef}
+              ref={handleViewerContainerRef}
               className={cn(
                 'relative bg-gray-900 overflow-hidden border border-white/10 w-full',
                 isPseudoFullscreen
@@ -402,7 +408,7 @@ function ViewerContentInner() {
                 onAR={launchAR}
                 arLoading={arLoading}
                 arSupported={isARSupported && isMobile}
-                portalContainer={viewerContainerRef.current}
+                portalContainer={viewerContainer}
               />
             </div>
 

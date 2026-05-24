@@ -13,7 +13,8 @@
  * - Processing state indicators
  */
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import { Upload, Loader2, CheckCircle, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,12 +25,7 @@ import type {
 } from '@/types';
 
 // View configuration
-const MESH_VIEWS: { angle: PipelineMeshAngle; label: string }[] = [
-  { angle: 'front', label: '正面' },
-  { angle: 'back', label: '背面' },
-  { angle: 'left', label: '左側' },
-  { angle: 'right', label: '右側' },
-];
+const MESH_VIEWS: PipelineMeshAngle[] = ['front', 'back', 'left', 'right'];
 
 interface ViewSlotProps {
   angle: string;
@@ -52,8 +48,10 @@ function ViewSlot({
   disabled,
   uploadingAngle,
 }: ViewSlotProps) {
+  const t = useTranslations('multiViewGrid');
   const inputRef = useRef<HTMLInputElement>(null);
   const isUploading = uploadingAngle === angle;
+  const isAiGenerated = image?.source.startsWith('gemini') ?? false;
 
   const handleClick = () => {
     if (!disabled && !isGenerating && !isUploading) {
@@ -87,18 +85,18 @@ function ViewSlot({
         {isGenerating || isUploading ? (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-xs">{isUploading ? '上傳中...' : '生成中...'}</span>
+            <span className="text-xs">{isUploading ? t('status.uploading') : t('status.generating')}</span>
           </div>
         ) : image ? (
           <img
             src={image.url}
-            alt={`${label} view`}
+            alt={t('viewAlt', { label })}
             className="w-full h-full object-contain"
           />
         ) : (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Upload className="h-6 w-6" />
-            <span className="text-xs">上傳</span>
+            <span className="text-xs">{t('actions.upload')}</span>
           </div>
         )}
       </div>
@@ -108,10 +106,10 @@ function ViewSlot({
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
         {image && (
           <Badge
-            variant={image.source === 'gemini' ? 'secondary' : 'outline'}
+            variant={isAiGenerated ? 'secondary' : 'outline'}
             className="text-[10px] px-1 py-0 h-4"
           >
-            {image.source === 'gemini' ? 'AI' : '手動'}
+            {isAiGenerated ? t('source.ai') : t('source.manual')}
           </Badge>
         )}
       </div>
@@ -129,7 +127,7 @@ function ViewSlot({
             }}
           >
             <Upload className="h-3.5 w-3.5 mr-1" />
-            替換
+            {t('actions.replace')}
           </Button>
           {onRegenerate && (
             <Button
@@ -142,7 +140,7 @@ function ViewSlot({
               }}
             >
               <RefreshCw className="h-3.5 w-3.5 mr-1" />
-              重新生成
+              {t('actions.regenerate')}
             </Button>
           )}
         </div>
@@ -186,6 +184,7 @@ export function MultiViewGrid({
   disabled,
   uploadingView,
 }: MultiViewGridProps) {
+  const t = useTranslations('multiViewGrid');
   // Count completed images
   const meshCount = Object.keys(meshImages).length;
   const totalRequired = 4;
@@ -198,7 +197,7 @@ export function MultiViewGrid({
       <div className="flex items-center justify-between">
         <h3 className="font-medium text-foreground flex items-center gap-2">
           <ImageIcon className="h-4 w-4" />
-          多視角圖片
+          {t('title')}
           <Badge variant={allComplete ? 'default' : 'secondary'} className="ml-1">
             {totalCount}/{totalRequired}
           </Badge>
@@ -206,20 +205,20 @@ export function MultiViewGrid({
         {isGenerating && (
           <Badge variant="outline" className="gap-1">
             <Loader2 className="h-3 w-3 animate-spin" />
-            生成網格視角...
+            {t('status.generatingMeshViews')}
           </Badge>
         )}
       </div>
 
       {/* Mesh Views (4 columns) */}
       <div>
-        <h4 className="text-sm text-muted-foreground mb-2">網格用圖片</h4>
+        <h4 className="text-sm text-muted-foreground mb-2">{t('meshImages')}</h4>
         <div className="grid grid-cols-4 gap-3">
-          {MESH_VIEWS.map(({ angle, label }) => (
+          {MESH_VIEWS.map((angle) => (
             <ViewSlot
               key={`mesh-${angle}`}
               angle={angle}
-              label={label}
+              label={t(`angles.${angle}`)}
               image={meshImages[angle]}
               isGenerating={isGenerating && generatingPhase === 'mesh-views' && !meshImages[angle]}
               onUpload={(file) => onUploadView('mesh', angle, file)}
@@ -233,7 +232,7 @@ export function MultiViewGrid({
 
       {/* Help text */}
       <p className="text-xs text-muted-foreground">
-        點擊空格上傳圖片，或 hover 已有圖片進行替換。AI 生成的圖片標記為「AI」，手動上傳標記為「手動」。
+        {t('help')}
       </p>
     </div>
   );

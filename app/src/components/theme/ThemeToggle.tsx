@@ -1,8 +1,8 @@
 'use client';
 
 import { useTheme } from 'next-themes';
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useMounted } from '@/hooks/useMounted';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,13 +12,8 @@ import {
 import { Sun, Moon, Monitor } from 'lucide-react';
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { setTheme } = useTheme();
+  const mounted = useMounted();
 
   if (!mounted) {
     return (

@@ -30,6 +30,7 @@ import {
 import { Loader2, Plus, Minus, ShoppingCart, Lock } from 'lucide-react';
 import { usePrintConfig, useCart, useUserOrders, useShippingAddresses } from '@/hooks/useOrders';
 import { ShippingAddressForm } from './ShippingAddressForm';
+import { deferStateUpdate } from '@/lib/defer-state-update';
 import type { PrintMaterial, PrintSizeId, ShippingAddress } from '@/types/order';
 
 interface PrintOrderModalProps {
@@ -58,7 +59,7 @@ export function PrintOrderModal({
   const { materials, sizes, colors, getPrice, loading: configLoading } = usePrintConfig();
   const { addItem, items: cartItems, subtotal, clearCart } = useCart();
   const { createOrder, creatingOrder } = useUserOrders();
-  const { addresses, fetchAddresses, loading: addressesLoading } = useShippingAddresses();
+  const { addresses, fetchAddresses } = useShippingAddresses();
 
   // State
   const [step, setStep] = useState<Step>('configure');
@@ -81,7 +82,7 @@ export function PrintOrderModal({
   useEffect(() => {
     if (addresses.length > 0 && !shippingAddress) {
       const defaultAddr = addresses.find((a) => a.isDefault) || addresses[0];
-      setShippingAddress(defaultAddr);
+      return deferStateUpdate(() => setShippingAddress(defaultAddr));
     }
   }, [addresses, shippingAddress]);
 

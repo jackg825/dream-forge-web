@@ -113,7 +113,7 @@ function AlertDialogDescription({ className, ...props }: React.HTMLAttributes<HT
   return <p className={cn('text-sm text-muted-foreground', className)} {...props} />;
 }
 
-interface AlertDialogActionProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {}
+type AlertDialogActionProps = React.ButtonHTMLAttributes<HTMLButtonElement>;
 
 function AlertDialogAction({ className, ...props }: AlertDialogActionProps) {
   const context = React.useContext(AlertDialogContext);

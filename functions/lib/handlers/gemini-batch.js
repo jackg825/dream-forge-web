@@ -38,15 +38,12 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.submitGeminiBatch = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
-const axios_1 = __importDefault(require("axios"));
 const batch_client_1 = require("../gemini/batch-client");
+const storage_validation_1 = require("../utils/storage-validation");
 const db = admin.firestore();
 /**
  * Submit a batch job for image generation
@@ -94,14 +91,13 @@ exports.submitGeminiBatch = functions
     if (!inputImage?.url) {
         throw new functions.https.HttpsError('failed-precondition', 'No input image found');
     }
-    // Download reference image
-    const imageResponse = await axios_1.default.get(inputImage.url, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
+    // Download reference image after confirming it belongs to this user.
+    const { base64: imageBase64, mimeType, storagePath } = await (0, storage_validation_1.downloadValidatedImageAsBase64)(inputImage.url, userId, ['uploads']);
+    functions.logger.info('Batch reference image downloaded', {
+        pipelineId,
+        storagePath,
+        mimeType,
     });
-    const imageBuffer = Buffer.from(imageResponse.data);
-    const imageBase64 = imageBuffer.toString('base64');
-    const mimeType = imageResponse.headers['content-type'] || 'image/png';
     // Create batch client
     const client = (0, batch_client_1.createBatchClient)(process.env.GEMINI_API_KEY || '');
     // Build batch requests

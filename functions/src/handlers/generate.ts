@@ -1,10 +1,10 @@
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
-import axios from 'axios';
 import { createGeminiClient } from '../gemini/client';
 import { createProvider, isValidProvider } from '../providers/factory';
 import type { ProviderType } from '../providers/types';
-import { deductCredits, incrementGenerationCount } from '../utils/credits';
+import { incrementGenerationCount } from '../utils/credits';
+import { assertUserStorageReferences, downloadValidatedImageAsBase64 } from '../utils/storage-validation';
 import { uploadBuffer } from '../storage';
 // import { refundCredits } from '../utils/credits'; // Auto-refund temporarily disabled
 import type {
@@ -47,6 +47,57 @@ interface RetryFailedJobData {
   jobId: string;
 }
 
+type PendingJobDocument = Omit<JobDocument, 'createdAt' | 'completedAt'> & {
+  createdAt: FirebaseFirestore.FieldValue;
+  completedAt: null;
+};
+
+async function createJobAndDeductCredits(
+  userId: string,
+  amount: number,
+  jobId: string,
+  jobRef: FirebaseFirestore.DocumentReference,
+  jobDoc: PendingJobDocument
+): Promise<void> {
+  const userRef = db.collection('users').doc(userId);
+
+  await db.runTransaction(async (transaction) => {
+    const userDoc = await transaction.get(userRef);
+
+    if (!userDoc.exists) {
+      throw new functions.https.HttpsError(
+        'not-found',
+        'User not found'
+      );
+    }
+
+    const currentCredits = userDoc.data()?.credits || 0;
+    if (currentCredits < amount) {
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        'Insufficient credits'
+      );
+    }
+
+    transaction.update(userRef, {
+      credits: admin.firestore.FieldValue.increment(-amount),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    transaction.set(db.collection('transactions').doc(), {
+      userId,
+      type: 'consume',
+      amount: -amount,
+      jobId,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    transaction.create(jobRef, jobDoc);
+  });
+
+  functions.logger.info('Job created and credits deducted', { userId, amount, jobId });
+}
+
 /**
  * Cloud Function: generateModel
  *
@@ -58,8 +109,8 @@ interface RetryFailedJobData {
  * Steps:
  * 1. Verify authentication
  * 2. Calculate credit cost based on input mode
- * 3. Deduct credits
- * 4. Create job document
+ * 3. Create job document and deduct credits atomically
+ * 4. Prepare images
  * 5. Prepare images (download uploaded or generate via Gemini)
  * 6. Call provider API (Rodin or Meshy)
  * 7. Update job with provider task ID
@@ -135,29 +186,17 @@ export const generateModel = functions
       );
     }
 
+    const validatedInputImages = inputMode === 'multi'
+      ? assertUserStorageReferences(imageUrls?.length ? imageUrls : [imageUrl], userId, ['uploads'], 4)
+      : assertUserStorageReferences([imageUrl], userId, ['uploads'], 1);
+    const validatedPrimaryImage = validatedInputImages[0];
+
     // 2. Calculate credit cost based on input mode
     const creditCost = creditCosts[inputMode];
 
-    // 3. Check credits and deduct
+    // 3. Prepare job document
     const jobRef = db.collection('jobs').doc();
     const jobId = jobRef.id;
-
-    try {
-      await deductCredits(userId, creditCost, jobId);
-    } catch (error) {
-      if (
-        error instanceof functions.https.HttpsError &&
-        error.code === 'resource-exhausted'
-      ) {
-        throw new functions.https.HttpsError(
-          'resource-exhausted',
-          `You need ${creditCost} credit(s) for this generation mode.`
-        );
-      }
-      throw error;
-    }
-
-    // 4. Create job document
     const now = admin.firestore.FieldValue.serverTimestamp();
     const jobSettings: JobSettings = {
       tier: 'Gen-2',
@@ -169,15 +208,12 @@ export const generateModel = functions
       provider,      // Track which provider is used
     };
 
-    const jobDoc: Omit<JobDocument, 'createdAt' | 'completedAt'> & {
-      createdAt: FirebaseFirestore.FieldValue;
-      completedAt: null;
-    } = {
+    const jobDoc: PendingJobDocument = {
       userId,
       jobType: 'model',
       status: 'pending',
-      inputImageUrl: imageUrl,
-      inputImageUrls: [imageUrl],
+      inputImageUrl: validatedPrimaryImage.url,
+      inputImageUrls: [validatedPrimaryImage.url],
       viewAngles: ['front'],
       outputModelUrl: null,
       // Provider abstraction fields
@@ -193,7 +229,20 @@ export const generateModel = functions
       completedAt: null,
     };
 
-    await jobRef.set(jobDoc);
+    try {
+      await createJobAndDeductCredits(userId, creditCost, jobId, jobRef, jobDoc);
+    } catch (error) {
+      if (
+        error instanceof functions.https.HttpsError &&
+        error.code === 'resource-exhausted'
+      ) {
+        throw new functions.https.HttpsError(
+          'resource-exhausted',
+          `You need ${creditCost} credit(s) for this generation mode.`
+        );
+      }
+      throw error;
+    }
 
     // 5. Prepare images based on input mode
     try {
@@ -201,15 +250,17 @@ export const generateModel = functions
       const finalViewAngles: ViewAngle[] = ['front'];
 
       // Download primary image
-      const primaryResponse = await axios.get(imageUrl, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-      });
-      const primaryBuffer = Buffer.from(primaryResponse.data);
+      const primaryImage = await downloadValidatedImageAsBase64(
+        validatedPrimaryImage.url,
+        userId,
+        ['uploads']
+      );
+      const primaryBuffer = Buffer.from(primaryImage.base64, 'base64');
       imageBuffers.push(primaryBuffer);
 
       functions.logger.info('Primary image downloaded', {
         size: primaryBuffer.length,
+        storagePath: primaryImage.storagePath,
         jobId,
         inputMode,
       });
@@ -229,7 +280,7 @@ export const generateModel = functions
 
         const generatedViews = await geminiClient.generateViews(
           base64,
-          'image/png',
+          primaryImage.mimeType,
           generateAngles
         );
 
@@ -247,14 +298,15 @@ export const generateModel = functions
         }
       }
       // Handle multi-upload mode
-      else if (inputMode === 'multi' && imageUrls && imageUrls.length > 1) {
+      else if (inputMode === 'multi' && validatedInputImages.length > 1) {
         // Download additional user-uploaded images (skip first as it's already downloaded)
-        for (let i = 1; i < imageUrls.length; i++) {
-          const response = await axios.get(imageUrls[i], {
-            responseType: 'arraybuffer',
-            timeout: 30000,
-          });
-          const buffer = Buffer.from(response.data);
+        for (let i = 1; i < validatedInputImages.length; i++) {
+          const downloadedImage = await downloadValidatedImageAsBase64(
+            validatedInputImages[i].url,
+            userId,
+            ['uploads']
+          );
+          const buffer = Buffer.from(downloadedImage.base64, 'base64');
           imageBuffers.push(buffer);
           finalViewAngles.push(viewAngles?.[i] || 'front');
         }
@@ -267,7 +319,7 @@ export const generateModel = functions
 
       // Update job with final image count
       await jobRef.update({
-        inputImageUrls: inputMode === 'multi' ? imageUrls : [imageUrl],
+        inputImageUrls: validatedInputImages.map((image) => image.url),
         viewAngles: finalViewAngles,
         'settings.imageCount': imageBuffers.length,
       });

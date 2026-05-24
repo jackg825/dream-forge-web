@@ -30,7 +30,7 @@ export interface PresignRequest {
   filename: string;
   contentType: string;
   size: number;
-  path?: string; // 可選的自定義路徑前綴
+  path?: string; // Optional client-writable top-level prefix, defaults to uploads
 }
 
 export interface PresignResponse {

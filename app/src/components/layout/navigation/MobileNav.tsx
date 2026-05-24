@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { Link, usePathname, useRouter } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
+import { useMounted } from '@/hooks/useMounted';
 import { Box, LogOut, Shield, Sun, Moon, Monitor, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -54,12 +54,7 @@ export function MobileNav({
   const router = useRouter();
   const locale = useLocale() as Locale;
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch for theme
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   const getInitials = (name: string | undefined) => {
     if (!name) return 'U';

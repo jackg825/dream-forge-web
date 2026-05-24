@@ -19,6 +19,8 @@ import {
   isCancellable,
   calculateSubtotal,
   DELIVERY_BONUS_PERCENTAGE,
+  MATERIAL_CONFIGS,
+  SIZE_CONFIGS,
 } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -362,11 +364,22 @@ export class OrderAggregate {
       if (!item.modelUrl) {
         throw new OrderValidationError('Each item must have a modelUrl', 'INVALID_ITEM');
       }
-      if (item.quantity < 1) {
-        throw new OrderValidationError('Item quantity must be at least 1', 'INVALID_QUANTITY');
+      const materialConfig = MATERIAL_CONFIGS[item.material];
+      if (!materialConfig || !materialConfig.available) {
+        throw new OrderValidationError('Invalid or unavailable print material', 'INVALID_MATERIAL');
       }
-      if (!item.colors || item.colors.length === 0) {
-        throw new OrderValidationError('Each item must have at least one color', 'INVALID_COLORS');
+      const sizeConfig = SIZE_CONFIGS[item.size];
+      if (!sizeConfig || !sizeConfig.available) {
+        throw new OrderValidationError('Invalid or unavailable print size', 'INVALID_SIZE');
+      }
+      if (item.quantity < 1 || item.quantity > 10) {
+        throw new OrderValidationError('Item quantity must be between 1 and 10', 'INVALID_QUANTITY');
+      }
+      if (!item.colors || item.colors.length === 0 || item.colors.length > materialConfig.maxColors) {
+        throw new OrderValidationError(
+          `Each item must have 1-${materialConfig.maxColors} color(s)`,
+          'INVALID_COLORS'
+        );
       }
     }
 
