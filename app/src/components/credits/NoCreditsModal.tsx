@@ -2,8 +2,15 @@
 
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Coins } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Coins } from 'lucide-react';
 
 interface NoCreditsModalProps {
   isOpen: boolean;
@@ -13,56 +20,27 @@ interface NoCreditsModalProps {
 export function NoCreditsModal({ isOpen, onClose }: NoCreditsModalProps) {
   const t = useTranslations('credits');
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 transition-opacity"
-        onClick={onClose}
-      />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md text-center">
+        <DialogHeader className="items-center text-center">
+          <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-yellow-500/10">
+            <Coins className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+          </div>
+          <DialogTitle>{t('noCreditsTitle')}</DialogTitle>
+          <DialogDescription>{t('noCreditsDescription')}</DialogDescription>
+        </DialogHeader>
 
-      {/* Modal */}
-      <div className="flex min-h-full items-center justify-center p-4">
-        <Card className="relative w-full max-w-md shadow-xl">
-          {/* Close button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="absolute right-2 top-2 h-8 w-8"
-          >
-            <X className="h-4 w-4" />
+        <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
+          {t('contactAdmin')}
+        </div>
+
+        <DialogFooter>
+          <Button onClick={onClose} className="w-full">
+            {t('close')}
           </Button>
-
-          <CardHeader className="text-center pt-8">
-            <div className="mx-auto w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4">
-              <Coins className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
-            </div>
-            <CardTitle>{t('noCreditsTitle')}</CardTitle>
-          </CardHeader>
-
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-6">
-              {t('noCreditsDescription')}
-            </p>
-
-            {/* Coming soon notice */}
-            <div className="bg-muted rounded-lg p-4">
-              <p className="text-sm text-muted-foreground">
-                {t('contactAdmin')}
-              </p>
-            </div>
-          </CardContent>
-
-          <CardFooter>
-            <Button onClick={onClose} className="w-full">
-              {t('close')}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

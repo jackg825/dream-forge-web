@@ -339,7 +339,10 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
     pipeline.status === 'generating-images' ||
     pipeline.status === 'generating-mesh' ||
     pipeline.status === 'generating-texture';
-  const totalCredits = pipeline.creditsCharged.mesh + pipeline.creditsCharged.texture;
+  const totalCredits =
+    (pipeline.creditsCharged.views || 0) +
+    pipeline.creditsCharged.mesh +
+    pipeline.creditsCharged.texture;
 
   // Handlers for image regeneration
   const handleRegenerateMeshImage = async (angle: string) => {

@@ -15,6 +15,11 @@ import axios from 'axios';
 import * as functions from 'firebase-functions';
 import type { PrinterType, KeyFeatures, ViewAngle } from '../rodin/types';
 import { type StyleId, isValidStyleId, getStyleConfig } from '../config/styles';
+import {
+  IMAGE_ANALYSIS_RESPONSE_SCHEMA,
+  parseStructuredImageAnalysis,
+  type StructuredImageAnalysisResponse,
+} from './image-analysis-schema';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const MODEL = 'gemini-3-flash-preview';
@@ -175,31 +180,9 @@ Please provide the following analysis (respond in English unless otherwise speci
    - RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
    - STYLE_CONFIDENCE: [0.0-1.0] (how confident you are in this recommendation)
    - STYLE_REASONING: [Brief 1-2 sentence explanation why this style fits best]`,
-        outputFormat: `Output strictly in the following format (one field per line):
-PROMPT_DESCRIPTION: [3-5 English narrative sentences for image generation]
-STYLE_HINTS: [comma-separated English style keywords]
-DESCRIPTION: [your description in English]
-COLORS: #RRGGBB, #RRGGBB, #RRGGBB...
-SCORE: [1-5]
-COLOR_SUGGESTIONS: [comma-separated suggestions in English]
-STRUCTURAL_CONCERNS: [comma-separated issues in English, or "none"]
-MATERIAL_RECOMMENDATIONS: [comma-separated material suggestions in English]
-ORIENTATION_TIPS: [comma-separated orientation suggestions in English]
-MATERIALS: [comma-separated English material list]
-OBJECT_TYPE: [English classification word]
-EARS: [yes/no], [description in English]
-TAIL: [yes/no], [description in English]
-LIMBS: [description in English, or "none"]
-ACCESSORIES: [comma-separated accessory list in English, or "none"]
-DISTINCTIVE_MARKS: [comma-separated marks in English, or "none"]
-ASYMMETRIC: [comma-separated asymmetric features in English, or "none"]
-SURFACE_TEXTURES: [comma-separated texture descriptions in English]
-DETECTED_VIEW: [front|back|left|right|top]
-RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
-STYLE_CONFIDENCE: [0.0-1.0]
-STYLE_REASONING: [Brief explanation in English]
-STYLE_SUITABILITY: [0.0-1.0, only if target style was specified]
-STYLE_SUITABILITY_REASON: [Brief explanation if suitability < 0.5, or "none"]`,
+        outputFormat: `Return only JSON matching the supplied response schema.
+Use arrays for list fields and empty arrays when no item applies. Use empty strings for absent feature descriptions.
+Return colors as #RRGGBB strings. Include styleSuitability and styleSuitabilityReason only when a target style was supplied.`,
       },
     };
   }
@@ -276,31 +259,9 @@ STYLE_SUITABILITY_REASON: [Brief explanation if suitability < 0.5, or "none"]`,
    - RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
    - STYLE_CONFIDENCE: [0.0-1.0]（對此推薦的信心程度）
    - STYLE_REASONING: [簡短 1-2 句解釋為何推薦此風格，使用繁體中文]`,
-      outputFormat: `嚴格按照以下格式輸出（每行一個欄位）：
-PROMPT_DESCRIPTION: [3-5 句英文敘事描述，適合直接用於圖片生成]
-STYLE_HINTS: [逗號分隔的英文風格關鍵詞]
-DESCRIPTION: [物體描述，必須使用繁體中文撰寫，禁止英文]
-COLORS: #RRGGBB, #RRGGBB, #RRGGBB...
-SCORE: [1-5]
-COLOR_SUGGESTIONS: [逗號分隔的建議清單，使用繁體中文]
-STRUCTURAL_CONCERNS: [逗號分隔的問題清單，使用繁體中文，若無則填 none]
-MATERIAL_RECOMMENDATIONS: [逗號分隔的材質建議清單，使用繁體中文]
-ORIENTATION_TIPS: [逗號分隔的方向建議清單，使用繁體中文]
-MATERIALS: [逗號分隔的英文材質清單]
-OBJECT_TYPE: [英文分類詞]
-EARS: [yes/no], [描述，使用繁體中文]
-TAIL: [yes/no], [描述，使用繁體中文]
-LIMBS: [描述，使用繁體中文，若無則填 none]
-ACCESSORIES: [逗號分隔的配件清單，使用繁體中文，若無則填 none]
-DISTINCTIVE_MARKS: [逗號分隔的標記清單，使用繁體中文，若無則填 none]
-ASYMMETRIC: [逗號分隔的不對稱特徵清單，使用繁體中文，若無則填 none]
-SURFACE_TEXTURES: [逗號分隔的質感描述，使用繁體中文]
-DETECTED_VIEW: [front|back|left|right|top]
-RECOMMENDED_STYLE: [bobblehead|chibi|cartoon|emoji]
-STYLE_CONFIDENCE: [0.0-1.0]
-STYLE_REASONING: [簡短解釋，使用繁體中文]
-STYLE_SUITABILITY: [0.0-1.0，僅當指定了目標風格時填寫]
-STYLE_SUITABILITY_REASON: [如果適合度 < 0.5 請簡短說明原因，使用繁體中文，否則填 none]`,
+      outputFormat: `只回傳符合 response schema 的 JSON。
+清單欄位必須使用陣列，沒有項目時使用空陣列；沒有特徵描述時使用空字串。
+顏色使用 #RRGGBB 字串。只有指定目標風格時才回傳 styleSuitability 與 styleSuitabilityReason。`,
     },
   };
 }
@@ -395,10 +356,81 @@ ${i.styleRecommendation}
 ${i.outputFormat}`;
 }
 
-/**
- * Parse the analysis response from Gemini
- */
-function parseAnalysisResponse(
+function cleanStringList(values: string[]): string[] {
+  return values.map((value) => value.trim()).filter(Boolean);
+}
+
+function mapStructuredAnalysisResponse(
+  raw: StructuredImageAnalysisResponse,
+  expectedColorCount: number,
+  locale: string
+): Omit<ImageAnalysisResult, 'analyzedAt'> {
+  const colorPalette = [...new Set(
+    raw.colors
+      .map((color) => color.trim().toUpperCase())
+      .filter((color) => /^#[0-9A-F]{6}$/.test(color))
+  )].slice(0, expectedColorCount);
+
+  if (colorPalette.length < expectedColorCount) {
+    functions.logger.warn('Structured color extraction returned fewer colors than expected', {
+      expected: expectedColorCount,
+      actual: colorPalette.length,
+      rawColors: raw.colors,
+    });
+  }
+
+  const keyFeatures: KeyFeatures = {
+    ears: {
+      present: raw.earsPresent,
+      ...(raw.earsPresent && raw.earsDescription.trim() && { description: raw.earsDescription.trim() }),
+    },
+    tail: {
+      present: raw.tailPresent,
+      ...(raw.tailPresent && raw.tailDescription.trim() && { description: raw.tailDescription.trim() }),
+    },
+  };
+
+  if (raw.limbs.trim() && raw.limbs.trim().toLowerCase() !== 'none') keyFeatures.limbs = raw.limbs.trim();
+  if (raw.accessories.length) keyFeatures.accessories = cleanStringList(raw.accessories);
+  if (raw.distinctiveMarks.length) keyFeatures.distinctiveMarks = cleanStringList(raw.distinctiveMarks);
+  if (raw.asymmetricFeatures.length) keyFeatures.asymmetricFeatures = cleanStringList(raw.asymmetricFeatures);
+  if (raw.surfaceTextures.length) keyFeatures.surfaceTextures = cleanStringList(raw.surfaceTextures);
+
+  const styleSuitabilityReason = raw.styleSuitabilityReason?.trim();
+  const fallbackDescription = locale.startsWith('en')
+    ? 'Unable to analyze the object description'
+    : '無法分析物體描述';
+
+  return {
+    description: raw.description.trim() || fallbackDescription,
+    promptDescription: raw.promptDescription.trim(),
+    styleHints: cleanStringList(raw.styleHints),
+    colorPalette,
+    detectedMaterials: cleanStringList(raw.materials),
+    objectType: raw.objectType.trim() || 'unknown',
+    printFriendliness: {
+      score: Math.min(5, Math.max(1, Math.round(raw.score))),
+      colorSuggestions: cleanStringList(raw.colorSuggestions),
+      structuralConcerns: cleanStringList(raw.structuralConcerns),
+      materialRecommendations: cleanStringList(raw.materialRecommendations),
+      orientationTips: cleanStringList(raw.orientationTips),
+    },
+    keyFeatures,
+    detectedViewAngle: raw.detectedView,
+    recommendedStyle: raw.recommendedStyle,
+    styleConfidence: Math.min(1, Math.max(0, raw.styleConfidence)),
+    styleReasoning: raw.styleReasoning.trim(),
+    ...(raw.styleSuitability !== undefined && {
+      styleSuitability: Math.min(1, Math.max(0, raw.styleSuitability)),
+    }),
+    ...(styleSuitabilityReason && styleSuitabilityReason.toLowerCase() !== 'none' && {
+      styleSuitabilityReason,
+    }),
+  };
+}
+
+/** Legacy parser retained for old recorded responses and defensive fallback. */
+function parseLegacyAnalysisResponse(
   text: string,
   expectedColorCount: number
 ): Omit<ImageAnalysisResult, 'analyzedAt'> {
@@ -553,6 +585,21 @@ function parseAnalysisResponse(
   };
 }
 
+function parseAnalysisResponse(
+  text: string,
+  expectedColorCount: number,
+  locale: string
+): Omit<ImageAnalysisResult, 'analyzedAt'> {
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith('{') || trimmed.startsWith('```')) {
+    const structured = parseStructuredImageAnalysis(text);
+    return mapStructuredAnalysisResponse(structured, expectedColorCount, locale);
+  }
+
+  functions.logger.warn('Gemini returned legacy unstructured image analysis output');
+  return parseLegacyAnalysisResponse(text, expectedColorCount);
+}
+
 /**
  * Analyze an image using Gemini
  *
@@ -614,7 +661,9 @@ export async function analyzeImage(
         ],
         generationConfig: {
           temperature: 0.3,  // Lower temperature for more consistent output
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
+          responseMimeType: 'application/json',
+          responseSchema: IMAGE_ANALYSIS_RESPONSE_SCHEMA,
         },
       },
       {
@@ -660,7 +709,7 @@ export async function analyzeImage(
     });
 
     // Parse the response
-    const result = parseAnalysisResponse(textPart.text, colorCount);
+    const result = parseAnalysisResponse(textPart.text, colorCount, locale);
 
     functions.logger.info('Image analysis complete', {
       colorCount: result.colorPalette.length,

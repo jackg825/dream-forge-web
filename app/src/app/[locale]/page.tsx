@@ -6,7 +6,6 @@ import {
   ShowcaseSection,
   HowItWorksSection,
   FeaturesSection,
-  CreatorHubSection,
   UseCasesSection,
   PricingSection,
   PrintServiceSection,
@@ -22,7 +21,6 @@ import {
  * - Showcase: Interactive before/after 3D transformation gallery
  * - How It Works: 3-step process visualization
  * - Features: Bento grid of key features
- * - Creator Hub: Upcoming creator marketplace (Coming Soon)
  * - Use Cases: Target audience personas
  * - Pricing: Credit-based pricing tiers
  * - Print Service: Physical printing service details
@@ -39,7 +37,6 @@ export default function HomePage() {
         <ShowcaseSection />
         <HowItWorksSection />
         <FeaturesSection />
-        <CreatorHubSection />
         <UseCasesSection />
         <PricingSection />
         <PrintServiceSection />

@@ -13,7 +13,7 @@ import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import { analyzeImage, type ImageAnalysisResult } from '../gemini/image-analyzer';
 import type { PrinterType } from '../rodin/types';
-import type { StyleId } from '../config/styles';
+import { isValidStyleId, type StyleId } from '../config/styles';
 import { downloadValidatedImageAsBase64 } from '../utils/storage-validation';
 
 // ============================================
@@ -73,6 +73,19 @@ export const analyzeUploadedImage = functions
         'invalid-argument',
         'imageUrl is required'
       );
+    }
+
+    if (typeof colorCount !== 'number' || !Number.isFinite(colorCount)) {
+      throw new functions.https.HttpsError('invalid-argument', 'colorCount must be a number');
+    }
+    if (!['fdm', 'sla', 'resin'].includes(printerType)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid printer type');
+    }
+    if (locale !== 'en' && locale !== 'zh-TW') {
+      throw new functions.https.HttpsError('invalid-argument', 'Unsupported locale');
+    }
+    if (selectedStyle !== undefined && !isValidStyleId(selectedStyle)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid figure style');
     }
 
     // Validate color count (3-12)

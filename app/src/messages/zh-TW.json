@@ -355,7 +355,7 @@
       "orDragDrop": "或拖放檔案",
       "title": "拖放 3D 模型檔案",
       "orClick": "或點擊選擇檔案",
-      "supportedFormats": "支援 STL、OBJ、GLB、GLTF（最大 100MB）",
+      "supportedFormats": "支援 STL、OBJ、GLB、GLTF（最大 50MB）",
       "maxSize": "最大 50MB"
     },
     "tips": {
@@ -524,7 +524,7 @@
     "badge": "{count} 點",
     "noCreditsTitle": "點數不足",
     "noCreditsDescription": "您需要更多點數才能生成 3D 模型。",
-    "contactAdmin": "請聯繫管理員取得更多點數。",
+    "contactAdmin": "付費加值尚未開放。請關閉此訊息，並選擇目前點數足以使用的選項。",
     "close": "關閉"
   },
   "time": {
@@ -580,6 +580,55 @@
         "retryable": "可重試：",
         "failedStep": "失敗步驟：",
         "originalError": "原始錯誤："
+      },
+      "categories": {
+        "network": "網路問題",
+        "rate_limit": "服務繁忙",
+        "safety": "內容限制",
+        "validation": "輸入無效",
+        "resource": "資源不足",
+        "service": "服務錯誤",
+        "internal": "系統錯誤"
+      },
+      "pipelineSteps": {
+        "draft": "準備中",
+        "batch-queued": "排隊中",
+        "batch-processing": "處理中",
+        "generating-images": "生成輔助視角",
+        "images-ready": "檢查圖片",
+        "generating-mesh": "生成 3D 網格",
+        "mesh-ready": "檢查網格",
+        "generating-texture": "生成貼圖",
+        "completed": "已完成",
+        "failed": "失敗"
+      },
+      "actions": {
+        "retry": "重試",
+        "change_input": "更換圖片",
+        "contact_support": "聯繫支援",
+        "resume": "開啟歷史紀錄"
+      },
+      "codes": {
+        "NETWORK_TIMEOUT": "服務未能及時回應，請稍後重試。",
+        "NETWORK_CONNECTION": "無法連線至服務，請檢查網路後重試。",
+        "GEMINI_RATE_LIMIT": "圖片服務目前繁忙，請稍候再重試。",
+        "MESHY_RATE_LIMIT": "Meshy 目前繁忙，請稍候再重試。",
+        "HUNYUAN_RATE_LIMIT": "Hunyuan 3D 目前繁忙，請稍候再重試。",
+        "TRIPO_RATE_LIMIT": "Tripo3D 目前繁忙，請稍候再重試。",
+        "CONTENT_FILTERED": "依 AI 安全規則，此圖片無法處理。",
+        "SAFETY_BLOCKED": "圖片未通過內容安全檢查。",
+        "INVALID_IMAGE": "圖片無效、損毀或不受支援。",
+        "IMAGE_TOO_LARGE": "圖片檔案太大，請壓縮後重試。",
+        "UNSUPPORTED_FORMAT": "不支援此檔案格式。",
+        "INSUFFICIENT_CREDITS": "目前點數不足，無法繼續。",
+        "QUOTA_EXCEEDED": "可用服務配額已用完。",
+        "GEMINI_SERVICE_ERROR": "AI 圖片服務暫時無法使用。",
+        "MESHY_SERVICE_ERROR": "Meshy 暫時無法使用。",
+        "HUNYUAN_SERVICE_ERROR": "Hunyuan 3D 暫時無法使用。",
+        "TRIPO_SERVICE_ERROR": "Tripo3D 暫時無法使用。",
+        "STORAGE_ERROR": "無法儲存生成的檔案。",
+        "INTERNAL_ERROR": "發生未預期的系統錯誤。",
+        "UNKNOWN_ERROR": "發生未預期的錯誤。"
       }
     },
     "completion": {
@@ -741,7 +790,7 @@
     "supportedFormats": "JPG、PNG 或 WEBP（最大 10MB）"
   },
   "pipelineUploader": {
-    "maxImagesError": "最多只能上傳 {max} 張圖片",
+    "maxImagesError": "目前只能上傳一張參考圖片",
     "invalidFormat": "圖片格式不正確",
     "uploadFailed": "上傳失敗",
     "uploadedImage": "上傳的圖片 {index}",
@@ -757,19 +806,19 @@
       "simpleBackgroundDesc": "純色或簡單背景效果最佳"
     },
     "dropzone": {
-      "title": "拖放圖片到這裡",
-      "subtitle": "或點擊選擇圖片 (最多 {max} 張)",
+      "title": "將參考圖片拖放到這裡",
+      "subtitle": "或點擊選擇一張清晰的物件照片",
       "button": "選擇圖片",
       "formats": "支援 JPG、PNG、WebP 格式"
     },
     "uploading": "上傳中... {progress}%",
-    "imageCount": "已上傳 {count} / {max} 張圖片"
+    "imageCount": "參考圖片已上傳"
   },
   "multiViewGrid": {
     "title": "多視角圖片",
     "meshImages": "網格用圖片",
     "viewAlt": "{label}視角",
-    "help": "點擊空格上傳圖片，或 hover 已有圖片進行替換。AI 生成的圖片標記為「AI」，手動上傳標記為「手動」。",
+    "help": "生成 3D 網格前，請檢查每個輔助視角；將游標移至已有圖片上即可重新生成。",
     "angles": {
       "front": "正面",
       "back": "背面",
@@ -779,7 +828,8 @@
     "status": {
       "uploading": "上傳中...",
       "generating": "生成中...",
-      "generatingMeshViews": "生成網格視角..."
+      "generatingMeshViews": "生成網格視角...",
+      "missing": "尚未生成"
     },
     "actions": {
       "upload": "上傳",
@@ -872,20 +922,20 @@
   },
   "landing": {
     "hero": {
-      "badge": "AI 驅動 · 全球配送",
-      "title1": "從照片到手中",
-      "title2": "實體 3D 模型",
-      "subtitle": "上傳照片，AI 自動生成 3D 模型。下載數位檔案，或讓我們為您專業列印，全球配送到府。",
+      "badge": "AI 驅動的照片轉 3D",
+      "title1": "將照片轉換為",
+      "title2": "可下載的 3D 模型",
+      "subtitle": "上傳清晰的物件照片，由 AI 準備輔助視角，再透過同一套引導流程生成、預覽並下載 3D 模型。",
       "cta": "免費開始創作",
       "ctaSecondary": "查看範例",
       "stat1": "免費點數起步",
-      "stat2": "分鐘生成時間",
-      "stat3": "種匯出格式",
-      "stat4": "全球配送",
+      "stat2": "張 AI 輔助視角",
+      "stat3": "種介面語言",
+      "stat4": "模型下載格式",
       "journey": {
         "photo": "上傳照片",
         "model": "生成模型",
-        "deliver": "列印&配送"
+        "deliver": "預覽並下載"
       }
     },
     "showcase": {
@@ -910,12 +960,12 @@
         "vase": {
           "before": "原始多肉盆栽照片",
           "after": "3D 渲染多肉盆栽",
-          "description": "精緻多肉植物盆栽，可直接 3D 列印"
+        "description": "精緻多肉植物盆栽，重建後可在瀏覽器中預覽"
         },
         "racecar": {
           "before": "原始賽車照片",
           "after": "3D 渲染賽車",
-          "description": "精細賽車模型轉換為可列印 3D"
+        "description": "將精細賽車轉換為可檢查的 3D 模型"
         },
         "sculpture": {
           "before": "原始雕塑照片",
@@ -929,7 +979,8 @@
       "badge": "簡單流程",
       "title": "如何使用",
       "subtitle": "三個簡單步驟，將照片轉換為 3D 模型",
-      "timeLabel": "分鐘平均生成時間",
+      "timeValue": "依情況",
+      "timeLabel": "視模型與服務商而定",
       "steps": {
         "upload": {
           "title": "上傳照片",
@@ -941,7 +992,7 @@
         },
         "download": {
           "title": "下載使用",
-          "description": "以 STL、OBJ、GLB 或 FBX 格式下載模型，可直接列印或編輯。"
+          "description": "在 3D 檢視器中確認生成結果，再下載目前提供的 GLB 檔案繼續使用。"
         }
       }
     },
@@ -951,25 +1002,25 @@
       "subtitle": "為創作者設計的專業級 3D 生成工具",
       "items": {
         "fast": {
-          "title": "閃電快速",
-          "description": "約 2 分鐘即可獲得 3D 模型。無需等待，無需複雜軟體。",
-          "subtext": "由先進 AI 驅動"
+          "title": "清楚的生成進度",
+          "description": "逐步追蹤圖片分析、輔助視角與 3D 重建。實際處理時間依模型與服務商而異。",
+          "subtext": "進度會保存在個人工作區"
         },
         "formats": {
-          "title": "多種格式",
-          "description": "支援 STL、OBJ、GLB、FBX 或 USDZ 匯出，相容任何 3D 軟體或切片器。"
+          "title": "GLB 下載",
+          "description": "預覽並下載生成的 GLB 模型，供相容的 3D 工具繼續使用。"
         },
         "printing": {
-          "title": "可直接列印",
-          "description": "模型針對 3D 列印優化，具備適當的網格品質和流形幾何。"
+          "title": "多視角重建",
+          "description": "AI 產生輔助視角，為 3D 服務商提供較一致的視覺參考；製造前仍應檢查幾何品質。"
         },
         "quality": {
-          "title": "品質選項",
-          "description": "根據需求和時間選擇草稿、標準或精細品質。"
+          "title": "模型與服務商選擇",
+          "description": "依帳戶層級與可用點數，選擇支援的圖片生成模型與 3D 服務商。"
         },
         "secure": {
           "title": "安全私密",
-          "description": "照片安全處理，生成後即刪除。您的資料屬於您。"
+          "description": "上傳圖片與生成資產保存在需登入的個人工作區，並受專案存取規則保護。"
         },
         "global": {
           "title": "多語系支援",
@@ -984,7 +1035,7 @@
       "items": {
         "creator": {
           "title": "創作者",
-          "description": "上傳您的 3D 模型，從全球用戶的下載和列印訂單中獲取收益"
+          "description": "將參考照片轉換成數位藝術與產品概念所需的 3D 起點"
         },
         "hobbyist": {
           "title": "愛好者",
@@ -1013,10 +1064,11 @@
       }
     },
     "pricing": {
-      "badge": "簡單定價",
-      "title": "按需付費",
-      "subtitle": "免費開始，3 點起步。需要時再購買更多。",
+      "badge": "目前使用方式",
+      "title": "從免費點數開始",
+      "subtitle": "新帳戶會獲得 3 點起始點數；付費購買點數尚未開放。",
       "popular": "最受歡迎",
+      "comingSoon": "即將推出",
       "perPack": "/ 套餐",
       "credits": "點數",
       "note": "",
@@ -1024,46 +1076,46 @@
         "free": {
           "name": "免費方案",
           "freeFeature1": "3 點起步",
-          "freeFeature2": "所有匯出格式",
-          "freeFeature3": "基本支援",
-          "freeFeature4": "實體列印（按件計費）",
+          "freeFeature2": "下載 GLB 模型",
+          "freeFeature3": "需登入的私人工作區",
+          "freeFeature4": "保存生成紀錄與進度",
           "cta": "免費開始"
         },
         "starter": {
-          "name": "入門套餐",
-          "starterFeature1": "20 點",
-          "starterFeature2": "所有匯出格式",
-          "starterFeature3": "優先處理",
-          "starterFeature4": "Email 支援",
-          "starterFeature5": "實體列印（按件計費）",
-          "cta": "購買入門套餐"
+          "name": "入門套餐（規劃中）",
+          "starterFeature1": "規劃中的 20 點套餐",
+          "starterFeature2": "購買流程尚未開放",
+          "starterFeature3": "最終權益仍待確認",
+          "starterFeature4": "售價將於推出前複核",
+          "starterFeature5": "目前不會收取任何款項",
+          "cta": "即將推出"
         },
         "pro": {
-          "name": "專業套餐",
-          "proFeature1": "80 點",
-          "proFeature2": "所有匯出格式",
-          "proFeature3": "優先處理",
-          "proFeature4": "優先支援",
-          "proFeature5": "實體列印 9 折優惠",
-          "cta": "購買專業套餐"
+          "name": "專業套餐（規劃中）",
+          "proFeature1": "規劃中的 80 點套餐",
+          "proFeature2": "購買流程尚未開放",
+          "proFeature3": "最終權益仍待確認",
+          "proFeature4": "售價將於推出前複核",
+          "proFeature5": "目前不會收取任何款項",
+          "cta": "即將推出"
         }
       }
     },
     "printService": {
-      "badge": "實體列印服務",
-      "title": "將數位模型變成實體",
-      "subtitle": "專業 3D 列印，全球配送。從照片到手中的實體模型，一站完成。",
+      "badge": "實體列印服務預覽",
+      "title": "實體列印仍在產品規劃中",
+      "subtitle": "目前可生成並下載數位模型；下列尺寸、材質與配送內容是預計推出的列印服務預覽。",
       "previewTitle": "實際生成範例預覽",
       "visualCaption": "專業列印品質",
-      "statusReady": "即時接單",
-      "worldwide": "全球配送",
-      "sizesTitle": "尺寸選擇",
+      "statusReady": "規劃中",
+      "worldwide": "配送規劃中",
+      "sizesTitle": "預計尺寸選項",
       "sizes": {
         "small": "小型",
         "medium": "中型",
         "large": "大型"
       },
-      "materialsTitle": "材質選項",
+      "materialsTitle": "預計材質選項",
       "materials": {
         "pla": {
           "name": "PLA 環保塑料",
@@ -1075,59 +1127,60 @@
         }
       },
       "features": {
-        "quality": "專業級列印品質",
-        "packaging": "精緻包裝保護",
-        "worldwide": "全球寄送服務",
-        "tracking": "物流追蹤查詢"
+        "quality": "規劃列印品質檢查",
+        "packaging": "規劃保護性包裝",
+        "worldwide": "配送地區評估中",
+        "tracking": "規劃訂單追蹤"
       },
-      "startingFrom": "價格起始",
+      "startingFrom": "開放狀態",
+      "comingSoon": "即將推出",
       "perModel": "/ 每件",
-      "shippingIncluded": "含國內運費",
-      "cta": "訂購實體列印",
-      "trustNote": "付款後 3-5 個工作天出貨"
+      "shippingIncluded": "售價與配送細節將另行公告",
+      "cta": "實體列印訂購即將推出",
+      "trustNote": "目前不接受列印訂單或付款；數位模型生成與 GLB 下載已可使用。"
     },
     "finalCta": {
       "badge": "準備好了嗎？",
       "title": "立即開始轉換您的照片",
-      "subtitle": "加入已在使用 DreamForge 將創意變為 3D 現實的創作者行列",
+      "subtitle": "使用起始點數體驗完整的照片轉 3D 引導流程",
       "cta": "建立您的第一個模型",
       "trust": "無需信用卡 • 3 點免費開始"
     },
     "creatorHub": {
       "badge": "即將推出",
       "title": "創作者中心",
-      "subtitle": "分享您的創作，讓全世界看見",
+      "subtitle": "規劃中的創作者市集功能預覽",
       "connector": "創作者 ↔ 消費者",
       "forCreators": {
         "title": "創作者專區",
-        "subtitle": "將創意轉化為收入",
+        "subtitle": "規劃中的發布與分析工具",
         "upload": {
-          "title": "上傳販售",
-          "description": "上架您的 3D 模型，提供數位下載或實體列印"
+          "title": "模型發布",
+          "description": "規劃將 3D 模型發布至公開作品庫的工具"
         },
         "earn": {
-          "title": "賺取分潤",
-          "description": "用戶下載或列印時，您即可獲得收益"
+          "title": "創作者收益",
+          "description": "變現方式仍在評估，預計於未來版本推出"
         },
         "analytics": {
           "title": "追蹤成效",
-          "description": "查看下載數、收益和受眾分析"
+          "description": "規劃提供下載與受眾活動分析"
         }
       },
       "forCollectors": {
         "title": "消費者專區",
-        "subtitle": "探索獨特 3D 創作",
+        "subtitle": "規劃中的探索與收藏工具",
         "discover": {
           "title": "瀏覽作品庫",
-          "description": "探索來自優秀創作者的精選 3D 模型"
+          "description": "規劃瀏覽已發布 3D 模型的作品庫"
         },
         "options": {
-          "title": "免費與付費",
-          "description": "下載免費模型或解鎖付費精品設計"
+          "title": "存取方案",
+          "description": "免費與付費存取方式仍在評估中"
         },
         "print": {
-          "title": "一鍵列印",
-          "description": "訂購實體列印，直送到府"
+          "title": "實體列印訂購",
+          "description": "實體列印仍在規劃中，目前尚未開放"
         }
       }
     },
@@ -1373,7 +1426,7 @@
       "label": "Gemini 2.5 Flash",
       "description": "快速生成，標準品質"
     },
-    "gemini3ProImagePreview": {
+    "gemini3ProImage": {
       "label": "Gemini 3 Pro",
       "description": "高品質生成，更精細的細節"
     },

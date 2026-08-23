@@ -14,9 +14,11 @@ import * as functions from 'firebase-functions';
 import type { GeminiResponse, GeminiResponseAnalysis } from './types';
 import type { ViewAngle, ImageAnalysisResult } from '../rodin/types';
 import { type StyleId, getStyleConfig } from '../config/styles';
+import type { ViewGenerationModel } from '../config/tiers';
+import { formatPromptData } from './prompt-utils';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
+const DEFAULT_GEMINI_MODEL: ViewGenerationModel = 'gemini-2.5-flash-image';
 
 /**
  * Result of styled reference generation
@@ -44,6 +46,8 @@ export interface StyledReferenceOptions {
   imageAnalysis?: ImageAnalysisResult | null;
   /** User-provided description of the object */
   userDescription?: string | null;
+  /** User-selected image generation model */
+  geminiModel?: ViewGenerationModel;
 }
 
 /**
@@ -150,11 +154,11 @@ function buildStyledReferencePrompt(options: StyledReferenceOptions): string {
   // Build subject description from analysis or user input
   let subjectDescription = 'the subject in the image';
   if (userDescription) {
-    subjectDescription = userDescription;
+    subjectDescription = formatPromptData(userDescription);
   } else if (imageAnalysis?.promptDescription) {
-    subjectDescription = imageAnalysis.promptDescription;
+    subjectDescription = formatPromptData(imageAnalysis.promptDescription);
   } else if (imageAnalysis?.description) {
-    subjectDescription = imageAnalysis.description;
+    subjectDescription = formatPromptData(imageAnalysis.description);
   }
 
   // Build key features context if available
@@ -162,12 +166,12 @@ function buildStyledReferencePrompt(options: StyledReferenceOptions): string {
   if (imageAnalysis?.keyFeatures) {
     const kf = imageAnalysis.keyFeatures;
     const featureLines: string[] = [];
-    if (kf.ears?.present) featureLines.push(`Ears: ${kf.ears.description || 'present'}`);
-    if (kf.tail?.present) featureLines.push(`Tail: ${kf.tail.description || 'present'}`);
-    if (kf.limbs) featureLines.push(`Limbs: ${kf.limbs}`);
-    if (kf.accessories?.length) featureLines.push(`Accessories: ${kf.accessories.join(', ')}`);
-    if (kf.distinctiveMarks?.length) featureLines.push(`Distinctive marks: ${kf.distinctiveMarks.join(', ')}`);
-    if (kf.surfaceTextures?.length) featureLines.push(`Surface textures: ${kf.surfaceTextures.join(', ')}`);
+    if (kf.ears?.present) featureLines.push(`Ears: ${formatPromptData(kf.ears.description || 'present')}`);
+    if (kf.tail?.present) featureLines.push(`Tail: ${formatPromptData(kf.tail.description || 'present')}`);
+    if (kf.limbs) featureLines.push(`Limbs: ${formatPromptData(kf.limbs)}`);
+    if (kf.accessories?.length) featureLines.push(`Accessories: ${formatPromptData(kf.accessories.join(', '))}`);
+    if (kf.distinctiveMarks?.length) featureLines.push(`Distinctive marks: ${formatPromptData(kf.distinctiveMarks.join(', '))}`);
+    if (kf.surfaceTextures?.length) featureLines.push(`Surface textures: ${formatPromptData(kf.surfaceTextures.join(', '))}`);
     if (featureLines.length > 0) {
       keyFeaturesContext = `
 KEY FEATURES TO PRESERVE:
@@ -257,9 +261,10 @@ export async function generateStyledReference(
   }
 
   const { detectedAngle, style } = options;
+  const modelId = options.geminiModel || DEFAULT_GEMINI_MODEL;
 
   functions.logger.info('Generating styled reference image', {
-    model: GEMINI_MODEL_ID,
+    model: modelId,
     style,
     detectedAngle,
     hasImageAnalysis: !!options.imageAnalysis,
@@ -269,7 +274,7 @@ export async function generateStyledReference(
   const prompt = buildStyledReferencePrompt(options);
 
   const response = await axios.post<GeminiResponse>(
-    `${GEMINI_API_BASE}/${GEMINI_MODEL_ID}:generateContent`,
+    `${GEMINI_API_BASE}/${modelId}:generateContent`,
     {
       contents: [
         {
@@ -304,7 +309,7 @@ export async function generateStyledReference(
   const analysis = analyzeGeminiResponse(response.data);
 
   functions.logger.info('Styled reference generation response', {
-    model: GEMINI_MODEL_ID,
+    model: modelId,
     hasImage: analysis.hasImage,
     hasText: !!analysis.textContent,
     blockReason: analysis.blockReason,

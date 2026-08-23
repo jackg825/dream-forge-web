@@ -2,7 +2,7 @@
   "schemaVersion": "2026-04-23",
   "serverInfo": {
     "name": "Dream Forge Web Tools",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Browser-exposed tools for discovering Dream Forge capabilities and helping users begin photo-to-3D model workflows."
   },
   "transport": {
@@ -32,7 +32,11 @@
     },
     {
       "name": "dreamforge.get_pricing_summary",
-      "description": "Return a high-level summary of free and premium generation capabilities."
+      "description": "Return current credit availability and account-tier generation capabilities."
+    },
+    {
+      "name": "dreamforge.get_discovery_resources",
+      "description": "Return machine-readable discovery URLs for Dream Forge public resources."
     }
   ],
   "resources": [

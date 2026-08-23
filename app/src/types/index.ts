@@ -333,7 +333,7 @@ export interface AdminPipeline {
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
   meshUrl: string | null;
   texturedModelUrl: string | null;
-  creditsCharged: { mesh: number; texture: number };
+  creditsCharged: { views?: number; mesh: number; texture: number };
   settings: PipelineSettings;
   userDescription: string | null;
   error: string | null;
@@ -762,7 +762,7 @@ export const DEFAULT_GENERATION_MODE: GenerationModeId = 'simplified-mesh';
  * Gemini model for image generation
  * Note: Type values must match ViewGenerationModel in @/config/tiers
  */
-export type GeminiModelId = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type GeminiModelId = 'gemini-2.5-flash-image' | 'gemini-3-pro-image';
 
 /**
  * Gemini model options for reference
@@ -783,8 +783,8 @@ export const GEMINI_MODEL_OPTIONS: Record<GeminiModelId, {
     estimatedTime: '約 1-2 分鐘',
     creditCost: 3,
   },
-  'gemini-3-pro-image-preview': {
-    id: 'gemini-3-pro-image-preview',
+  'gemini-3-pro-image': {
+    id: 'gemini-3-pro-image',
     name: 'Gemini 3 Pro',
     description: '高品質生成，更精細的細節',
     badge: 'Premium',
@@ -800,14 +800,14 @@ export const DEFAULT_GEMINI_MODEL: GeminiModelId = 'gemini-2.5-flash-image';
 
 /**
  * Pipeline status for new simplified workflow
- * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
+ * Single flow: Upload → Gemini 4 supporting views → 3D provider → Optional texture
  */
 export type PipelineStatus =
   | 'draft'              // Initial state, user uploading images
   | 'batch-queued'       // Batch job submitted, waiting to process
   | 'batch-processing'   // Batch job running on Gemini
-  | 'generating-images'  // Gemini generating 6 views (real-time mode)
-  | 'images-ready'       // 6 images ready for preview
+  | 'generating-images'  // Gemini generating 4 views (real-time mode)
+  | 'images-ready'       // 4 images ready for preview
   | 'generating-mesh'    // Meshy generating mesh (no texture)
   | 'mesh-ready'         // Mesh complete, texture optional
   | 'generating-texture' // Meshy generating texture
@@ -824,7 +824,7 @@ export type ProcessingMode = 'realtime' | 'batch';
 /**
  * Default processing mode
  */
-export const DEFAULT_PROCESSING_MODE: ProcessingMode = 'batch';
+export const DEFAULT_PROCESSING_MODE: ProcessingMode = 'realtime';
 
 /**
  * Processing mode options for UI
@@ -868,11 +868,12 @@ export const PIPELINE_STATUS_MESSAGES: Record<PipelineStatus, string> = {
 };
 
 /**
- * Credit costs for pipeline workflow
- * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ * Baseline credit costs for the pipeline workflow.
+ * Provider-specific mesh costs are defined in the provider configuration.
  */
 export const PIPELINE_CREDIT_COSTS = {
-  IMAGE_PROCESSING: 0,   // Gemini processing is free
+  VIEW_GENERATION_FLASH: 3,
+  VIEW_GENERATION_PRO: 5,
   MESH_GENERATION: 5,    // Meshy mesh-only
   TEXTURE_GENERATION: 10, // Meshy retexture
 } as const;
@@ -888,7 +889,7 @@ export type PipelineMeshAngle = 'front' | 'back' | 'left' | 'right';
 export interface PipelineProcessedImage {
   url: string;
   storagePath: string;
-  source: 'gemini' | 'upload';
+  source: 'gemini' | 'upload' | 'gemini-styled-reference' | 'gemini-from-reference' | 'gemini-composite';
   colorPalette?: string[];
   generatedAt: Date;
 }
@@ -1013,6 +1014,7 @@ export interface Pipeline {
 
   // Credits
   creditsCharged: {
+    views: number;
     mesh: number;
     texture: number;
   };

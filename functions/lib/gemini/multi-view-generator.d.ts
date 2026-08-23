@@ -12,7 +12,7 @@
 import type { PipelineMeshAngle, GenerationModeId, ImageAnalysisResult, ViewAngle } from '../rodin/types';
 import { type ModeConfig } from './mode-configs';
 import { type StyleId } from '../config/styles';
-export type GeminiImageModel = 'gemini-2.5-flash' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type GeminiImageModel = 'gemini-2.5-flash' | 'gemini-2.5-flash-image' | 'gemini-3-pro-image';
 /**
  * Result of a single view generation
  */
@@ -43,7 +43,7 @@ export interface MultiViewGenerationResult {
 export type ViewProgressCallback = (type: 'mesh', angle: string, completed: number, total: number) => Promise<void>;
 /**
  * Multi-View Generator class
- * Generates 6 images from a reference image for 3D model generation
+ * Generates 4 supporting views from a reference image for 3D model generation
  *
  * Supports different generation modes for A/B testing
  */

@@ -77,10 +77,11 @@ function buildTools(): WebMCPTool[] {
           description:
             'AI-powered photo-to-3D model creation for digital art, games, collectibles, and 3D printing.',
           capabilities: [
-            'single-photo 3D model generation',
-            'multi-view and AI-generated supporting views',
+            'single reference photo upload',
+            'AI-generated front, back, left, and right supporting views',
             'style presets including bobblehead, chibi, cartoon, and emoji',
-            'browser model preview, downloads, and print-order workflows',
+            'browser model preview and GLB download',
+            'physical print ordering is planned but not yet available',
           ],
           urls: {
             home: localizedUrl(locale, '/'),
@@ -131,19 +132,23 @@ function buildTools(): WebMCPTool[] {
       name: 'dreamforge.get_pricing_summary',
       title: 'Get Dream Forge Pricing Summary',
       description:
-        'Return a concise summary of free and premium capabilities for Dream Forge model generation.',
+        'Return current credit availability and account-tier capabilities for Dream Forge model generation.',
       inputSchema: {
         type: 'object',
         properties: {},
         additionalProperties: false,
       },
       execute: () => ({
+        starterCredits: 3,
+        creditPurchasesAvailable: false,
+        printOrderingAvailable: false,
         free: {
           viewGenerationModels: ['Gemini 2.5 Flash'],
           providers: ['HiTem3D'],
           hitem3dResolutions: ['512'],
         },
         premium: {
+          availability: 'Requires an eligible account tier; self-service upgrades are not available yet.',
           viewGenerationModels: ['Gemini 2.5 Flash', 'Gemini 3 Pro'],
           providers: ['Hunyuan', 'Tripo', 'HiTem3D'],
           hitem3dResolutions: ['512', '1024'],

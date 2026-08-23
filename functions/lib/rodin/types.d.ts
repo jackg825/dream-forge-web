@@ -178,7 +178,7 @@ export interface SessionDocument {
 }
 /**
  * Pipeline Status for new simplified 3D generation workflow
- * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
+ * Single flow: Upload → Gemini 4 supporting views → 3D provider → Optional texture
  */
 export type PipelineStatus = 'draft' | 'batch-queued' | 'batch-processing' | 'generating-images' | 'images-ready' | 'generating-mesh' | 'mesh-ready' | 'generating-texture' | 'completed' | 'failed';
 /**
@@ -188,11 +188,12 @@ export type PipelineStatus = 'draft' | 'batch-queued' | 'batch-processing' | 'ge
  */
 export type ProcessingMode = 'realtime' | 'batch';
 /**
- * Credit costs for pipeline workflow
- * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ * Baseline credit costs for the pipeline workflow.
+ * Provider-specific mesh costs are defined in the provider configuration.
  */
 export declare const PIPELINE_CREDIT_COSTS: {
-    readonly IMAGE_PROCESSING: 0;
+    readonly VIEW_GENERATION_FLASH: 3;
+    readonly VIEW_GENERATION_PRO: 5;
     readonly MESH_GENERATION: 5;
     readonly TEXTURE_GENERATION: 10;
 };
@@ -222,7 +223,7 @@ export interface PipelineSettings {
     printerType: PrinterType;
     format: OutputFormat;
     generationMode?: GenerationModeId;
-    geminiModel?: 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+    geminiModel?: 'gemini-2.5-flash-image' | 'gemini-3-pro-image';
     meshPrecision?: MeshPrecision;
     colorCount?: number;
     provider?: ProviderType;
@@ -234,11 +235,9 @@ export interface PipelineSettings {
  *
  * Flow:
  * 1. User uploads 1+ images
- * 2. Gemini generates 6 images:
- *    - 4 mesh-optimized (7-color H2C style) for front/back/left/right
- *    - 2 texture-ready (full color) for front/back
+ * 2. Gemini generates 4 front/back/left/right supporting views
  * 3. User previews images, can regenerate individual views
- * 4. Meshy Multi-Image-to-3D generates mesh (5 credits)
+ * 4. The selected multi-image 3D provider generates the mesh
  * 5. User previews mesh
  * 6. Optional: Meshy Retexture generates texture (10 credits)
  * 7. Final model ready with download options
@@ -279,6 +278,7 @@ export interface PipelineDocument {
     texturedModelStoragePath?: string;
     texturedDownloadFiles?: DownloadFile[];
     creditsCharged: {
+        views: number;
         mesh: number;
         texture: number;
     };

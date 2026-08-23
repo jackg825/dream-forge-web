@@ -22,16 +22,16 @@ interface PipelineUploaderProps {
 }
 
 /**
- * PipelineUploader - Simple multi-image uploader for the pipeline flow
+ * PipelineUploader - Reference image uploader for the pipeline flow
  *
- * Supports drag-and-drop and click-to-upload for 1-4 images.
+ * Supports drag-and-drop and click-to-upload for one image.
  * Images are uploaded to Firebase Storage immediately.
  */
 export function PipelineUploader({
   userId,
   images,
   onImagesChange,
-  maxImages = 4,
+  maxImages = 1,
   disabled = false,
 }: PipelineUploaderProps) {
   const t = useTranslations('pipelineUploader');
@@ -49,7 +49,7 @@ export function PipelineUploader({
       const remainingSlots = maxImages - images.length;
 
       if (fileArray.length > remainingSlots) {
-        setError(t('maxImagesError', { max: maxImages }));
+        setError(t('maxImagesError'));
         return;
       }
 
@@ -152,7 +152,6 @@ export function PipelineUploader({
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-        multiple
         onChange={handleFileInput}
         className="hidden"
         disabled={disabled}
@@ -245,7 +244,7 @@ export function PipelineUploader({
               <div>
                 <p className="text-lg font-medium">{t('dropzone.title')}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {t('dropzone.subtitle', { max: maxImages })}
+                  {t('dropzone.subtitle')}
                 </p>
               </div>
               <Button variant="secondary" size="sm" disabled={disabled}>
@@ -273,7 +272,7 @@ export function PipelineUploader({
       {/* Image count */}
       {images.length > 0 && (
         <p className="text-sm text-muted-foreground text-center">
-          {t('imageCount', { count: images.length, max: maxImages })}
+          {t('imageCount')}
         </p>
       )}
     </div>

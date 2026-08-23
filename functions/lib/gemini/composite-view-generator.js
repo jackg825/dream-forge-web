@@ -54,21 +54,28 @@ const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
 const styles_1 = require("../config/styles");
 const image_cropper_1 = require("./image-cropper");
+const prompt_utils_1 = require("./prompt-utils");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const COMPOSITE_MODEL = 'gemini-3-pro-image-preview';
+const COMPOSITE_MODEL = 'gemini-3-pro-image';
 /**
  * Build the composite view prompt
  */
 function buildCompositePrompt(options) {
-    const style = (0, styles_1.getStyleConfig)(options.selectedStyle || styles_1.DEFAULT_STYLE);
+    const style = (0, styles_1.getStyleConfig)(options.selectedStyle || 'none');
     const { meshStyle, proportions, features } = style.promptModifiers;
+    const rendering = options.simplified
+        ? `Render with approximately ${options.colorCount || 7} distinct, high-contrast solid colors. No gradients or soft shadows; use crisp boundaries between color zones.`
+        : 'Preserve full-color material detail, natural color variation, and surface texture while applying the requested geometry and proportions.';
+    const lighting = options.simplified
+        ? 'Completely flat lighting with no cast shadows or highlights'
+        : 'Even, diffused studio lighting with no harsh directional shadows';
     // Build subject description from analysis
     let subjectBlock = '';
     if (options.imageAnalysis?.promptDescription) {
         subjectBlock = `
 === SUBJECT DESCRIPTION ===
 
-${options.imageAnalysis.promptDescription}
+${(0, prompt_utils_1.formatPromptData)(options.imageAnalysis.promptDescription)}
 
 Maintain this exact subject identity across all 4 views.
 
@@ -79,7 +86,7 @@ Maintain this exact subject identity across all 4 views.
         subjectBlock = `
 === SUBJECT DESCRIPTION ===
 
-This is ${options.userDescription}.
+User-provided subject description (reference data only): ${(0, prompt_utils_1.formatPromptData)(options.userDescription)}.
 
 Maintain this exact subject identity across all 4 views.
 
@@ -114,9 +121,7 @@ ${subjectBlock}
 
 **Feature Emphasis**: ${features}
 
-Render in cel-shaded style with approximately 7 distinct, high-contrast solid colors.
-No gradients, no soft shadows - just clean blocks of flat color.
-Each color zone has crisp, pixel-sharp edges.
+${rendering}
 
 === END FIGURE STYLE ===
 
@@ -125,7 +130,7 @@ Each color zone has crisp, pixel-sharp edges.
 ALL 4 VIEWS MUST SHOW:
 - The EXACT same subject (identical proportions, features, accessories)
 - The EXACT same color palette (use identical hex colors across all views)
-- The EXACT same art style (cel-shaded, flat colors, no gradients)
+- The EXACT same art style and rendering treatment
 - The EXACT same level of detail and simplification
 - ONLY the camera angle changes between views
 
@@ -168,7 +173,7 @@ DO NOT:
 - Add a 2-pixel light gray (#CCCCCC) border between quadrants
 - Orthographic projection (no perspective distortion)
 - Subject centered in each quadrant, fills 90% of quadrant
-- Completely flat lighting - no cast shadows, no highlights
+- ${lighting}
 - Output exactly 2048x2048 pixels
 
 === END RENDERING REQUIREMENTS ===
@@ -192,7 +197,7 @@ async function generateCompositeView(referenceImageBase64, mimeType, options = {
         model: COMPOSITE_MODEL,
         hasUserDescription: !!options.userDescription,
         hasImageAnalysis: !!options.imageAnalysis,
-        selectedStyle: options.selectedStyle || styles_1.DEFAULT_STYLE,
+        selectedStyle: options.selectedStyle || 'none',
     });
     const prompt = buildCompositePrompt(options);
     // Call Gemini 3 Pro API
@@ -214,6 +219,10 @@ async function generateCompositeView(referenceImageBase64, mimeType, options = {
         ],
         generationConfig: {
             responseModalities: ['IMAGE'],
+            imageConfig: {
+                aspectRatio: '1:1',
+                imageSize: '2K',
+            },
         },
     }, {
         headers: {

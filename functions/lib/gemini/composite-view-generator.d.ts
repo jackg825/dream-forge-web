@@ -20,6 +20,8 @@ export interface CompositeViewOptions {
     userDescription?: string | null;
     imageAnalysis?: ImageAnalysisResult | null;
     selectedStyle?: StyleId;
+    simplified?: boolean;
+    colorCount?: number;
 }
 /**
  * Result of composite view generation (after cropping)

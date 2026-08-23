@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { ArrowRight, Camera, Box, Truck, Sparkles } from 'lucide-react';
+import { ArrowRight, Camera, Box, Download, Sparkles } from 'lucide-react';
 
 interface HeroSectionProps {
   className?: string;
@@ -12,7 +12,7 @@ interface HeroSectionProps {
 
 /**
  * HeroSection - Immersive hero showcasing the complete journey:
- * Photo → 3D Model → Physical Print Delivery
+ * Photo → 3D Model → Preview and download
  *
  * Mobile-optimized with responsive typography and touch-friendly elements
  */
@@ -22,7 +22,7 @@ export function HeroSection({ className }: HeroSectionProps) {
   const journeySteps = [
     { icon: Camera, label: t('hero.journey.photo'), delay: '0s' },
     { icon: Box, label: t('hero.journey.model'), delay: '0.1s' },
-    { icon: Truck, label: t('hero.journey.deliver'), delay: '0.2s' },
+    { icon: Download, label: t('hero.journey.deliver'), delay: '0.2s' },
   ];
 
   return (
@@ -267,9 +267,9 @@ export function HeroSection({ className }: HeroSectionProps) {
           >
             {[
               { value: '3', label: t('hero.stat1') },
-              { value: '~2', label: t('hero.stat2') },
-              { value: '4+', label: t('hero.stat3') },
-              { value: '🌍', label: t('hero.stat4') },
+              { value: '4', label: t('hero.stat2') },
+              { value: '2', label: t('hero.stat3') },
+              { value: 'GLB', label: t('hero.stat4') },
             ].map((stat, index) => (
               <div
                 key={stat.label}

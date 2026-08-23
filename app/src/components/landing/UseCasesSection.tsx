@@ -4,7 +4,6 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { ComingSoonBadge } from '@/components/ui/coming-soon-badge';
 import { FillImage } from '@/components/ui/fill-image';
 import {
   Gamepad2,
@@ -25,7 +24,6 @@ const useCases = [
     icon: Brush,
     image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80',
     color: 'var(--accent-violet)',
-    comingSoon: true,
   },
   {
     id: 'maker',
@@ -89,40 +87,21 @@ export function UseCasesSection({ className }: UseCasesSectionProps) {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {useCases.map((useCase) => {
             const Icon = useCase.icon;
-            const isComingSoon = 'comingSoon' in useCase && useCase.comingSoon;
 
             return (
               <Card
                 key={useCase.id}
-                className={cn(
-                  'group overflow-hidden shadow-lg transition-all duration-500',
-                  'active:scale-[0.98] md:hover:shadow-2xl md:hover:-translate-y-2',
-                  isComingSoon
-                    ? 'border border-dashed border-[var(--accent-violet)]/40'
-                    : 'border-0'
-                )}
+                className="group overflow-hidden border-0 shadow-lg transition-all duration-500 active:scale-[0.98] md:hover:-translate-y-2 md:hover:shadow-2xl"
               >
                 {/* Image - shorter on mobile */}
                 <div className="relative h-28 sm:h-36 md:h-40 overflow-hidden">
                   <FillImage
                     src={useCase.image}
                     alt={t(`useCases.items.${useCase.id}.title`)}
-                    className={cn(
-                      'object-cover transition-transform duration-500 md:group-hover:scale-110',
-                      isComingSoon && 'opacity-80'
-                    )}
+                    className="object-cover transition-transform duration-500 md:group-hover:scale-110"
                     sizes="(min-width: 768px) 33vw, 100vw"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
-                  {/* Coming Soon badge */}
-                  {isComingSoon && (
-                    <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-                      <ComingSoonBadge size="sm" showIcon={false}>
-                        {t('creatorHub.badge')}
-                      </ComingSoonBadge>
-                    </div>
-                  )}
 
                   {/* Icon badge - smaller on mobile */}
                   <div

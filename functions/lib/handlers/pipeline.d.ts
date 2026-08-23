@@ -26,7 +26,7 @@ export declare const getPipeline: functions.HttpsFunction & functions.Runnable<a
  */
 export declare const getUserPipelines: functions.HttpsFunction & functions.Runnable<any>;
 /**
- * Generate all 6 views using Gemini
+ * Generate all 4 supporting views using Gemini
  *
  * Generates:
  * - 4 mesh-optimized views (7-color H2C style)
@@ -42,7 +42,7 @@ export declare const generatePipelineImages: functions.HttpsFunction & functions
 /**
  * Regenerate a single view
  *
- * Allows user to regenerate individual views without regenerating all 6.
+ * Allows user to regenerate individual views without regenerating all 4.
  */
 export declare const regeneratePipelineImage: functions.HttpsFunction & functions.Runnable<any>;
 /**

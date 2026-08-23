@@ -1,12 +1,12 @@
 ---
 title: Dream Forge
-description: AI-powered photo to 3D model creation for digital art, games, and 3D printing.
+description: AI-powered photo-to-3D creation with browser preview and GLB download.
 canonical: https://dreamforge.app/zh-TW/
 ---
 
 # Dream Forge
 
-Dream Forge turns photos into textured 3D models. Creators can upload one or more images, choose a visual style, generate preview views, create a mesh, inspect the model in the browser, and prepare files for download or printing.
+Dream Forge turns one clear reference photo into a 3D model. Creators can choose a visual style and available provider, generate supporting views and a mesh, inspect the model in the browser, and download the available GLB file. Physical print ordering and paid credit top-ups are planned but not yet available.
 
 ## Core Pages
 

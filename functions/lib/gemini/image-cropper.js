@@ -65,7 +65,10 @@ async function cropCompositeView(compositeImage) {
     const metadata = await (0, sharp_1.default)(compositeImage).metadata();
     const width = metadata.width || 2048;
     const height = metadata.height || 2048;
-    // Handle non-2048 images by resizing first
+    if (Math.abs(width - height) / Math.max(width, height) > 0.02) {
+        throw new functions.https.HttpsError('internal', `Composite image must be square, received ${width}x${height}`);
+    }
+    // Normalize supported square outputs before extracting quadrants.
     let normalizedImage = compositeImage;
     if (width !== 2048 || height !== 2048) {
         functions.logger.info('Resizing composite image to 2048×2048', {
