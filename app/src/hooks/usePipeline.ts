@@ -25,6 +25,7 @@ import type {
   ImageAnalysisResult,
   ModelProvider,
   ProviderOptions,
+  StyleId,
 } from '@/types';
 
 interface SubmitBatchResponse {
@@ -62,13 +63,13 @@ interface UsePipelineReturn {
     imageAnalysis?: ImageAnalysisResult,
     geminiModel?: GeminiModelId
   ) => Promise<string>;
-  generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
+  generateImages: (overridePipelineId?: string, geminiModel?: GeminiModelId) => Promise<GeneratePipelineImagesResponse>;
   submitBatch: (overridePipelineId?: string) => Promise<SubmitBatchResponse>;
   regenerateImage: (viewType: 'mesh' | 'texture', angle: string, hint?: string) => Promise<void>;
   startMeshGeneration: (provider?: ModelProvider, providerOptions?: ProviderOptions) => Promise<StartPipelineMeshResponse>;
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
   startTextureGeneration: () => Promise<StartPipelineTextureResponse>;
-  updateAnalysis: (imageAnalysis: ImageAnalysisResult, userDescription?: string) => Promise<void>;
+  updateAnalysis: (imageAnalysis: ImageAnalysisResult, userDescription?: string, selectedStyle?: StyleId) => Promise<void>;
   resetStep: (targetStep: ResetTargetStep, keepResults: boolean) => Promise<void>;
 
   // Navigation helpers
@@ -234,9 +235,12 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     []
   );
 
-  // Generate all 6 images (realtime mode)
+  // Generate all 4 supporting views (realtime mode)
   // Accepts optional overridePipelineId for immediate use after creation
-  const generateImages = useCallback(async (overridePipelineId?: string): Promise<GeneratePipelineImagesResponse> => {
+  const generateImages = useCallback(async (
+    overridePipelineId?: string,
+    geminiModel?: GeminiModelId
+  ): Promise<GeneratePipelineImagesResponse> => {
     const targetPipelineId = overridePipelineId || pipelineId;
     if (!targetPipelineId) {
       throw new Error('No pipeline ID');
@@ -247,11 +251,11 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
 
     try {
       const generateFn = httpsCallable<
-        { pipelineId: string },
+        { pipelineId: string; geminiModel?: GeminiModelId },
         GeneratePipelineImagesResponse
       >(functions, 'generatePipelineImages', { timeout: 120000 });
 
-      const result = await generateFn({ pipelineId: targetPipelineId });
+      const result = await generateFn({ pipelineId: targetPipelineId, geminiModel });
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate images';
@@ -390,7 +394,8 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
   // Update pipeline analysis (for draft pipelines)
   const updateAnalysis = useCallback(async (
     imageAnalysis: ImageAnalysisResult,
-    userDescription?: string
+    userDescription?: string,
+    selectedStyle?: StyleId
   ): Promise<void> => {
     if (!pipelineId) {
       throw new Error('No pipeline ID');
@@ -401,11 +406,16 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
 
     try {
       const updateFn = httpsCallable<
-        { pipelineId: string; imageAnalysis: ImageAnalysisResult; userDescription?: string },
+        {
+          pipelineId: string;
+          imageAnalysis: ImageAnalysisResult;
+          userDescription?: string;
+          selectedStyle?: StyleId;
+        },
         UpdatePipelineAnalysisResponse
       >(functions, 'updatePipelineAnalysis');
 
-      await updateFn({ pipelineId, imageAnalysis, userDescription });
+      await updateFn({ pipelineId, imageAnalysis, userDescription, selectedStyle });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update analysis';
       setError(message);

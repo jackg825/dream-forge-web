@@ -164,7 +164,7 @@ function calculateProgress(
  */
 export function UnifiedProgressIndicator({
   status,
-  processingMode = 'batch',
+  processingMode = 'realtime',
   progress,
   estimatedCompletionTime,
   provider,

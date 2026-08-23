@@ -27,10 +27,7 @@ export type ErrorSeverity = 'warning' | 'error' | 'critical';
  */
 export type RecoveryActionType =
   | 'retry'           // Retry the same operation
-  | 'retry_batch'     // Switch to batch mode and retry
-  | 'wait'            // Wait and retry later
   | 'change_input'    // Change input image
-  | 'purchase'        // Purchase more credits
   | 'contact_support' // Contact support
   | 'resume';         // Resume from history page
 
@@ -42,7 +39,6 @@ export interface RecoveryAction {
   label: string;           // Chinese button label
   description: string;     // Chinese explanation
   primary?: boolean;       // Is this the primary action?
-  waitTimeMs?: number;     // Suggested wait time for 'wait' type
 }
 
 /**
@@ -173,24 +169,13 @@ export const DEFAULT_RECOVERY_ACTIONS: Record<ErrorCategory, RecoveryAction[]> =
       description: '重新嘗試此操作',
       primary: true,
     },
-    {
-      type: 'retry_batch',
-      label: '切換批次處理',
-      description: '使用批次模式處理，更穩定',
-    },
   ],
   rate_limit: [
     {
-      type: 'wait',
+      type: 'retry',
       label: '稍後重試',
       description: '等待 1-2 分鐘後再試',
-      waitTimeMs: 60000,
       primary: true,
-    },
-    {
-      type: 'retry_batch',
-      label: '切換批次處理',
-      description: '使用批次模式可避免速率限制',
     },
   ],
   safety: [
@@ -211,9 +196,9 @@ export const DEFAULT_RECOVERY_ACTIONS: Record<ErrorCategory, RecoveryAction[]> =
   ],
   resource: [
     {
-      type: 'purchase',
-      label: '購買點數',
-      description: '前往購買更多點數',
+      type: 'contact_support',
+      label: '聯繫支援',
+      description: '付費加值尚未開放，如需協助請聯繫支援',
       primary: true,
     },
   ],

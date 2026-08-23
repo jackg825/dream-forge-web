@@ -1,12 +1,12 @@
 ---
 title: Dream Forge
-description: 使用 AI 將照片轉換成可預覽、下載與 3D 列印的 3D 模型。
+description: 使用 AI 將照片轉換成可在瀏覽器預覽並下載 GLB 的 3D 模型。
 canonical: https://dreamforge.app/zh-TW/
 ---
 
 # Dream Forge
 
-Dream Forge 可將照片轉換成帶材質的 3D 模型。使用者可以上傳單張或多張圖片、選擇風格與生成服務、建立模型、在瀏覽器中預覽結果，並下載或送出列印。
+Dream Forge 可將一張清晰的物件參考照片轉換成 3D 模型。使用者可以選擇風格與帳戶可用的生成服務、產生輔助視角與網格、在瀏覽器中檢查結果，並下載目前提供的 GLB 檔案。實體列印訂購與付費點數加值仍在規劃中。
 
 ## Agent 入口
 

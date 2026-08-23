@@ -31,7 +31,7 @@ exports.TIER_FEATURES = {
         allowedHiTem3DResolutions: [512],
     },
     premium: {
-        allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview'],
+        allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image'],
         allowedProviders: ['hunyuan', 'tripo', 'hitem3d'],
         allowedHiTem3DResolutions: [512, 1024],
     },

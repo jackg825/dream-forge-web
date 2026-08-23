@@ -185,7 +185,7 @@ import { type StyleId, getStyleConfig, DEFAULT_STYLE } from '../config/styles';
 import { cropCompositeView, type CropResult } from './image-cropper';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const COMPOSITE_MODEL = 'gemini-3-pro-image-preview';
+const COMPOSITE_MODEL = 'gemini-3-pro-image';
 
 /**
  * Options for composite view generation
@@ -505,7 +505,7 @@ import { generateCompositeView, type CompositeViewResult } from '../gemini/compo
 const GEMINI_MODEL_CREDITS: Record<string, number> = {
   'gemini-2.5-flash': 3,
   'gemini-2.5-flash-image': 3,
-  'gemini-3-pro-image-preview': 5,    // Premium model - composite view
+  'gemini-3-pro-image': 5,            // Premium model - composite view
   'gemini-3-pro-composite': 5,        // Alias for composite mode
 };
 ```

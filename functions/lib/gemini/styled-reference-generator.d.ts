@@ -10,6 +10,7 @@
  */
 import type { ViewAngle, ImageAnalysisResult } from '../rodin/types';
 import { type StyleId } from '../config/styles';
+import type { ViewGenerationModel } from '../config/tiers';
 /**
  * Result of styled reference generation
  */
@@ -35,6 +36,8 @@ export interface StyledReferenceOptions {
     imageAnalysis?: ImageAnalysisResult | null;
     /** User-provided description of the object */
     userDescription?: string | null;
+    /** User-selected image generation model */
+    geminiModel?: ViewGenerationModel;
 }
 /**
  * Generate a styled reference image from the original photo

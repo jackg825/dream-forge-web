@@ -13,7 +13,7 @@ import {
   Loader2,
   ExternalLink,
 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import type { Pipeline, PipelineStatus } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
 import { FillImage } from '@/components/ui/fill-image';
@@ -39,8 +39,8 @@ const STATUS_CONFIG: Record<
   failed: { labelKey: 'failed', icon: AlertCircle, variant: 'destructive' },
 };
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat('zh-TW', {
+function formatDate(date: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -50,6 +50,7 @@ function formatDate(date: Date): string {
 
 export function PipelineCard({ pipeline }: PipelineCardProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const statusConfig = STATUS_CONFIG[pipeline.status] || STATUS_CONFIG.draft;
   const StatusIcon = statusConfig.icon;
   const statusLabel = t(`adminStatus.${statusConfig.labelKey}`);
@@ -69,7 +70,10 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
     pipeline.status === 'generating-texture';
 
   // Calculate total credits used
-  const totalCredits = pipeline.creditsCharged.mesh + pipeline.creditsCharged.texture;
+  const totalCredits =
+    (pipeline.creditsCharged.views || 0) +
+    pipeline.creditsCharged.mesh +
+    pipeline.creditsCharged.texture;
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">
@@ -123,7 +127,7 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
       <CardContent className="p-4">
         {/* Date and credits */}
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
-          <span>{formatDate(pipeline.createdAt)}</span>
+          <span>{formatDate(pipeline.createdAt, locale)}</span>
           {totalCredits > 0 && (
             <span>{totalCredits} {t('pipeline.credits.points')}</span>
           )}

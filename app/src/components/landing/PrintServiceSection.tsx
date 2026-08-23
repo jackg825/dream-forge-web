@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,8 +11,7 @@ import {
   Package,
   Globe,
   Truck,
-  ArrowRight,
-  Check,
+  Clock,
 } from 'lucide-react';
 
 interface PrintServiceSectionProps {
@@ -185,29 +183,24 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
                     {t('printService.startingFrom')}
                   </div>
                   <div className="text-2xl sm:text-3xl font-bold font-display">
-                    NT$ 500
-                    <span className="text-sm sm:text-base font-normal text-muted-foreground ml-1 sm:ml-2">
-                      {t('printService.perModel')}
-                    </span>
+                    {t('printService.comingSoon')}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                  <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--accent-mint)]" />
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--accent-mint)]" />
                   {t('printService.shippingIncluded')}
                 </div>
               </div>
             </Card>
 
             {/* CTA */}
-            <Link href="/print" className="block">
-              <Button
-                size="lg"
-                className="w-full text-base sm:text-lg py-5 sm:py-6 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90 shadow-lg active:scale-[0.98]"
-              >
-                {t('printService.cta')}
-                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              className="w-full text-base sm:text-lg py-5 sm:py-6"
+              disabled
+            >
+              {t('printService.cta')}
+            </Button>
 
             {/* Trust note */}
             <p className="text-center text-xs sm:text-sm text-muted-foreground">

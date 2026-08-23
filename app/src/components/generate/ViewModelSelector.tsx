@@ -20,7 +20,7 @@ import { GEMINI_MODEL_OPTIONS } from '@/types';
 
 const MODEL_TRANSLATION_KEYS: Record<ViewGenerationModel, string> = {
   'gemini-2.5-flash-image': 'gemini25FlashImage',
-  'gemini-3-pro-image-preview': 'gemini3ProImagePreview',
+  'gemini-3-pro-image': 'gemini3ProImage',
 };
 
 interface ViewModelSelectorProps {
@@ -34,7 +34,7 @@ interface ViewModelSelectorProps {
  * ViewModelSelector - Select Gemini model for view generation
  *
  * Free tier: gemini-2.5-flash-image only
- * Premium tier: + gemini-3-pro-image-preview
+ * Premium tier: + gemini-3-pro-image
  */
 export function ViewModelSelector({
   value,
@@ -60,7 +60,7 @@ export function ViewModelSelector({
     switch (modelId) {
       case 'gemini-2.5-flash-image':
         return <Zap className="h-4 w-4 text-blue-500" />;
-      case 'gemini-3-pro-image-preview':
+      case 'gemini-3-pro-image':
         return <Sparkles className="h-4 w-4 text-yellow-500" />;
       default:
         return null;

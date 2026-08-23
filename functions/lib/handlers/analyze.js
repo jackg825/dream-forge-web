@@ -47,6 +47,7 @@ exports.analyzeUploadedImage = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const image_analyzer_1 = require("../gemini/image-analyzer");
+const styles_1 = require("../config/styles");
 const storage_validation_1 = require("../utils/storage-validation");
 // ============================================
 // Cloud Function: analyzeUploadedImage
@@ -80,6 +81,18 @@ exports.analyzeUploadedImage = functions
     // Validate input
     if (!imageUrl) {
         throw new functions.https.HttpsError('invalid-argument', 'imageUrl is required');
+    }
+    if (typeof colorCount !== 'number' || !Number.isFinite(colorCount)) {
+        throw new functions.https.HttpsError('invalid-argument', 'colorCount must be a number');
+    }
+    if (!['fdm', 'sla', 'resin'].includes(printerType)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid printer type');
+    }
+    if (locale !== 'en' && locale !== 'zh-TW') {
+        throw new functions.https.HttpsError('invalid-argument', 'Unsupported locale');
+    }
+    if (selectedStyle !== undefined && !(0, styles_1.isValidStyleId)(selectedStyle)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid figure style');
     }
     // Validate color count (3-12)
     const validColorCount = Math.min(12, Math.max(3, colorCount));

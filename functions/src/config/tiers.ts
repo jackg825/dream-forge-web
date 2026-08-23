@@ -9,7 +9,7 @@ import type { ProviderType } from '../providers/types';
 import type { UserTier } from '../rodin/types';
 
 // View generation model options (Gemini image generation)
-export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image';
 
 // HiTem3D resolution options
 export type HiTem3DResolution = 512 | 1024;
@@ -46,7 +46,7 @@ export const TIER_FEATURES: Record<UserTier, TierFeatureConfig> = {
     allowedHiTem3DResolutions: [512],
   },
   premium: {
-    allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview'],
+    allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image'],
     allowedProviders: ['hunyuan', 'tripo', 'hitem3d'],
     allowedHiTem3DResolutions: [512, 1024],
   },

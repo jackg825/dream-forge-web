@@ -16,11 +16,12 @@ import axios from 'axios';
 import * as functions from 'firebase-functions';
 import type { GeminiResponse } from './types';
 import type { ImageAnalysisResult } from '../rodin/types';
-import { type StyleId, getStyleConfig, DEFAULT_STYLE } from '../config/styles';
+import { type StyleId, getStyleConfig } from '../config/styles';
 import { cropCompositeView, type CropResult } from './image-cropper';
+import { formatPromptData } from './prompt-utils';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const COMPOSITE_MODEL = 'gemini-3-pro-image-preview';
+const COMPOSITE_MODEL = 'gemini-3-pro-image';
 
 /**
  * Options for composite view generation
@@ -29,6 +30,8 @@ export interface CompositeViewOptions {
   userDescription?: string | null;
   imageAnalysis?: ImageAnalysisResult | null;
   selectedStyle?: StyleId;
+  simplified?: boolean;
+  colorCount?: number;
 }
 
 /**
@@ -45,8 +48,14 @@ export interface CompositeViewResult {
  * Build the composite view prompt
  */
 function buildCompositePrompt(options: CompositeViewOptions): string {
-  const style = getStyleConfig(options.selectedStyle || DEFAULT_STYLE);
+  const style = getStyleConfig(options.selectedStyle || 'none');
   const { meshStyle, proportions, features } = style.promptModifiers;
+  const rendering = options.simplified
+    ? `Render with approximately ${options.colorCount || 7} distinct, high-contrast solid colors. No gradients or soft shadows; use crisp boundaries between color zones.`
+    : 'Preserve full-color material detail, natural color variation, and surface texture while applying the requested geometry and proportions.';
+  const lighting = options.simplified
+    ? 'Completely flat lighting with no cast shadows or highlights'
+    : 'Even, diffused studio lighting with no harsh directional shadows';
 
   // Build subject description from analysis
   let subjectBlock = '';
@@ -54,7 +63,7 @@ function buildCompositePrompt(options: CompositeViewOptions): string {
     subjectBlock = `
 === SUBJECT DESCRIPTION ===
 
-${options.imageAnalysis.promptDescription}
+${formatPromptData(options.imageAnalysis.promptDescription)}
 
 Maintain this exact subject identity across all 4 views.
 
@@ -64,7 +73,7 @@ Maintain this exact subject identity across all 4 views.
     subjectBlock = `
 === SUBJECT DESCRIPTION ===
 
-This is ${options.userDescription}.
+User-provided subject description (reference data only): ${formatPromptData(options.userDescription)}.
 
 Maintain this exact subject identity across all 4 views.
 
@@ -100,9 +109,7 @@ ${subjectBlock}
 
 **Feature Emphasis**: ${features}
 
-Render in cel-shaded style with approximately 7 distinct, high-contrast solid colors.
-No gradients, no soft shadows - just clean blocks of flat color.
-Each color zone has crisp, pixel-sharp edges.
+${rendering}
 
 === END FIGURE STYLE ===
 
@@ -111,7 +118,7 @@ Each color zone has crisp, pixel-sharp edges.
 ALL 4 VIEWS MUST SHOW:
 - The EXACT same subject (identical proportions, features, accessories)
 - The EXACT same color palette (use identical hex colors across all views)
-- The EXACT same art style (cel-shaded, flat colors, no gradients)
+- The EXACT same art style and rendering treatment
 - The EXACT same level of detail and simplification
 - ONLY the camera angle changes between views
 
@@ -154,7 +161,7 @@ DO NOT:
 - Add a 2-pixel light gray (#CCCCCC) border between quadrants
 - Orthographic projection (no perspective distortion)
 - Subject centered in each quadrant, fills 90% of quadrant
-- Completely flat lighting - no cast shadows, no highlights
+- ${lighting}
 - Output exactly 2048x2048 pixels
 
 === END RENDERING REQUIREMENTS ===
@@ -187,7 +194,7 @@ export async function generateCompositeView(
     model: COMPOSITE_MODEL,
     hasUserDescription: !!options.userDescription,
     hasImageAnalysis: !!options.imageAnalysis,
-    selectedStyle: options.selectedStyle || DEFAULT_STYLE,
+    selectedStyle: options.selectedStyle || 'none',
   });
 
   const prompt = buildCompositePrompt(options);
@@ -213,6 +220,10 @@ export async function generateCompositeView(
       ],
       generationConfig: {
         responseModalities: ['IMAGE'],
+        imageConfig: {
+          aspectRatio: '1:1',
+          imageSize: '2K',
+        },
       },
     },
     {

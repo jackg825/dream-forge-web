@@ -8,8 +8,6 @@
  *
  * Supports:
  * - AI-generated images display
- * - Manual upload for individual slots
- * - Replace existing images
  * - Processing state indicators
  */
 
@@ -33,7 +31,7 @@ interface ViewSlotProps {
   label: string;
   image: PipelineProcessedImage | undefined;
   isGenerating: boolean;
-  onUpload: (file: File) => void;
+  onUpload?: (file: File) => void;
   onRegenerate?: () => void;
   disabled?: boolean;
   uploadingAngle?: string;
@@ -55,14 +53,14 @@ function ViewSlot({
   const isAiGenerated = image?.source.startsWith('gemini') ?? false;
 
   const handleClick = () => {
-    if (!disabled && !isGenerating && !isUploading) {
+    if (onUpload && !disabled && !isGenerating && !isUploading) {
       inputRef.current?.click();
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && onUpload) {
       onUpload(file);
     }
     // Reset input
@@ -78,7 +76,7 @@ function ViewSlot({
           'relative aspect-square rounded-lg border-2 overflow-hidden transition-all',
           'flex items-center justify-center',
           image ? 'border-border bg-black' : 'border-dashed border-muted-foreground/30 bg-muted/30',
-          !disabled && !isGenerating && !isUploading && 'cursor-pointer hover:border-primary/50 hover:bg-muted/50',
+          onUpload && !disabled && !isGenerating && !isUploading && 'cursor-pointer hover:border-primary/50 hover:bg-muted/50',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
         onClick={handleClick}
@@ -97,8 +95,8 @@ function ViewSlot({
           />
         ) : (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            <Upload className="h-6 w-6" />
-            <span className="text-xs">{t('actions.upload')}</span>
+            <ImageIcon className="h-6 w-6" />
+            <span className="text-xs">{t('status.missing')}</span>
           </div>
         )}
       </div>
@@ -117,20 +115,22 @@ function ViewSlot({
       </div>
 
       {/* Hover overlay with actions */}
-      {image && !disabled && !isGenerating && (
+      {image && !disabled && !isGenerating && (onUpload || onRegenerate) && (
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8"
-            onClick={(e) => {
-              e.stopPropagation();
-              inputRef.current?.click();
-            }}
-          >
-            <Upload className="h-3.5 w-3.5 mr-1" />
-            {t('actions.replace')}
-          </Button>
+          {onUpload && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-8"
+              onClick={(e) => {
+                e.stopPropagation();
+                inputRef.current?.click();
+              }}
+            >
+              <Upload className="h-3.5 w-3.5 mr-1" />
+              {t('actions.replace')}
+            </Button>
+          )}
           {onRegenerate && (
             <Button
               size="sm"
@@ -156,13 +156,15 @@ function ViewSlot({
       )}
 
       {/* Hidden file input */}
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        onChange={handleFileChange}
-        className="sr-only"
-      />
+      {onUpload && (
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFileChange}
+          className="sr-only"
+        />
+      )}
     </div>
   );
 }
@@ -171,7 +173,7 @@ interface MultiViewGridProps {
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
   isGenerating: boolean;
   generatingPhase?: 'mesh-views' | 'complete';
-  onUploadView: (viewType: 'mesh', angle: string, file: File) => void;
+  onUploadView?: (viewType: 'mesh', angle: string, file: File) => void;
   onRegenerateView?: (viewType: 'mesh', angle: string) => void;
   disabled?: boolean;
   uploadingView?: { type: 'mesh'; angle: string } | null;
@@ -223,7 +225,7 @@ export function MultiViewGrid({
               label={t(`angles.${angle}`)}
               image={meshImages[angle]}
               isGenerating={isGenerating && generatingPhase === 'mesh-views' && !meshImages[angle]}
-              onUpload={(file) => onUploadView('mesh', angle, file)}
+              onUpload={onUploadView ? (file) => onUploadView('mesh', angle, file) : undefined}
               onRegenerate={onRegenerateView ? () => onRegenerateView('mesh', angle) : undefined}
               disabled={disabled}
               uploadingAngle={uploadingView?.type === 'mesh' ? uploadingView.angle : undefined}

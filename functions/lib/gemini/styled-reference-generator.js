@@ -50,8 +50,9 @@ exports.generateStyledReference = generateStyledReference;
 const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
 const styles_1 = require("../config/styles");
+const prompt_utils_1 = require("./prompt-utils");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-image';
 /**
  * Analyze Gemini response for image and text data
  */
@@ -142,13 +143,13 @@ function buildStyledReferencePrompt(options) {
     // Build subject description from analysis or user input
     let subjectDescription = 'the subject in the image';
     if (userDescription) {
-        subjectDescription = userDescription;
+        subjectDescription = (0, prompt_utils_1.formatPromptData)(userDescription);
     }
     else if (imageAnalysis?.promptDescription) {
-        subjectDescription = imageAnalysis.promptDescription;
+        subjectDescription = (0, prompt_utils_1.formatPromptData)(imageAnalysis.promptDescription);
     }
     else if (imageAnalysis?.description) {
-        subjectDescription = imageAnalysis.description;
+        subjectDescription = (0, prompt_utils_1.formatPromptData)(imageAnalysis.description);
     }
     // Build key features context if available
     let keyFeaturesContext = '';
@@ -156,17 +157,17 @@ function buildStyledReferencePrompt(options) {
         const kf = imageAnalysis.keyFeatures;
         const featureLines = [];
         if (kf.ears?.present)
-            featureLines.push(`Ears: ${kf.ears.description || 'present'}`);
+            featureLines.push(`Ears: ${(0, prompt_utils_1.formatPromptData)(kf.ears.description || 'present')}`);
         if (kf.tail?.present)
-            featureLines.push(`Tail: ${kf.tail.description || 'present'}`);
+            featureLines.push(`Tail: ${(0, prompt_utils_1.formatPromptData)(kf.tail.description || 'present')}`);
         if (kf.limbs)
-            featureLines.push(`Limbs: ${kf.limbs}`);
+            featureLines.push(`Limbs: ${(0, prompt_utils_1.formatPromptData)(kf.limbs)}`);
         if (kf.accessories?.length)
-            featureLines.push(`Accessories: ${kf.accessories.join(', ')}`);
+            featureLines.push(`Accessories: ${(0, prompt_utils_1.formatPromptData)(kf.accessories.join(', '))}`);
         if (kf.distinctiveMarks?.length)
-            featureLines.push(`Distinctive marks: ${kf.distinctiveMarks.join(', ')}`);
+            featureLines.push(`Distinctive marks: ${(0, prompt_utils_1.formatPromptData)(kf.distinctiveMarks.join(', '))}`);
         if (kf.surfaceTextures?.length)
-            featureLines.push(`Surface textures: ${kf.surfaceTextures.join(', ')}`);
+            featureLines.push(`Surface textures: ${(0, prompt_utils_1.formatPromptData)(kf.surfaceTextures.join(', '))}`);
         if (featureLines.length > 0) {
             keyFeaturesContext = `
 KEY FEATURES TO PRESERVE:
@@ -244,15 +245,16 @@ async function generateStyledReference(referenceImageBase64, mimeType, options) 
         throw new functions.https.HttpsError('failed-precondition', 'Gemini API key not configured');
     }
     const { detectedAngle, style } = options;
+    const modelId = options.geminiModel || DEFAULT_GEMINI_MODEL;
     functions.logger.info('Generating styled reference image', {
-        model: GEMINI_MODEL_ID,
+        model: modelId,
         style,
         detectedAngle,
         hasImageAnalysis: !!options.imageAnalysis,
         hasUserDescription: !!options.userDescription,
     });
     const prompt = buildStyledReferencePrompt(options);
-    const response = await axios_1.default.post(`${GEMINI_API_BASE}/${GEMINI_MODEL_ID}:generateContent`, {
+    const response = await axios_1.default.post(`${GEMINI_API_BASE}/${modelId}:generateContent`, {
         contents: [
             {
                 parts: [
@@ -282,7 +284,7 @@ async function generateStyledReference(referenceImageBase64, mimeType, options) 
     });
     const analysis = analyzeGeminiResponse(response.data);
     functions.logger.info('Styled reference generation response', {
-        model: GEMINI_MODEL_ID,
+        model: modelId,
         hasImage: analysis.hasImage,
         hasText: !!analysis.textContent,
         blockReason: analysis.blockReason,

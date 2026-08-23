@@ -41,7 +41,7 @@ export function BaseHeader({
         {leftSlot}
 
         {/* Logo */}
-        <Link href="/" className="mr-4 md:mr-6 flex items-center gap-2">
+        <Link href="/" aria-label="Dream Forge" className="mr-4 md:mr-6 flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
             <Box className="h-5 w-5 text-white" />
           </div>

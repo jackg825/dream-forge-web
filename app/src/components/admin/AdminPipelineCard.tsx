@@ -69,7 +69,10 @@ export function AdminPipelineCard({ pipeline, onClick }: AdminPipelineCardProps)
     pipeline.status === 'generating-texture';
 
   // Calculate total credits used
-  const totalCredits = pipeline.creditsCharged.mesh + pipeline.creditsCharged.texture;
+  const totalCredits =
+    (pipeline.creditsCharged.views || 0) +
+    pipeline.creditsCharged.mesh +
+    pipeline.creditsCharged.texture;
 
   return (
     <Card

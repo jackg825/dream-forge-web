@@ -28,7 +28,6 @@ import {
   type ErrorCategory,
   type RecoveryAction,
   formatErrorDisplay,
-  ERROR_CATEGORY_INFO,
 } from '@/types/errors';
 import type { Pipeline, PipelineStatus } from '@/types';
 
@@ -153,10 +152,10 @@ export function PipelineErrorState({
     );
   }
 
-  const { categorized, stepLabel } = errorDisplay;
+  const { categorized } = errorDisplay;
+  const stepLabel = errorStep ? t(`pipelineSteps.${errorStep}`) : '';
   const Icon = CategoryIcon[categorized.category];
   const colors = CategoryColors[categorized.category];
-  const categoryInfo = ERROR_CATEGORY_INFO[categorized.category];
   const canRetry = categorized.retryable && isRetryableStep(errorStep);
 
   // Handle recovery action clicks
@@ -165,21 +164,11 @@ export function PipelineErrorState({
       case 'retry':
         await onRetry();
         break;
-      case 'retry_batch':
-        // TODO: Implement batch mode switch
-        await onRetry();
-        break;
-      case 'wait':
-        // Show wait message, could add a timer
-        break;
       case 'change_input':
         onReset();
         break;
-      case 'purchase':
-        router.push('/pricing');
-        break;
       case 'contact_support':
-        window.open('mailto:support@dreamforge.com', '_blank');
+        window.open('mailto:support@dreamforge.app', '_self');
         break;
       case 'resume':
         router.push('/dashboard/history');
@@ -198,12 +187,12 @@ export function PipelineErrorState({
 
       {/* Category badge */}
       <Badge variant="secondary" className={`mb-3 ${colors.badge}`}>
-        {categoryInfo.label}
+        {t(`categories.${categorized.category}`)}
       </Badge>
 
       {/* Main error message */}
       <p className="text-lg font-medium mb-2 text-center">
-        {categorized.userMessage}
+        {t(`codes.${categorized.code}`)}
       </p>
 
       {/* Step info */}
@@ -248,8 +237,6 @@ export function PipelineErrorState({
           .filter((action) => {
             // Skip retry if we already show it
             if (action.type === 'retry' && canRetry) return false;
-            // Skip certain actions based on context
-            if (action.type === 'retry_batch') return true; // TODO: Enable when batch mode is ready
             return true;
           })
           .slice(0, 2) // Limit to 2 additional actions
@@ -260,9 +247,9 @@ export function PipelineErrorState({
               onClick={() => handleRecoveryAction(action)}
               disabled={isRetrying}
             >
-              {action.type === 'purchase' && <CreditCard className="mr-2 h-4 w-4" />}
+              {action.type === 'contact_support' && <ExternalLink className="mr-2 h-4 w-4" />}
               {action.type === 'resume' && <ExternalLink className="mr-2 h-4 w-4" />}
-              {action.label}
+              {t(`actions.${action.type}`)}
             </Button>
           ))}
 

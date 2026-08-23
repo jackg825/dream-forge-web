@@ -196,7 +196,7 @@
 ### 模型資訊
 
 - 圖片分析: `gemini-3-pro-preview` (Gemini 3.0 Pro)
-- 圖片生成: `gemini-3-pro-image-preview` (Gemini 3.0 Pro Image)
+- 圖片生成: `gemini-3-pro-image` (Gemini 3 Pro Image)
 - 輸出解析度: 1024x1024 (1K) / 2048x2048 (2K)
 - 生成張數: 6 張 (4 mesh + 2 texture)
 

@@ -36,6 +36,7 @@ import type {
   GenerationModeId,
   ProviderType,
   ProviderOptions,
+  ProcessingMode,
   ViewAngle,
 } from '../rodin/types';
 import { DEFAULT_MODE } from '../gemini/mode-configs';
@@ -48,6 +49,7 @@ import {
   type ViewGenerationModel,
 } from '../config/tiers';
 import type { UserTier } from '../rodin/types';
+import { isValidStyleId, type StyleId } from '../config/styles';
 
 const db = admin.firestore();
 
@@ -71,7 +73,7 @@ const PIPELINE_CREDITS = {
 const GEMINI_MODEL_CREDITS: Record<string, number> = {
   'gemini-2.5-flash': 3,
   'gemini-2.5-flash-image': 3,        // Full ID from frontend
-  'gemini-3-pro-image-preview': 5,    // Premium model
+  'gemini-3-pro-image': 5,            // Premium model
 };
 
 // ============================================
@@ -82,10 +84,11 @@ interface CreatePipelineData {
   imageUrls: string[];  // URLs of uploaded images in Firebase Storage
   settings?: Partial<PipelineSettings>;
   generationMode?: GenerationModeId;  // A/B testing mode
+  processingMode?: ProcessingMode;
   userDescription?: string;  // Optional description of the object for better AI generation
   imageAnalysis?: import('../rodin/types').ImageAnalysisResult;  // Pre-analysis results from Gemini
-  geminiModel?: 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';  // Gemini model for image generation
-  selectedStyle?: import('../config/styles').StyleId;  // User-selected figure style
+  geminiModel?: ViewGenerationModel;
+  selectedStyle?: StyleId;  // Legacy top-level field; current clients send settings.selectedStyle
 }
 
 // Maximum regenerations allowed per pipeline (credits only charged once)
@@ -93,6 +96,7 @@ const MAX_REGENERATIONS = 4;
 
 interface GeneratePipelineImagesData {
   pipelineId: string;
+  geminiModel?: ViewGenerationModel;
 }
 
 interface RegeneratePipelineImageData {
@@ -158,7 +162,7 @@ function normalizeGeminiViewModel(model?: string): ViewGenerationModel {
     return 'gemini-2.5-flash-image';
   }
 
-  if (model === 'gemini-2.5-flash-image' || model === 'gemini-3-pro-image-preview') {
+  if (model === 'gemini-2.5-flash-image' || model === 'gemini-3-pro-image') {
     return model;
   }
 
@@ -166,6 +170,17 @@ function normalizeGeminiViewModel(model?: string): ViewGenerationModel {
     'invalid-argument',
     'Invalid Gemini image model'
   );
+}
+
+function normalizeOptionalUserDescription(value: unknown): string | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string' || value.length > 2000) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'User description must be a string of at most 2000 characters'
+    );
+  }
+  return value.trim() || undefined;
 }
 
 async function getUserAccess(userId: string): Promise<{ userTier: UserTier; isAdmin: boolean }> {
@@ -256,7 +271,16 @@ export const createPipeline = functions
     }
 
     const userId = context.auth.uid;
-    const { imageUrls, settings, generationMode, userDescription, imageAnalysis, geminiModel, selectedStyle } = data;
+    const {
+      imageUrls,
+      settings,
+      generationMode,
+      processingMode = 'realtime',
+      userDescription,
+      imageAnalysis,
+      geminiModel,
+      selectedStyle: legacySelectedStyle,
+    } = data;
 
     if (!imageUrls || imageUrls.length === 0) {
       throw new functions.https.HttpsError(
@@ -265,8 +289,20 @@ export const createPipeline = functions
       );
     }
 
-    const validatedImages = assertUserStorageReferences(imageUrls, userId, ['uploads'], 4);
+    const validatedImages = assertUserStorageReferences(imageUrls, userId, ['uploads'], 1);
     const selectedGeminiModel = normalizeGeminiViewModel(geminiModel);
+    const normalizedUserDescription = normalizeOptionalUserDescription(userDescription);
+    const requestedStyle = legacySelectedStyle ?? settings?.selectedStyle;
+
+    if (requestedStyle !== undefined && !isValidStyleId(requestedStyle)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid figure style');
+    }
+
+    if (processingMode !== 'realtime' && processingMode !== 'batch') {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid processing mode');
+    }
+
+    const selectedStyle = requestedStyle as StyleId | undefined;
     const { userTier, isAdmin } = await getUserAccess(userId);
 
     if (!canAccessViewModel(userTier, selectedGeminiModel, isAdmin)) {
@@ -293,7 +329,7 @@ export const createPipeline = functions
     } = {
       userId,
       status: 'draft',
-      processingMode: 'batch', // Default to batch mode (50% cost savings)
+      processingMode,
       generationMode: modeId,
       inputImages: validatedImages.map((image) => ({
         url: image.url,
@@ -302,6 +338,7 @@ export const createPipeline = functions
       })),
       meshImages: {},
       creditsCharged: {
+        views: 0,
         mesh: 0,
         texture: 0,
       },
@@ -315,7 +352,7 @@ export const createPipeline = functions
         ...(settings?.colorCount !== undefined && { colorCount: settings.colorCount }),
         ...(selectedStyle !== undefined && { selectedStyle }),  // User-selected figure style
       },
-      userDescription: userDescription || null,
+      userDescription: normalizedUserDescription || null,
       ...(imageAnalysis !== undefined && { imageAnalysis }),
       createdAt: now,
       updatedAt: now,
@@ -328,10 +365,12 @@ export const createPipeline = functions
       userId,
       imageCount: validatedImages.length,
       generationMode: modeId,
-      hasUserDescription: !!userDescription,
+      hasUserDescription: !!normalizedUserDescription,
       hasImageAnalysis: !!imageAnalysis,
       analysisColorCount: imageAnalysis?.colorPalette?.length,
       geminiModel: selectedGeminiModel,
+      processingMode,
+      selectedStyle: selectedStyle || 'none',
     });
 
     return {
@@ -411,7 +450,7 @@ export const getUserPipelines = functions
   });
 
 /**
- * Generate all 6 views using Gemini
+ * Generate all 4 supporting views using Gemini
  *
  * Generates:
  * - 4 mesh-optimized views (7-color H2C style)
@@ -435,7 +474,7 @@ export const generatePipelineImages = functions
     }
 
     const userId = context.auth.uid;
-    const { pipelineId } = data;
+    const { pipelineId, geminiModel: requestedGeminiModel } = data;
 
     // Get pipeline
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
@@ -461,7 +500,9 @@ export const generatePipelineImages = functions
     }
 
     // Get Gemini model and calculate credits
-    const geminiViewModel = normalizeGeminiViewModel(pipeline.settings?.geminiModel);
+    const geminiViewModel = normalizeGeminiViewModel(
+      requestedGeminiModel ?? pipeline.settings?.geminiModel
+    );
     const geminiModel = geminiViewModel as GeminiImageModel;
     const viewCredits = GEMINI_MODEL_CREDITS[geminiModel];
 
@@ -487,6 +528,7 @@ export const generatePipelineImages = functions
       credits: viewCredits,
       updateData: {
         status: 'generating-images',
+        'settings.geminiModel': geminiViewModel,
         'creditsCharged.views': viewCredits,
         error: admin.firestore.FieldValue.delete(),
         errorStep: admin.firestore.FieldValue.delete(),
@@ -521,9 +563,9 @@ export const generatePipelineImages = functions
       const generator = createMultiViewGenerator(modeId, claimedPipeline.userDescription, claimedPipeline.imageAnalysis, geminiModel, selectedStyle);
 
       // Determine if we should use two-phase flow for style consistency
-      // Two-phase is used when: image analysis detected a view angle AND a style is selected
+      // Top-down references cannot be rotated into side views with the azimuth-based prompt.
       const detectedViewAngle = claimedPipeline.imageAnalysis?.detectedViewAngle as ViewAngle | undefined;
-      const useTwoPhaseFlow = detectedViewAngle && selectedStyle;
+      const useTwoPhaseFlow = Boolean(detectedViewAngle && detectedViewAngle !== 'top' && selectedStyle);
 
       const now = admin.firestore.FieldValue.serverTimestamp();
       const meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>> = {};
@@ -552,10 +594,11 @@ export const generatePipelineImages = functions
         });
 
         const styledRef = await generateStyledReference(base64, mimeType, {
-          detectedAngle: detectedViewAngle,
-          style: selectedStyle,
+          detectedAngle: detectedViewAngle!,
+          style: selectedStyle!,
           imageAnalysis: claimedPipeline.imageAnalysis,
           userDescription: claimedPipeline.userDescription,
+          geminiModel: geminiViewModel,
         });
 
         styledReferenceAngle = styledRef.sourceAngle;
@@ -638,7 +681,7 @@ export const generatePipelineImages = functions
           colorPaletteCount: styledRef.colorPalette.length,
         });
 
-      } else {
+      } else if (geminiModel === 'gemini-3-pro-image') {
         // =====================================================
         // SINGLE-PHASE FLOW: Composite View Generation
         // Generate all 4 views in a single 2×2 grid image
@@ -663,6 +706,8 @@ export const generatePipelineImages = functions
           userDescription: claimedPipeline.userDescription,
           imageAnalysis: claimedPipeline.imageAnalysis,
           selectedStyle,
+          simplified: generator.mode.mesh.simplified,
+          colorCount: generator.mode.mesh.colorCount,
         });
 
         // Update progress: composite done, uploading
@@ -702,6 +747,45 @@ export const generatePipelineImages = functions
           pipelineId,
           viewCount: Object.keys(meshImages).length,
         });
+      } else {
+        // Flash fallback: generate each view at native resolution instead of
+        // upscaling quadrants from a 1K composite image.
+        functions.logger.info('Using native multi-view generation', {
+          pipelineId,
+          geminiModel,
+          selectedStyle: selectedStyle || 'none',
+        });
+
+        await pipelineRef.update({
+          generationProgress: {
+            phase: 'mesh-views' as const,
+            meshViewsCompleted: 0,
+          },
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        const generated = await generator.generateAllViews(base64, mimeType);
+
+        for (const [angle, view] of Object.entries(generated.meshViews)) {
+          const ext = getExtensionFromMimeType(view.mimeType);
+          const storagePath = `pipelines/${userId}/${pipelineId}/mesh_${angle}.${ext}`;
+          const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
+
+          meshImages[angle as PipelineMeshAngle] = {
+            url,
+            storagePath,
+            source: 'gemini',
+            generatedAt: now as unknown as FirebaseFirestore.Timestamp,
+            ...(view.colorPalette?.length && { colorPalette: view.colorPalette }),
+          };
+        }
+
+        if (generated.aggregatedPalette) {
+          aggregatedColorPalette = {
+            unified: generated.aggregatedPalette.unified,
+            dominantColors: generated.aggregatedPalette.dominantColors,
+          };
+        }
       }
 
       // Update pipeline with generated images and color palette
@@ -760,7 +844,7 @@ export const generatePipelineImages = functions
 /**
  * Regenerate a single view
  *
- * Allows user to regenerate individual views without regenerating all 6.
+ * Allows user to regenerate individual views without regenerating all 4.
  */
 export const regeneratePipelineImage = functions
   .region('asia-east1')
@@ -786,6 +870,14 @@ export const regeneratePipelineImage = functions
     if (!validMeshAngles.includes(angle as PipelineMeshAngle)) {
       throw new functions.https.HttpsError('invalid-argument', 'Invalid mesh angle');
     }
+
+    if (hint !== undefined && (typeof hint !== 'string' || hint.length > 100)) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Regeneration hint must be a string of at most 100 characters'
+      );
+    }
+    const normalizedHint = hint?.trim() || undefined;
 
     // Get pipeline
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
@@ -819,7 +911,8 @@ export const regeneratePipelineImage = functions
 
     try {
       const modeId = pipeline.generationMode || DEFAULT_MODE;
-      const geminiModel = normalizeGeminiViewModel(pipeline.settings?.geminiModel) as GeminiImageModel;
+      const geminiViewModel = normalizeGeminiViewModel(pipeline.settings?.geminiModel);
+      const geminiModel = geminiViewModel as GeminiImageModel;
       const selectedStyle = pipeline.settings?.selectedStyle;
       const generator = createMultiViewGenerator(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel, selectedStyle);
       const now = admin.firestore.FieldValue.serverTimestamp();
@@ -872,7 +965,7 @@ export const regeneratePipelineImage = functions
           styledReferenceAngle,
           angle as PipelineMeshAngle,
           referenceColorPalette,
-          hint
+          normalizedHint
         );
 
         // Upload mesh image
@@ -930,6 +1023,7 @@ export const regeneratePipelineImage = functions
           style: selectedStyle,
           imageAnalysis: pipeline.imageAnalysis,
           userDescription: pipeline.userDescription,
+          geminiModel: geminiViewModel,
         });
 
         // Upload styled reference
@@ -1015,7 +1109,12 @@ export const regeneratePipelineImage = functions
         );
 
         // Regenerate mesh view
-        const view = await generator.generateMeshView(base64, mimeType, angle as PipelineMeshAngle, hint);
+        const view = await generator.generateMeshView(
+          base64,
+          mimeType,
+          angle as PipelineMeshAngle,
+          normalizedHint
+        );
 
         // Upload mesh image
         const ext = getExtensionFromMimeType(view.mimeType);
@@ -1661,6 +1760,7 @@ interface UpdatePipelineAnalysisData {
   pipelineId: string;
   imageAnalysis: import('../rodin/types').ImageAnalysisResult;
   userDescription?: string;
+  selectedStyle?: StyleId;
 }
 
 /**
@@ -1682,7 +1782,12 @@ export const updatePipelineAnalysis = functions
     }
 
     const userId = context.auth.uid;
-    const { pipelineId, imageAnalysis, userDescription } = data;
+    const { pipelineId, imageAnalysis, userDescription, selectedStyle } = data;
+    const normalizedUserDescription = normalizeOptionalUserDescription(userDescription);
+
+    if (selectedStyle !== undefined && !isValidStyleId(selectedStyle)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid figure style');
+    }
 
     if (!pipelineId) {
       throw new functions.https.HttpsError(
@@ -1734,7 +1839,10 @@ export const updatePipelineAnalysis = functions
 
     // Also update userDescription if provided
     if (userDescription !== undefined) {
-      updateData.userDescription = userDescription || null;
+      updateData.userDescription = normalizedUserDescription || null;
+    }
+    if (selectedStyle !== undefined) {
+      updateData['settings.selectedStyle'] = selectedStyle;
     }
 
     await pipelineRef.update(updateData);
@@ -1743,7 +1851,8 @@ export const updatePipelineAnalysis = functions
       pipelineId,
       userId,
       colorCount: imageAnalysis.colorPalette?.length,
-      hasDescription: !!userDescription,
+      hasDescription: !!normalizedUserDescription,
+      selectedStyle: selectedStyle || pipeline.settings?.selectedStyle || 'none',
     });
 
     return {

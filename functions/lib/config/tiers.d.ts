@@ -6,7 +6,7 @@
  */
 import type { ProviderType } from '../providers/types';
 import type { UserTier } from '../rodin/types';
-export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image';
 export type HiTem3DResolution = 512 | 1024;
 export interface TierFeatureConfig {
     allowedViewModels: ViewGenerationModel[];

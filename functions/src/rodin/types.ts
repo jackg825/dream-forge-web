@@ -316,14 +316,14 @@ export interface SessionDocument {
 
 /**
  * Pipeline Status for new simplified 3D generation workflow
- * Single flow: Upload → Gemini 6 images → Meshy mesh → Optional texture
+ * Single flow: Upload → Gemini 4 supporting views → 3D provider → Optional texture
  */
 export type PipelineStatus =
   | 'draft'              // Initial state, user uploading images
   | 'batch-queued'       // Batch job submitted, waiting to process
   | 'batch-processing'   // Batch job running on Gemini
-  | 'generating-images'  // Gemini generating 6 views (real-time mode)
-  | 'images-ready'       // 6 images ready for preview
+  | 'generating-images'  // Gemini generating 4 views (real-time mode)
+  | 'images-ready'       // 4 images ready for preview
   | 'generating-mesh'    // Meshy generating mesh (no texture)
   | 'mesh-ready'         // Mesh complete, texture optional
   | 'generating-texture' // Meshy generating texture
@@ -338,11 +338,12 @@ export type PipelineStatus =
 export type ProcessingMode = 'realtime' | 'batch';
 
 /**
- * Credit costs for pipeline workflow
- * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ * Baseline credit costs for the pipeline workflow.
+ * Provider-specific mesh costs are defined in the provider configuration.
  */
 export const PIPELINE_CREDIT_COSTS = {
-  IMAGE_PROCESSING: 0,   // Gemini processing is free (absorbed cost)
+  VIEW_GENERATION_FLASH: 3,
+  VIEW_GENERATION_PRO: 5,
   MESH_GENERATION: 5,    // Meshy mesh-only generation
   TEXTURE_GENERATION: 10, // Meshy texture/retexture
 } as const;
@@ -378,7 +379,7 @@ export interface PipelineSettings {
   printerType: PrinterType;
   format: OutputFormat;
   generationMode?: GenerationModeId;
-  geminiModel?: 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';  // Gemini model for image generation
+  geminiModel?: 'gemini-2.5-flash-image' | 'gemini-3-pro-image';  // Gemini model for image generation
   meshPrecision?: MeshPrecision;  // 'high' = no remesh, 'standard' = remesh (default)
   colorCount?: number;            // Number of colors for analysis (3-12, default: 7)
   provider?: ProviderType;        // 3D generation provider (default: 'meshy')
@@ -391,11 +392,9 @@ export interface PipelineSettings {
  *
  * Flow:
  * 1. User uploads 1+ images
- * 2. Gemini generates 6 images:
- *    - 4 mesh-optimized (7-color H2C style) for front/back/left/right
- *    - 2 texture-ready (full color) for front/back
+ * 2. Gemini generates 4 front/back/left/right supporting views
  * 3. User previews images, can regenerate individual views
- * 4. Meshy Multi-Image-to-3D generates mesh (5 credits)
+ * 4. The selected multi-image 3D provider generates the mesh
  * 5. User previews mesh
  * 6. Optional: Meshy Retexture generates texture (10 credits)
  * 7. Final model ready with download options
@@ -457,6 +456,7 @@ export interface PipelineDocument {
 
   // Credit tracking
   creditsCharged: {
+    views: number;    // 3 or 5 based on the selected Gemini model
     mesh: number;     // 5 when mesh generated
     texture: number;  // 10 when texture generated
   };

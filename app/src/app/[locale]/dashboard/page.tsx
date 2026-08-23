@@ -1,6 +1,6 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { UserHeader } from '@/components/layout/headers';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,18 +36,18 @@ function DashboardContent() {
   // Get translated status message
   const getStatusMessage = (status: PipelineStatus): string => {
     const statusMap: Record<PipelineStatus, string> = {
-      'draft': '草稿',
-      'batch-queued': '排隊中',
-      'batch-processing': '批次處理中',
-      'generating-images': '生成圖片中',
-      'images-ready': '圖片就緒',
-      'generating-mesh': '生成網格中',
-      'mesh-ready': '網格就緒',
-      'generating-texture': '生成貼圖中',
-      'completed': t('status.completed'),
-      'failed': t('status.failed'),
+      'draft': 'draft',
+      'batch-queued': 'batchQueued',
+      'batch-processing': 'batchProcessing',
+      'generating-images': 'generatingImages',
+      'images-ready': 'imagesReady',
+      'generating-mesh': 'generatingMesh',
+      'mesh-ready': 'meshReady',
+      'generating-texture': 'generatingTexture',
+      'completed': 'completed',
+      'failed': 'failed',
     };
-    return statusMap[status] || status;
+    return t(`adminStatus.${statusMap[status]}`);
   };
 
   return (
@@ -173,6 +173,7 @@ function DashboardContent() {
 
 function PipelineListItem({ pipeline, getStatusMessage }: { pipeline: Pipeline; getStatusMessage: (status: PipelineStatus) => string }) {
   const t = useTranslations();
+  const locale = useLocale();
 
   // Status icon and variant
   const getStatusConfig = (status: PipelineStatus) => {
@@ -224,7 +225,7 @@ function PipelineListItem({ pipeline, getStatusMessage }: { pipeline: Pipeline; 
     if (minutes < 60) return t('time.minutesAgo', { count: minutes });
     if (hours < 24) return t('time.hoursAgo', { count: hours });
     if (days < 7) return t('time.daysAgo', { count: days });
-    return date.toLocaleDateString();
+    return new Intl.DateTimeFormat(locale).format(date);
   };
 
   return (
@@ -252,7 +253,7 @@ function PipelineListItem({ pipeline, getStatusMessage }: { pipeline: Pipeline; 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-sm font-medium truncate">
-            {pipeline.settings.quality === 'fine' ? '高品質' : pipeline.settings.quality === 'standard' ? '標準' : '草稿'}
+            {t(`upload.quality.${pipeline.settings.quality}.label`)}
           </p>
           {pipeline.meshUrl && (
             <Badge variant="outline" className="gap-1 text-xs">

@@ -8,7 +8,7 @@
 import type { ModelProvider, UserTier } from '@/types';
 
 // View generation model options (Gemini image generation)
-export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image-preview';
+export type ViewGenerationModel = 'gemini-2.5-flash-image' | 'gemini-3-pro-image';
 
 // HiTem3D resolution options
 export type HiTem3DResolution = 512 | 1024;
@@ -45,7 +45,7 @@ export const TIER_FEATURES: Record<UserTier, TierFeatureConfig> = {
     allowedHiTem3DResolutions: [512],
   },
   premium: {
-    allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image-preview'],
+    allowedViewModels: ['gemini-2.5-flash-image', 'gemini-3-pro-image'],
     allowedProviders: ['hunyuan', 'tripo', 'hitem3d'],
     allowedHiTem3DResolutions: [512, 1024],
   },
@@ -67,7 +67,7 @@ export const VIEW_MODEL_OPTIONS: Record<ViewGenerationModel, {
     label: 'Gemini 2.5 Flash',
     description: '快速生成，標準品質',
   },
-  'gemini-3-pro-image-preview': {
+  'gemini-3-pro-image': {
     label: 'Gemini 3 Pro',
     description: '高品質生成，更精細',
     badge: 'Premium',

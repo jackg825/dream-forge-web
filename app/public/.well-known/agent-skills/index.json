@@ -4,9 +4,9 @@
     {
       "name": "dream-forge-create-3d-model",
       "type": "skill-md",
-      "description": "Guide a user through creating a textured 3D model from photos in Dream Forge.",
+      "description": "Guide a user through creating and downloading a 3D model from one reference photo in Dream Forge.",
       "url": "https://dreamforge.app/.well-known/agent-skills/create-3d-model.md",
-      "digest": "sha256:da07bfdfb33094a14e827488bfb6d569cf0f278babd9c218e359d75fc73d541f"
+      "digest": "sha256:2379f3174e94c3cec705d2b1ad11e000d5bea80dd9ec76cf137bfbc915381bf9"
     },
     {
       "name": "dream-forge-api-integration",

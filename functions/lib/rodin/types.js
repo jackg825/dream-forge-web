@@ -42,11 +42,12 @@ exports.SESSION_CREDIT_COSTS = {
 // Maximum drafts per user
 exports.MAX_USER_DRAFTS = 3;
 /**
- * Credit costs for pipeline workflow
- * Total: 5 (mesh) + 10 (texture) = 15 credits max
+ * Baseline credit costs for the pipeline workflow.
+ * Provider-specific mesh costs are defined in the provider configuration.
  */
 exports.PIPELINE_CREDIT_COSTS = {
-    IMAGE_PROCESSING: 0, // Gemini processing is free (absorbed cost)
+    VIEW_GENERATION_FLASH: 3,
+    VIEW_GENERATION_PRO: 5,
     MESH_GENERATION: 5, // Meshy mesh-only generation
     TEXTURE_GENERATION: 10, // Meshy texture/retexture
 };

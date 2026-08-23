@@ -190,7 +190,7 @@ export function HowItWorksSection({ className }: HowItWorksSectionProps) {
         <div className="mt-10 sm:mt-16 text-center">
           <div className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-muted/50 rounded-full">
             <span className="text-xl sm:text-2xl font-display font-bold text-[var(--accent-violet)]">
-              ~2
+              {t('howItWorks.timeValue')}
             </span>
             <span className="text-sm sm:text-base text-muted-foreground">
               {t('howItWorks.timeLabel')}
