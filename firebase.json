@@ -21,7 +21,7 @@
     {
       "source": "functions-python",
       "codebase": "python",
-      "runtime": "python310",
+      "runtime": "python312",
       "ignore": [
         "venv",
         "__pycache__",

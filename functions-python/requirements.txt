@@ -1,5 +1,5 @@
-firebase-functions>=0.4.0
-trimesh>=4.0.0
-numpy>=1.24.0
-scipy>=1.10.0
-networkx>=3.0
+firebase-functions==0.6.0
+trimesh==5.0.0
+numpy==2.5.2
+scipy==1.18.1
+networkx==3.6.1
