@@ -25,37 +25,43 @@ function AdminPipelinesContent() {
   } = useAdminPipelines();
 
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
-  const [userIdFilter, setUserIdFilter] = useState('');
-  const [selectedPipeline, setSelectedPipeline] = useState<AdminPipeline | null>(null);
+  const [userIdInput, setUserIdInput] = useState('');
+  const [appliedUserIdFilter, setAppliedUserIdFilter] = useState('');
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const selectedPipeline = pipelines.find((pipeline) => pipeline.id === selectedPipelineId) || null;
 
   // Fetch pipelines on mount and when filters change
   useEffect(() => {
     fetchPipelines(20, 0, {
       status: statusFilter === 'all' ? undefined : statusFilter,
-      userId: userIdFilter || undefined,
+      userId: appliedUserIdFilter || undefined,
     });
-  }, [statusFilter, userIdFilter, fetchPipelines]);
+  }, [statusFilter, appliedUserIdFilter, fetchPipelines]);
 
   const handleSearch = () => {
-    fetchPipelines(20, 0, {
-      status: statusFilter === 'all' ? undefined : statusFilter,
-      userId: userIdFilter || undefined,
-    });
+    setAppliedUserIdFilter(userIdInput.trim());
   };
 
   const handleLoadMore = () => {
     if (pagination?.hasMore) {
       fetchPipelines(pagination.limit, pagination.offset + pagination.limit, {
         status: statusFilter === 'all' ? undefined : statusFilter,
-        userId: userIdFilter || undefined,
+        userId: appliedUserIdFilter || undefined,
       });
     }
   };
 
   const handlePipelineClick = (pipeline: AdminPipeline) => {
-    setSelectedPipeline(pipeline);
+    setSelectedPipelineId(pipeline.id);
     setDetailOpen(true);
+  };
+
+  const refreshLoadedPipelines = () => {
+    fetchPipelines(Math.min(Math.max(pipelines.length, 20), 50), 0, {
+      status: statusFilter === 'all' ? undefined : statusFilter,
+      userId: appliedUserIdFilter || undefined,
+    });
   };
 
   const handleFilterChange = (newFilter: FilterStatus) => {
@@ -73,7 +79,9 @@ function AdminPipelinesContent() {
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             <button
+              type="button"
               onClick={clearError}
+              aria-label="關閉錯誤訊息"
               className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
             >
               ✕
@@ -99,8 +107,8 @@ function AdminPipelinesContent() {
           <div className="flex gap-2">
             <Input
               placeholder="搜尋用戶 ID..."
-              value={userIdFilter}
-              onChange={(e) => setUserIdFilter(e.target.value)}
+              value={userIdInput}
+              onChange={(e) => setUserIdInput(e.target.value)}
               className="max-w-xs"
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
@@ -129,7 +137,7 @@ function AdminPipelinesContent() {
             <Box className="h-16 w-16 text-muted-foreground/30 mb-4" />
             <h3 className="text-lg font-medium mb-1">沒有找到 Pipeline</h3>
             <p className="text-muted-foreground">
-              {statusFilter !== 'all' || userIdFilter
+              {statusFilter !== 'all' || appliedUserIdFilter
                 ? '嘗試調整篩選條件'
                 : '系統中尚無任何 Pipeline'}
             </p>
@@ -176,8 +184,9 @@ function AdminPipelinesContent() {
         open={detailOpen}
         onClose={() => {
           setDetailOpen(false);
-          setSelectedPipeline(null);
+          setSelectedPipelineId(null);
         }}
+        onPipelineUpdated={refreshLoadedPipelines}
       />
     </div>
   );

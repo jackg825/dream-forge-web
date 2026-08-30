@@ -17,7 +17,8 @@ import * as functions from 'firebase-functions/v1';
  * 2. Sends it to Gemini for analysis
  * 3. Returns structured analysis results
  *
- * The analysis is free (no credits charged) and is used to:
+ * The analysis does not consume generation credits, but is email-verified and
+ * rate-limited to protect the paid provider from automated abuse. It is used to:
  * - Pre-populate description for better AI generation
  * - Extract color palette for consistency
  * - Provide 3D print friendliness feedback

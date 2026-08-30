@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense, useRef } from 'react';
+import { useState, useEffect, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
@@ -68,6 +68,7 @@ import type {
   GeminiModelId,
 } from '@/types';
 import { downloadFile } from '@/lib/download';
+import { refreshPipelineUrls } from '@/lib/refresh-pipeline-urls';
 import {
   GENERATION_MODE_OPTIONS,
   DEFAULT_GENERATION_MODE,
@@ -80,6 +81,12 @@ import {
 import { ProviderSelector } from './ProviderSelector';
 import { ProviderOptionsPanel } from './ProviderOptionsPanel';
 import { ViewModelSelector } from './ViewModelSelector';
+import {
+  canAccessHiTem3DResolution,
+  canAccessProvider,
+  canAccessViewModel,
+  type HiTem3DResolution,
+} from '@/config/tiers';
 
 interface PipelineFlowProps {
   onNoCredits: () => void;
@@ -157,13 +164,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const generationMode: GenerationModeId = DEFAULT_GENERATION_MODE;
   // Batch mode temporarily disabled - force realtime
-  const processingMode = 'realtime' as ProcessingMode;
+  const processingMode: ProcessingMode = 'realtime';
   const meshPrecision: MeshPrecision = DEFAULT_MESH_PRECISION;
   const [userDescription, setUserDescription] = useState<string>('');
   const [colorCount, setColorCount] = useState<number>(7);
 
-  // Provider selection state - default to Tripo3D v3.0
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('tripo');
+  // HiTem3D is available to every tier, so the default selection is always valid.
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('hitem3d');
   const [providerOptions, setProviderOptions] = useState<ProviderOptions>({});
 
   // Gemini model selection state
@@ -193,6 +200,19 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     reset: resetAnalysis,
     hasEdits: analysisHasEdits,
   } = useImageAnalysis();
+
+  const resetLocalDraftState = useCallback(() => {
+    setUploadedImages([]);
+    setAnalysis(null);
+    setUserDescription('');
+    setColorCount(7);
+    setSelectedProvider('hitem3d');
+    setProviderOptions({});
+    setGeminiModel(DEFAULT_GEMINI_MODEL);
+    setSelectedStyle(DEFAULT_STYLE);
+    setStyleChangeRequested(false);
+    setActionLoading(false);
+  }, [setAnalysis]);
 
   // 3D Viewer state - mesh preview (Step 5)
   const meshViewerRef = useRef<ModelViewerRef>(null);
@@ -240,7 +260,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     error,
     createPipeline,
     generateImages,
-    submitBatch,
     regenerateImage,
     startMeshGeneration,
     checkStatus,
@@ -249,9 +268,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     resetStep,
     isBatchProcessing,
   } = usePipeline(pipelineId);
-
-  // Credit costs
-  const MESH_COST = 5;
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -274,9 +290,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     }
   }, [pipeline?.settings?.provider, meshViewModeInitialized]);
 
-  // Restore analysis when loading a draft pipeline
+  // Restore the selected draft without carrying state from another pipeline.
   useEffect(() => {
-    if (pipeline?.status === 'draft' && pipeline.imageAnalysis && !imageAnalysis) {
+    if (pipeline?.status === 'draft' && pipeline.imageAnalysis) {
       // Convert Firestore timestamp to Date if needed
       const analysis = {
         ...pipeline.imageAnalysis,
@@ -285,16 +301,49 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           : new Date((pipeline.imageAnalysis.analyzedAt as unknown as { seconds: number }).seconds * 1000),
       };
       setAnalysis(analysis);
-      // Also restore userDescription if present
-      if (pipeline.userDescription) {
-        setUserDescription(pipeline.userDescription);
-      }
-      // Restore uploaded images from pipeline
-      if (pipeline.inputImages && pipeline.inputImages.length > 0 && uploadedImages.length === 0) {
-        setUploadedImages(pipeline.inputImages.map(img => ({ url: img.url })));
-      }
+      setUserDescription(pipeline.userDescription || analysis.description || '');
+      setUploadedImages((pipeline.inputImages || []).map((img) => ({ url: img.url })));
     }
-  }, [pipeline, imageAnalysis, setAnalysis, uploadedImages.length]);
+  }, [pipeline, setAnalysis]);
+
+  // Keep local state aligned with browser Back/Forward navigation.
+  const previousPipelineIdParam = useRef(pipelineIdParam);
+  useEffect(() => {
+    if (previousPipelineIdParam.current !== pipelineIdParam) {
+      resetLocalDraftState();
+      previousPipelineIdParam.current = pipelineIdParam;
+    }
+    setPipelineId(pipelineIdParam);
+  }, [pipelineIdParam, resetLocalDraftState]);
+
+  // Restore persisted choices when resuming a pipeline from history.
+  useEffect(() => {
+    const settings = pipeline?.settings;
+    if (!settings) return;
+
+    const tier = user?.tier || 'free';
+    if (settings.selectedStyle) setSelectedStyle(settings.selectedStyle);
+    const restoredModel = settings.geminiModel &&
+      canAccessViewModel(tier, settings.geminiModel, isAdmin)
+      ? settings.geminiModel
+      : DEFAULT_GEMINI_MODEL;
+    setGeminiModel(restoredModel);
+
+    const restoredProvider = settings.provider &&
+      canAccessProvider(tier, settings.provider, isAdmin)
+      ? settings.provider
+      : 'hitem3d';
+    setSelectedProvider(restoredProvider);
+
+    const restoredOptions = settings.providerOptions || {};
+    const restoredResolution = restoredOptions.resolution as HiTem3DResolution | undefined;
+    setProviderOptions(
+      restoredProvider === 'hitem3d' && restoredResolution &&
+      !canAccessHiTem3DResolution(tier, restoredResolution, isAdmin)
+        ? { ...restoredOptions, resolution: 512 }
+        : restoredOptions
+    );
+  }, [pipeline?.settings, user?.tier, isAdmin]);
 
   // Note: We no longer auto-select recommended style since user now selects style BEFORE analysis
   // The analysis uses the user's selected style for context-aware generation
@@ -339,7 +388,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   // Handle image upload and pipeline creation
   const handleStartPipeline = async () => {
     if (!user) {
-      router.push('/auth');
+      router.push(`/${locale}/auth?returnTo=${encodeURIComponent('/generate')}`);
       return;
     }
 
@@ -347,28 +396,31 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       return;
     }
 
+    if (creditsLoading) return;
+
+    const viewCost = GEMINI_MODEL_OPTIONS[geminiModel].creditCost;
+    if (credits < viewCost) {
+      onNoCredits();
+      return;
+    }
+
     setActionLoading(true);
     try {
       // Check if we already have a draft pipeline (from analysis)
       if (pipelineId && pipeline?.status === 'draft') {
-        // Update analysis if user made edits
-        if (analysisHasEdits && imageAnalysis) {
-          await updateAnalysis(imageAnalysis, imageAnalysis.description);
+        if (imageAnalysis) {
+          await updateAnalysis(
+            imageAnalysis,
+            imageAnalysis.description,
+            selectedStyle,
+            geminiModel
+          );
         }
 
-        // Start generation on existing pipeline
-        // Keep actionLoading true until Firestore status changes to generating-images
-        if (processingMode === 'batch') {
-          submitBatch(pipelineId).catch((err) => {
-            console.error('Batch submission failed:', err);
-            setActionLoading(false);
-          });
-        } else {
-          generateImages(pipelineId).catch((err) => {
-            console.error('Image generation failed:', err);
-            setActionLoading(false);
-          });
-        }
+        generateImages(pipelineId).catch((err) => {
+          console.error('Image generation failed:', err);
+          setActionLoading(false);
+        });
         return;
       }
 
@@ -389,19 +441,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       // Update URL with pipeline ID
       router.push(`?id=${newPipelineId}`, { scroll: false });
 
-      // Start image generation based on processing mode
-      // Keep actionLoading true until Firestore status changes to generating-images
-      if (processingMode === 'batch') {
-        submitBatch(newPipelineId).catch((err) => {
-          console.error('Batch submission failed:', err);
-          setActionLoading(false);
-        });
-      } else {
-        generateImages(newPipelineId).catch((err) => {
-          console.error('Image generation failed:', err);
-          setActionLoading(false);
-        });
-      }
+      generateImages(newPipelineId).catch((err) => {
+        console.error('Image generation failed:', err);
+        setActionLoading(false);
+      });
     } catch (err) {
       console.error('Failed to create pipeline:', err);
       setActionLoading(false);
@@ -418,6 +461,11 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
       // Reset style change request flag after successful analysis
       setStyleChangeRequested(false);
+
+      if (pipelineId && pipeline?.status === 'draft') {
+        await updateAnalysis(result, result.description, selectedStyle, geminiModel);
+        return;
+      }
 
       // Create draft pipeline with analysis results
       // Use the user's selected style (which was passed to analysis)
@@ -447,11 +495,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   };
 
   // Handle style change confirmation - re-analyze with new style
-  const handleStyleChangeConfirm = async () => {
-    // Clear analysis and re-run with new style
-    resetAnalysis();
+  const handleStyleChangeConfirm = () => {
+    // Clear the displayed result; the next analysis updates the existing draft.
+    setAnalysis(null);
     setStyleChangeRequested(false);
-    // The user will need to click "Analyze" again
   };
 
   // Handle style change cancel - revert to original style
@@ -465,7 +512,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Handle mesh generation with provider selection
   const handleStartMesh = async () => {
-    if (credits < MESH_COST) {
+    if (creditsLoading) return;
+
+    if (credits < PROVIDER_OPTIONS[selectedProvider].creditCost) {
       onNoCredits();
       return;
     }
@@ -547,7 +596,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             userId={user.uid}
             images={uploadedImages}
             onImagesChange={setUploadedImages}
-            maxImages={4}
+            maxImages={1}
             disabled={actionLoading}
           />
 
@@ -624,7 +673,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 <Button
                   size="lg"
                   onClick={handleStartPipeline}
-                  disabled={uploadedImages.length === 0 || actionLoading || authLoading || styleChangeRequested}
+                  disabled={uploadedImages.length === 0 || actionLoading || authLoading || creditsLoading || styleChangeRequested}
                   className="px-8"
                 >
                   {actionLoading ? (
@@ -647,7 +696,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           <CardContent className="py-12 text-center">
             <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground mb-4">{t('buttons.pleaseSignIn')}</p>
-            <Button onClick={() => router.push('/auth')}>
+            <Button
+              onClick={() => router.push(`/${locale}/auth?returnTo=${encodeURIComponent('/generate')}`)}
+            >
               {t('buttons.signIn')}
             </Button>
           </CardContent>
@@ -758,10 +809,6 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           <MultiViewGrid
             meshImages={pipeline?.meshImages || {}}
             isGenerating={false}
-            onUploadView={(viewType, angle, file) => {
-              // TODO: Implement view upload
-              console.log('Upload view:', viewType, angle, file);
-            }}
             onRegenerateView={(viewType, angle) => openRegenerateDialog(viewType, angle)}
             disabled={actionLoading}
           />
@@ -774,7 +821,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <Button
               size="lg"
               onClick={handleStartPipeline}
-              disabled={actionLoading || isGeneratingImages}
+              disabled={actionLoading || creditsLoading || isGeneratingImages}
               className="px-8"
             >
               {actionLoading || isGeneratingImages ? (
@@ -794,7 +841,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <Button
               size="lg"
               onClick={handleStartMesh}
-              disabled={actionLoading}
+              disabled={actionLoading || creditsLoading}
               className="px-8"
             >
               {actionLoading ? (
@@ -816,7 +863,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 variant="outline"
                 size="lg"
                 onClick={handleStartPipeline}
-                disabled={actionLoading || isGeneratingImages}
+                disabled={actionLoading || creditsLoading || isGeneratingImages}
               >
                 {actionLoading || isGeneratingImages ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -828,7 +875,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               <Button
                 size="lg"
                 onClick={handleStartMesh}
-                disabled={actionLoading || !hasAllMeshImages}
+                disabled={actionLoading || creditsLoading || !hasAllMeshImages}
                 className="px-8"
               >
                 <Box className="mr-2 h-4 w-4" />
@@ -946,7 +993,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
         {/* Action button - proceed to mesh generation */}
         <div className="flex justify-center pt-4">
-          <Button size="lg" onClick={handleStartMesh} disabled={actionLoading} className="px-8">
+          <Button size="lg" onClick={handleStartMesh} disabled={actionLoading || creditsLoading} className="px-8">
             {actionLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -983,14 +1030,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         <div className="py-16">
           <UnifiedProgressIndicator
             status={pipeline?.status || 'batch-queued'}
-            processingMode={pipeline?.processingMode || 'batch'}
+            processingMode={pipeline?.processingMode || 'realtime'}
             progress={{
               meshViewsCompleted: meshCompleted,
               phase,
               batchProgress: pipeline?.batchProgress,
             }}
             estimatedCompletionTime={pipeline?.estimatedCompletionTime}
-            onViewHistory={() => router.push('/dashboard/history')}
+            onViewHistory={() => router.push(`/${locale}/dashboard/history`)}
           />
         </div>
       );
@@ -1064,7 +1111,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       <div className="lg:col-span-2 py-16">
         <UnifiedProgressIndicator
           status="generating-mesh"
-          processingMode={pipeline?.processingMode || 'batch'}
+          processingMode={pipeline?.processingMode || 'realtime'}
           provider={pipeline?.settings?.provider}
         />
       </div>
@@ -1123,10 +1170,19 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   };
 
   // Download handler - uses fetch to preserve Referer header
-  const handleDownload = async (url: string, fileName: string) => {
+  const handleDownload = async (
+    asset: 'mesh' | 'textured',
+    fileName: string
+  ) => {
     if (downloading) return;
     setDownloading(true);
     try {
+      if (!pipeline) return;
+      const refreshedPipeline = await refreshPipelineUrls(pipeline).catch(() => pipeline);
+      const url = asset === 'textured'
+        ? refreshedPipeline.texturedModelUrl
+        : refreshedPipeline.meshUrl;
+      if (!url) return;
       await downloadFile(url, fileName);
     } catch (error) {
       console.error('Download failed:', error);
@@ -1186,7 +1242,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             {/* Download and optimization links */}
             <div className="flex items-center justify-center gap-4">
               <button
-                onClick={() => handleDownload(pipeline.meshUrl!, 'mesh-model.glb')}
+                onClick={() => handleDownload('mesh', 'mesh-model.glb')}
                 disabled={downloading}
                 className="text-primary hover:underline text-sm inline-flex items-center gap-1 disabled:opacity-50"
               >
@@ -1239,7 +1295,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               <Button
                 className="flex-1"
                 size="lg"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push(`/${locale}/dashboard`)}
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
                 {t('step2.finish')}
@@ -1259,7 +1315,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       <div className="lg:col-span-2 py-16">
         <UnifiedProgressIndicator
           status="generating-texture"
-          processingMode={pipeline?.processingMode || 'batch'}
+          processingMode={pipeline?.processingMode || 'realtime'}
         />
       </div>
 
@@ -1322,7 +1378,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={() =>
-                  handleDownload(modelUrl, hasTexture ? 'textured-model.glb' : 'mesh-model.glb')
+                  handleDownload(
+                    hasTexture ? 'textured' : 'mesh',
+                    hasTexture ? 'textured-model.glb' : 'mesh-model.glb'
+                  )
                 }
                 disabled={downloading}
                 className="text-primary hover:underline text-sm inline-flex items-center gap-1 disabled:opacity-50"
@@ -1408,8 +1467,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 className="flex-1"
                 onClick={() => {
                   setPipelineId(null);
-                  setUploadedImages([]);
-                  router.push('/generate', { scroll: false });
+                  resetLocalDraftState();
+                  router.push(`/${locale}/generate`, { scroll: false });
                 }}
               >
                 {t('completion.createNew')}
@@ -1417,7 +1476,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push(`/${locale}/dashboard`)}
               >
                 {t('completion.viewHistory')}
               </Button>
@@ -1485,8 +1544,8 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
           onRetry={handleRetry}
           onReset={() => {
             setPipelineId(null);
-            setUploadedImages([]);
-            router.push('/generate', { scroll: false });
+            resetLocalDraftState();
+            router.push(`/${locale}/generate`, { scroll: false });
           }}
           isRetrying={actionLoading}
         />

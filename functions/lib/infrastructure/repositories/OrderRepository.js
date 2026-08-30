@@ -421,6 +421,12 @@ class FirestoreOrderRepository {
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
     }
+    async updatePricingMatrix(pricing) {
+        await db.collection(PRINT_CONFIG_COLLECTION).doc('pricing').set({
+            matrix: pricing,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    }
     // ============================================
     // Reports
     // ============================================

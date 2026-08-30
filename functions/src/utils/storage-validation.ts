@@ -1,5 +1,6 @@
-import axios from 'axios';
 import * as functions from 'firebase-functions/v1';
+import * as admin from 'firebase-admin';
+import { getR2Client } from '../storage/r2-client';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const DEFAULT_ALLOWED_IMAGE_TYPES = new Set([
@@ -9,6 +10,31 @@ const DEFAULT_ALLOWED_IMAGE_TYPES = new Set([
   'image/heic',
   'image/heif',
 ]);
+
+function hasBytes(buffer: Buffer, offset: number, expected: number[]): boolean {
+  return expected.every((byte, index) => buffer[offset + index] === byte);
+}
+
+/** Validate actual image signatures for both Firebase and R2 objects. */
+function hasValidImageSignature(buffer: Buffer, mimeType: string): boolean {
+  switch (mimeType) {
+    case 'image/jpeg':
+      return hasBytes(buffer, 0, [0xff, 0xd8, 0xff]);
+    case 'image/png':
+      return hasBytes(buffer, 0, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    case 'image/webp':
+      return hasBytes(buffer, 0, [0x52, 0x49, 0x46, 0x46]) &&
+        hasBytes(buffer, 8, [0x57, 0x45, 0x42, 0x50]);
+    case 'image/heic':
+    case 'image/heif': {
+      if (!hasBytes(buffer, 4, [0x66, 0x74, 0x79, 0x70])) return false;
+      const brand = buffer.subarray(8, 12).toString('ascii');
+      return ['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1'].includes(brand);
+    }
+    default:
+      return false;
+  }
+}
 
 export interface ValidatedStorageReference {
   url: string;
@@ -21,6 +47,12 @@ export interface DownloadedValidatedImage extends ValidatedStorageReference {
 }
 
 type AllowedPrefix = 'uploads' | 'pipelines' | string;
+export type StorageBackend = 'firebase' | 'r2';
+
+export interface ParsedStorageReference {
+  storagePath: string;
+  backend: StorageBackend;
+}
 
 function normalizeStoragePath(path: string | null): string | null {
   if (!path) return null;
@@ -46,16 +78,29 @@ function normalizeStoragePath(path: string | null): string | null {
   return segments.join('/');
 }
 
+function isAllowedR2ProxyHost(hostname: string): boolean {
+  const hosts = new Set([
+    'dream-forge-r2-proxy.jackg825.workers.dev',
+    'r2-proxy.dreamforge.app',
+  ]);
+
+  if (process.env.R2_PUBLIC_URL) {
+    try {
+      hosts.add(new URL(process.env.R2_PUBLIC_URL).hostname);
+    } catch {
+      // A malformed deployment variable must not broaden the allowlist.
+    }
+  }
+
+  return hosts.has(hostname);
+}
+
 /**
  * Extract a storage object path from Firebase Storage, Google Storage, or R2 proxy URLs.
  */
-export function extractStoragePathFromUrl(rawUrl: string): string | null {
+export function extractStorageReferenceFromUrl(rawUrl: string): ParsedStorageReference | null {
   const trimmedUrl = rawUrl.trim();
   if (!trimmedUrl) return null;
-
-  if (trimmedUrl.startsWith('/download/')) {
-    return normalizeStoragePath(trimmedUrl.slice('/download/'.length));
-  }
 
   let parsedUrl: URL;
   try {
@@ -64,22 +109,47 @@ export function extractStoragePathFromUrl(rawUrl: string): string | null {
     return null;
   }
 
-  if (parsedUrl.pathname.startsWith('/download/')) {
-    return normalizeStoragePath(parsedUrl.pathname.slice('/download/'.length));
+  if (parsedUrl.protocol !== 'https:') return null;
+
+  if (parsedUrl.pathname.startsWith('/download/') && isAllowedR2ProxyHost(parsedUrl.hostname)) {
+    const storagePath = normalizeStoragePath(parsedUrl.pathname.slice('/download/'.length));
+    return storagePath ? { storagePath, backend: 'r2' } : null;
+  }
+
+  const r2AccountId = process.env.R2_ACCOUNT_ID;
+  const r2BucketName = process.env.R2_BUCKET_NAME || 'dream-forge-storage';
+  if (r2AccountId && parsedUrl.hostname === `${r2BucketName}.${r2AccountId}.r2.cloudflarestorage.com`) {
+    const storagePath = normalizeStoragePath(parsedUrl.pathname);
+    return storagePath ? { storagePath, backend: 'r2' } : null;
+  }
+
+  if (r2AccountId && parsedUrl.hostname === `${r2AccountId}.r2.cloudflarestorage.com`) {
+    const segments = parsedUrl.pathname.split('/').filter(Boolean);
+    if (segments.length < 4 || segments[0] !== r2BucketName) return null;
+    const storagePath = normalizeStoragePath(segments.slice(1).join('/'));
+    return storagePath ? { storagePath, backend: 'r2' } : null;
   }
 
   if (parsedUrl.hostname === 'firebasestorage.googleapis.com') {
+    const bucketMatch = parsedUrl.pathname.match(/^\/v0\/b\/([^/]+)\/o\//);
+    if (!bucketMatch || bucketMatch[1] !== admin.storage().bucket().name) return null;
     const objectMatch = parsedUrl.pathname.match(/\/o\/(.+)$/);
-    return normalizeStoragePath(objectMatch?.[1] || null);
+    const storagePath = normalizeStoragePath(objectMatch?.[1] || null);
+    return storagePath ? { storagePath, backend: 'firebase' } : null;
   }
 
   if (parsedUrl.hostname === 'storage.googleapis.com') {
     const segments = parsedUrl.pathname.split('/').filter(Boolean);
-    if (segments.length < 2) return null;
-    return normalizeStoragePath(segments.slice(1).join('/'));
+    if (segments.length < 2 || segments[0] !== admin.storage().bucket().name) return null;
+    const storagePath = normalizeStoragePath(segments.slice(1).join('/'));
+    return storagePath ? { storagePath, backend: 'firebase' } : null;
   }
 
   return null;
+}
+
+export function extractStoragePathFromUrl(rawUrl: string): string | null {
+  return extractStorageReferenceFromUrl(rawUrl)?.storagePath || null;
 }
 
 export function assertUserStorageReference(
@@ -127,17 +197,33 @@ export async function downloadValidatedImageAsBase64(
   allowedPrefixes: AllowedPrefix[] = ['uploads']
 ): Promise<DownloadedValidatedImage> {
   const reference = assertUserStorageReference(url, userId, allowedPrefixes);
-  const response = await axios.get(reference.url, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-    maxContentLength: MAX_IMAGE_BYTES,
-    maxBodyLength: MAX_IMAGE_BYTES,
-    maxRedirects: 0,
-    validateStatus: (status) => status >= 200 && status < 300,
-  });
+  const parsedReference = extractStorageReferenceFromUrl(reference.url);
+  if (!parsedReference) {
+    throw new functions.https.HttpsError('invalid-argument', 'Invalid storage URL');
+  }
 
-  const buffer = Buffer.from(response.data);
-  const mimeType = String(response.headers['content-type'] || 'image/png').split(';')[0].trim();
+  let buffer: Buffer;
+  let mimeType: string;
+
+  if (parsedReference.backend === 'r2') {
+    const r2 = getR2Client();
+    const metadata = await r2.getMetadata(reference.storagePath);
+    if (!metadata || typeof metadata.contentLength !== 'number' || metadata.contentLength > MAX_IMAGE_BYTES) {
+      throw new functions.https.HttpsError('invalid-argument', 'Image is missing or too large');
+    }
+    buffer = await r2.download(reference.storagePath);
+    mimeType = metadata.contentType || 'application/octet-stream';
+  } else {
+    const file = admin.storage().bucket().file(reference.storagePath);
+    const [metadata] = await file.getMetadata();
+    if (Number(metadata.size || 0) > MAX_IMAGE_BYTES) {
+      throw new functions.https.HttpsError('invalid-argument', 'Image is too large');
+    }
+    [buffer] = await file.download();
+    mimeType = metadata.contentType || 'application/octet-stream';
+  }
+
+  mimeType = mimeType.split(';')[0].trim().toLowerCase();
 
   if (buffer.length > MAX_IMAGE_BYTES) {
     throw new functions.https.HttpsError(
@@ -150,6 +236,13 @@ export async function downloadValidatedImageAsBase64(
     throw new functions.https.HttpsError(
       'invalid-argument',
       'Image URL must return a supported image type'
+    );
+  }
+
+  if (!hasValidImageSignature(buffer, mimeType)) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Image content does not match its declared type'
     );
   }
 

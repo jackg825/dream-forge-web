@@ -55,7 +55,11 @@ function OrderDetailsContent() {
   const orderId = searchParams.get('id');
   const t = useTranslations('orders');
 
-  const { cancelOrder, cancellingOrder } = useUserOrders();
+  const {
+    cancelOrder,
+    cancellingOrder,
+    error: orderActionError,
+  } = useUserOrders();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -380,10 +384,23 @@ function OrderDetailsContent() {
                         <AlertDialogDescription>
                           {t('orderDetails.cancelConfirmDescription')}
                         </AlertDialogDescription>
+                        {orderActionError && (
+                          <p role="alert" className="text-sm text-destructive">
+                            {orderActionError}
+                          </p>
+                        )}
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>{t('orderDetails.keepOrder')}</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        <AlertDialogCancel disabled={cancellingOrder}>
+                          {t('orderDetails.keepOrder')}
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          closeOnClick={false}
+                          disabled={cancellingOrder}
+                          onClick={handleCancel}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {cancellingOrder && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           {t('orderDetails.confirmCancel')}
                         </AlertDialogAction>
                       </AlertDialogFooter>

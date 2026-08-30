@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import {
   Dialog,
   DialogContent,
@@ -269,7 +269,10 @@ export function PrintOrderModal({
                           value={colorId}
                           onValueChange={(v) => handleColorChange(v, index)}
                         >
-                          <SelectTrigger className="flex-1">
+                          <SelectTrigger
+                            className="flex-1"
+                            aria-label={`${t('modal.colors')} ${index + 1}`}
+                          >
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>

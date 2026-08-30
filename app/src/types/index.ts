@@ -332,7 +332,9 @@ export interface AdminPipeline {
   inputImages: Array<{ url: string; storagePath: string; uploadedAt: string }>;
   meshImages: Partial<Record<PipelineMeshAngle, PipelineProcessedImage>>;
   meshUrl: string | null;
+  meshStoragePath?: string | null;
   texturedModelUrl: string | null;
+  texturedModelStoragePath?: string | null;
   creditsCharged: { mesh: number; texture: number };
   settings: PipelineSettings;
   userDescription: string | null;
@@ -453,6 +455,7 @@ export interface Job {
   inputImageUrls?: string[];
   viewAngles?: ViewAngle[];
   outputModelUrl: string | null;
+  outputModelStoragePath?: string;
   downloadFiles?: DownloadFile[]; // All available files from provider
   settings: JobSettings;
   error: string | null;

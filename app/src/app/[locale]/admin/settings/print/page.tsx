@@ -45,17 +45,19 @@ function PrintSettingsContent() {
   const { materials, sizes, colors, pricing, loading, refresh } = usePrintConfig();
 
   const [saving, setSaving] = useState(false);
+  const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
   const [editedPricing, setEditedPricing] = useState<Record<PrintMaterial, Record<PrintSizeId, number>>>(EMPTY_PRICING);
 
   // Initialize edited pricing from loaded config
   useEffect(() => {
     if (pricing && Object.keys(pricing).length > 0) {
-      setEditedPricing(pricing);
+      setEditedPricing(structuredClone(pricing));
     }
   }, [pricing]);
 
   const handlePricingChange = (material: PrintMaterial, size: PrintSizeId, value: string) => {
     const cents = Math.round(parseFloat(value) * 100) || 0;
+    setSaveResult(null);
     setEditedPricing((prev) => ({
       ...prev,
       [material]: {
@@ -69,6 +71,7 @@ function PrintSettingsContent() {
     if (!functions) return;
 
     setSaving(true);
+    setSaveResult(null);
     try {
       const updatePricingFn = httpsCallable<{ pricing: typeof editedPricing }, { success: boolean }>(
         functions,
@@ -76,8 +79,10 @@ function PrintSettingsContent() {
       );
       await updatePricingFn({ pricing: editedPricing });
       await refresh();
+      setSaveResult('success');
     } catch (error) {
       console.error('Failed to save pricing:', error);
+      setSaveResult('error');
     } finally {
       setSaving(false);
     }
@@ -193,7 +198,7 @@ function PrintSettingsContent() {
                   </Table>
                 </div>
 
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex flex-col items-end gap-2">
                   <Button onClick={handleSavePricing} disabled={saving}>
                     {saving ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -202,6 +207,14 @@ function PrintSettingsContent() {
                     )}
                     {t('print.pricing.save')}
                   </Button>
+                  {saveResult && (
+                    <p
+                      className={saveResult === 'success' ? 'text-sm text-green-700 dark:text-green-400' : 'text-sm text-destructive'}
+                      role={saveResult === 'error' ? 'alert' : 'status'}
+                    >
+                      {t(`print.pricing.${saveResult}`)}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

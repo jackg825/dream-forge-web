@@ -4,8 +4,12 @@ import { createGeminiClient } from '../gemini/client';
 import { createProvider, isValidProvider } from '../providers/factory';
 import type { ProviderType } from '../providers/types';
 import { incrementGenerationCount } from '../utils/credits';
-import { assertUserStorageReferences, downloadValidatedImageAsBase64 } from '../utils/storage-validation';
-import { uploadBuffer } from '../storage';
+import {
+  assertUserStorageReferences,
+  downloadValidatedImageAsBase64,
+  extractStorageReferenceFromUrl,
+} from '../utils/storage-validation';
+import { getSignedUrlForReference, uploadBuffer } from '../storage';
 // import { refundCredits } from '../utils/credits'; // Auto-refund temporarily disabled
 import type {
   JobDocument,
@@ -47,10 +51,16 @@ interface RetryFailedJobData {
   jobId: string;
 }
 
+interface RefreshJobAccessUrlsData {
+  jobIds: string[];
+}
+
 type PendingJobDocument = Omit<JobDocument, 'createdAt' | 'completedAt'> & {
   createdAt: FirebaseFirestore.FieldValue;
   completedAt: null;
 };
+
+const JOB_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
 async function createJobAndDeductCredits(
   userId: string,
@@ -531,6 +541,7 @@ export const checkJobStatus = functions
         await jobRef.update({
           status: 'completed',
           outputModelUrl: signedUrl,
+          outputModelStoragePath: modelPath,
           downloadFiles: downloadList, // Save all Rodin files (GLB, textures, etc.) for preview
           completedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -766,6 +777,7 @@ export const retryFailedJob = functions
       await jobRef.update({
         status: 'completed',
         outputModelUrl: signedUrl,
+        outputModelStoragePath: modelPath,
         downloadFiles: downloadList, // Save all Rodin files for preview
         completedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -802,4 +814,79 @@ export const retryFailedJob = functions
         error: errorMessage,
       };
     }
+  });
+
+/**
+ * Mint fresh URLs from server-owned job records. Clients submit document IDs
+ * only; persisted storage references are validated before signing.
+ */
+export const refreshJobAccessUrls = functions
+  .region('asia-east1')
+  .runWith({
+    timeoutSeconds: 60,
+    memory: '512MB',
+    secrets: ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'],
+  })
+  .https.onCall(async (data: RefreshJobAccessUrlsData, context: functions.https.CallableContext) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+    if (context.auth.token.email_verified !== true) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'Verify your email before refreshing model downloads'
+      );
+    }
+
+    if (!Array.isArray(data?.jobIds)) {
+      throw new functions.https.HttpsError('invalid-argument', 'jobIds must be an array');
+    }
+
+    const userId = context.auth.uid;
+    const jobIds = [...new Set(data.jobIds)];
+    if (
+      jobIds.length === 0 ||
+      jobIds.length > 50 ||
+      jobIds.some((id) => typeof id !== 'string' || !JOB_ID_PATTERN.test(id))
+    ) {
+      throw new functions.https.HttpsError('invalid-argument', 'Expected 1-50 valid job IDs');
+    }
+
+    const snapshots = await db.getAll(
+      ...jobIds.map((jobId) => db.collection('jobs').doc(jobId))
+    );
+    const refreshedEntries = await Promise.all(snapshots.map(async (snapshot) => {
+      if (!snapshot.exists) {
+        throw new functions.https.HttpsError('not-found', 'Job not found');
+      }
+
+      const job = snapshot.data() as JobDocument;
+      if (job.userId !== userId) {
+        throw new functions.https.HttpsError('permission-denied', 'Job access denied');
+      }
+
+      let outputModelUrl: string | null = null;
+      if (job.outputModelUrl) {
+        const storagePath = job.outputModelStoragePath ||
+          extractStorageReferenceFromUrl(job.outputModelUrl)?.storagePath;
+
+        if (storagePath) {
+          try {
+            outputModelUrl = await getSignedUrlForReference(storagePath, job.outputModelUrl);
+          } catch (error) {
+            functions.logger.warn('Could not refresh a job storage URL', {
+              jobId: snapshot.id,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
+        }
+      }
+
+      return [snapshot.id, { outputModelUrl }] as const;
+    }));
+
+    return {
+      jobs: Object.fromEntries(refreshedEntries),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    };
   });

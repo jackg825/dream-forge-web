@@ -1,0 +1,18 @@
+import * as functions from 'firebase-functions/v1';
+export declare const createSession: functions.HttpsFunction & functions.Runnable<any>;
+export declare const updateSession: functions.HttpsFunction & functions.Runnable<any>;
+export declare const deleteSession: functions.HttpsFunction & functions.Runnable<any>;
+export declare const getUserSessions: functions.HttpsFunction & functions.Runnable<any>;
+export declare const generateSessionViews: functions.HttpsFunction & functions.Runnable<any>;
+export declare const regenerateView: functions.HttpsFunction & functions.Runnable<any>;
+export declare const uploadCustomView: functions.HttpsFunction & functions.Runnable<any>;
+export declare const startSessionModelGeneration: functions.HttpsFunction & functions.Runnable<any>;
+export declare const checkSessionModelStatus: functions.HttpsFunction & functions.Runnable<any>;
+export declare const optimizeColorsForH2C: functions.HttpsFunction & functions.Runnable<any>;
+export declare const uploadEditedH2CImage: functions.HttpsFunction & functions.Runnable<any>;
+export declare const generateModel: functions.HttpsFunction & functions.Runnable<any>;
+export declare const checkJobStatus: functions.HttpsFunction & functions.Runnable<any>;
+export declare const retryFailedJob: functions.HttpsFunction & functions.Runnable<any>;
+export declare const createOrder: functions.HttpsFunction & functions.Runnable<any>;
+export declare const saveShippingAddress: functions.HttpsFunction & functions.Runnable<any>;
+export declare const deleteShippingAddress: functions.HttpsFunction & functions.Runnable<any>;

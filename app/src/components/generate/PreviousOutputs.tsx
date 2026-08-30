@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Images, Box } from 'lucide-react';
+import { ChevronDown, ChevronUp, Images, Box, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ImageLightbox } from '@/components/ui/image-lightbox';
 import { useTranslations } from 'next-intl';
 import type { Pipeline, PipelineMeshAngle } from '@/types';
 import { ProviderBadge } from '@/components/ui/provider-badge';
 import { FillImage } from '@/components/ui/fill-image';
+import { refreshPipelineUrls } from '@/lib/refresh-pipeline-urls';
 
 interface PreviousOutputsProps {
   pipeline: Pipeline;
@@ -32,6 +33,7 @@ export function PreviousOutputs({
   const pipelineT = useTranslations('pipeline');
   const [imagesExpanded, setImagesExpanded] = useState(!defaultCollapsed);
   const [meshExpanded, setMeshExpanded] = useState(!defaultCollapsed);
+  const [openingMesh, setOpeningMesh] = useState(false);
 
   // Lightbox state
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -64,6 +66,29 @@ export function PreviousOutputs({
       setLightboxImages(allImages);
       setLightboxIndex(index);
       setLightboxOpen(true);
+    }
+  };
+
+  const handleOpenMesh = async () => {
+    if (openingMesh) return;
+
+    const previewWindow = window.open('about:blank', '_blank');
+    if (previewWindow) previewWindow.opener = null;
+    setOpeningMesh(true);
+
+    try {
+      const refreshedPipeline = await refreshPipelineUrls(pipeline).catch(() => pipeline);
+      if (refreshedPipeline.meshUrl) {
+        if (previewWindow) {
+          previewWindow.location.replace(refreshedPipeline.meshUrl);
+        } else {
+          window.open(refreshedPipeline.meshUrl, '_blank', 'noopener,noreferrer');
+        }
+      } else {
+        previewWindow?.close();
+      }
+    } finally {
+      setOpeningMesh(false);
     }
   };
 
@@ -164,15 +189,20 @@ export function PreviousOutputs({
           {meshExpanded && (
             <div className="px-4 pb-4">
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <a
-                  href={pipeline.meshUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={handleOpenMesh}
+                  disabled={openingMesh}
+                  aria-busy={openingMesh}
                   className="text-xs text-primary hover:underline flex items-center gap-1"
                 >
-                  <Box className="h-3 w-3" />
+                  {openingMesh ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Box className="h-3 w-3" />
+                  )}
                   {t('viewGlb')}
-                </a>
+                </button>
               </div>
             </div>
           )}

@@ -41,3 +41,8 @@ export declare const checkJobStatus: functions.HttpsFunction & functions.Runnabl
  * @param jobId - The ID of the failed job to retry
  */
 export declare const retryFailedJob: functions.HttpsFunction & functions.Runnable<any>;
+/**
+ * Mint fresh URLs from server-owned job records. Clients submit document IDs
+ * only; persisted storage references are validated before signing.
+ */
+export declare const refreshJobAccessUrls: functions.HttpsFunction & functions.Runnable<any>;

@@ -24,7 +24,7 @@ interface PipelineUploaderProps {
 /**
  * PipelineUploader - Simple multi-image uploader for the pipeline flow
  *
- * Supports drag-and-drop and click-to-upload for 1-4 images.
+ * Supports drag-and-drop and click-to-upload within the configured limit.
  * Images are uploaded to Firebase Storage immediately.
  */
 export function PipelineUploader({
@@ -152,7 +152,7 @@ export function PipelineUploader({
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-        multiple
+        multiple={maxImages > 1}
         onChange={handleFileInput}
         className="hidden"
         disabled={disabled}
@@ -184,7 +184,7 @@ export function PipelineUploader({
                 <button
                   type="button"
                   onClick={() => handleRemoveImage(index)}
-                  className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full text-white opacity-100 md:opacity-0 md:group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-opacity"
                   aria-label={t('removeImage')}
                 >
                   <X className="h-4 w-4" />

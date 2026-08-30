@@ -32,7 +32,7 @@ export function PricingSection({ className }: PricingSectionProps) {
       id: 'starter',
       featured: true,
       icon: Sparkles,
-      price: '$9',
+      price: null,
       credits: 20,
       features: ['starterFeature1', 'starterFeature2', 'starterFeature3', 'starterFeature4', 'starterFeature5'],
     },
@@ -40,7 +40,7 @@ export function PricingSection({ className }: PricingSectionProps) {
       id: 'pro',
       featured: false,
       icon: Sparkles,
-      price: '$29',
+      price: null,
       credits: 80,
       features: ['proFeature1', 'proFeature2', 'proFeature3', 'proFeature4', 'proFeature5'],
     },
@@ -124,9 +124,9 @@ export function PricingSection({ className }: PricingSectionProps) {
                     {/* Price */}
                     <div className="mt-2">
                       <span className="text-3xl font-display font-bold">
-                        {plan.price}
+                        {plan.price ?? t('pricing.comingSoon')}
                       </span>
-                      {plan.id !== 'free' && (
+                      {plan.price && plan.id !== 'free' && (
                         <span className="text-sm text-muted-foreground ml-1">
                           {t('pricing.perPack')}
                         </span>
@@ -157,19 +157,24 @@ export function PricingSection({ className }: PricingSectionProps) {
                     </ul>
 
                     {/* CTA Button */}
-                    <Link href={plan.id === 'free' ? '/generate' : '/dashboard'}>
-                      <Button
-                        className={cn(
-                          'w-full py-5',
-                          plan.featured
-                            ? 'bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90'
-                            : ''
-                        )}
-                        variant={plan.featured ? 'default' : 'outline'}
-                      >
+                    {plan.id === 'free' ? <Button
+                      asChild
+                      className={cn(
+                        'w-full py-5',
+                        plan.featured
+                          ? 'bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90'
+                          : ''
+                      )}
+                      variant={plan.featured ? 'default' : 'outline'}
+                    >
+                      <Link href="/generate">
                         {t(`pricing.plans.${plan.id}.cta`)}
+                      </Link>
+                    </Button> : (
+                      <Button className="w-full py-5" variant="outline" disabled>
+                        {t('pricing.comingSoon')}
                       </Button>
-                    </Link>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -226,9 +231,9 @@ export function PricingSection({ className }: PricingSectionProps) {
                     {/* Price */}
                     <div className="mt-4">
                       <span className="text-4xl font-display font-bold">
-                        {plan.price}
+                        {plan.price ?? t('pricing.comingSoon')}
                       </span>
-                      {plan.id !== 'free' && (
+                      {plan.price && plan.id !== 'free' && (
                         <span className="text-muted-foreground ml-1">
                           {t('pricing.perPack')}
                         </span>
@@ -259,19 +264,24 @@ export function PricingSection({ className }: PricingSectionProps) {
                     </ul>
 
                     {/* CTA Button */}
-                    <Link href={plan.id === 'free' ? '/generate' : '/dashboard'}>
-                      <Button
-                        className={cn(
-                          'w-full',
-                          plan.featured
-                            ? 'bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90'
-                            : ''
-                        )}
-                        variant={plan.featured ? 'default' : 'outline'}
-                      >
+                    {plan.id === 'free' ? <Button
+                      asChild
+                      className={cn(
+                        'w-full',
+                        plan.featured
+                          ? 'bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90'
+                          : ''
+                      )}
+                      variant={plan.featured ? 'default' : 'outline'}
+                    >
+                      <Link href="/generate">
                         {t(`pricing.plans.${plan.id}.cta`)}
+                      </Link>
+                    </Button> : (
+                      <Button className="w-full" variant="outline" disabled>
+                        {t('pricing.comingSoon')}
                       </Button>
-                    </Link>
+                    )}
                   </CardContent>
                 </Card>
               );

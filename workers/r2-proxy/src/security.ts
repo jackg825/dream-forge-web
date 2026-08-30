@@ -119,10 +119,14 @@ export function addCorsHeaders(
   env: Env
 ): Response {
   const corsHeaders = getCorsHeaders(request, env);
+  const securityHeaders = getSecurityHeaders();
   const newHeaders = new Headers(response.headers);
 
   corsHeaders.forEach((value, key) => {
     newHeaders.set(key, value);
+  });
+  securityHeaders.forEach((value, key) => {
+    if (!newHeaders.has(key)) newHeaders.set(key, value);
   });
 
   return new Response(response.body, {
@@ -156,10 +160,9 @@ export function getSecurityHeaders(): Headers {
  */
 export async function signUrl(
   path: string,
-  expiresIn: number,
+  expires: string,
   signingSecret: string
 ): Promise<string> {
-  const expires = Date.now() + expiresIn * 1000;
   const message = `${path}:${expires}`;
 
   const encoder = new TextEncoder();
@@ -199,14 +202,6 @@ export async function verifyUrlSignature(
     return false;
   }
 
-  // 重新計算簽名
-  const expectedSignature = await signUrl(
-    path,
-    0,
-    signingSecret
-  );
-
-  // 這裡需要修正：使用相同的過期時間來驗證
   const message = `${path}:${expires}`;
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -227,5 +222,10 @@ export async function verifyUrlSignature(
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 
-  return signature === expectedHex;
+  if (signature.length !== expectedHex.length) return false;
+  let difference = 0;
+  for (let i = 0; i < signature.length; i++) {
+    difference |= signature.charCodeAt(i) ^ expectedHex.charCodeAt(i);
+  }
+  return difference === 0;
 }

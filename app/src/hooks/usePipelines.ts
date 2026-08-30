@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { deferStateUpdate } from '@/lib/defer-state-update';
+import { refreshPipelinesUrls } from '@/lib/refresh-pipeline-urls';
 import type { Pipeline, PipelineStatus } from '@/types';
 
 interface PipelineInputImageData {
@@ -54,9 +55,55 @@ export function usePipelines(
     // Note: Adding status filter requires composite index
     // For now, we filter client-side
 
+    let active = true;
+    let snapshotRevision = 0;
+    let latestPipelines: Pipeline[] = [];
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleUrlRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        const sourcePipelines = latestPipelines;
+        const revision = snapshotRevision;
+        if (!active || sourcePipelines.length === 0) return;
+
+        void refreshPipelinesUrls(sourcePipelines)
+          .then((refreshedPipelines) => {
+            if (!active || revision !== snapshotRevision) return;
+            latestPipelines = refreshedPipelines;
+            setPipelines(refreshedPipelines);
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            if (active && revision === snapshotRevision) scheduleUrlRefresh();
+          });
+      }, 45 * 60 * 1000);
+    };
+
+    const refreshUrlsInBackground = (pipelineList: Pipeline[], revision: number) => {
+      void refreshPipelinesUrls(pipelineList)
+        .then((refreshedPipelines) => {
+          if (!active || revision !== snapshotRevision) return;
+          latestPipelines = refreshedPipelines;
+          setPipelines(refreshedPipelines);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (active && revision === snapshotRevision) scheduleUrlRefresh();
+        });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && latestPipelines.length > 0) {
+        refreshUrlsInBackground(latestPipelines, snapshotRevision);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
+        const revision = ++snapshotRevision;
         const pipelineList: Pipeline[] = [];
 
         snapshot.forEach((doc) => {
@@ -102,8 +149,10 @@ export function usePipelines(
           }
         });
 
+        latestPipelines = pipelineList;
         setPipelines(pipelineList);
         setLoading(false);
+        refreshUrlsInBackground(pipelineList, revision);
       },
       (err) => {
         console.error('Error fetching pipelines:', err);
@@ -113,6 +162,9 @@ export function usePipelines(
     );
 
     return () => {
+      active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelPendingState();
       unsubscribe();
     };

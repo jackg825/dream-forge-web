@@ -124,6 +124,10 @@ export interface IOrderRepository {
      */
     updatePricing(material: PrintMaterial, size: PrintSizeId, price: number): Promise<void>;
     /**
+     * Replace the complete pricing matrix atomically
+     */
+    updatePricingMatrix(pricing: Record<PrintMaterial, Record<PrintSizeId, number>>): Promise<void>;
+    /**
      * Get order statistics for a date range
      */
     getOrderStats(fromDate: Date, toDate: Date): Promise<{

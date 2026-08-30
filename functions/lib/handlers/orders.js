@@ -44,13 +44,109 @@ const admin = __importStar(require("firebase-admin"));
 const OrderRepository_1 = require("../infrastructure/repositories/OrderRepository");
 const WebhookNotificationAdapter_1 = require("../infrastructure/notification/WebhookNotificationAdapter");
 const orders_1 = require("../application/orders");
+const storage_1 = require("../storage");
+const storage_validation_1 = require("../utils/storage-validation");
 const db = admin.firestore();
+const PRINT_MATERIALS = ['pla-single', 'pla-multi', 'resin'];
+const PRINT_SIZES = ['5x5x5', '10x10x10', '15x15x15'];
+const MAX_PRINT_PRICE_CENTS = 100_000_000;
+function isValidPrice(price) {
+    return typeof price === 'number' &&
+        Number.isInteger(price) &&
+        price >= 0 &&
+        price <= MAX_PRINT_PRICE_CENTS;
+}
+function isSafeExternalUrl(value) {
+    if (typeof value !== 'string' || value.length > 2048)
+        return false;
+    try {
+        const url = new URL(value);
+        return url.protocol === 'https:' || url.protocol === 'http:';
+    }
+    catch {
+        return false;
+    }
+}
+function parsePageNumber(value, fallback, minimum, maximum, field) {
+    if (value === undefined || value === null)
+        return fallback;
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+        throw new functions.https.HttpsError('invalid-argument', `${field} must be an integer between ${minimum} and ${maximum}`);
+    }
+    return value;
+}
 /**
  * Check if user is admin
  */
 async function isAdmin(uid) {
     const userDoc = await db.collection('users').doc(uid).get();
     return userDoc.data()?.role === 'admin';
+}
+/**
+ * Order records keep a durable storage identity and expose a freshly signed
+ * access URL. Legacy records can be recovered from their approved URL shape.
+ */
+async function refreshOrderModelUrls(order) {
+    const items = await Promise.all(order.items.map(async (item) => {
+        const legacyReference = (0, storage_validation_1.extractStorageReferenceFromUrl)(item.modelUrl);
+        const storagePath = item.modelStoragePath || legacyReference?.storagePath;
+        const storedBackend = item.modelStorageBackend;
+        const backend = storedBackend === 'firebase' || storedBackend === 'r2'
+            ? storedBackend
+            : legacyReference?.backend;
+        const thumbnailReference = item.modelThumbnail
+            ? (0, storage_validation_1.extractStorageReferenceFromUrl)(item.modelThumbnail)
+            : null;
+        const thumbnailPath = item.modelThumbnailStoragePath || thumbnailReference?.storagePath;
+        const thumbnailBackend = item.modelThumbnailStorageBackend || thumbnailReference?.backend;
+        let modelThumbnail;
+        if (thumbnailPath && thumbnailBackend) {
+            try {
+                modelThumbnail = await (0, storage_1.getSignedUrl)(thumbnailPath, 3600, thumbnailBackend);
+            }
+            catch {
+                modelThumbnail = undefined;
+            }
+        }
+        const sanitizedItem = { ...item, modelThumbnail };
+        if (!storagePath || !backend)
+            return sanitizedItem;
+        if (!item.modelStoragePath &&
+            (!legacyReference || legacyReference.storagePath !== storagePath)) {
+            return sanitizedItem;
+        }
+        try {
+            return {
+                ...sanitizedItem,
+                modelUrl: await (0, storage_1.getSignedUrl)(storagePath, 3600, backend),
+                modelStoragePath: storagePath,
+                modelStorageBackend: backend,
+                modelThumbnail,
+                ...(modelThumbnail && {
+                    modelThumbnailStoragePath: thumbnailPath,
+                    modelThumbnailStorageBackend: thumbnailBackend,
+                }),
+            };
+        }
+        catch (error) {
+            functions.logger.warn('Could not refresh an order model URL', {
+                orderId: order.id,
+                itemId: item.id,
+                storagePath,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+            return sanitizedItem;
+        }
+    }));
+    const tracking = order.tracking
+        ? {
+            ...order.tracking,
+            trackingUrl: isSafeExternalUrl(order.tracking.trackingUrl)
+                ? order.tracking.trackingUrl
+                : undefined,
+        }
+        : undefined;
+    return { ...order, items, tracking };
 }
 // ============================================
 // User Functions
@@ -109,13 +205,14 @@ exports.getUserOrders = functions
         throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
     }
     const userId = context.auth.uid;
-    const limit = data?.limit || 20;
-    const offset = data?.offset || 0;
+    const limit = parsePageNumber(data?.limit, 20, 1, 50, 'limit');
+    const offset = parsePageNumber(data?.offset, 0, 0, 1000, 'offset');
     try {
         const result = await OrderRepository_1.orderRepository.getByUserId(userId, { limit, offset });
+        const refreshedOrders = await Promise.all(result.items.map((order) => refreshOrderModelUrls(order)));
         return {
             success: true,
-            orders: result.items.map((order) => ({
+            orders: refreshedOrders.map((order) => ({
                 ...order,
                 createdAt: order.createdAt.toISOString(),
                 updatedAt: order.updatedAt.toISOString(),
@@ -159,15 +256,16 @@ exports.getOrderDetails = functions
         if (order.userId !== context.auth.uid && !userIsAdmin) {
             throw new functions.https.HttpsError('permission-denied', 'Access denied');
         }
+        const refreshedOrder = await refreshOrderModelUrls(order);
         return {
             success: true,
             order: {
-                ...order,
-                createdAt: order.createdAt.toISOString(),
-                updatedAt: order.updatedAt.toISOString(),
-                confirmedAt: order.confirmedAt?.toISOString(),
-                shippedAt: order.shippedAt?.toISOString(),
-                deliveredAt: order.deliveredAt?.toISOString(),
+                ...refreshedOrder,
+                createdAt: refreshedOrder.createdAt.toISOString(),
+                updatedAt: refreshedOrder.updatedAt.toISOString(),
+                confirmedAt: refreshedOrder.confirmedAt?.toISOString(),
+                shippedAt: refreshedOrder.shippedAt?.toISOString(),
+                deliveredAt: refreshedOrder.deliveredAt?.toISOString(),
             },
         };
     }
@@ -331,7 +429,9 @@ exports.listAllOrders = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { status, userId, fromDate, toDate, limit = 50, offset = 0 } = data || {};
+    const { status, userId, fromDate, toDate } = data || {};
+    const limit = parsePageNumber(data?.limit, 50, 1, 50, 'limit');
+    const offset = parsePageNumber(data?.offset, 0, 0, 1000, 'offset');
     try {
         const result = await OrderRepository_1.orderRepository.getAll({
             status,
@@ -339,9 +439,10 @@ exports.listAllOrders = functions
             fromDate: fromDate ? new Date(fromDate) : undefined,
             toDate: toDate ? new Date(toDate) : undefined,
         }, { limit, offset });
+        const refreshedOrders = await Promise.all(result.items.map((order) => refreshOrderModelUrls(order)));
         return {
             success: true,
-            orders: result.items.map((order) => ({
+            orders: refreshedOrders.map((order) => ({
                 ...order,
                 createdAt: order.createdAt.toISOString(),
                 updatedAt: order.updatedAt.toISOString(),
@@ -374,15 +475,17 @@ exports.getOrdersByStatus = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { status, limit = 20 } = data || {};
+    const { status } = data || {};
+    const limit = parsePageNumber(data?.limit, 20, 1, 50, 'limit');
     if (!status) {
         throw new functions.https.HttpsError('invalid-argument', 'Status is required');
     }
     try {
         const result = await OrderRepository_1.orderRepository.getByStatus(status, { limit });
+        const refreshedOrders = await Promise.all(result.items.map((order) => refreshOrderModelUrls(order)));
         return {
             success: true,
-            orders: result.items.map((order) => ({
+            orders: refreshedOrders.map((order) => ({
                 ...order,
                 createdAt: order.createdAt.toISOString(),
                 updatedAt: order.updatedAt.toISOString(),
@@ -410,6 +513,9 @@ exports.updateOrderStatus = functions
     const { orderId, newStatus, reason, adminNotes, tracking } = data;
     if (!orderId || !newStatus) {
         throw new functions.https.HttpsError('invalid-argument', 'Order ID and status are required');
+    }
+    if (tracking?.trackingUrl && !isSafeExternalUrl(tracking.trackingUrl)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Tracking URL must use HTTP or HTTPS');
     }
     const useCase = new orders_1.UpdateOrderStatusUseCase(OrderRepository_1.orderRepository, WebhookNotificationAdapter_1.webhookNotificationAdapter);
     try {
@@ -454,6 +560,9 @@ exports.updateTrackingInfo = functions
     const { orderId, carrier, trackingNumber, trackingUrl, estimatedDelivery } = data;
     if (!orderId || !carrier || !trackingNumber) {
         throw new functions.https.HttpsError('invalid-argument', 'Order ID, carrier, and tracking number are required');
+    }
+    if (trackingUrl && !isSafeExternalUrl(trackingUrl)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Tracking URL must use HTTP or HTTPS');
     }
     try {
         const order = await OrderRepository_1.orderRepository.getById(orderId);
@@ -553,15 +662,40 @@ exports.updatePricing = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { material, size, price } = data;
-    if (!material || !size || typeof price !== 'number') {
-        throw new functions.https.HttpsError('invalid-argument', 'Material, size, and price are required');
-    }
     try {
-        await OrderRepository_1.orderRepository.updatePricing(material, size, price);
+        if (data?.pricing && typeof data.pricing === 'object') {
+            const pricing = {};
+            for (const material of PRINT_MATERIALS) {
+                const materialPricing = data.pricing[material];
+                if (!materialPricing || typeof materialPricing !== 'object') {
+                    throw new functions.https.HttpsError('invalid-argument', `Missing pricing for material: ${material}`);
+                }
+                pricing[material] = {};
+                for (const size of PRINT_SIZES) {
+                    const price = materialPricing[size];
+                    if (!isValidPrice(price)) {
+                        throw new functions.https.HttpsError('invalid-argument', `Invalid price for ${material}/${size}`);
+                    }
+                    pricing[material][size] = price;
+                }
+            }
+            await OrderRepository_1.orderRepository.updatePricingMatrix(pricing);
+        }
+        else {
+            const { material, size, price } = data || {};
+            if (!PRINT_MATERIALS.includes(material) ||
+                !PRINT_SIZES.includes(size) ||
+                !isValidPrice(price)) {
+                throw new functions.https.HttpsError('invalid-argument', 'Valid material, size, and price are required');
+            }
+            await OrderRepository_1.orderRepository.updatePricing(material, size, price);
+        }
         return { success: true };
     }
     catch (error) {
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
         functions.logger.error('updatePricing failed:', error);
         throw new functions.https.HttpsError('internal', 'Failed to update pricing');
     }

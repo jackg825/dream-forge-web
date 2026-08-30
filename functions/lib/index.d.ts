@@ -1,12 +1,9 @@
-export { onUserCreate } from './handlers/users';
-export { generateModel, checkJobStatus, retryFailedJob } from './handlers/generate';
+export { onUserCreate, claimWelcomeCredits } from './handlers/users';
+export { refreshJobAccessUrls } from './handlers/generate';
 export { addCredits, checkRodinBalance, checkAllProviderBalances, getAdminStats, listUsers, listAllPipelines, deductCredits, getUserTransactions, updateUserTier, adminRegeneratePipelineImage, adminStartPipelineMesh, adminCheckPreviewStatus, adminConfirmPreview, adminRejectPreview, } from './handlers/admin';
-export { createSession, updateSession, deleteSession, getUserSessions, } from './handlers/sessions';
-export { generateSessionViews, regenerateView, uploadCustomView, } from './handlers/views';
-export { startSessionModelGeneration, checkSessionModelStatus, } from './handlers/model';
-export { optimizeColorsForH2C, uploadEditedH2CImage, } from './handlers/h2c';
-export { createPipeline, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, updatePipelineAnalysis, resetPipelineStep, } from './handlers/pipeline';
+export { createSession, updateSession, deleteSession, getUserSessions, generateSessionViews, regenerateView, uploadCustomView, startSessionModelGeneration, checkSessionModelStatus, optimizeColorsForH2C, uploadEditedH2CImage, generateModel, checkJobStatus, retryFailedJob, createOrder, saveShippingAddress, deleteShippingAddress, } from './handlers/disabled-legacy';
+export { createPipeline, generatePipelineImages, regeneratePipelineImage, startPipelineMesh, checkPipelineStatus, startPipelineTexture, refreshPipelineAccessUrls, updatePipelineAnalysis, resetPipelineStep, } from './handlers/pipeline';
 export { submitGeminiBatch } from './handlers/gemini-batch';
 export { analyzeUploadedImage } from './handlers/analyze';
 export { optimizeMeshForPrint, analyzeMeshForPrint, } from './handlers/optimize';
-export { createOrder, getUserOrders, getOrderDetails, cancelOrder, getShippingAddresses, saveShippingAddress, deleteShippingAddress, getPrintConfig, listAllOrders, getOrdersByStatus, updateOrderStatus, updateTrackingInfo, getOrderStats, updateMaterialConfig, updatePricing, } from './handlers/orders';
+export { getUserOrders, getOrderDetails, cancelOrder, getShippingAddresses, getPrintConfig, listAllOrders, getOrdersByStatus, updateOrderStatus, updateTrackingInfo, getOrderStats, updateMaterialConfig, updatePricing, } from './handlers/orders';

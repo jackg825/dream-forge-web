@@ -203,6 +203,7 @@ export interface JobDocument {
   inputImageUrls?: string[];      // All image URLs for multi-view
   viewAngles?: ViewAngle[];       // Corresponding angles
   outputModelUrl: string | null;
+  outputModelStoragePath?: string;
   downloadFiles?: DownloadFile[]; // All available download files (GLB, textures, etc.)
 
   // Provider abstraction fields
@@ -476,6 +477,13 @@ export interface PipelineDocument {
   // Error handling
   error?: string;
   errorStep?: PipelineStatus;
+
+  // Short-lived lease preventing concurrent status polls from finalizing twice.
+  finalizationClaim?: {
+    token: string;
+    step: 'mesh' | 'texture';
+    startedAt: FirebaseFirestore.Timestamp;
+  };
 
   // Timestamps
   createdAt: FirebaseFirestore.Timestamp;

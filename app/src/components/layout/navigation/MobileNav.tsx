@@ -86,7 +86,7 @@ export function MobileNav({
           variant="ghost"
           size="icon"
           className="mr-2 h-10 w-10 md:hidden"
-          aria-label="Toggle menu"
+          aria-label={t('mobile.navigation')}
         >
           <Menu className="h-5 w-5" />
         </Button>

@@ -117,6 +117,7 @@ export interface JobDocument {
     inputImageUrls?: string[];
     viewAngles?: ViewAngle[];
     outputModelUrl: string | null;
+    outputModelStoragePath?: string;
     downloadFiles?: DownloadFile[];
     provider?: import('../providers/types').ProviderType;
     providerTaskId?: string;
@@ -288,6 +289,11 @@ export interface PipelineDocument {
     imageAnalysis?: ImageAnalysisResult;
     error?: string;
     errorStep?: PipelineStatus;
+    finalizationClaim?: {
+        token: string;
+        step: 'mesh' | 'texture';
+        startedAt: FirebaseFirestore.Timestamp;
+    };
     createdAt: FirebaseFirestore.Timestamp;
     updatedAt: FirebaseFirestore.Timestamp;
     completedAt?: FirebaseFirestore.Timestamp;

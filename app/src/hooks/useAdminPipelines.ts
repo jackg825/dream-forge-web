@@ -70,7 +70,13 @@ export function useAdminPipelines(): UseAdminPipelinesReturn {
         userId: activeFilters.userId,
       });
 
-      setPipelines(result.data.pipelines);
+      setPipelines((current) => {
+        if (offset === 0) return result.data.pipelines;
+
+        const byId = new Map(current.map((pipeline) => [pipeline.id, pipeline]));
+        result.data.pipelines.forEach((pipeline) => byId.set(pipeline.id, pipeline));
+        return [...byId.values()];
+      });
       setPagination(result.data.pagination);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to fetch pipelines';

@@ -67,6 +67,7 @@ export default function PreviewPage() {
   const [showGrid, setShowGrid] = useState(false);
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
+  const [screenshotStatus, setScreenshotStatus] = useState<'success' | 'error' | null>(null);
 
   // Fullscreen hook with iOS fallback
   const {
@@ -80,6 +81,7 @@ export default function PreviewPage() {
   const handleFileSelect = useCallback(
     (file: File) => {
       // Reset clipping when loading new model
+      setScreenshotStatus(null);
       setClippingEnabled(false);
       setClippingPosition(50);
       setClippingInverted(false);
@@ -90,10 +92,30 @@ export default function PreviewPage() {
 
   const handleReset = useCallback(() => {
     reset();
+    setScreenshotStatus(null);
     setClippingEnabled(false);
     setClippingPosition(50);
     setClippingInverted(false);
   }, [reset]);
+
+  const handleScreenshot = useCallback(() => {
+    try {
+      const canvas = viewerContainerRef.current?.querySelector('canvas');
+      if (!canvas) throw new Error('Viewer canvas is unavailable');
+
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `dream-forge-preview-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setScreenshotStatus('success');
+    } catch (error) {
+      console.error('Screenshot failed:', error);
+      setScreenshotStatus('error');
+    }
+  }, []);
 
   const hasModel = state === 'ready' && model;
   const isLoading = state === 'loading';
@@ -185,6 +207,7 @@ export default function PreviewPage() {
                   {isPseudoFullscreen && (
                     <button
                       onClick={toggleFullscreen}
+                      aria-label={t('controls.exitFullscreen')}
                       className="absolute top-4 right-4 z-[10000] p-2.5 rounded-full
                                  bg-black/60 hover:bg-black/80 transition-colors
                                  text-white/80 hover:text-white"
@@ -233,14 +256,21 @@ export default function PreviewPage() {
                     onAutoRotateChange={setAutoRotate}
                     isFullscreen={isFullscreen}
                     onFullscreen={handleFullscreen}
-                    onScreenshot={() => {
-                      // TODO: Implement screenshot for preview
-                    }}
+                    onScreenshot={handleScreenshot}
                     onReset={handleReset}
                     portalContainer={viewerContainer}
                   />
                 </div>
               </Card>
+            )}
+
+            {screenshotStatus && (
+              <p
+                className={screenshotStatus === 'success' ? 'text-sm text-green-700 dark:text-green-400' : 'text-sm text-destructive'}
+                role={screenshotStatus === 'error' ? 'alert' : 'status'}
+              >
+                {t(`preview.screenshot.${screenshotStatus}`)}
+              </p>
             )}
 
             {/* Upload another file hint */}
@@ -313,7 +343,7 @@ export default function PreviewPage() {
                   {t('preview.cta.description')}
                 </p>
                 <Button asChild variant="secondary">
-                  <Link href="/">{t('preview.cta.button')}</Link>
+                  <Link href="/generate">{t('preview.cta.button')}</Link>
                 </Button>
               </CardContent>
             </Card>

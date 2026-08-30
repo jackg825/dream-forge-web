@@ -107,7 +107,7 @@ export function ShippingAddressForm({
           onValueChange={(v) => handleChange('country', v)}
           disabled={disabled}
         >
-          <SelectTrigger>
+          <SelectTrigger id="country">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

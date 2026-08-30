@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { httpsCallable } from 'firebase/functions';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { auth, db, isFirebaseReady } from '@/lib/firebase';
+import { auth, db, functions, isFirebaseReady } from '@/lib/firebase';
 import { deferStateUpdate } from '@/lib/defer-state-update';
 import {
   signInWithGoogle,
@@ -21,7 +22,7 @@ interface UseAuthReturn {
   error: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string, displayName?: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   clearError: () => void;
 }
@@ -59,6 +60,44 @@ export function useAuth(): UseAuthReturn {
     if (!firebaseUser || !db) return;
 
     const userDocRef = doc(db, 'users', firebaseUser.uid);
+    const welcomeCreditsCallable = functions
+      ? httpsCallable<void, { granted: boolean }>(functions, 'claimWelcomeCredits')
+      : null;
+    let active = true;
+    let claimInFlight = false;
+    let claimAttempts = 0;
+    let claimRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const claimWelcomeCreditsWithRetry = () => {
+      if (
+        !active ||
+        !firebaseUser.emailVerified ||
+        !welcomeCreditsCallable ||
+        claimInFlight ||
+        claimRetryTimer
+      ) {
+        return;
+      }
+
+      claimInFlight = true;
+      void welcomeCreditsCallable()
+        .then(() => {
+          claimAttempts = 0;
+        })
+        .catch(() => {
+          claimAttempts += 1;
+          if (active && claimAttempts < 3) {
+            claimRetryTimer = setTimeout(() => {
+              claimRetryTimer = null;
+              claimWelcomeCreditsWithRetry();
+            }, 1_000 * 2 ** (claimAttempts - 1));
+          }
+        })
+        .finally(() => {
+          claimInFlight = false;
+        });
+    };
+
     const unsubscribe = onSnapshot(
       userDocRef,
       (docSnap) => {
@@ -77,6 +116,12 @@ export function useAuth(): UseAuthReturn {
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate() || new Date(),
           });
+          if (
+            firebaseUser.emailVerified &&
+            data.welcomeCreditsGranted !== true
+          ) {
+            claimWelcomeCreditsWithRetry();
+          }
         } else {
           // User document not yet created (Cloud Function may be running)
           // Use Firebase Auth data as fallback
@@ -101,7 +146,11 @@ export function useAuth(): UseAuthReturn {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      if (claimRetryTimer) clearTimeout(claimRetryTimer);
+      unsubscribe();
+    };
   }, [firebaseUser]);
 
   const handleSignInWithGoogle = useCallback(async () => {
@@ -132,9 +181,11 @@ export function useAuth(): UseAuthReturn {
       setLoading(true);
       try {
         await signUpWithEmail(email, password, displayName);
+        return true;
       } catch (err) {
         setError(getAuthErrorMessage(err));
         setLoading(false);
+        return false;
       }
     },
     []

@@ -131,7 +131,7 @@ export function Header() {
               variant="ghost"
               size="icon"
               className="mr-2 h-10 w-10 md:hidden"
-              aria-label="Toggle menu"
+              aria-label={t('mobile.navigation')}
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -329,7 +329,11 @@ export function Header() {
         </Sheet>
 
         {/* Logo */}
-        <Link href="/" className="mr-4 md:mr-6 flex items-center gap-2">
+        <Link
+          href="/"
+          className="mr-4 md:mr-6 flex items-center gap-2"
+          aria-label="Dream Forge"
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
             <Box className="h-5 w-5 text-white" />
           </div>
@@ -380,6 +384,7 @@ export function Header() {
                   <Button
                     variant="ghost"
                     className="relative h-10 w-10 rounded-full"
+                    aria-label={t('mobile.account')}
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
@@ -495,7 +500,12 @@ export function Header() {
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-10 w-10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10"
+                    aria-label={t('nav.settings')}
+                  >
                     <Settings2 className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>

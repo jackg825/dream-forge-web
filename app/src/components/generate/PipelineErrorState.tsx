@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
 import {
   AlertCircle,
@@ -166,8 +166,7 @@ export function PipelineErrorState({
         await onRetry();
         break;
       case 'retry_batch':
-        // TODO: Implement batch mode switch
-        await onRetry();
+        // Batch mode is intentionally disabled until it uses the same claim/credit path.
         break;
       case 'wait':
         // Show wait message, could add a timer
@@ -176,7 +175,7 @@ export function PipelineErrorState({
         onReset();
         break;
       case 'purchase':
-        router.push('/pricing');
+        router.push('/#pricing');
         break;
       case 'contact_support':
         window.open('mailto:support@dreamforge.com', '_blank');
@@ -249,7 +248,7 @@ export function PipelineErrorState({
             // Skip retry if we already show it
             if (action.type === 'retry' && canRetry) return false;
             // Skip certain actions based on context
-            if (action.type === 'retry_batch') return true; // TODO: Enable when batch mode is ready
+            if (action.type === 'retry_batch' || action.type === 'wait') return false;
             return true;
           })
           .slice(0, 2) // Limit to 2 additional actions

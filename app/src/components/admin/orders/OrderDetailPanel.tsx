@@ -347,7 +347,7 @@ export function OrderDetailPanel({
               <div className="space-y-2">
                 <Label>{t('detail.newStatus')}</Label>
                 <Select value={newStatus} onValueChange={(v) => setNewStatus(v as OrderStatus)}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label={t('detail.newStatus')}>
                     <SelectValue placeholder={t('detail.selectStatus')} />
                   </SelectTrigger>
                   <SelectContent>

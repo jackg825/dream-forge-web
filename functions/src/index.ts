@@ -4,8 +4,8 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 
 // Export all Cloud Functions
-export { onUserCreate } from './handlers/users';
-export { generateModel, checkJobStatus, retryFailedJob } from './handlers/generate';
+export { onUserCreate, claimWelcomeCredits } from './handlers/users';
+export { refreshJobAccessUrls } from './handlers/generate';
 export {
   addCredits,
   checkRodinBalance,
@@ -24,32 +24,27 @@ export {
   adminRejectPreview,
 } from './handlers/admin';
 
-// Multi-step creation flow (Sessions)
+// Overwrite legacy URL-based callables with fail-closed stubs for one migration
+// cycle. They can be explicitly deleted after this version is deployed.
 export {
   createSession,
   updateSession,
   deleteSession,
   getUserSessions,
-} from './handlers/sessions';
-
-// Multi-step creation flow (Views)
-export {
   generateSessionViews,
   regenerateView,
   uploadCustomView,
-} from './handlers/views';
-
-// Multi-step creation flow (Model)
-export {
   startSessionModelGeneration,
   checkSessionModelStatus,
-} from './handlers/model';
-
-// H2C 7-color optimization for Bambu Lab H2C printer
-export {
   optimizeColorsForH2C,
   uploadEditedH2CImage,
-} from './handlers/h2c';
+  generateModel,
+  checkJobStatus,
+  retryFailedJob,
+  createOrder,
+  saveShippingAddress,
+  deleteShippingAddress,
+} from './handlers/disabled-legacy';
 
 // New simplified pipeline flow (Gemini + Meshy)
 export {
@@ -59,11 +54,13 @@ export {
   startPipelineMesh,
   checkPipelineStatus,
   startPipelineTexture,
+  refreshPipelineAccessUrls,
   updatePipelineAnalysis,
   resetPipelineStep,
 } from './handlers/pipeline';
 
-// Gemini Batch API handlers
+// Keep the disabled callable exported so a deployment overwrites any older,
+// vulnerable deployed version instead of leaving it active by accident.
 export { submitGeminiBatch } from './handlers/gemini-batch';
 
 // Image analysis (pre-upload Gemini analysis)
@@ -78,14 +75,11 @@ export {
 // Print ordering system
 export {
   // User functions
-  createOrder,
   getUserOrders,
   getOrderDetails,
   cancelOrder,
   // Shipping addresses
   getShippingAddresses,
-  saveShippingAddress,
-  deleteShippingAddress,
   // Print config
   getPrintConfig,
   // Admin functions

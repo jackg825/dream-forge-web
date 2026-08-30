@@ -369,6 +369,7 @@ export const checkSessionModelStatus = functions
           await jobRef.update({
             status: 'completed',
             outputModelUrl,
+            outputModelStoragePath: storagePath,
             completedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
 

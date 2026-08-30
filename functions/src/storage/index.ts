@@ -7,17 +7,29 @@
 
 import * as admin from 'firebase-admin';
 import { getR2Client } from './r2-client';
+import {
+  extractStorageReferenceFromUrl,
+  type StorageBackend,
+} from '../utils/storage-validation';
 
-// 儲存後端類型
-type StorageBackend = 'firebase' | 'r2';
+export type { StorageBackend } from '../utils/storage-validation';
 
 // 從環境變數讀取，預設使用 Firebase
 const STORAGE_BACKEND: StorageBackend =
-  (process.env.STORAGE_BACKEND as StorageBackend) || 'firebase';
+  process.env.STORAGE_BACKEND === 'r2' ? 'r2' : 'firebase';
 
 // R2 公開 URL (透過 Worker)
 const R2_PUBLIC_URL =
   process.env.R2_PUBLIC_URL || 'https://dream-forge-r2-proxy.jackg825.workers.dev';
+
+/**
+ * Infer the durable storage backend from an already-persisted URL. This lets
+ * Firebase and R2 objects coexist safely during storage migrations.
+ */
+export function getStorageBackendForUrl(rawUrl: string | null | undefined): StorageBackend | null {
+  if (!rawUrl) return null;
+  return extractStorageReferenceFromUrl(rawUrl)?.backend || null;
+}
 
 /**
  * 上傳 Buffer 到儲存
@@ -56,7 +68,7 @@ export async function uploadFromUrl(
   if (STORAGE_BACKEND === 'r2') {
     const r2 = getR2Client();
     await r2.uploadFromUrl(storagePath, url, contentType);
-    return r2.getPublicUrl(storagePath);
+    return r2.getSignedDownloadUrl(storagePath, 604800);
   }
 
   // Firebase: 下載後上傳
@@ -67,7 +79,8 @@ export async function uploadFromUrl(
   });
 
   const buffer = Buffer.from(response.data);
-  const type = contentType || response.headers['content-type'] || 'application/octet-stream';
+  const responseType = response.headers['content-type'];
+  const type = contentType || (typeof responseType === 'string' ? responseType : 'application/octet-stream');
 
   return uploadToFirebase(buffer, storagePath, type);
 }
@@ -76,21 +89,7 @@ export async function uploadFromUrl(
  * 獲取檔案的公開 URL (或簽名 URL)
  */
 export async function getDownloadUrl(storagePath: string): Promise<string> {
-  if (STORAGE_BACKEND === 'r2') {
-    const r2 = getR2Client();
-    return r2.getPublicUrl(storagePath);
-  }
-
-  // Firebase: 生成簽名 URL
-  const bucket = admin.storage().bucket();
-  const file = bucket.file(storagePath);
-
-  const [signedUrl] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-
-  return signedUrl;
+  return getSignedUrl(storagePath, 604800);
 }
 
 /**
@@ -98,9 +97,10 @@ export async function getDownloadUrl(storagePath: string): Promise<string> {
  */
 export async function getSignedUrl(
   storagePath: string,
-  expiresIn: number = 3600
+  expiresIn: number = 3600,
+  backend: StorageBackend = STORAGE_BACKEND
 ): Promise<string> {
-  if (STORAGE_BACKEND === 'r2') {
+  if (backend === 'r2') {
     const r2 = getR2Client();
     return r2.getSignedDownloadUrl(storagePath, expiresIn);
   }
@@ -114,6 +114,24 @@ export async function getSignedUrl(
   });
 
   return signedUrl;
+}
+
+/** Generate a fresh URL for the same backend as an existing stored URL. */
+export async function getSignedUrlForReference(
+  storagePath: string,
+  sourceUrl: string | null | undefined,
+  expiresIn: number = 3600
+): Promise<string> {
+  if (!sourceUrl) {
+    throw new Error('Stored file URL is missing');
+  }
+
+  const reference = extractStorageReferenceFromUrl(sourceUrl);
+  if (!reference || reference.storagePath !== storagePath) {
+    throw new Error('Stored file URL does not match its storage path');
+  }
+
+  return getSignedUrl(storagePath, expiresIn, reference.backend);
 }
 
 /**
@@ -157,8 +175,11 @@ export async function fileExists(storagePath: string): Promise<boolean> {
 /**
  * 下載檔案內容
  */
-export async function downloadFile(storagePath: string): Promise<Buffer> {
-  if (STORAGE_BACKEND === 'r2') {
+export async function downloadFile(
+  storagePath: string,
+  backend: StorageBackend = STORAGE_BACKEND
+): Promise<Buffer> {
+  if (backend === 'r2') {
     const r2 = getR2Client();
     return r2.download(storagePath);
   }
@@ -247,7 +268,7 @@ async function uploadToR2(
 ): Promise<string> {
   const r2 = getR2Client();
   await r2.upload(storagePath, buffer, contentType);
-  return r2.getPublicUrl(storagePath);
+  return r2.getSignedDownloadUrl(storagePath, 604800);
 }
 
 // 導出常數

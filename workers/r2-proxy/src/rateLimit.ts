@@ -1,6 +1,9 @@
 /**
- * Rate Limiting 模組
- * 使用 Cloudflare KV 實現速率限制
+ * Rate Limiting module backed by Cloudflare's native Rate Limiting API.
+ *
+ * KV cannot safely implement a request counter: writes to the same key are
+ * limited and read-modify-write updates are not atomic. Native bindings avoid
+ * those availability and concurrency failures.
  */
 
 import type { Env, RateLimitAction, RateLimitConfig } from './types';
@@ -18,9 +21,21 @@ const GLOBAL_IP_LIMIT: RateLimitConfig = {
   window: 60,
 };
 
-interface RateLimitEntry {
-  count: number;
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
   resetAt: number;
+}
+
+function getActionLimiter(env: Env, action: RateLimitAction): RateLimit {
+  switch (action) {
+    case 'upload':
+      return env.UPLOAD_RATE_LIMITER;
+    case 'download':
+      return env.DOWNLOAD_RATE_LIMITER;
+    case 'presign':
+      return env.PRESIGN_RATE_LIMITER;
+  }
 }
 
 /**
@@ -30,62 +45,23 @@ export async function checkRateLimit(
   env: Env,
   userId: string,
   action: RateLimitAction
-): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
+): Promise<RateLimitResult> {
   const config = RATE_LIMIT_CONFIG[action];
-  const key = `rate:${action}:${userId}`;
   const now = Date.now();
 
   try {
-    const stored = await env.RATE_LIMIT_KV.get(key, 'json') as RateLimitEntry | null;
-
-    // 如果沒有記錄或已過期，創建新記錄
-    if (!stored || stored.resetAt < now) {
-      const newEntry: RateLimitEntry = {
-        count: 1,
-        resetAt: now + config.window * 1000,
-      };
-
-      await env.RATE_LIMIT_KV.put(key, JSON.stringify(newEntry), {
-        expirationTtl: config.window + 10, // 額外 10 秒緩衝
-      });
-
-      return {
-        allowed: true,
-        remaining: config.requests - 1,
-        resetAt: newEntry.resetAt,
-      };
-    }
-
-    // 檢查是否超過限制
-    if (stored.count >= config.requests) {
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: stored.resetAt,
-      };
-    }
-
-    // 增加計數
-    const updatedEntry: RateLimitEntry = {
-      count: stored.count + 1,
-      resetAt: stored.resetAt,
-    };
-
-    await env.RATE_LIMIT_KV.put(key, JSON.stringify(updatedEntry), {
-      expirationTtl: Math.ceil((stored.resetAt - now) / 1000) + 10,
-    });
+    const { success } = await getActionLimiter(env, action).limit({ key: userId });
 
     return {
-      allowed: true,
-      remaining: config.requests - updatedEntry.count,
-      resetAt: stored.resetAt,
+      allowed: success,
+      remaining: success ? config.requests - 1 : 0,
+      resetAt: now + config.window * 1000,
     };
   } catch (error) {
-    // KV 錯誤時允許請求通過 (fail open)
     console.error('Rate limit check failed:', error);
     return {
-      allowed: true,
-      remaining: config.requests,
+      allowed: false,
+      remaining: 0,
       resetAt: now + config.window * 1000,
     };
   }
@@ -97,57 +73,22 @@ export async function checkRateLimit(
 export async function checkIpRateLimit(
   env: Env,
   ip: string
-): Promise<{ allowed: boolean; remaining: number; resetAt: number }> {
-  const key = `rate:ip:${ip}`;
+): Promise<RateLimitResult> {
   const now = Date.now();
 
   try {
-    const stored = await env.RATE_LIMIT_KV.get(key, 'json') as RateLimitEntry | null;
-
-    if (!stored || stored.resetAt < now) {
-      const newEntry: RateLimitEntry = {
-        count: 1,
-        resetAt: now + GLOBAL_IP_LIMIT.window * 1000,
-      };
-
-      await env.RATE_LIMIT_KV.put(key, JSON.stringify(newEntry), {
-        expirationTtl: GLOBAL_IP_LIMIT.window + 10,
-      });
-
-      return {
-        allowed: true,
-        remaining: GLOBAL_IP_LIMIT.requests - 1,
-        resetAt: newEntry.resetAt,
-      };
-    }
-
-    if (stored.count >= GLOBAL_IP_LIMIT.requests) {
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: stored.resetAt,
-      };
-    }
-
-    const updatedEntry: RateLimitEntry = {
-      count: stored.count + 1,
-      resetAt: stored.resetAt,
-    };
-
-    await env.RATE_LIMIT_KV.put(key, JSON.stringify(updatedEntry), {
-      expirationTtl: Math.ceil((stored.resetAt - now) / 1000) + 10,
-    });
+    const { success } = await env.IP_RATE_LIMITER.limit({ key: ip });
 
     return {
-      allowed: true,
-      remaining: GLOBAL_IP_LIMIT.requests - updatedEntry.count,
-      resetAt: stored.resetAt,
+      allowed: success,
+      remaining: success ? GLOBAL_IP_LIMIT.requests - 1 : 0,
+      resetAt: now + GLOBAL_IP_LIMIT.window * 1000,
     };
   } catch (error) {
     console.error('IP rate limit check failed:', error);
     return {
-      allowed: true,
-      remaining: GLOBAL_IP_LIMIT.requests,
+      allowed: false,
+      remaining: 0,
       resetAt: now + GLOBAL_IP_LIMIT.window * 1000,
     };
   }

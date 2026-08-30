@@ -532,7 +532,7 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
                       value={selectedProvider}
                       onValueChange={(v: string) => setSelectedProvider(v as ModelProvider)}
                     >
-                      <SelectTrigger className="w-48">
+                      <SelectTrigger className="w-48" aria-label="選擇 3D 網格供應商">
                         <SelectValue placeholder="選擇供應商" />
                       </SelectTrigger>
                       <SelectContent>

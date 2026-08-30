@@ -19,6 +19,18 @@ const PYTHON_FUNCTION_BASE_URL = process.env.PYTHON_FUNCTION_URL ||
 const TRIMESH_ANALYZE_URL = `${PYTHON_FUNCTION_BASE_URL}/trimesh_analyze`;
 const TRIMESH_OPTIMIZE_URL = `${PYTHON_FUNCTION_BASE_URL}/trimesh_optimize`;
 
+function getInternalHeaders(): Record<string, string> {
+  const token = process.env.TRIMESH_INTERNAL_TOKEN;
+  if (!token) {
+    throw new Error('TRIMESH_INTERNAL_TOKEN is not configured');
+  }
+
+  return {
+    'Content-Type': 'application/json',
+    'X-Internal-Token': token,
+  };
+}
+
 export interface TrimeshRepairOptions {
   /** Fill holes in the mesh */
   fillHoles?: boolean;
@@ -94,13 +106,14 @@ export interface TrimeshAnalysisResult {
  */
 export async function isTrimeshAvailable(): Promise<boolean> {
   try {
-    // Simple health check - try to reach the function
-    const response = await axios.get(TRIMESH_ANALYZE_URL, {
+    const response = await axios.post(TRIMESH_ANALYZE_URL, { health: true }, {
       timeout: 5000,
-      validateStatus: () => true, // Accept any status
+      headers: getInternalHeaders(),
+      validateStatus: () => true,
     });
-    // Function exists if we get any response (even 405 for wrong method)
-    return response.status !== 404;
+    return response.status === 200 &&
+      response.data?.success === true &&
+      response.data?.status === 'ok';
   } catch {
     return false;
   }
@@ -161,9 +174,7 @@ export async function optimizeMeshBuffer(
       },
       {
         timeout: 300000, // 5 minutes
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getInternalHeaders(),
       }
     );
 
@@ -234,9 +245,7 @@ export async function analyzeMeshBuffer(inputBuffer: Buffer): Promise<TrimeshAna
       },
       {
         timeout: 120000, // 2 minutes
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getInternalHeaders(),
       }
     );
 

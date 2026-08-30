@@ -10,6 +10,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/lib/firebase';
 import { deferStateUpdate } from '@/lib/defer-state-update';
+import { refreshPipelineUrls } from '@/lib/refresh-pipeline-urls';
 import type {
   Pipeline,
   PipelineStatus,
@@ -25,13 +26,8 @@ import type {
   ImageAnalysisResult,
   ModelProvider,
   ProviderOptions,
+  StyleId,
 } from '@/types';
-
-interface SubmitBatchResponse {
-  success: boolean;
-  batchJobId: string;
-  status: PipelineStatus;
-}
 
 interface UpdatePipelineAnalysisResponse {
   success: boolean;
@@ -63,12 +59,16 @@ interface UsePipelineReturn {
     geminiModel?: GeminiModelId
   ) => Promise<string>;
   generateImages: (overridePipelineId?: string) => Promise<GeneratePipelineImagesResponse>;
-  submitBatch: (overridePipelineId?: string) => Promise<SubmitBatchResponse>;
   regenerateImage: (viewType: 'mesh' | 'texture', angle: string, hint?: string) => Promise<void>;
   startMeshGeneration: (provider?: ModelProvider, providerOptions?: ProviderOptions) => Promise<StartPipelineMeshResponse>;
   checkStatus: () => Promise<CheckPipelineStatusResponse>;
   startTextureGeneration: () => Promise<StartPipelineTextureResponse>;
-  updateAnalysis: (imageAnalysis: ImageAnalysisResult, userDescription?: string) => Promise<void>;
+  updateAnalysis: (
+    imageAnalysis: ImageAnalysisResult,
+    userDescription?: string,
+    selectedStyle?: StyleId,
+    geminiModel?: GeminiModelId
+  ) => Promise<void>;
   resetStep: (targetStep: ResetTargetStep, keepResults: boolean) => Promise<void>;
 
   // Navigation helpers
@@ -140,6 +140,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     if (!pipelineId) {
       return deferStateUpdate(() => {
         setPipeline(null);
+        setError(null);
         setLoading(false);
       });
     }
@@ -157,21 +158,72 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       setError(null);
     });
 
+    let active = true;
+    let snapshotRevision = 0;
+    let latestPipeline: Pipeline | null = null;
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleUrlRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        const sourcePipeline = latestPipeline;
+        const revision = snapshotRevision;
+        if (!active || !sourcePipeline) return;
+
+        void refreshPipelineUrls(sourcePipeline)
+          .then((refreshedPipeline) => {
+            if (!active || revision !== snapshotRevision) return;
+            latestPipeline = refreshedPipeline;
+            setPipeline(refreshedPipeline);
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            if (active && revision === snapshotRevision) scheduleUrlRefresh();
+          });
+      }, 45 * 60 * 1000);
+    };
+
+    const refreshUrlsInBackground = (nextPipeline: Pipeline, revision: number) => {
+      void refreshPipelineUrls(nextPipeline)
+        .then((refreshedPipeline) => {
+          if (!active || revision !== snapshotRevision) return;
+          latestPipeline = refreshedPipeline;
+          setPipeline(refreshedPipeline);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (active && revision === snapshotRevision) scheduleUrlRefresh();
+        });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && latestPipeline) {
+        refreshUrlsInBackground(latestPipeline, snapshotRevision);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const unsubscribe = onSnapshot(
       doc(db, 'pipelines', pipelineId),
       (snapshot) => {
+        const revision = ++snapshotRevision;
         if (snapshot.exists()) {
           const data = snapshot.data();
           const converted = convertTimestamps(data) as Omit<Pipeline, 'id'>;
-          setPipeline({
+          const nextPipeline = {
             id: snapshot.id,
             ...converted,
-          } as Pipeline);
+          } as Pipeline;
+
+          latestPipeline = nextPipeline;
+          setPipeline(nextPipeline);
+          setLoading(false);
+          refreshUrlsInBackground(nextPipeline, revision);
         } else {
           setPipeline(null);
           setError('Pipeline not found');
+          setLoading(false);
         }
-        setLoading(false);
       },
       (err) => {
         console.error('Pipeline subscription error:', err);
@@ -181,6 +233,9 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     );
 
     return () => {
+      active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       cancelPendingState();
       unsubscribe();
     };
@@ -255,32 +310,6 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate images';
-      setError(message);
-      throw err;
-    }
-  }, [pipelineId]);
-
-  // Submit batch job for image generation (batch mode)
-  // Uses Gemini Batch API for 50% cost savings, async processing
-  const submitBatch = useCallback(async (overridePipelineId?: string): Promise<SubmitBatchResponse> => {
-    const targetPipelineId = overridePipelineId || pipelineId;
-    if (!targetPipelineId) {
-      throw new Error('No pipeline ID');
-    }
-    if (!functions) {
-      throw new Error('Firebase not initialized');
-    }
-
-    try {
-      const submitBatchFn = httpsCallable<
-        { pipelineId: string },
-        SubmitBatchResponse
-      >(functions, 'submitGeminiBatch');
-
-      const result = await submitBatchFn({ pipelineId: targetPipelineId });
-      return result.data;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to submit batch job';
       setError(message);
       throw err;
     }
@@ -390,7 +419,9 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
   // Update pipeline analysis (for draft pipelines)
   const updateAnalysis = useCallback(async (
     imageAnalysis: ImageAnalysisResult,
-    userDescription?: string
+    userDescription?: string,
+    selectedStyle?: StyleId,
+    geminiModel?: GeminiModelId
   ): Promise<void> => {
     if (!pipelineId) {
       throw new Error('No pipeline ID');
@@ -401,11 +432,17 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
 
     try {
       const updateFn = httpsCallable<
-        { pipelineId: string; imageAnalysis: ImageAnalysisResult; userDescription?: string },
+        {
+          pipelineId: string;
+          imageAnalysis: ImageAnalysisResult;
+          userDescription?: string;
+          selectedStyle?: StyleId;
+          geminiModel?: GeminiModelId;
+        },
         UpdatePipelineAnalysisResponse
       >(functions, 'updatePipelineAnalysis');
 
-      await updateFn({ pipelineId, imageAnalysis, userDescription });
+      await updateFn({ pipelineId, imageAnalysis, userDescription, selectedStyle, geminiModel });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update analysis';
       setError(message);
@@ -459,7 +496,6 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     error,
     createPipeline,
     generateImages,
-    submitBatch,
     regenerateImage,
     startMeshGeneration,
     checkStatus,
