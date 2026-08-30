@@ -21,17 +21,17 @@ Protected APIs expect an `Authorization: Bearer <Firebase ID token>` header. Tok
 
 ## Storage Proxy
 
-The storage proxy is available at `https://r2-proxy.dreamforge.app`.
+The storage proxy is available at `https://dream-forge-r2-proxy.jackg825.workers.dev`.
 
 ```http
-GET https://r2-proxy.dreamforge.app/health
+GET https://dream-forge-r2-proxy.jackg825.workers.dev/health
 ```
 
 The OpenAPI document describes:
 
 - `GET /health`
-- `POST /upload/presign`
-- `POST /upload/confirm`
+- `PUT /upload/direct`
+- `POST /download/presign`
 - `GET /public/{key}`
 - `GET /download/{key}`
 - `DELETE /delete/{key}`

@@ -1,7 +1,7 @@
 {
   "linkset": [
     {
-      "anchor": "https://r2-proxy.dreamforge.app",
+      "anchor": "https://dream-forge-r2-proxy.jackg825.workers.dev",
       "service-desc": [
         {
           "href": "https://dreamforge.app/.well-known/openapi.json",
@@ -18,7 +18,7 @@
       ],
       "status": [
         {
-          "href": "https://r2-proxy.dreamforge.app/health",
+          "href": "https://dream-forge-r2-proxy.jackg825.workers.dev/health",
           "type": "application/json",
           "title": "Dream Forge R2 proxy health"
         }

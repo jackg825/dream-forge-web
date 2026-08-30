@@ -1,5 +1,5 @@
 {
-  "resource": "https://r2-proxy.dreamforge.app",
+  "resource": "https://dream-forge-r2-proxy.jackg825.workers.dev",
   "resource_name": "Dream Forge R2 Storage Proxy",
   "authorization_servers": [
     "https://securetoken.google.com/dreamforge-66998"

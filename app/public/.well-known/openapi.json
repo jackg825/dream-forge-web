@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://r2-proxy.dreamforge.app",
+      "url": "https://dream-forge-r2-proxy.jackg825.workers.dev",
       "description": "Dream Forge R2 storage proxy"
     }
   ],
@@ -16,6 +16,7 @@
       "get": {
         "operationId": "getHealth",
         "summary": "Return proxy health status",
+        "security": [],
         "responses": {
           "200": {
             "description": "Proxy is healthy",
@@ -30,32 +31,94 @@
         }
       }
     },
-    "/upload/presign": {
-      "post": {
-        "operationId": "createUploadPresign",
-        "summary": "Create a presigned R2 upload URL",
+    "/upload/direct": {
+      "put": {
+        "operationId": "uploadObject",
+        "summary": "Upload and validate an object directly",
         "security": [
           {
             "firebaseIdToken": []
           }
         ],
+        "parameters": [
+          {
+            "name": "filename",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "An allowed path prefix owned by the authenticated user."
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "image/jpeg": {
               "schema": {
-                "$ref": "#/components/schemas/PresignRequest"
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/heic": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/heif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "model/gltf-binary": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Presigned upload URL",
+            "description": "Validated object and signed download URL",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PresignResponse"
+                  "$ref": "#/components/schemas/DirectUploadResponse"
                 }
               }
             }
@@ -69,10 +132,10 @@
         }
       }
     },
-    "/upload/confirm": {
+    "/download/presign": {
       "post": {
-        "operationId": "confirmUpload",
-        "summary": "Validate an uploaded R2 object and return its download path",
+        "operationId": "createDownloadUrls",
+        "summary": "Create short-lived signed download URLs",
         "security": [
           {
             "firebaseIdToken": []
@@ -83,24 +146,27 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UploadConfirmRequest"
+                "$ref": "#/components/schemas/DownloadPresignRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Upload confirmation",
+            "description": "Signed download URLs for authorized objects",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UploadConfirmResponse"
+                  "$ref": "#/components/schemas/DownloadPresignResponse"
                 }
               }
             }
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           }
         }
       }
@@ -109,6 +175,7 @@
       "get": {
         "operationId": "downloadPublicObject",
         "summary": "Download a public showcase object",
+        "security": [],
         "parameters": [
           {
             "name": "objectName",
@@ -647,11 +714,12 @@
         },
         "required": ["status", "timestamp"]
       },
-      "PresignRequest": {
+      "DirectUploadResponse": {
         "type": "object",
         "properties": {
-          "filename": {
-            "type": "string"
+          "downloadUrl": {
+            "type": "string",
+            "format": "uri"
           },
           "contentType": {
             "type": "string"
@@ -660,57 +728,60 @@
             "type": "integer",
             "minimum": 1
           },
-          "path": {
-            "type": "string"
+          "key": {
+            "type": "string",
+            "minLength": 1
           }
         },
-        "required": ["filename", "contentType", "size"]
+        "required": ["downloadUrl", "key", "size", "contentType"]
       },
-      "PresignResponse": {
+      "DownloadPresignRequest": {
+        "type": "object",
+        "description": "Provide exactly one of key or keys.",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "keys": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "oneOf": [
+          {
+            "required": ["key"]
+          },
+          {
+            "required": ["keys"]
+          }
+        ],
+        "additionalProperties": false
+      },
+      "DownloadPresignResponse": {
         "type": "object",
         "properties": {
-          "uploadUrl": {
+          "downloadUrl": {
             "type": "string",
             "format": "uri"
           },
-          "key": {
-            "type": "string"
+          "downloadUrls": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "format": "uri"
+            }
           },
           "expiresIn": {
             "type": "integer"
           }
         },
-        "required": ["uploadUrl", "key", "expiresIn"]
-      },
-      "UploadConfirmRequest": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string"
-          }
-        },
-        "required": ["key"]
-      },
-      "UploadConfirmResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean"
-          },
-          "key": {
-            "type": "string"
-          },
-          "downloadUrl": {
-            "type": "string"
-          },
-          "size": {
-            "type": "integer"
-          },
-          "contentType": {
-            "type": "string"
-          }
-        },
-        "required": ["success", "key", "downloadUrl", "size", "contentType"]
+        "required": ["downloadUrls", "expiresIn"]
       }
     }
   }
