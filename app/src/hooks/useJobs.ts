@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { functions, db } from '@/lib/firebase';
 import { deferStateUpdate } from '@/lib/defer-state-update';
+import { refreshJobUrls, refreshJobsUrls } from '@/lib/refresh-job-urls';
 import type {
   Job,
   JobStatus,
@@ -45,9 +46,55 @@ export function useJobs(userId: string | undefined) {
       limit(50)
     );
 
+    let active = true;
+    let snapshotRevision = 0;
+    let latestJobs: Job[] = [];
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleUrlRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        const sourceJobs = latestJobs;
+        const revision = snapshotRevision;
+        if (!active || sourceJobs.length === 0) return;
+
+        void refreshJobsUrls(sourceJobs)
+          .then((refreshedJobs) => {
+            if (!active || revision !== snapshotRevision) return;
+            latestJobs = refreshedJobs;
+            setJobs(refreshedJobs);
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            if (active && revision === snapshotRevision) scheduleUrlRefresh();
+          });
+      }, 45 * 60 * 1000);
+    };
+
+    const refreshUrlsInBackground = (jobList: Job[], revision: number) => {
+      void refreshJobsUrls(jobList)
+        .then((refreshedJobs) => {
+          if (!active || revision !== snapshotRevision) return;
+          latestJobs = refreshedJobs;
+          setJobs(refreshedJobs);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (active && revision === snapshotRevision) scheduleUrlRefresh();
+        });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && latestJobs.length > 0) {
+        refreshUrlsInBackground(latestJobs, snapshotRevision);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const unsubscribe = onSnapshot(
       jobsQuery,
       (snapshot) => {
+        const revision = ++snapshotRevision;
         const jobsData = snapshot.docs.map((docSnap) => {
           const data = docSnap.data();
           return {
@@ -59,14 +106,17 @@ export function useJobs(userId: string | undefined) {
             inputImageUrls: data.inputImageUrls,
             viewAngles: data.viewAngles,
             outputModelUrl: data.outputModelUrl,
+            outputModelStoragePath: data.outputModelStoragePath,
             settings: data.settings,
             error: data.error,
             createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
             completedAt: (data.completedAt as Timestamp)?.toDate() || null,
           } as Job;
         });
+        latestJobs = jobsData;
         setJobs(jobsData);
         setLoading(false);
+        refreshUrlsInBackground(jobsData, revision);
       },
       (error) => {
         console.error('Error fetching jobs:', error);
@@ -74,7 +124,12 @@ export function useJobs(userId: string | undefined) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      unsubscribe();
+    };
   }, [userId]);
 
   return { jobs, loading };
@@ -97,12 +152,58 @@ export function useJob(jobId: string | null) {
     }
 
     const jobRef = doc(db, 'jobs', jobId);
+    let active = true;
+    let snapshotRevision = 0;
+    let latestJob: Job | null = null;
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleUrlRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => {
+        const sourceJob = latestJob;
+        const revision = snapshotRevision;
+        if (!active || !sourceJob) return;
+
+        void refreshJobUrls(sourceJob)
+          .then((refreshedJob) => {
+            if (!active || revision !== snapshotRevision) return;
+            latestJob = refreshedJob;
+            setJob(refreshedJob);
+          })
+          .catch(() => undefined)
+          .finally(() => {
+            if (active && revision === snapshotRevision) scheduleUrlRefresh();
+          });
+      }, 45 * 60 * 1000);
+    };
+
+    const refreshUrlInBackground = (nextJob: Job, revision: number) => {
+      void refreshJobUrls(nextJob)
+        .then((refreshedJob) => {
+          if (!active || revision !== snapshotRevision) return;
+          latestJob = refreshedJob;
+          setJob(refreshedJob);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          if (active && revision === snapshotRevision) scheduleUrlRefresh();
+        });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && latestJob) {
+        refreshUrlInBackground(latestJob, snapshotRevision);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     const unsubscribe = onSnapshot(
       jobRef,
       (docSnap) => {
+        const revision = ++snapshotRevision;
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setJob({
+          const nextJob: Job = {
             id: docSnap.id,
             userId: data.userId,
             jobType: data.jobType || 'model',
@@ -111,13 +212,18 @@ export function useJob(jobId: string | null) {
             inputImageUrls: data.inputImageUrls,
             viewAngles: data.viewAngles,
             outputModelUrl: data.outputModelUrl,
+            outputModelStoragePath: data.outputModelStoragePath,
             settings: data.settings,
             error: data.error,
             createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
             completedAt: (data.completedAt as Timestamp)?.toDate() || null,
-          });
+          };
+          latestJob = nextJob;
+          setJob(nextJob);
           setError(null);
+          refreshUrlInBackground(nextJob, revision);
         } else {
+          latestJob = null;
           setJob(null);
           setError('Job not found');
         }
@@ -130,7 +236,12 @@ export function useJob(jobId: string | null) {
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      active = false;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      unsubscribe();
+    };
   }, [jobId]);
 
   return { job, loading, error };

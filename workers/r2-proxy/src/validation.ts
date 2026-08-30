@@ -79,6 +79,14 @@ function validateMagicBytes(
 ): boolean {
   const mimeType = declaredType.split(';')[0].trim().toLowerCase();
 
+  if (mimeType === 'image/webp') {
+    const hasRiff = [0x52, 0x49, 0x46, 0x46]
+      .every((byte, index) => header[index] === byte);
+    const hasWebpBrand = [0x57, 0x45, 0x42, 0x50]
+      .every((byte, index) => header[index + 8] === byte);
+    return hasRiff && hasWebpBrand;
+  }
+
   const config = MAGIC_BYTES_CONFIG.find((c) => c.mimeType === mimeType);
 
   if (!config) {
@@ -176,11 +184,8 @@ export async function validateFile(
  * 清理檔案名稱，防止路徑遍歷攻擊
  */
 export function sanitizeFilename(filename: string): string {
-  // 移除路徑分隔符和特殊字符
-  let sanitized = filename
-    .replace(/[\/\\]/g, '_')
-    .replace(/\.\./g, '_')
-    .replace(/[<>:"|?*\x00-\x1f]/g, '_');
+  // Keep generated object keys ASCII-safe so URL signing and parsing agree.
+  let sanitized = filename.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/\.\./g, '_');
 
   // 限制長度
   if (sanitized.length > 255) {

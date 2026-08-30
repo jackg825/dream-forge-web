@@ -68,6 +68,10 @@ export async function validateFirebaseToken(
       throw new Error('Missing subject (uid) in token');
     }
 
+    if (payload.email_verified !== true) {
+      throw new Error('Email verification required');
+    }
+
     // 檢查 token 是否過期
     const now = Math.floor(Date.now() / 1000);
     if (payload.exp && payload.exp < now) {
@@ -123,6 +127,19 @@ export async function authenticateRequest(
 }
 
 /**
+ * Check that an R2 object path has one unambiguous canonical representation.
+ */
+export function isCanonicalObjectPath(path: string): boolean {
+  if (!path || path.startsWith('/') || path.includes('\\')) {
+    return false;
+  }
+
+  return path
+    .split('/')
+    .every((segment) => segment.length > 0 && segment !== '.' && segment !== '..');
+}
+
+/**
  * 檢查用戶是否有權限存取指定路徑
  */
 export function authorizePathAccess(
@@ -130,7 +147,11 @@ export function authorizePathAccess(
   path: string,
   action: 'read' | 'write'
 ): boolean {
-  const parts = path.split('/').filter(Boolean);
+  if (!isCanonicalObjectPath(path)) {
+    return false;
+  }
+
+  const parts = path.split('/');
 
   if (parts.length < 2) {
     return false;

@@ -80,12 +80,27 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
     }
   }, [disabled]);
 
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+        e.preventDefault();
+        fileInputRef.current?.click();
+      }
+    },
+    [disabled]
+  );
+
   return (
     <Card
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled}
+      aria-label={`${t('dropZone.clickToUpload')} ${t('dropZone.orDragDrop')}`}
       className={cn(
         'cursor-pointer transition-colors duration-200',
         isDragging && 'border-primary bg-primary/5',
@@ -126,7 +141,11 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
           {t('dropZone.supportedFormats')}
         </p>
 
-        {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+        {error && (
+          <p className="mt-2 text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

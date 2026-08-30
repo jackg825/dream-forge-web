@@ -33,18 +33,17 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.listAllOrders = exports.getPrintConfig = exports.deleteShippingAddress = exports.saveShippingAddress = exports.getShippingAddresses = exports.cancelOrder = exports.getOrderDetails = exports.getUserOrders = exports.createOrder = exports.analyzeMeshForPrint = exports.optimizeMeshForPrint = exports.analyzeUploadedImage = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.updateUserTier = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkAllProviderBalances = exports.checkRodinBalance = exports.addCredits = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.onUserCreate = void 0;
-exports.updatePricing = exports.updateMaterialConfig = exports.getOrderStats = exports.updateTrackingInfo = exports.updateOrderStatus = exports.getOrdersByStatus = void 0;
+exports.cancelOrder = exports.getOrderDetails = exports.getUserOrders = exports.analyzeMeshForPrint = exports.optimizeMeshForPrint = exports.analyzeUploadedImage = exports.submitGeminiBatch = exports.resetPipelineStep = exports.updatePipelineAnalysis = exports.refreshPipelineAccessUrls = exports.startPipelineTexture = exports.checkPipelineStatus = exports.startPipelineMesh = exports.regeneratePipelineImage = exports.generatePipelineImages = exports.createPipeline = exports.deleteShippingAddress = exports.saveShippingAddress = exports.createOrder = exports.retryFailedJob = exports.checkJobStatus = exports.generateModel = exports.uploadEditedH2CImage = exports.optimizeColorsForH2C = exports.checkSessionModelStatus = exports.startSessionModelGeneration = exports.uploadCustomView = exports.regenerateView = exports.generateSessionViews = exports.getUserSessions = exports.deleteSession = exports.updateSession = exports.createSession = exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.updateUserTier = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkAllProviderBalances = exports.checkRodinBalance = exports.addCredits = exports.refreshJobAccessUrls = exports.claimWelcomeCredits = exports.onUserCreate = void 0;
+exports.updatePricing = exports.updateMaterialConfig = exports.getOrderStats = exports.updateTrackingInfo = exports.updateOrderStatus = exports.getOrdersByStatus = exports.listAllOrders = exports.getPrintConfig = exports.getShippingAddresses = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 // Export all Cloud Functions
 var users_1 = require("./handlers/users");
 Object.defineProperty(exports, "onUserCreate", { enumerable: true, get: function () { return users_1.onUserCreate; } });
+Object.defineProperty(exports, "claimWelcomeCredits", { enumerable: true, get: function () { return users_1.claimWelcomeCredits; } });
 var generate_1 = require("./handlers/generate");
-Object.defineProperty(exports, "generateModel", { enumerable: true, get: function () { return generate_1.generateModel; } });
-Object.defineProperty(exports, "checkJobStatus", { enumerable: true, get: function () { return generate_1.checkJobStatus; } });
-Object.defineProperty(exports, "retryFailedJob", { enumerable: true, get: function () { return generate_1.retryFailedJob; } });
+Object.defineProperty(exports, "refreshJobAccessUrls", { enumerable: true, get: function () { return generate_1.refreshJobAccessUrls; } });
 var admin_1 = require("./handlers/admin");
 Object.defineProperty(exports, "addCredits", { enumerable: true, get: function () { return admin_1.addCredits; } });
 Object.defineProperty(exports, "checkRodinBalance", { enumerable: true, get: function () { return admin_1.checkRodinBalance; } });
@@ -61,25 +60,26 @@ Object.defineProperty(exports, "adminStartPipelineMesh", { enumerable: true, get
 Object.defineProperty(exports, "adminCheckPreviewStatus", { enumerable: true, get: function () { return admin_1.adminCheckPreviewStatus; } });
 Object.defineProperty(exports, "adminConfirmPreview", { enumerable: true, get: function () { return admin_1.adminConfirmPreview; } });
 Object.defineProperty(exports, "adminRejectPreview", { enumerable: true, get: function () { return admin_1.adminRejectPreview; } });
-// Multi-step creation flow (Sessions)
-var sessions_1 = require("./handlers/sessions");
-Object.defineProperty(exports, "createSession", { enumerable: true, get: function () { return sessions_1.createSession; } });
-Object.defineProperty(exports, "updateSession", { enumerable: true, get: function () { return sessions_1.updateSession; } });
-Object.defineProperty(exports, "deleteSession", { enumerable: true, get: function () { return sessions_1.deleteSession; } });
-Object.defineProperty(exports, "getUserSessions", { enumerable: true, get: function () { return sessions_1.getUserSessions; } });
-// Multi-step creation flow (Views)
-var views_1 = require("./handlers/views");
-Object.defineProperty(exports, "generateSessionViews", { enumerable: true, get: function () { return views_1.generateSessionViews; } });
-Object.defineProperty(exports, "regenerateView", { enumerable: true, get: function () { return views_1.regenerateView; } });
-Object.defineProperty(exports, "uploadCustomView", { enumerable: true, get: function () { return views_1.uploadCustomView; } });
-// Multi-step creation flow (Model)
-var model_1 = require("./handlers/model");
-Object.defineProperty(exports, "startSessionModelGeneration", { enumerable: true, get: function () { return model_1.startSessionModelGeneration; } });
-Object.defineProperty(exports, "checkSessionModelStatus", { enumerable: true, get: function () { return model_1.checkSessionModelStatus; } });
-// H2C 7-color optimization for Bambu Lab H2C printer
-var h2c_1 = require("./handlers/h2c");
-Object.defineProperty(exports, "optimizeColorsForH2C", { enumerable: true, get: function () { return h2c_1.optimizeColorsForH2C; } });
-Object.defineProperty(exports, "uploadEditedH2CImage", { enumerable: true, get: function () { return h2c_1.uploadEditedH2CImage; } });
+// Overwrite legacy URL-based callables with fail-closed stubs for one migration
+// cycle. They can be explicitly deleted after this version is deployed.
+var disabled_legacy_1 = require("./handlers/disabled-legacy");
+Object.defineProperty(exports, "createSession", { enumerable: true, get: function () { return disabled_legacy_1.createSession; } });
+Object.defineProperty(exports, "updateSession", { enumerable: true, get: function () { return disabled_legacy_1.updateSession; } });
+Object.defineProperty(exports, "deleteSession", { enumerable: true, get: function () { return disabled_legacy_1.deleteSession; } });
+Object.defineProperty(exports, "getUserSessions", { enumerable: true, get: function () { return disabled_legacy_1.getUserSessions; } });
+Object.defineProperty(exports, "generateSessionViews", { enumerable: true, get: function () { return disabled_legacy_1.generateSessionViews; } });
+Object.defineProperty(exports, "regenerateView", { enumerable: true, get: function () { return disabled_legacy_1.regenerateView; } });
+Object.defineProperty(exports, "uploadCustomView", { enumerable: true, get: function () { return disabled_legacy_1.uploadCustomView; } });
+Object.defineProperty(exports, "startSessionModelGeneration", { enumerable: true, get: function () { return disabled_legacy_1.startSessionModelGeneration; } });
+Object.defineProperty(exports, "checkSessionModelStatus", { enumerable: true, get: function () { return disabled_legacy_1.checkSessionModelStatus; } });
+Object.defineProperty(exports, "optimizeColorsForH2C", { enumerable: true, get: function () { return disabled_legacy_1.optimizeColorsForH2C; } });
+Object.defineProperty(exports, "uploadEditedH2CImage", { enumerable: true, get: function () { return disabled_legacy_1.uploadEditedH2CImage; } });
+Object.defineProperty(exports, "generateModel", { enumerable: true, get: function () { return disabled_legacy_1.generateModel; } });
+Object.defineProperty(exports, "checkJobStatus", { enumerable: true, get: function () { return disabled_legacy_1.checkJobStatus; } });
+Object.defineProperty(exports, "retryFailedJob", { enumerable: true, get: function () { return disabled_legacy_1.retryFailedJob; } });
+Object.defineProperty(exports, "createOrder", { enumerable: true, get: function () { return disabled_legacy_1.createOrder; } });
+Object.defineProperty(exports, "saveShippingAddress", { enumerable: true, get: function () { return disabled_legacy_1.saveShippingAddress; } });
+Object.defineProperty(exports, "deleteShippingAddress", { enumerable: true, get: function () { return disabled_legacy_1.deleteShippingAddress; } });
 // New simplified pipeline flow (Gemini + Meshy)
 var pipeline_1 = require("./handlers/pipeline");
 Object.defineProperty(exports, "createPipeline", { enumerable: true, get: function () { return pipeline_1.createPipeline; } });
@@ -88,9 +88,11 @@ Object.defineProperty(exports, "regeneratePipelineImage", { enumerable: true, ge
 Object.defineProperty(exports, "startPipelineMesh", { enumerable: true, get: function () { return pipeline_1.startPipelineMesh; } });
 Object.defineProperty(exports, "checkPipelineStatus", { enumerable: true, get: function () { return pipeline_1.checkPipelineStatus; } });
 Object.defineProperty(exports, "startPipelineTexture", { enumerable: true, get: function () { return pipeline_1.startPipelineTexture; } });
+Object.defineProperty(exports, "refreshPipelineAccessUrls", { enumerable: true, get: function () { return pipeline_1.refreshPipelineAccessUrls; } });
 Object.defineProperty(exports, "updatePipelineAnalysis", { enumerable: true, get: function () { return pipeline_1.updatePipelineAnalysis; } });
 Object.defineProperty(exports, "resetPipelineStep", { enumerable: true, get: function () { return pipeline_1.resetPipelineStep; } });
-// Gemini Batch API handlers
+// Keep the disabled callable exported so a deployment overwrites any older,
+// vulnerable deployed version instead of leaving it active by accident.
 var gemini_batch_1 = require("./handlers/gemini-batch");
 Object.defineProperty(exports, "submitGeminiBatch", { enumerable: true, get: function () { return gemini_batch_1.submitGeminiBatch; } });
 // Image analysis (pre-upload Gemini analysis)
@@ -103,14 +105,11 @@ Object.defineProperty(exports, "analyzeMeshForPrint", { enumerable: true, get: f
 // Print ordering system
 var orders_1 = require("./handlers/orders");
 // User functions
-Object.defineProperty(exports, "createOrder", { enumerable: true, get: function () { return orders_1.createOrder; } });
 Object.defineProperty(exports, "getUserOrders", { enumerable: true, get: function () { return orders_1.getUserOrders; } });
 Object.defineProperty(exports, "getOrderDetails", { enumerable: true, get: function () { return orders_1.getOrderDetails; } });
 Object.defineProperty(exports, "cancelOrder", { enumerable: true, get: function () { return orders_1.cancelOrder; } });
 // Shipping addresses
 Object.defineProperty(exports, "getShippingAddresses", { enumerable: true, get: function () { return orders_1.getShippingAddresses; } });
-Object.defineProperty(exports, "saveShippingAddress", { enumerable: true, get: function () { return orders_1.saveShippingAddress; } });
-Object.defineProperty(exports, "deleteShippingAddress", { enumerable: true, get: function () { return orders_1.deleteShippingAddress; } });
 // Print config
 Object.defineProperty(exports, "getPrintConfig", { enumerable: true, get: function () { return orders_1.getPrintConfig; } });
 // Admin functions

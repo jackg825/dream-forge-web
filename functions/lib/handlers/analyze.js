@@ -48,6 +48,41 @@ const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
 const image_analyzer_1 = require("../gemini/image-analyzer");
 const storage_validation_1 = require("../utils/storage-validation");
+const styles_1 = require("../config/styles");
+const MAX_ANALYSES_PER_UTC_DAY = 10;
+const ANALYSIS_COOLDOWN_MS = 10_000;
+const SUPPORTED_PRINTER_TYPES = new Set(['fdm', 'sla', 'resin']);
+const SUPPORTED_LOCALES = new Set(['zh-TW', 'en']);
+async function reserveAnalysisQuota(userId) {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(userId);
+    const now = admin.firestore.Timestamp.now();
+    const quotaDay = now.toDate().toISOString().slice(0, 10);
+    await db.runTransaction(async (transaction) => {
+        const userSnapshot = await transaction.get(userRef);
+        if (!userSnapshot.exists) {
+            throw new functions.https.HttpsError('failed-precondition', 'User profile is not ready');
+        }
+        const user = userSnapshot.data() || {};
+        const currentCount = user.analysisQuotaDay === quotaDay
+            ? Number(user.analysisQuotaCount || 0)
+            : 0;
+        const lastAnalysisAt = user.lastAnalysisAt;
+        if (lastAnalysisAt &&
+            now.toMillis() - lastAnalysisAt.toMillis() < ANALYSIS_COOLDOWN_MS) {
+            throw new functions.https.HttpsError('resource-exhausted', 'Please wait before analyzing another image');
+        }
+        if (currentCount >= MAX_ANALYSES_PER_UTC_DAY) {
+            throw new functions.https.HttpsError('resource-exhausted', 'Daily image analysis limit reached');
+        }
+        transaction.update(userRef, {
+            analysisQuotaDay: quotaDay,
+            analysisQuotaCount: currentCount + 1,
+            lastAnalysisAt: now,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+}
 // ============================================
 // Cloud Function: analyzeUploadedImage
 // ============================================
@@ -59,7 +94,8 @@ const storage_validation_1 = require("../utils/storage-validation");
  * 2. Sends it to Gemini for analysis
  * 3. Returns structured analysis results
  *
- * The analysis is free (no credits charged) and is used to:
+ * The analysis does not consume generation credits, but is email-verified and
+ * rate-limited to protect the paid provider from automated abuse. It is used to:
  * - Pre-populate description for better AI generation
  * - Extract color palette for consistency
  * - Provide 3D print friendliness feedback
@@ -69,23 +105,38 @@ exports.analyzeUploadedImage = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
+    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     // Verify authentication
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'You must be logged in to analyze images');
     }
+    if (context.auth.token.email_verified !== true) {
+        throw new functions.https.HttpsError('failed-precondition', 'Verify your email before analyzing images');
+    }
     const userId = context.auth.uid;
-    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW', selectedStyle } = data;
+    const { imageUrl, colorCount = 7, printerType = 'fdm', locale = 'zh-TW', selectedStyle } = data || {};
     // Validate input
     if (!imageUrl) {
         throw new functions.https.HttpsError('invalid-argument', 'imageUrl is required');
     }
-    // Validate color count (3-12)
-    const validColorCount = Math.min(12, Math.max(3, colorCount));
+    if (!Number.isInteger(colorCount) || colorCount < 3 || colorCount > 12) {
+        throw new functions.https.HttpsError('invalid-argument', 'colorCount must be an integer from 3 to 12');
+    }
+    if (!SUPPORTED_PRINTER_TYPES.has(printerType)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Unsupported printer type');
+    }
+    if (!SUPPORTED_LOCALES.has(locale)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Unsupported locale');
+    }
+    if (selectedStyle !== undefined && !(0, styles_1.isValidStyleId)(selectedStyle)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Unsupported style');
+    }
+    await reserveAnalysisQuota(userId);
     functions.logger.info('Starting image analysis', {
         userId,
-        colorCount: validColorCount,
+        colorCount,
         printerType,
         selectedStyle: selectedStyle || 'none',
     });
@@ -99,7 +150,7 @@ exports.analyzeUploadedImage = functions
         });
         // Analyze image with optional style context
         const analysisResult = await (0, image_analyzer_1.analyzeImage)(base64, mimeType, {
-            colorCount: validColorCount,
+            colorCount,
             printerType,
             locale,
             selectedStyle,
@@ -126,7 +177,7 @@ exports.analyzeUploadedImage = functions
             userId,
             error: errorMessage,
         });
-        throw new functions.https.HttpsError('internal', `Image analysis failed: ${errorMessage}`);
+        throw new functions.https.HttpsError('internal', 'Image analysis failed');
     }
 });
 //# sourceMappingURL=analyze.js.map

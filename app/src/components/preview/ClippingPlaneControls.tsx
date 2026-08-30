@@ -51,6 +51,7 @@ export function ClippingPlaneControls({
             checked={enabled}
             onCheckedChange={onEnabledChange}
             disabled={disabled}
+            aria-label={t('title')}
           />
         </div>
       </CardHeader>
@@ -94,6 +95,7 @@ export function ClippingPlaneControls({
                 max={100}
                 step={1}
                 disabled={disabled}
+                aria-label={t('position')}
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>0%</span>
@@ -115,6 +117,7 @@ export function ClippingPlaneControls({
                 size="icon"
                 onClick={() => onInvertedChange(!inverted)}
                 disabled={disabled}
+                aria-label={t('invert')}
               >
                 <ArrowUpDown className={cn('h-4 w-4', inverted && 'rotate-180')} />
               </Button>

@@ -32,36 +32,29 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.checkAllProviderBalances = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.updateUserTier = exports.addCredits = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
-const axios_1 = __importDefault(require("axios"));
 const client_1 = require("../rodin/client");
 const client_2 = require("../providers/meshy/client");
 const client_3 = require("../providers/tripo/client");
 const factory_1 = require("../providers/factory");
 const multi_view_generator_1 = require("../gemini/multi-view-generator");
 const storage_1 = require("../storage");
+const storage_validation_1 = require("../utils/storage-validation");
 const db = admin.firestore();
+function parsePaginationValue(value, fallback, minimum, maximum, field) {
+    if (value === undefined || value === null)
+        return fallback;
+    if (!Number.isInteger(value) || value < minimum || value > maximum) {
+        throw new functions.https.HttpsError('invalid-argument', `${field} must be an integer between ${minimum} and ${maximum}`);
+    }
+    return value;
+}
 // ============================================
 // Helper Functions
 // ============================================
-/**
- * Download image and convert to base64
- */
-async function downloadImageAsBase64(url) {
-    const response = await axios_1.default.get(url, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-    });
-    const base64 = Buffer.from(response.data).toString('base64');
-    const contentType = response.headers['content-type'] || 'image/png';
-    return { base64, mimeType: contentType };
-}
 /**
  * Upload image to storage and get URL
  */
@@ -359,8 +352,8 @@ exports.listUsers = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const limit = Math.min(data.limit || 50, 100);
-    const offset = data.offset || 0;
+    const limit = parsePaginationValue(data?.limit, 50, 1, 100, 'limit');
+    const offset = parsePaginationValue(data?.offset, 0, 0, 1000, 'offset');
     try {
         const usersSnapshot = await db
             .collection('users')
@@ -401,6 +394,46 @@ exports.listUsers = functions
         throw new functions.https.HttpsError('internal', 'Failed to list users');
     }
 });
+const VALID_PIPELINE_STATUSES = new Set([
+    'draft',
+    'batch-queued',
+    'batch-processing',
+    'generating-images',
+    'images-ready',
+    'generating-mesh',
+    'mesh-ready',
+    'generating-texture',
+    'completed',
+    'failed',
+]);
+async function refreshStoredAdminUrl(url, storagePath) {
+    if (typeof url !== 'string')
+        return null;
+    if (typeof storagePath !== 'string' || !storagePath)
+        return url;
+    try {
+        return await (0, storage_1.getSignedUrlForReference)(storagePath, url);
+    }
+    catch (error) {
+        functions.logger.warn('Could not refresh an admin storage URL', {
+            storagePath,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        return url;
+    }
+}
+async function refreshStoredAdminImages(images) {
+    if (!images || typeof images !== 'object')
+        return {};
+    const entries = await Promise.all(Object.entries(images).map(async ([key, image]) => [
+        key,
+        {
+            ...image,
+            url: await refreshStoredAdminUrl(image?.url, image?.storagePath),
+        },
+    ]));
+    return Object.fromEntries(entries);
+}
 /**
  * Cloud Function: listAllPipelines
  *
@@ -418,9 +451,16 @@ exports.listAllPipelines = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const limit = Math.min(data.limit || 20, 50);
-    const offset = data.offset || 0;
-    const { status, userId } = data;
+    const limit = parsePaginationValue(data?.limit, 20, 1, 50, 'limit');
+    const offset = parsePaginationValue(data?.offset, 0, 0, 1000, 'offset');
+    const { status, userId } = data || {};
+    if (status && !VALID_PIPELINE_STATUSES.has(status)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid pipeline status');
+    }
+    if (userId !== undefined &&
+        (typeof userId !== 'string' || !userId || userId.length > 128 || userId.includes('/'))) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid user ID');
+    }
     try {
         // Build query with optional filters
         let query = db.collection('pipelines');
@@ -436,9 +476,22 @@ exports.listAllPipelines = functions
         const userIds = [...new Set(pipelinesSnapshot.docs.map((doc) => doc.data().userId))];
         const userDocs = await Promise.all(userIds.map((uid) => db.collection('users').doc(uid).get()));
         const userMap = new Map(userDocs.filter((doc) => doc.exists).map((doc) => [doc.id, doc.data()]));
-        const pipelines = pipelinesSnapshot.docs.map((doc) => {
+        const pipelines = await Promise.all(pipelinesSnapshot.docs.map(async (doc) => {
             const pipelineData = doc.data();
             const userData = userMap.get(pipelineData.userId);
+            const inputImages = await Promise.all((pipelineData.inputImages || []).map(async (image) => ({
+                ...image,
+                url: await refreshStoredAdminUrl(image.url, image.storagePath),
+            })));
+            const meshImages = await refreshStoredAdminImages(pipelineData.meshImages);
+            const adminPreview = pipelineData.adminPreview
+                ? {
+                    ...pipelineData.adminPreview,
+                    meshImages: await refreshStoredAdminImages(pipelineData.adminPreview.meshImages),
+                    meshUrl: await refreshStoredAdminUrl(pipelineData.adminPreview.meshUrl, pipelineData.adminPreview.meshStoragePath),
+                    texturedModelUrl: await refreshStoredAdminUrl(pipelineData.adminPreview.texturedModelUrl, pipelineData.adminPreview.texturedModelStoragePath),
+                }
+                : null;
             return {
                 id: doc.id,
                 userId: pipelineData.userId,
@@ -448,19 +501,23 @@ exports.listAllPipelines = functions
                 status: pipelineData.status,
                 processingMode: pipelineData.processingMode,
                 generationMode: pipelineData.generationMode,
-                inputImages: pipelineData.inputImages || [],
-                meshImages: pipelineData.meshImages || {},
-                meshUrl: pipelineData.meshUrl || null,
-                texturedModelUrl: pipelineData.texturedModelUrl || null,
+                inputImages,
+                meshImages,
+                meshUrl: await refreshStoredAdminUrl(pipelineData.meshUrl, pipelineData.meshStoragePath),
+                meshStoragePath: pipelineData.meshStoragePath || null,
+                texturedModelUrl: await refreshStoredAdminUrl(pipelineData.texturedModelUrl, pipelineData.texturedModelStoragePath),
+                texturedModelStoragePath: pipelineData.texturedModelStoragePath || null,
                 creditsCharged: pipelineData.creditsCharged || { mesh: 0, texture: 0 },
                 settings: pipelineData.settings || {},
                 userDescription: pipelineData.userDescription || null,
                 error: pipelineData.error || null,
+                adminPreview,
+                adminActions: pipelineData.adminActions || [],
                 createdAt: pipelineData.createdAt?.toDate?.()?.toISOString() || null,
                 updatedAt: pipelineData.updatedAt?.toDate?.()?.toISOString() || null,
                 completedAt: pipelineData.completedAt?.toDate?.()?.toISOString() || null,
             };
-        });
+        }));
         // Get total count (with filters if applied)
         let countQuery = db.collection('pipelines');
         if (status) {
@@ -583,9 +640,9 @@ exports.getUserTransactions = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { targetUserId } = data;
-    const limit = Math.min(data.limit || 50, 100);
-    const offset = data.offset || 0;
+    const targetUserId = data?.targetUserId;
+    const limit = parsePaginationValue(data?.limit, 50, 1, 100, 'limit');
+    const offset = parsePaginationValue(data?.offset, 0, 0, 1000, 'offset');
     if (!targetUserId) {
         throw new functions.https.HttpsError('invalid-argument', 'Target user ID is required');
     }
@@ -770,6 +827,7 @@ exports.adminRegeneratePipelineImage = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '512MB',
+    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     if (!context.auth) {
@@ -799,7 +857,7 @@ exports.adminRegeneratePipelineImage = functions
     try {
         // Download reference image
         const referenceImageUrl = pipeline.inputImages[0].url;
-        const { base64, mimeType } = await downloadImageAsBase64(referenceImageUrl);
+        const { base64, mimeType } = await (0, storage_validation_1.downloadValidatedImageAsBase64)(referenceImageUrl, pipeline.userId, ['uploads']);
         // Generate view using pipeline's settings
         const modeId = pipeline.generationMode || 'simplified-texture';
         const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash');
@@ -894,12 +952,17 @@ exports.adminStartPipelineMesh = functions
     try {
         // Collect mesh image URLs
         const meshAngles = ['front', 'back', 'left', 'right'];
-        const imageUrls = meshAngles
-            .map((angle) => pipeline.meshImages[angle]?.url)
-            .filter((url) => !!url);
-        if (imageUrls.length < 4) {
+        const imageUrls = await Promise.all(meshAngles.map(async (angle) => {
+            const imageUrl = pipeline.meshImages[angle]?.url;
+            if (!imageUrl)
+                return null;
+            const reference = (0, storage_validation_1.assertUserStorageReference)(imageUrl, pipeline.userId, ['pipelines']);
+            return (0, storage_1.getSignedUrlForReference)(reference.storagePath, imageUrl);
+        }));
+        if (imageUrls.some((url) => !url)) {
             throw new functions.https.HttpsError('failed-precondition', 'Not all mesh images available');
         }
+        const validatedImageUrls = imageUrls.filter((url) => Boolean(url));
         // Get provider
         const providerType = requestedProvider || pipeline.settings?.provider || 'meshy';
         const provider = factory_1.ProviderFactory.getProvider(providerType);
@@ -907,7 +970,7 @@ exports.adminStartPipelineMesh = functions
         let result;
         if (providerType === 'tripo') {
             const tripoProvider = provider;
-            result = await tripoProvider.generateFromUrls(imageUrls, {
+            result = await tripoProvider.generateFromUrls(validatedImageUrls, {
                 quality: pipeline.settings?.quality || 'standard',
                 format: pipeline.settings?.format || 'glb',
                 enableTexture: true,
@@ -916,7 +979,7 @@ exports.adminStartPipelineMesh = functions
         }
         else if (providerType === 'meshy') {
             const meshyProvider = provider;
-            result = await meshyProvider.generateMeshOnlyFromUrls(imageUrls, {
+            result = await meshyProvider.generateMeshOnlyFromUrls(validatedImageUrls, {
                 quality: pipeline.settings?.quality || 'standard',
                 format: pipeline.settings?.format || 'glb',
                 precision: pipeline.settings?.meshPrecision || 'standard',
@@ -924,7 +987,7 @@ exports.adminStartPipelineMesh = functions
         }
         else if (providerType === 'hunyuan') {
             const hunyuanProvider = provider;
-            result = await hunyuanProvider.generateFromUrls(imageUrls, {
+            result = await hunyuanProvider.generateFromUrls(validatedImageUrls, {
                 quality: pipeline.settings?.quality || 'standard',
                 format: pipeline.settings?.format || 'glb',
                 enablePBR: false,
@@ -936,12 +999,9 @@ exports.adminStartPipelineMesh = functions
         else {
             // Fallback: download images and use generateFromMultipleImages
             const imageBuffers = [];
-            for (const url of imageUrls) {
-                const response = await axios_1.default.get(url, {
-                    responseType: 'arraybuffer',
-                    timeout: 30000,
-                });
-                imageBuffers.push(Buffer.from(response.data));
+            for (const url of validatedImageUrls) {
+                const image = await (0, storage_validation_1.downloadValidatedImageAsBase64)(url, pipeline.userId, ['pipelines']);
+                imageBuffers.push(Buffer.from(image.base64, 'base64'));
             }
             result = await provider.generateFromMultipleImages(imageBuffers, {
                 quality: pipeline.settings?.quality || 'standard',
@@ -1016,10 +1076,17 @@ exports.adminCheckPreviewStatus = functions
     const pipeline = pipelineDoc.data();
     const preview = pipeline.adminPreview;
     if (!preview?.taskId || !preview?.provider) {
+        const refreshedPreview = preview
+            ? {
+                ...preview,
+                meshUrl: await refreshStoredAdminUrl(preview.meshUrl, preview.meshStoragePath),
+                texturedModelUrl: await refreshStoredAdminUrl(preview.texturedModelUrl, preview.texturedModelStoragePath),
+            }
+            : null;
         return {
             success: true,
             status: 'no-active-task',
-            preview: preview || null,
+            preview: refreshedPreview,
         };
     }
     try {
@@ -1032,11 +1099,7 @@ exports.adminCheckPreviewStatus = functions
             if (glbFile) {
                 const modelBuffer = await providerInstance.downloadModel(glbFile.url);
                 const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/model.glb`;
-                const bucket = admin.storage().bucket();
-                const file = bucket.file(storagePath);
-                await file.save(modelBuffer, { contentType: 'model/gltf-binary' });
-                await file.makePublic();
-                const meshUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+                const meshUrl = await (0, storage_1.uploadBuffer)(modelBuffer, storagePath, 'model/gltf-binary');
                 await pipelineRef.update({
                     'adminPreview.meshUrl': meshUrl,
                     'adminPreview.meshStoragePath': storagePath,

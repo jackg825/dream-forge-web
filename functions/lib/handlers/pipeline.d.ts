@@ -64,6 +64,12 @@ export declare const checkPipelineStatus: functions.HttpsFunction & functions.Ru
  */
 export declare const startPipelineTexture: functions.HttpsFunction & functions.Runnable<any>;
 /**
+ * Mint fresh Firebase/R2 URLs from server-owned pipeline records. Clients send
+ * document IDs only, so they cannot ask the signer to authorize arbitrary
+ * storage paths.
+ */
+export declare const refreshPipelineAccessUrls: functions.HttpsFunction & functions.Runnable<any>;
+/**
  * Update pipeline analysis results
  *
  * Allows users to update the image analysis and description

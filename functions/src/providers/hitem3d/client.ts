@@ -25,7 +25,6 @@ import {
   HITEM_API_BASE,
   HITEM_DEFAULT_MODEL,
   HITEM_QUALITY_RESOLUTION,
-  HITEM_QUALITY_FACE_COUNT,
   HITEM_FORMAT_CODE,
   HITEM_ERROR_CODES,
 } from './types';
@@ -61,8 +60,14 @@ export class Hitem3DProvider implements I3DProvider {
   ): Promise<GenerationTaskResult> {
     try {
       const accessToken = await this.authManager.getAccessToken();
-      const resolution = HITEM_QUALITY_RESOLUTION[options.quality] || 1024;
-      const faceCount = HITEM_QUALITY_FACE_COUNT[options.quality] || 1000000;
+      const requestedResolution = options.providerOptions?.hitem3d?.resolution;
+      const validResolutions = [512, 1024, 1536, '1536pro'] as const;
+      if (requestedResolution !== undefined && !validResolutions.includes(requestedResolution)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid HiTem3D resolution');
+      }
+
+      const resolution = requestedResolution ?? HITEM_QUALITY_RESOLUTION[options.quality] ?? 1024;
+      const faceCount = resolution === 512 ? 500_000 : resolution === 1024 ? 1_000_000 : 2_000_000;
       const formatCode = this.getFormatCode(options.format);
 
       functions.logger.info('Starting HiTem3D generation', {

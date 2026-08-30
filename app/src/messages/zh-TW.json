@@ -89,6 +89,7 @@
   },
   "auth": {
     "welcomeBack": "歡迎回來",
+    "createYourAccount": "建立您的帳號",
     "transformPhotos": "將照片轉換成 3D 模型",
     "tabSignIn": "登入",
     "tabSignUp": "建立帳號",
@@ -100,7 +101,8 @@
     "namePlaceholder": "您的名稱",
     "orContinueWith": "或使用以下方式繼續",
     "continueWithGoogle": "使用 Google 帳號繼續",
-    "newUsersReceive": "新用戶可獲得 3 點免費點數",
+    "newUsersReceive": "完成信箱驗證後可獲得 3 點免費點數",
+    "verificationSent": "請前往信箱完成驗證後再登入；驗證完成後會自動加入 3 點迎新點數。",
     "backToHome": "返回首頁",
     "signInToUpload": "登入以上傳照片",
     "newUsersGet3Credits": "新用戶可獲得 3 點免費點數",
@@ -264,7 +266,7 @@
     "availableCredits": "可用點數",
     "totalGenerations": "總生成次數",
     "modelsCreated": "已建立的 3D 模型",
-    "creditEquation": "1 點 = 1 次生成",
+    "creditEquation": "點數依步驟與供應商計費",
     "createNewModel": "建立新模型",
     "uploadAndTransform": "上傳照片，轉換成 3D 模型",
     "newGeneration": "新增生成",
@@ -349,6 +351,10 @@
     "failedToLoad": "無法載入模型",
     "tryAnotherFile": "請嘗試其他檔案",
     "uploadAnotherFile": "上傳其他檔案",
+    "screenshot": {
+      "success": "截圖已下載。",
+      "error": "無法建立截圖，請再試一次。"
+    },
     "unsupportedFormat": "不支援的檔案格式。請上傳 STL、OBJ、GLB 或 GLTF 檔案。",
     "dropZone": {
       "clickToUpload": "點擊上傳",
@@ -548,11 +554,11 @@
       "prepareImages": "準備圖片",
       "generateMesh": "生成網格",
       "generateTexture": "生成貼圖",
-      "printDelivery": "列印&配送"
+      "printDelivery": "列印與配送"
     },
     "progressBar": {
       "returnToStep": "返回「{step}」步驟",
-      "soon": "Soon"
+      "soon": "即將推出"
     },
     "error": {
       "title": "處理失敗",
@@ -653,7 +659,7 @@
       "viewHistory": "查看我的作品"
     },
     "step4": {
-      "title": "列印&配送",
+      "title": "列印與配送",
       "comingSoon": "即將推出",
       "description": "很快你就可以直接訂購 3D 列印成品並寄送到府"
     },
@@ -748,7 +754,7 @@
     "removeImage": "移除圖片",
     "addMore": "添加更多",
     "photoTips": {
-      "title": "📸 最佳拍攝建議",
+      "title": "最佳拍攝建議",
       "frontView": "正面視角",
       "frontViewDesc": "主體正面朝向鏡頭，如同面對面看著它",
       "clearComplete": "清晰完整",
@@ -770,6 +776,7 @@
     "meshImages": "網格用圖片",
     "viewAlt": "{label}視角",
     "help": "點擊空格上傳圖片，或 hover 已有圖片進行替換。AI 生成的圖片標記為「AI」，手動上傳標記為「手動」。",
+    "helpRegenerate": "請檢查各個生成視角；需要修正時可使用「重新生成」。",
     "angles": {
       "front": "正面",
       "back": "背面",
@@ -872,20 +879,20 @@
   },
   "landing": {
     "hero": {
-      "badge": "AI 驅動 · 全球配送",
-      "title1": "從照片到手中",
-      "title2": "實體 3D 模型",
-      "subtitle": "上傳照片，AI 自動生成 3D 模型。下載數位檔案，或讓我們為您專業列印，全球配送到府。",
+      "badge": "AI 驅動的照片轉 3D",
+      "title1": "將照片轉換為",
+      "title2": "可下載的 3D 模型",
+      "subtitle": "上傳清晰的物品照片，生成輔助視角，再依流程建立、檢視並下載 3D 模型。",
       "cta": "免費開始創作",
       "ctaSecondary": "查看範例",
       "stat1": "免費點數起步",
-      "stat2": "分鐘生成時間",
-      "stat3": "種匯出格式",
-      "stat4": "全球配送",
+      "stat2": "AI 輔助視角",
+      "stat3": "介面語言",
+      "stat4": "瀏覽器預覽",
       "journey": {
         "photo": "上傳照片",
         "model": "生成模型",
-        "deliver": "列印&配送"
+        "deliver": "預覽與下載"
       }
     },
     "showcase": {
@@ -929,7 +936,7 @@
       "badge": "簡單流程",
       "title": "如何使用",
       "subtitle": "三個簡單步驟，將照片轉換為 3D 模型",
-      "timeLabel": "分鐘平均生成時間",
+      "timeLabel": "生成時間依供應商而異",
       "steps": {
         "upload": {
           "title": "上傳照片",
@@ -941,7 +948,7 @@
         },
         "download": {
           "title": "下載使用",
-          "description": "以 STL、OBJ、GLB 或 FBX 格式下載模型，可直接列印或編輯。"
+          "description": "先在 3D 檢視器確認結果，再下載目前提供的 GLB 模型繼續使用。"
         }
       }
     },
@@ -951,17 +958,17 @@
       "subtitle": "為創作者設計的專業級 3D 生成工具",
       "items": {
         "fast": {
-          "title": "閃電快速",
-          "description": "約 2 分鐘即可獲得 3D 模型。無需等待，無需複雜軟體。",
-          "subtext": "由先進 AI 驅動"
+          "title": "清楚的生成進度",
+          "description": "依序完成圖片分析、輔助視角與 3D 重建；實際處理時間依服務而異。",
+          "subtext": "進度會儲存在工作區"
         },
         "formats": {
-          "title": "多種格式",
-          "description": "支援 STL、OBJ、GLB、FBX 或 USDZ 匯出，相容任何 3D 軟體或切片器。"
+          "title": "3D 預覽與 GLB",
+          "description": "直接在瀏覽器檢視結果，並下載生成的 GLB 模型。"
         },
         "printing": {
-          "title": "可直接列印",
-          "description": "模型針對 3D 列印優化，具備適當的網格品質和流形幾何。"
+          "title": "網格檢查",
+          "description": "下載前先檢視生成網格，再進行後續編輯或列印準備。"
         },
         "quality": {
           "title": "品質選項",
@@ -969,7 +976,7 @@
         },
         "secure": {
           "title": "安全私密",
-          "description": "照片安全處理，生成後即刪除。您的資料屬於您。"
+          "description": "檔案依帳號隔離，並透過驗證或限時網址提供存取。"
         },
         "global": {
           "title": "多語系支援",
@@ -1014,49 +1021,50 @@
     },
     "pricing": {
       "badge": "簡單定價",
-      "title": "按需付費",
-      "subtitle": "免費開始，3 點起步。需要時再購買更多。",
+      "title": "點數方案預覽",
+      "subtitle": "提供 3 點體驗輔助視角；付費加值功能即將推出。",
       "popular": "最受歡迎",
       "perPack": "/ 套餐",
       "credits": "點數",
+      "comingSoon": "即將推出",
       "note": "",
       "plans": {
         "free": {
           "name": "免費方案",
-          "freeFeature1": "3 點起步",
-          "freeFeature2": "所有匯出格式",
-          "freeFeature3": "基本支援",
-          "freeFeature4": "實體列印（按件計費）",
+          "freeFeature1": "3 點體驗輔助視角",
+          "freeFeature2": "引導式照片分析",
+          "freeFeature3": "四個 AI 輔助視角",
+          "freeFeature4": "生成 3D 網格需要額外點數",
           "cta": "免費開始"
         },
         "starter": {
           "name": "入門套餐",
           "starterFeature1": "20 點",
-          "starterFeature2": "所有匯出格式",
+          "starterFeature2": "GLB 下載",
           "starterFeature3": "優先處理",
           "starterFeature4": "Email 支援",
-          "starterFeature5": "實體列印（按件計費）",
+          "starterFeature5": "加值功能上線通知",
           "cta": "購買入門套餐"
         },
         "pro": {
           "name": "專業套餐",
           "proFeature1": "80 點",
-          "proFeature2": "所有匯出格式",
+          "proFeature2": "GLB 下載",
           "proFeature3": "優先處理",
           "proFeature4": "優先支援",
-          "proFeature5": "實體列印 9 折優惠",
+          "proFeature5": "加值功能上線通知",
           "cta": "購買專業套餐"
         }
       }
     },
     "printService": {
-      "badge": "實體列印服務",
-      "title": "將數位模型變成實體",
-      "subtitle": "專業 3D 列印，全球配送。從照片到手中的實體模型，一站完成。",
+      "badge": "實體列印 · 即將推出",
+      "title": "實體列印服務開發中",
+      "subtitle": "此區預覽規劃中的尺寸、材質與配送體驗；目前尚未開放訂購與付款。",
       "previewTitle": "實際生成範例預覽",
       "visualCaption": "專業列印品質",
-      "statusReady": "即時接單",
-      "worldwide": "全球配送",
+      "statusReady": "概念預覽",
+      "worldwide": "配送規劃中",
       "sizesTitle": "尺寸選擇",
       "sizes": {
         "small": "小型",
@@ -1075,16 +1083,17 @@
         }
       },
       "features": {
-        "quality": "專業級列印品質",
-        "packaging": "精緻包裝保護",
-        "worldwide": "全球寄送服務",
-        "tracking": "物流追蹤查詢"
+        "quality": "規劃中的列印品質選項",
+        "packaging": "規劃中的包裝保護",
+        "worldwide": "配送地區尚待公布",
+        "tracking": "規劃中的物流追蹤"
       },
-      "startingFrom": "價格起始",
+      "startingFrom": "開放狀態",
+      "comingSoon": "即將推出",
       "perModel": "/ 每件",
-      "shippingIncluded": "含國內運費",
-      "cta": "訂購實體列印",
-      "trustNote": "付款後 3-5 個工作天出貨"
+      "shippingIncluded": "上線資訊將另行公布",
+      "cta": "實體列印即將推出",
+      "trustNote": "目前尚未開放訂購、付款與配送"
     },
     "finalCta": {
       "badge": "準備好了嗎？",
@@ -1588,7 +1597,9 @@
         "title": "價格矩陣",
         "description": "設定每種材質和尺寸組合的價格",
         "material": "材質",
-        "save": "儲存價格"
+        "save": "儲存價格",
+        "success": "價格已儲存。",
+        "error": "無法儲存價格，請再試一次。"
       },
       "materials": {
         "title": "列印材質",

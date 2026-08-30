@@ -64,7 +64,8 @@ async function downloadImageAsBase64(url) {
     const buffer = Buffer.from(response.data);
     const base64 = buffer.toString('base64');
     // Determine MIME type from content-type header or default to png
-    const contentType = response.headers['content-type'] || 'image/png';
+    const contentTypeHeader = response.headers['content-type'];
+    const contentType = typeof contentTypeHeader === 'string' ? contentTypeHeader : 'image/png';
     const mimeType = contentType.split(';')[0].trim();
     return { base64, mimeType };
 }
@@ -94,6 +95,7 @@ exports.optimizeColorsForH2C = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
+    secrets: ['GEMINI_API_KEY'],
 })
     .https.onCall(async (data, context) => {
     // 1. Verify authentication

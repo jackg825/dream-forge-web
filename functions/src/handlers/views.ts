@@ -48,7 +48,9 @@ async function downloadImage(
 
   return {
     buffer: Buffer.from(response.data),
-    mimeType: response.headers['content-type'] || 'image/png',
+    mimeType: typeof response.headers['content-type'] === 'string'
+      ? response.headers['content-type']
+      : 'image/png',
   };
 }
 

@@ -193,6 +193,13 @@ export interface IOrderRepository {
     price: number
   ): Promise<void>;
 
+  /**
+   * Replace the complete pricing matrix atomically
+   */
+  updatePricingMatrix(
+    pricing: Record<PrintMaterial, Record<PrintSizeId, number>>
+  ): Promise<void>;
+
   // ============================================
   // Reports
   // ============================================

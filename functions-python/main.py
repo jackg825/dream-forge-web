@@ -8,11 +8,62 @@ These functions are admin-only and called from Node.js functions.
 import json
 import tempfile
 import os
+import base64
+import binascii
+import hmac
 from typing import Any
 
 # Lazy imports for heavy libraries to avoid timeout during initialization
 # numpy, trimesh, scipy will be imported when needed
 from firebase_functions import https_fn, options
+
+
+MAX_MESH_BYTES = 20 * 1024 * 1024
+MAX_MESH_ELEMENTS = 2_000_000
+
+
+def json_response(payload: dict, status: int = 200) -> https_fn.Response:
+    return https_fn.Response(
+        json.dumps(payload),
+        status=status,
+        content_type="application/json",
+    )
+
+
+def authorize_internal_request(req: https_fn.Request):
+    """Fail closed unless the Node function presents the deployment secret."""
+    expected = os.environ.get("TRIMESH_INTERNAL_TOKEN", "")
+    if not expected:
+        return json_response({"success": False, "error": "Service unavailable"}, 503)
+
+    supplied = req.headers.get("X-Internal-Token", "")
+    if not supplied or not hmac.compare_digest(supplied, expected):
+        return json_response({"success": False, "error": "Unauthorized"}, 401)
+    return None
+
+
+def decode_mesh_data(value: Any) -> bytes:
+    if not isinstance(value, str) or not value:
+        raise ValueError("file_data must be a non-empty base64 string")
+
+    # Reject oversized data before allocating the decoded buffer.
+    max_encoded_length = ((MAX_MESH_BYTES + 2) // 3) * 4
+    if len(value) > max_encoded_length:
+        raise ValueError("Mesh file exceeds the 20MB limit")
+
+    try:
+        decoded = base64.b64decode(value, validate=True)
+    except (binascii.Error, ValueError) as error:
+        raise ValueError("file_data is not valid base64") from error
+
+    if len(decoded) > MAX_MESH_BYTES:
+        raise ValueError("Mesh file exceeds the 20MB limit")
+    return decoded
+
+
+def validate_mesh_complexity(mesh) -> None:
+    if len(mesh.vertices) > MAX_MESH_ELEMENTS or len(mesh.faces) > MAX_MESH_ELEMENTS:
+        raise ValueError("Mesh is too complex to process")
 
 
 def get_trimesh():
@@ -117,21 +168,26 @@ def analyze_mesh_issues(mesh) -> tuple[list, list, int]:
     region="asia-east1",
     memory=options.MemoryOption.GB_2,
     timeout_sec=540,
-    cors=options.CorsOptions(cors_origins="*", cors_methods=["POST"]),
+    secrets=["TRIMESH_INTERNAL_TOKEN"],
 )
 def trimesh_analyze(req: https_fn.Request) -> https_fn.Response:
     """
     Analyze a mesh file and return statistics and issues.
 
     Request body (JSON):
-        - file_url: URL to download the mesh file
-        - file_data: Base64 encoded mesh data (alternative to file_url)
+        - file_data: Base64 encoded mesh data
 
     Response (JSON):
         - success: bool
         - analysis: mesh statistics and issues
         - error: error message if failed
     """
+    auth_error = authorize_internal_request(req)
+    if auth_error:
+        return auth_error
+    if req.method != "POST":
+        return json_response({"success": False, "error": "Method not allowed"}, 405)
+
     try:
         data = req.get_json()
         if not data:
@@ -141,24 +197,20 @@ def trimesh_analyze(req: https_fn.Request) -> https_fn.Response:
                 content_type="application/json",
             )
 
-        # Get mesh data
-        import base64
-        import urllib.request
+        if data.get("health") is True:
+            return json_response({"success": True, "status": "ok"})
 
+        # Get mesh data
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path = os.path.join(temp_dir, "input.glb")
 
             if "file_data" in data:
-                # Decode base64 data
-                file_bytes = base64.b64decode(data["file_data"])
+                file_bytes = decode_mesh_data(data["file_data"])
                 with open(input_path, "wb") as f:
                     f.write(file_bytes)
-            elif "file_url" in data:
-                # Download from URL
-                urllib.request.urlretrieve(data["file_url"], input_path)
             else:
                 return https_fn.Response(
-                    json.dumps({"success": False, "error": "No file_data or file_url provided"}),
+                    json.dumps({"success": False, "error": "No file_data provided"}),
                     status=400,
                     content_type="application/json",
                 )
@@ -180,6 +232,8 @@ def trimesh_analyze(req: https_fn.Request) -> https_fn.Response:
                             content_type="application/json",
                         )
 
+            validate_mesh_complexity(mesh)
+
             # Get stats and issues
             stats = get_mesh_stats(mesh)
             issues, recommendations, score = analyze_mesh_issues(mesh)
@@ -197,19 +251,17 @@ def trimesh_analyze(req: https_fn.Request) -> https_fn.Response:
                 content_type="application/json",
             )
 
-    except Exception as e:
-        return https_fn.Response(
-            json.dumps({"success": False, "error": str(e)}),
-            status=500,
-            content_type="application/json",
-        )
+    except ValueError as error:
+        return json_response({"success": False, "error": str(error)}, 400)
+    except Exception:
+        return json_response({"success": False, "error": "Mesh analysis failed"}, 500)
 
 
 @https_fn.on_request(
     region="asia-east1",
     memory=options.MemoryOption.GB_2,
     timeout_sec=540,
-    cors=options.CorsOptions(cors_origins="*", cors_methods=["POST"]),
+    secrets=["TRIMESH_INTERNAL_TOKEN"],
 )
 def trimesh_optimize(req: https_fn.Request) -> https_fn.Response:
     """
@@ -236,6 +288,12 @@ def trimesh_optimize(req: https_fn.Request) -> https_fn.Response:
         - warnings: list of warnings
         - error: error message if failed
     """
+    auth_error = authorize_internal_request(req)
+    if auth_error:
+        return auth_error
+    if req.method != "POST":
+        return json_response({"success": False, "error": "Method not allowed"}, 405)
+
     try:
         data = req.get_json()
         if not data:
@@ -252,10 +310,10 @@ def trimesh_optimize(req: https_fn.Request) -> https_fn.Response:
                 content_type="application/json",
             )
 
-        import base64
-
         options = data.get("options", {})
         output_format = data.get("output_format", "glb")
+        if output_format not in {"glb", "stl"}:
+            return json_response({"success": False, "error": "Unsupported output format"}, 400)
 
         operations = []
         warnings = []
@@ -263,7 +321,7 @@ def trimesh_optimize(req: https_fn.Request) -> https_fn.Response:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Write input file
             input_path = os.path.join(temp_dir, "input.glb")
-            file_bytes = base64.b64decode(data["file_data"])
+            file_bytes = decode_mesh_data(data["file_data"])
             with open(input_path, "wb") as f:
                 f.write(file_bytes)
 
@@ -282,6 +340,8 @@ def trimesh_optimize(req: https_fn.Request) -> https_fn.Response:
                             status=400,
                             content_type="application/json",
                         )
+
+            validate_mesh_complexity(mesh)
 
             # Get original stats
             original_stats = get_mesh_stats(mesh)
@@ -372,6 +432,8 @@ def trimesh_optimize(req: https_fn.Request) -> https_fn.Response:
             # Read output and encode
             with open(output_path, "rb") as f:
                 output_bytes = f.read()
+            if len(output_bytes) > MAX_MESH_BYTES:
+                return json_response({"success": False, "error": "Optimized mesh exceeds the 20MB limit"}, 400)
             output_base64 = base64.b64encode(output_bytes).decode("utf-8")
 
             return https_fn.Response(
@@ -387,9 +449,7 @@ def trimesh_optimize(req: https_fn.Request) -> https_fn.Response:
                 content_type="application/json",
             )
 
-    except Exception as e:
-        return https_fn.Response(
-            json.dumps({"success": False, "error": str(e)}),
-            status=500,
-            content_type="application/json",
-        )
+    except ValueError as error:
+        return json_response({"success": False, "error": str(error)}, 400)
+    except Exception:
+        return json_response({"success": False, "error": "Mesh optimization failed"}, 500)

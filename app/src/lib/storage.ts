@@ -9,7 +9,27 @@ import { compressImage, type CompressionResult } from './imageCompression';
 
 // Storage backend configuration
 const STORAGE_BACKEND = process.env.NEXT_PUBLIC_STORAGE_BACKEND || 'firebase';
-const R2_WORKER_URL = process.env.NEXT_PUBLIC_R2_WORKER_URL || 'https://r2-proxy.dreamforge.app';
+const R2_WORKER_URL = (
+  process.env.NEXT_PUBLIC_R2_WORKER_URL || 'https://r2-proxy.dreamforge.app'
+).replace(/\/+$/, '');
+
+/** Identify persisted R2 URLs without assuming every historical object uses R2. */
+export function isR2StorageUrl(rawUrl: string | null | undefined): boolean {
+  if (!rawUrl) return false;
+
+  try {
+    const parsedUrl = new URL(rawUrl);
+    const configuredWorker = new URL(R2_WORKER_URL);
+    if (parsedUrl.origin === configuredWorker.origin) return true;
+    return (
+      parsedUrl.hostname === 'dream-forge-r2-proxy.jackg825.workers.dev' ||
+      parsedUrl.hostname === 'r2-proxy.dreamforge.app' ||
+      parsedUrl.hostname.endsWith('.r2.cloudflarestorage.com')
+    );
+  } catch {
+    return false;
+  }
+}
 
 export interface UploadProgress {
   progress: number; // 0-100
@@ -26,12 +46,6 @@ export interface UploadResult {
 // R2 Upload Functions
 // ============================================
 
-interface PresignResponse {
-  uploadUrl: string;
-  key: string;
-  expiresIn: number;
-}
-
 /**
  * Get Firebase ID token for R2 Worker authentication
  */
@@ -47,76 +61,15 @@ async function getIdToken(): Promise<string> {
 }
 
 /**
- * Request a presigned upload URL from R2 Worker
- */
-async function getPresignedUploadUrl(
-  filename: string,
-  contentType: string,
-  size: number,
-  path = 'uploads'
-): Promise<PresignResponse> {
-  const token = await getIdToken();
-
-  const response = await fetch(`${R2_WORKER_URL}/upload/presign`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      filename,
-      contentType,
-      size,
-      path,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `Failed to get presigned URL: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Confirm upload completion with R2 Worker
- */
-async function confirmUpload(key: string): Promise<{ downloadUrl: string }> {
-  const token = await getIdToken();
-
-  const response = await fetch(`${R2_WORKER_URL}/upload/confirm`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ key }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }));
-    throw new Error(error.message || `Failed to confirm upload: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Upload file to R2 using presigned URL
+ * Upload file through the authenticated Worker, which enforces the byte limit
+ * before writing anything to R2.
  */
 async function uploadToR2(
   file: File,
   path: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadResult> {
-  // Get presigned URL
-  const presign = await getPresignedUploadUrl(
-    file.name,
-    file.type,
-    file.size,
-    path
-  );
+  const token = await getIdToken();
 
   // Upload using XMLHttpRequest for progress tracking
   return new Promise((resolve, reject) => {
@@ -135,17 +88,26 @@ async function uploadToR2(
     xhr.addEventListener('load', async () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
-          // Confirm upload and get final download URL
-          const { downloadUrl } = await confirmUpload(presign.key);
+          const { downloadUrl, key } = JSON.parse(xhr.responseText) as {
+            downloadUrl: string;
+            key: string;
+          };
           resolve({
             downloadUrl,
-            storagePath: presign.key,
+            storagePath: key,
           });
         } catch (error) {
           reject(error);
         }
       } else {
-        reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));
+        let message = `Upload failed: ${xhr.status} ${xhr.statusText}`;
+        try {
+          const response = JSON.parse(xhr.responseText) as { error?: string };
+          if (response.error) message = response.error;
+        } catch {
+          // Keep the generic HTTP error when the response is not JSON.
+        }
+        reject(new Error(message));
       }
     });
 
@@ -157,10 +119,56 @@ async function uploadToR2(
       reject(new Error('Upload was cancelled'));
     });
 
-    xhr.open('PUT', presign.uploadUrl);
+    const query = new URLSearchParams({ filename: file.name, path });
+    xhr.open('PUT', `${R2_WORKER_URL}/upload/direct?${query.toString()}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
     xhr.setRequestHeader('Content-Type', file.type);
     xhr.send(file);
   });
+}
+
+/**
+ * Renew private R2 download URLs from their durable storage paths.
+ */
+export async function getFreshR2DownloadUrls(
+  storagePaths: string[]
+): Promise<Record<string, string>> {
+  const uniquePaths = [...new Set(storagePaths)].filter(Boolean);
+  if (uniquePaths.length === 0) return {};
+
+  const token = await getIdToken();
+  const result: Record<string, string> = {};
+
+  for (let index = 0; index < uniquePaths.length; index += 100) {
+    const keys = uniquePaths.slice(index, index + 100);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 15000);
+    let response: Response;
+    try {
+      response = await fetch(`${R2_WORKER_URL}/download/presign`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ keys }),
+        signal: controller.signal,
+      });
+    } finally {
+      window.clearTimeout(timeout);
+    }
+
+    const body = await response.json().catch(() => ({})) as {
+      downloadUrls?: Record<string, string>;
+      error?: string;
+    };
+    if (!response.ok || !body.downloadUrls) {
+      throw new Error(body.error || 'Could not renew download access');
+    }
+    Object.assign(result, body.downloadUrls);
+  }
+
+  return result;
 }
 
 // ============================================

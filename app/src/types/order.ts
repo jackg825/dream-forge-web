@@ -129,7 +129,11 @@ export interface OrderItem {
   id: string;
   pipelineId: string;
   modelUrl: string;
+  modelStoragePath?: string;
+  modelStorageBackend?: 'firebase' | 'r2';
   modelThumbnail?: string;
+  modelThumbnailStoragePath?: string;
+  modelThumbnailStorageBackend?: 'firebase' | 'r2';
   modelName?: string;
   material: PrintMaterial;
   size: PrintSizeId;

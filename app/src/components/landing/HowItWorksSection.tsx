@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Upload, Cpu, Download, ChevronDown } from 'lucide-react';
+import { Upload, Cpu, Download, ChevronDown, Clock } from 'lucide-react';
 
 interface HowItWorksSectionProps {
   className?: string;
@@ -189,9 +189,7 @@ export function HowItWorksSection({ className }: HowItWorksSectionProps) {
         {/* Time indicator */}
         <div className="mt-10 sm:mt-16 text-center">
           <div className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-muted/50 rounded-full">
-            <span className="text-xl sm:text-2xl font-display font-bold text-[var(--accent-violet)]">
-              ~2
-            </span>
+            <Clock className="h-5 w-5 text-[var(--accent-violet)]" />
             <span className="text-sm sm:text-base text-muted-foreground">
               {t('howItWorks.timeLabel')}
             </span>

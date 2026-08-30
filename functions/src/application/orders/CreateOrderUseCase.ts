@@ -18,6 +18,7 @@ import {
 import { IOrderRepository } from '../../domain/ports/IOrderRepository';
 import { INotificationService } from '../../domain/ports/INotificationService';
 import type { PipelineDocument } from '../../rodin/types';
+import { extractStorageReferenceFromUrl } from '../../utils/storage-validation';
 
 const db = admin.firestore();
 
@@ -65,7 +66,11 @@ export interface CreateOrderResponse {
 type RequestedOrderItem = CreateOrderRequest['items'][number];
 type ValidatedOrderItem = RequestedOrderItem & {
   modelUrl: string;
+  modelStoragePath: string;
+  modelStorageBackend: 'firebase' | 'r2';
   modelThumbnail?: string;
+  modelThumbnailStoragePath?: string;
+  modelThumbnailStorageBackend?: 'firebase' | 'r2';
 };
 
 /**
@@ -107,7 +112,11 @@ export class CreateOrderUseCase {
       items: validatedItems.map((item) => ({
         pipelineId: item.pipelineId,
         modelUrl: item.modelUrl,
+        modelStoragePath: item.modelStoragePath,
+        modelStorageBackend: item.modelStorageBackend,
         modelThumbnail: item.modelThumbnail,
+        modelThumbnailStoragePath: item.modelThumbnailStoragePath,
+        modelThumbnailStorageBackend: item.modelThumbnailStorageBackend,
         modelName: item.modelName,
         material: item.material,
         size: item.size,
@@ -240,7 +249,11 @@ export class CreateOrderUseCase {
         );
       }
 
-      const modelUrl = pipeline.texturedModelUrl || pipeline.meshUrl;
+      const useTexturedModel = Boolean(pipeline.texturedModelUrl);
+      const modelUrl = useTexturedModel ? pipeline.texturedModelUrl : pipeline.meshUrl;
+      const configuredStoragePath = useTexturedModel
+        ? pipeline.texturedModelStoragePath
+        : pipeline.meshStoragePath;
       if (!modelUrl) {
         throw new functions.https.HttpsError(
           'failed-precondition',
@@ -248,10 +261,32 @@ export class CreateOrderUseCase {
         );
       }
 
+      const storageReference = extractStorageReferenceFromUrl(modelUrl);
+      const modelStoragePath = configuredStoragePath || storageReference?.storagePath;
+      if (
+        !storageReference ||
+        !modelStoragePath ||
+        storageReference.storagePath !== modelStoragePath
+      ) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          `Pipeline ${item.pipelineId} does not have a valid stored model reference`
+        );
+      }
+
+      const modelThumbnail = pipeline.meshImages.front?.url;
+      const thumbnailReference = modelThumbnail
+        ? extractStorageReferenceFromUrl(modelThumbnail)
+        : null;
+
       return {
         ...item,
         modelUrl,
-        modelThumbnail: item.modelThumbnail || pipeline.meshImages.front?.url,
+        modelStoragePath,
+        modelStorageBackend: storageReference.backend,
+        modelThumbnail: thumbnailReference ? modelThumbnail : undefined,
+        modelThumbnailStoragePath: thumbnailReference?.storagePath,
+        modelThumbnailStorageBackend: thumbnailReference?.backend,
       };
     });
   }

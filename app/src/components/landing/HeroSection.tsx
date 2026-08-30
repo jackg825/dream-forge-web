@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { ArrowRight, Camera, Box, Truck, Sparkles } from 'lucide-react';
+import { ArrowRight, Camera, Box, Download, Sparkles } from 'lucide-react';
 
 interface HeroSectionProps {
   className?: string;
@@ -22,7 +22,7 @@ export function HeroSection({ className }: HeroSectionProps) {
   const journeySteps = [
     { icon: Camera, label: t('hero.journey.photo'), delay: '0s' },
     { icon: Box, label: t('hero.journey.model'), delay: '0.1s' },
-    { icon: Truck, label: t('hero.journey.deliver'), delay: '0.2s' },
+    { icon: Download, label: t('hero.journey.deliver'), delay: '0.2s' },
   ];
 
   return (
@@ -132,10 +132,47 @@ export function HeroSection({ className }: HeroSectionProps) {
             {t('hero.subtitle')}
           </p>
 
+          {/* Keep the primary action ahead of the decorative journey so it is
+              visible on common laptop-height viewports. */}
+          <div
+            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-12 animate-fade-in-up px-2 sm:px-0"
+            style={{ animationDelay: '0.4s' }}
+          >
+            <Button
+              asChild
+              size="lg"
+              className={cn(
+                'group w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-6 sm:py-7 transition-all duration-300 active:scale-[0.98] sm:hover:scale-105',
+                'bg-zinc-900 text-white hover:bg-zinc-800 shadow-xl shadow-zinc-900/20',
+                'dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 dark:shadow-white/10 dark:hover:shadow-white/20'
+              )}
+            >
+              <Link href="/generate">
+                <span className="font-semibold">{t('hero.cta')}</span>
+                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              className={cn(
+                'w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-6 sm:py-7 transition-all duration-300 active:scale-[0.98]',
+                'bg-white/50 border-2 border-zinc-300 text-zinc-700 hover:bg-white hover:border-zinc-400',
+                'dark:bg-transparent dark:border-white/20 dark:text-white dark:hover:bg-white/10 dark:hover:border-white/30'
+              )}
+              onClick={() => {
+                document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              {t('hero.ctaSecondary')}
+            </Button>
+          </div>
+
           {/* Journey visualization - horizontal scroll on mobile */}
           <div
             className="mb-8 sm:mb-12 animate-fade-in-up"
-            style={{ animationDelay: '0.4s' }}
+            style={{ animationDelay: '0.5s' }}
           >
             {/* Mobile: Centered flexbox layout */}
             <div className="flex sm:hidden justify-center pb-4">
@@ -225,41 +262,6 @@ export function HeroSection({ className }: HeroSectionProps) {
             </div>
           </div>
 
-          {/* CTAs - full width on mobile */}
-          <div
-            className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 mb-10 sm:mb-16 animate-fade-in-up px-2 sm:px-0"
-            style={{ animationDelay: '0.5s' }}
-          >
-            <Link href="/generate" className="w-full sm:w-auto">
-              <Button
-                size="lg"
-                className={cn(
-                  'group w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-6 sm:py-7 transition-all duration-300 active:scale-[0.98] sm:hover:scale-105',
-                  'bg-zinc-900 text-white hover:bg-zinc-800 shadow-xl shadow-zinc-900/20',
-                  'dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 dark:shadow-white/10 dark:hover:shadow-white/20'
-                )}
-              >
-                <span className="font-semibold">{t('hero.cta')}</span>
-                <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
-
-            <Button
-              variant="outline"
-              size="lg"
-              className={cn(
-                'w-full sm:w-auto text-base sm:text-lg px-6 sm:px-8 py-6 sm:py-7 transition-all duration-300 active:scale-[0.98]',
-                'bg-white/50 border-2 border-zinc-300 text-zinc-700 hover:bg-white hover:border-zinc-400',
-                'dark:bg-transparent dark:border-white/20 dark:text-white dark:hover:bg-white/10 dark:hover:border-white/30'
-              )}
-              onClick={() => {
-                document.getElementById('showcase')?.scrollIntoView({ behavior: 'smooth' });
-              }}
-            >
-              {t('hero.ctaSecondary')}
-            </Button>
-          </div>
-
           {/* Stats row - 2x2 grid on mobile */}
           <div
             className="grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-4 sm:gap-8 md:gap-12 animate-fade-in-up"
@@ -267,9 +269,9 @@ export function HeroSection({ className }: HeroSectionProps) {
           >
             {[
               { value: '3', label: t('hero.stat1') },
-              { value: '~2', label: t('hero.stat2') },
-              { value: '4+', label: t('hero.stat3') },
-              { value: '🌍', label: t('hero.stat4') },
+              { value: '4', label: t('hero.stat2') },
+              { value: '2', label: t('hero.stat3') },
+              { value: '✓', label: t('hero.stat4') },
             ].map((stat, index) => (
               <div
                 key={stat.label}

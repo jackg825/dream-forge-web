@@ -76,7 +76,12 @@ export function UserHeader({ className }: UserHeaderProps) {
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10"
+                  aria-label={t('nav.settings')}
+                >
                   <Settings2 className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>

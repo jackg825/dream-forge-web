@@ -301,7 +301,12 @@ export interface OrderItem {
   id: string;
   pipelineId: string;
   modelUrl: string;
+  /** Durable storage identity; modelUrl is only a short-lived access view. */
+  modelStoragePath?: string;
+  modelStorageBackend?: 'firebase' | 'r2';
   modelThumbnail?: string;
+  modelThumbnailStoragePath?: string;
+  modelThumbnailStorageBackend?: 'firebase' | 'r2';
   modelName?: string;
   material: PrintMaterial;
   size: PrintSizeId;

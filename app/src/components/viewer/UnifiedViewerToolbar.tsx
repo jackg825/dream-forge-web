@@ -199,6 +199,9 @@ export function UnifiedViewerToolbar({
                     <Button
                       variant="ghost"
                       size="sm"
+                      aria-label={t(
+                        VIEW_MODES.find((m) => m.value === viewMode)?.labelKey ?? 'viewMode.clay'
+                      )}
                       className="h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
                                  font-mono text-xs tracking-wide"
                     >
@@ -269,6 +272,7 @@ export function UnifiedViewerToolbar({
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-label={t('background')}
                     className="h-9 w-9 p-0 text-white/90 hover:text-white hover:bg-white/10"
                   >
                     <div
@@ -307,6 +311,7 @@ export function UnifiedViewerToolbar({
                                }`}
                     style={{ backgroundColor: color.value }}
                     title={t(color.labelKey)}
+                    aria-label={t(color.labelKey)}
                   />
                 ))}
               </div>
@@ -325,6 +330,7 @@ export function UnifiedViewerToolbar({
                       <Button
                         variant="ghost"
                         size="sm"
+                        aria-label={t('lightingControl')}
                         className={`h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
                                    font-mono text-xs tracking-wide
                                    ${hasLightingChanges ? 'text-amber-400' : ''}`}
@@ -375,6 +381,7 @@ export function UnifiedViewerToolbar({
                       pressed={showGrid}
                       onPressedChange={onShowGridChange}
                       size="sm"
+                      aria-label={t('grid')}
                       className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                                  data-[state=on]:bg-white/20 data-[state=on]:text-white"
                     >
@@ -399,6 +406,7 @@ export function UnifiedViewerToolbar({
                       pressed={showAxes}
                       onPressedChange={onShowAxesChange}
                       size="sm"
+                      aria-label={t('axes')}
                       className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                                  data-[state=on]:bg-white/20 data-[state=on]:text-white"
                     >
@@ -423,6 +431,7 @@ export function UnifiedViewerToolbar({
                       pressed={autoRotate}
                       onPressedChange={onAutoRotateChange}
                       size="sm"
+                      aria-label={t('autoRotate')}
                       className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                                  data-[state=on]:bg-white/20 data-[state=on]:text-white"
                     >
@@ -453,6 +462,7 @@ export function UnifiedViewerToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={onScreenshot}
+                aria-label={t('screenshot')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
               >
                 <Camera className="w-4 h-4" />
@@ -476,6 +486,7 @@ export function UnifiedViewerToolbar({
                   size="sm"
                   onClick={onAR}
                   disabled={arLoading}
+                  aria-label={t('arPreview')}
                   className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
                 >
                   {arLoading ? (
@@ -503,6 +514,7 @@ export function UnifiedViewerToolbar({
                   variant="ghost"
                   size="sm"
                   onClick={onFullscreen}
+                  aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
                   className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
                 >
                   {isFullscreen ? (
@@ -529,6 +541,7 @@ export function UnifiedViewerToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={onReset}
+                aria-label={t('resetCamera')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
               >
                 <RefreshCw className="w-4 h-4" />

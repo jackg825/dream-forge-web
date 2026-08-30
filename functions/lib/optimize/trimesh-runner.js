@@ -60,19 +60,30 @@ const PYTHON_FUNCTION_BASE_URL = process.env.PYTHON_FUNCTION_URL ||
     'https://asia-east1-dreamforge-66998.cloudfunctions.net';
 const TRIMESH_ANALYZE_URL = `${PYTHON_FUNCTION_BASE_URL}/trimesh_analyze`;
 const TRIMESH_OPTIMIZE_URL = `${PYTHON_FUNCTION_BASE_URL}/trimesh_optimize`;
+function getInternalHeaders() {
+    const token = process.env.TRIMESH_INTERNAL_TOKEN;
+    if (!token) {
+        throw new Error('TRIMESH_INTERNAL_TOKEN is not configured');
+    }
+    return {
+        'Content-Type': 'application/json',
+        'X-Internal-Token': token,
+    };
+}
 /**
  * Check if Python Cloud Functions are available
  * For Gen 2 Cloud Functions, we assume they're available after deployment
  */
 async function isTrimeshAvailable() {
     try {
-        // Simple health check - try to reach the function
-        const response = await axios_1.default.get(TRIMESH_ANALYZE_URL, {
+        const response = await axios_1.default.post(TRIMESH_ANALYZE_URL, { health: true }, {
             timeout: 5000,
-            validateStatus: () => true, // Accept any status
+            headers: getInternalHeaders(),
+            validateStatus: () => true,
         });
-        // Function exists if we get any response (even 405 for wrong method)
-        return response.status !== 404;
+        return response.status === 200 &&
+            response.data?.success === true &&
+            response.data?.status === 'ok';
     }
     catch {
         return false;
@@ -119,9 +130,7 @@ async function optimizeMeshBuffer(inputBuffer, options, outputFormat = 'glb') {
             output_format: outputFormat,
         }, {
             timeout: 300000, // 5 minutes
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getInternalHeaders(),
         });
         const data = response.data;
         if (!data.success) {
@@ -184,9 +193,7 @@ async function analyzeMeshBuffer(inputBuffer) {
             file_data: inputBuffer.toString('base64'),
         }, {
             timeout: 120000, // 2 minutes
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getInternalHeaders(),
         });
         const data = response.data;
         if (!data.success) {

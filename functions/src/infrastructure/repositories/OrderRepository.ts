@@ -503,6 +503,15 @@ export class FirestoreOrderRepository implements IOrderRepository {
     });
   }
 
+  async updatePricingMatrix(
+    pricing: Record<PrintMaterial, Record<PrintSizeId, number>>
+  ): Promise<void> {
+    await db.collection(PRINT_CONFIG_COLLECTION).doc('pricing').set({
+      matrix: pricing,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
   // ============================================
   // Reports
   // ============================================

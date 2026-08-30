@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,8 +11,11 @@ import {
   Package,
   Globe,
   Truck,
-  ArrowRight,
-  Check,
+  Clock,
+  Palette,
+  Leaf,
+  Gem,
+  Sparkles,
 } from 'lucide-react';
 
 interface PrintServiceSectionProps {
@@ -28,14 +30,14 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
   const t = useTranslations('landing');
 
   const sizes = [
-    { id: 'small', dimension: '~5cm', icon: '📦' },
-    { id: 'medium', dimension: '~10cm', icon: '📦' },
-    { id: 'large', dimension: '~15cm', icon: '📦' },
+    { id: 'small', dimension: '~5cm' },
+    { id: 'medium', dimension: '~10cm' },
+    { id: 'large', dimension: '~15cm' },
   ];
 
   const materials = [
-    { id: 'pla', icon: '🌱' },
-    { id: 'resin', icon: '💎' },
+    { id: 'pla', icon: Leaf },
+    { id: 'resin', icon: Gem },
   ];
 
   const features = [
@@ -76,7 +78,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
           <div className="relative order-2 lg:order-1">
             {/* Title - aligns with "尺寸選擇" on right */}
             <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 flex items-center gap-2">
-              <span className="text-[var(--accent-violet)]">🎨</span>
+              <Palette className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-violet)]" />
               {t('printService.previewTitle')}
             </h3>
             {/* Model viewer card */}
@@ -95,11 +97,12 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
 
                   {/* Floating badges */}
                   <div className="absolute top-2 left-2 sm:top-4 sm:left-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 sm:gap-2 z-10">
-                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-muted-foreground rounded-full" />
                     {t('printService.statusReady')}
                   </div>
-                  <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium z-10">
-                    🌍 {t('printService.worldwide')}
+                  <div className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 px-2 sm:px-3 py-1 sm:py-1.5 bg-white dark:bg-zinc-900 rounded-full shadow-lg text-xs sm:text-sm font-medium z-10 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-[var(--accent-violet)]" />
+                    {t('printService.worldwide')}
                   </div>
                 </div>
               </CardContent>
@@ -120,7 +123,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
                     key={size.id}
                     className="text-center p-3 sm:p-4 active:scale-[0.98] transition-all cursor-default"
                   >
-                    <div className="text-xl sm:text-2xl mb-1 sm:mb-2">{size.icon}</div>
+                    <Package className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-[var(--accent-violet)]" />
                     <div className="text-xs sm:text-sm font-medium">
                       {t(`printService.sizes.${size.id}`)}
                     </div>
@@ -135,7 +138,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
             {/* Material options */}
             <div>
               <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3 flex items-center gap-2">
-                <span className="text-[var(--accent-coral)]">✨</span>
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-[var(--accent-coral)]" />
                 {t('printService.materialsTitle')}
               </h3>
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -145,7 +148,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
                     className="p-3 sm:p-4 active:scale-[0.98] transition-all cursor-default"
                   >
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="text-xl sm:text-2xl">{material.icon}</div>
+                      <material.icon className="w-5 h-5 sm:w-6 sm:h-6 shrink-0 text-[var(--accent-coral)]" />
                       <div className="min-w-0">
                         <div className="text-xs sm:text-sm font-medium truncate">
                           {t(`printService.materials.${material.id}.name`)}
@@ -185,29 +188,20 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
                     {t('printService.startingFrom')}
                   </div>
                   <div className="text-2xl sm:text-3xl font-bold font-display">
-                    NT$ 500
-                    <span className="text-sm sm:text-base font-normal text-muted-foreground ml-1 sm:ml-2">
-                      {t('printService.perModel')}
-                    </span>
+                    {t('printService.comingSoon')}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-                  <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--accent-mint)]" />
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--accent-mint)]" />
                   {t('printService.shippingIncluded')}
                 </div>
               </div>
             </Card>
 
             {/* CTA */}
-            <Link href="/print" className="block">
-              <Button
-                size="lg"
-                className="w-full text-base sm:text-lg py-5 sm:py-6 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90 shadow-lg active:scale-[0.98]"
-              >
-                {t('printService.cta')}
-                <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
-              </Button>
-            </Link>
+            <Button size="lg" className="w-full text-base sm:text-lg py-5 sm:py-6" disabled>
+              {t('printService.cta')}
+            </Button>
 
             {/* Trust note */}
             <p className="text-center text-xs sm:text-sm text-muted-foreground">

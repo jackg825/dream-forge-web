@@ -44,7 +44,11 @@ export function UserMenu({ user, showAdminLink = false, onSignOut }: UserMenuPro
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+        <Button
+          variant="ghost"
+          className="relative h-10 w-10 rounded-full"
+          aria-label={t('mobile.account')}
+        >
           <Avatar className="h-8 w-8">
             <AvatarImage
               src={user.photoURL || undefined}

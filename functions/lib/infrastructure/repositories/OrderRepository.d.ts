@@ -32,6 +32,7 @@ export declare class FirestoreOrderRepository implements IOrderRepository {
     updateSize(size: SizeConfig): Promise<void>;
     updateColor(color: ColorOption): Promise<void>;
     updatePricing(material: PrintMaterial, size: PrintSizeId, price: number): Promise<void>;
+    updatePricingMatrix(pricing: Record<PrintMaterial, Record<PrintSizeId, number>>): Promise<void>;
     getOrderStats(fromDate: Date, toDate: Date): Promise<{
         totalOrders: number;
         totalRevenue: number;

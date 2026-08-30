@@ -32,6 +32,7 @@ import {
   Grid3X3,
   Droplets,
   ArrowRightLeft,
+  Lightbulb,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -219,7 +220,10 @@ export function OptimizePanel({
             {analysis.recommendations && analysis.recommendations.length > 0 && (
               <ul className="text-xs text-blue-600 pl-4 space-y-0.5">
                 {analysis.recommendations.map((rec, i) => (
-                  <li key={i}>💡 {rec}</li>
+                  <li key={i} className="flex items-start gap-1.5">
+                    <Lightbulb className="h-3 w-3 shrink-0 mt-0.5" />
+                    <span>{rec}</span>
+                  </li>
                 ))}
               </ul>
             )}

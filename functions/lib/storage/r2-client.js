@@ -225,6 +225,6 @@ async function uploadBase64ToR2(base64, path, contentType) {
     const r2 = getR2Client();
     const buffer = Buffer.from(base64, 'base64');
     await r2.upload(path, buffer, contentType);
-    return r2.getPublicUrl(path);
+    return r2.getSignedDownloadUrl(path, 604800);
 }
 //# sourceMappingURL=r2-client.js.map

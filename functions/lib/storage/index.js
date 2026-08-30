@@ -40,11 +40,13 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.R2_PUBLIC_URL = exports.STORAGE_BACKEND = void 0;
+exports.getStorageBackendForUrl = getStorageBackendForUrl;
 exports.uploadBuffer = uploadBuffer;
 exports.uploadBase64 = uploadBase64;
 exports.uploadFromUrl = uploadFromUrl;
 exports.getDownloadUrl = getDownloadUrl;
 exports.getSignedUrl = getSignedUrl;
+exports.getSignedUrlForReference = getSignedUrlForReference;
 exports.deleteFile = deleteFile;
 exports.fileExists = fileExists;
 exports.downloadFile = downloadFile;
@@ -53,12 +55,22 @@ exports.generateStoragePath = generateStoragePath;
 exports.getStorageBackend = getStorageBackend;
 const admin = __importStar(require("firebase-admin"));
 const r2_client_1 = require("./r2-client");
+const storage_validation_1 = require("../utils/storage-validation");
 // 從環境變數讀取，預設使用 Firebase
-const STORAGE_BACKEND = process.env.STORAGE_BACKEND || 'firebase';
+const STORAGE_BACKEND = process.env.STORAGE_BACKEND === 'r2' ? 'r2' : 'firebase';
 exports.STORAGE_BACKEND = STORAGE_BACKEND;
 // R2 公開 URL (透過 Worker)
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || 'https://dream-forge-r2-proxy.jackg825.workers.dev';
 exports.R2_PUBLIC_URL = R2_PUBLIC_URL;
+/**
+ * Infer the durable storage backend from an already-persisted URL. This lets
+ * Firebase and R2 objects coexist safely during storage migrations.
+ */
+function getStorageBackendForUrl(rawUrl) {
+    if (!rawUrl)
+        return null;
+    return (0, storage_validation_1.extractStorageReferenceFromUrl)(rawUrl)?.backend || null;
+}
 /**
  * 上傳 Buffer 到儲存
  */
@@ -82,7 +94,7 @@ async function uploadFromUrl(url, storagePath, contentType) {
     if (STORAGE_BACKEND === 'r2') {
         const r2 = (0, r2_client_1.getR2Client)();
         await r2.uploadFromUrl(storagePath, url, contentType);
-        return r2.getPublicUrl(storagePath);
+        return r2.getSignedDownloadUrl(storagePath, 604800);
     }
     // Firebase: 下載後上傳
     const axios = (await Promise.resolve().then(() => __importStar(require('axios')))).default;
@@ -91,31 +103,21 @@ async function uploadFromUrl(url, storagePath, contentType) {
         timeout: 60000,
     });
     const buffer = Buffer.from(response.data);
-    const type = contentType || response.headers['content-type'] || 'application/octet-stream';
+    const responseType = response.headers['content-type'];
+    const type = contentType || (typeof responseType === 'string' ? responseType : 'application/octet-stream');
     return uploadToFirebase(buffer, storagePath, type);
 }
 /**
  * 獲取檔案的公開 URL (或簽名 URL)
  */
 async function getDownloadUrl(storagePath) {
-    if (STORAGE_BACKEND === 'r2') {
-        const r2 = (0, r2_client_1.getR2Client)();
-        return r2.getPublicUrl(storagePath);
-    }
-    // Firebase: 生成簽名 URL
-    const bucket = admin.storage().bucket();
-    const file = bucket.file(storagePath);
-    const [signedUrl] = await file.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-    return signedUrl;
+    return getSignedUrl(storagePath, 604800);
 }
 /**
  * 獲取簽名 URL (用於臨時存取)
  */
-async function getSignedUrl(storagePath, expiresIn = 3600) {
-    if (STORAGE_BACKEND === 'r2') {
+async function getSignedUrl(storagePath, expiresIn = 3600, backend = STORAGE_BACKEND) {
+    if (backend === 'r2') {
         const r2 = (0, r2_client_1.getR2Client)();
         return r2.getSignedDownloadUrl(storagePath, expiresIn);
     }
@@ -126,6 +128,17 @@ async function getSignedUrl(storagePath, expiresIn = 3600) {
         expires: Date.now() + expiresIn * 1000,
     });
     return signedUrl;
+}
+/** Generate a fresh URL for the same backend as an existing stored URL. */
+async function getSignedUrlForReference(storagePath, sourceUrl, expiresIn = 3600) {
+    if (!sourceUrl) {
+        throw new Error('Stored file URL is missing');
+    }
+    const reference = (0, storage_validation_1.extractStorageReferenceFromUrl)(sourceUrl);
+    if (!reference || reference.storagePath !== storagePath) {
+        throw new Error('Stored file URL does not match its storage path');
+    }
+    return getSignedUrl(storagePath, expiresIn, reference.backend);
 }
 /**
  * 刪除檔案
@@ -164,8 +177,8 @@ async function fileExists(storagePath) {
 /**
  * 下載檔案內容
  */
-async function downloadFile(storagePath) {
-    if (STORAGE_BACKEND === 'r2') {
+async function downloadFile(storagePath, backend = STORAGE_BACKEND) {
+    if (backend === 'r2') {
         const r2 = (0, r2_client_1.getR2Client)();
         return r2.download(storagePath);
     }
@@ -228,6 +241,6 @@ async function uploadToFirebase(buffer, storagePath, contentType) {
 async function uploadToR2(buffer, storagePath, contentType) {
     const r2 = (0, r2_client_1.getR2Client)();
     await r2.upload(storagePath, buffer, contentType);
-    return r2.getPublicUrl(storagePath);
+    return r2.getSignedDownloadUrl(storagePath, 604800);
 }
 //# sourceMappingURL=index.js.map

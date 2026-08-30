@@ -99,6 +99,9 @@ function launchAndroidSceneViewer(glbUrl: string, fallbackUrl?: string): void {
 
   intentUrl += 'end;';
 
+  // Android intent URLs require a browser-level navigation; the Next router
+  // cannot dispatch them to the native Scene Viewer app.
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.href = intentUrl;
 }
 

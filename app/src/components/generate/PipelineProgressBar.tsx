@@ -61,8 +61,11 @@ export function PipelineProgressBar({
                   type="button"
                   onClick={handleClick}
                   disabled={!isClickable}
+                  aria-label={isComingSoon
+                    ? `${stepLabel} (${t('pipeline.progressBar.soon')})`
+                    : stepLabel}
                   className={cn(
-                    'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium transition-all',
+                    'flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-1 sm:px-2 py-1 rounded-full text-xs font-medium transition-all',
                     'whitespace-nowrap border-0 bg-transparent',
                     isComingSoon && 'opacity-50',
                     isCompleted && !isComingSoon && 'bg-green-500/20 text-green-500',
@@ -86,7 +89,9 @@ export function PipelineProgressBar({
                   ) : (
                     <StepIcon className="h-3.5 w-3.5 shrink-0" />
                   )}
-                  <span className="hidden sm:inline">{stepLabel}</span>
+                  <span className="max-w-[4.5rem] text-[10px] sm:text-xs leading-tight text-center sm:max-w-none">
+                    {stepLabel}
+                  </span>
                   {isComingSoon && (
                     <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0 h-4 hidden md:inline-flex">
                       {t('pipeline.progressBar.soon')}

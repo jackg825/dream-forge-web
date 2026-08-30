@@ -43,6 +43,7 @@ exports.CreateOrderUseCase = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const order_1 = require("../../domain/order");
+const storage_validation_1 = require("../../utils/storage-validation");
 const db = admin.firestore();
 /**
  * Create Order Use Case
@@ -78,7 +79,11 @@ class CreateOrderUseCase {
             items: validatedItems.map((item) => ({
                 pipelineId: item.pipelineId,
                 modelUrl: item.modelUrl,
+                modelStoragePath: item.modelStoragePath,
+                modelStorageBackend: item.modelStorageBackend,
                 modelThumbnail: item.modelThumbnail,
+                modelThumbnailStoragePath: item.modelThumbnailStoragePath,
+                modelThumbnailStorageBackend: item.modelThumbnailStorageBackend,
                 modelName: item.modelName,
                 material: item.material,
                 size: item.size,
@@ -164,14 +169,33 @@ class CreateOrderUseCase {
             if (pipeline.status !== 'mesh-ready' && pipeline.status !== 'completed') {
                 throw new functions.https.HttpsError('failed-precondition', `Pipeline ${item.pipelineId} is not ready for ordering`);
             }
-            const modelUrl = pipeline.texturedModelUrl || pipeline.meshUrl;
+            const useTexturedModel = Boolean(pipeline.texturedModelUrl);
+            const modelUrl = useTexturedModel ? pipeline.texturedModelUrl : pipeline.meshUrl;
+            const configuredStoragePath = useTexturedModel
+                ? pipeline.texturedModelStoragePath
+                : pipeline.meshStoragePath;
             if (!modelUrl) {
                 throw new functions.https.HttpsError('failed-precondition', `Pipeline ${item.pipelineId} does not have a generated model`);
             }
+            const storageReference = (0, storage_validation_1.extractStorageReferenceFromUrl)(modelUrl);
+            const modelStoragePath = configuredStoragePath || storageReference?.storagePath;
+            if (!storageReference ||
+                !modelStoragePath ||
+                storageReference.storagePath !== modelStoragePath) {
+                throw new functions.https.HttpsError('failed-precondition', `Pipeline ${item.pipelineId} does not have a valid stored model reference`);
+            }
+            const modelThumbnail = pipeline.meshImages.front?.url;
+            const thumbnailReference = modelThumbnail
+                ? (0, storage_validation_1.extractStorageReferenceFromUrl)(modelThumbnail)
+                : null;
             return {
                 ...item,
                 modelUrl,
-                modelThumbnail: item.modelThumbnail || pipeline.meshImages.front?.url,
+                modelStoragePath,
+                modelStorageBackend: storageReference.backend,
+                modelThumbnail: thumbnailReference ? modelThumbnail : undefined,
+                modelThumbnailStoragePath: thumbnailReference?.storagePath,
+                modelThumbnailStorageBackend: thumbnailReference?.backend,
             };
         });
     }

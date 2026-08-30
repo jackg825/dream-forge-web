@@ -89,6 +89,7 @@
   },
   "auth": {
     "welcomeBack": "Welcome back",
+    "createYourAccount": "Create your account",
     "transformPhotos": "Transform your photos into 3D models",
     "tabSignIn": "Sign In",
     "tabSignUp": "Create Account",
@@ -100,7 +101,8 @@
     "namePlaceholder": "Your name",
     "orContinueWith": "Or continue with",
     "continueWithGoogle": "Continue with Google",
-    "newUsersReceive": "New users receive 3 free credits",
+    "newUsersReceive": "Verify your email to receive 3 free credits",
+    "verificationSent": "Check your inbox and verify your email before signing in. Your 3 welcome credits will be added after verification.",
     "backToHome": "Back to home",
     "signInToUpload": "Sign in to upload photos",
     "newUsersGet3Credits": "New users get 3 free credits",
@@ -264,7 +266,7 @@
     "availableCredits": "Available Credits",
     "totalGenerations": "Total Generations",
     "modelsCreated": "3D models created",
-    "creditEquation": "1 credit = 1 generation",
+    "creditEquation": "Credits are charged by step and provider",
     "createNewModel": "Create New Model",
     "uploadAndTransform": "Upload a photo and transform it into a 3D model",
     "newGeneration": "New Generation",
@@ -349,6 +351,10 @@
     "failedToLoad": "Failed to load model",
     "tryAnotherFile": "Try another file",
     "uploadAnotherFile": "Upload another file",
+    "screenshot": {
+      "success": "Screenshot downloaded.",
+      "error": "Screenshot could not be created. Try again."
+    },
     "unsupportedFormat": "Unsupported file format. Please upload STL, OBJ, GLB, or GLTF files.",
     "dropZone": {
       "clickToUpload": "Click to upload",
@@ -748,7 +754,7 @@
     "removeImage": "Remove image",
     "addMore": "Add more",
     "photoTips": {
-      "title": "📸 Photo Tips",
+      "title": "Photo Tips",
       "frontView": "Front View",
       "frontViewDesc": "Subject facing the camera directly, as if looking at it face-to-face",
       "clearComplete": "Clear & Complete",
@@ -770,6 +776,7 @@
     "meshImages": "Mesh reference images",
     "viewAlt": "{label} view",
     "help": "Click an empty slot to upload an image, or hover an existing image to replace it. AI-generated images are marked as AI, manual uploads as Manual.",
+    "helpRegenerate": "Review each generated angle. Use Regenerate on a view that needs correction.",
     "angles": {
       "front": "Front",
       "back": "Back",
@@ -872,20 +879,20 @@
   },
   "landing": {
     "hero": {
-      "badge": "AI-Powered · Worldwide Delivery",
-      "title1": "From Photo to Your Hands",
-      "title2": "Physical 3D Models",
-      "subtitle": "Upload a photo, AI generates a 3D model. Download digital files, or let us professionally print and ship it to you worldwide.",
+      "badge": "AI-Powered Photo-to-3D",
+      "title1": "Turn Photos Into",
+      "title2": "Downloadable 3D Models",
+      "subtitle": "Upload a clear object photo, generate supporting views, then create, inspect, and download a 3D model in one guided workflow.",
       "cta": "Start Creating Free",
       "ctaSecondary": "See Examples",
       "stat1": "Free credits to start",
-      "stat2": "Minutes to generate",
-      "stat3": "Export formats",
-      "stat4": "Worldwide shipping",
+      "stat2": "AI supporting views",
+      "stat3": "Interface languages",
+      "stat4": "Browser preview",
       "journey": {
         "photo": "Upload Photo",
         "model": "Generate Model",
-        "deliver": "Print & Ship"
+        "deliver": "Preview & Download"
       }
     },
     "showcase": {
@@ -929,7 +936,7 @@
       "badge": "Simple Process",
       "title": "How It Works",
       "subtitle": "Three simple steps to transform your photos into 3D models",
-      "timeLabel": "minutes average generation time",
+      "timeLabel": "generation time varies by provider",
       "steps": {
         "upload": {
           "title": "Upload Photo",
@@ -941,7 +948,7 @@
         },
         "download": {
           "title": "Download & Use",
-          "description": "Download your model in STL, OBJ, GLB, or FBX format. Ready for printing or editing."
+          "description": "Inspect the generated model in the 3D viewer, then download the available GLB file for further use."
         }
       }
     },
@@ -951,17 +958,17 @@
       "subtitle": "Professional-grade 3D generation tools designed for creators",
       "items": {
         "fast": {
-          "title": "Lightning Fast",
-          "description": "Get your 3D model in about 2 minutes. No waiting, no complex software required.",
-          "subtext": "Powered by advanced AI"
+          "title": "Guided Progress",
+          "description": "Follow image analysis, supporting-view generation, and 3D reconstruction step by step. Processing time varies.",
+          "subtext": "Progress is saved to your workspace"
         },
         "formats": {
-          "title": "Multiple Formats",
-          "description": "Export in STL, OBJ, GLB, FBX, or USDZ. Compatible with any 3D software or slicer."
+          "title": "3D Preview & GLB",
+          "description": "Inspect the result in the browser and download the generated GLB model."
         },
         "printing": {
-          "title": "Print Ready",
-          "description": "Models are optimized for 3D printing with proper mesh quality and manifold geometry."
+          "title": "Mesh Inspection",
+          "description": "Review the generated mesh before downloading it for further editing or preparation."
         },
         "quality": {
           "title": "Quality Options",
@@ -969,7 +976,7 @@
         },
         "secure": {
           "title": "Secure & Private",
-          "description": "Your photos are processed securely and deleted after generation. Your data stays yours."
+          "description": "Your files are isolated by account and served through authenticated or expiring URLs."
         },
         "global": {
           "title": "Multi-language",
@@ -1014,49 +1021,50 @@
     },
     "pricing": {
       "badge": "Simple Pricing",
-      "title": "Pay As You Go",
-      "subtitle": "Start free with 3 credits. Buy more when you need them.",
+      "title": "Credit Pack Preview",
+      "subtitle": "Start with 3 credits for supporting views. Paid top-ups are coming soon.",
       "popular": "Most Popular",
       "perPack": "/ pack",
       "credits": "credits",
+      "comingSoon": "Coming Soon",
       "note": "",
       "plans": {
         "free": {
           "name": "Free Tier",
-          "freeFeature1": "3 credits to start",
-          "freeFeature2": "All export formats",
-          "freeFeature3": "Basic support",
-          "freeFeature4": "Physical printing (per order)",
+          "freeFeature1": "3 credits for supporting views",
+          "freeFeature2": "Guided photo analysis",
+          "freeFeature3": "Four AI supporting views",
+          "freeFeature4": "3D mesh requires additional credits",
           "cta": "Get Started Free"
         },
         "starter": {
           "name": "Starter Pack",
           "starterFeature1": "20 credits",
-          "starterFeature2": "All export formats",
+          "starterFeature2": "GLB downloads",
           "starterFeature3": "Priority processing",
           "starterFeature4": "Email support",
-          "starterFeature5": "Physical printing (per order)",
+          "starterFeature5": "Top-up launch updates",
           "cta": "Buy Starter Pack"
         },
         "pro": {
           "name": "Pro Pack",
           "proFeature1": "80 credits",
-          "proFeature2": "All export formats",
+          "proFeature2": "GLB downloads",
           "proFeature3": "Priority processing",
           "proFeature4": "Priority support",
-          "proFeature5": "10% off physical printing",
+          "proFeature5": "Top-up launch updates",
           "cta": "Buy Pro Pack"
         }
       }
     },
     "printService": {
-      "badge": "Physical Printing Service",
-      "title": "Turn Digital Models into Reality",
-      "subtitle": "Professional 3D printing with worldwide delivery. From photo to physical model in your hands.",
+      "badge": "Physical Printing · Coming Soon",
+      "title": "Physical Printing Is in Development",
+      "subtitle": "This preview shows the planned sizes, materials, and delivery experience. Ordering and payment are not available yet.",
       "previewTitle": "Sample Generation Preview",
       "visualCaption": "Professional Print Quality",
-      "statusReady": "Ready to Print",
-      "worldwide": "Worldwide Shipping",
+      "statusReady": "Concept Preview",
+      "worldwide": "Planned Delivery",
       "sizesTitle": "Size Options",
       "sizes": {
         "small": "Small",
@@ -1075,16 +1083,17 @@
         }
       },
       "features": {
-        "quality": "Professional print quality",
-        "packaging": "Premium packaging",
-        "worldwide": "Global shipping",
-        "tracking": "Order tracking"
+        "quality": "Planned print quality options",
+        "packaging": "Planned protective packaging",
+        "worldwide": "Delivery regions to be announced",
+        "tracking": "Planned order tracking"
       },
-      "startingFrom": "Starting from",
+      "startingFrom": "Availability",
+      "comingSoon": "Coming Soon",
       "perModel": "/ model",
-      "shippingIncluded": "Domestic shipping included",
-      "cta": "Order Physical Print",
-      "trustNote": "Ships within 3-5 business days after payment"
+      "shippingIncluded": "Launch details to be announced",
+      "cta": "Physical Printing Coming Soon",
+      "trustNote": "Ordering, payment, and delivery are not available yet"
     },
     "finalCta": {
       "badge": "Ready to Create?",
@@ -1588,7 +1597,9 @@
         "title": "Pricing Matrix",
         "description": "Set prices for each material and size combination",
         "material": "Material",
-        "save": "Save Pricing"
+        "save": "Save Pricing",
+        "success": "Pricing saved.",
+        "error": "Pricing could not be saved. Try again."
       },
       "materials": {
         "title": "Print Materials",

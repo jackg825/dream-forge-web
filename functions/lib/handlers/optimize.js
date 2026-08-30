@@ -44,16 +44,13 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.analyzeMeshForPrint = exports.optimizeMeshForPrint = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
-const axios_1 = __importDefault(require("axios"));
 const mesh_optimizer_1 = require("../optimize/mesh-optimizer");
 const storage_1 = require("../storage");
+const storage_validation_1 = require("../utils/storage-validation");
 const db = admin.firestore();
 // ============================================
 // Admin Check
@@ -85,15 +82,38 @@ async function getModelBuffer(pipelineId, jobId, modelUrl) {
             return { error: 'Pipeline not found' };
         }
         const pipeline = pipelineDoc.data();
-        // Use storagePath to download directly from R2 (bypasses HTTP proxy with hotlink protection)
-        const storagePath = pipeline?.meshStoragePath || pipeline?.texturedModelStoragePath;
-        if (!storagePath) {
+        const storedModels = [
+            {
+                storagePath: pipeline?.texturedModelStoragePath,
+                url: pipeline?.texturedModelUrl,
+            },
+            {
+                storagePath: pipeline?.meshStoragePath,
+                url: pipeline?.meshUrl,
+            },
+        ].filter((model) => typeof model.storagePath === 'string' && typeof model.url === 'string');
+        if (storedModels.length === 0) {
             return { error: 'Pipeline has no model storage path' };
         }
         try {
-            // Download directly from R2 using S3 client
-            const buffer = await (0, storage_1.downloadFile)(storagePath);
-            return { buffer, storagePath };
+            let selectedModel = storedModels[0];
+            if (modelUrl) {
+                const requestedReference = (0, storage_validation_1.extractStorageReferenceFromUrl)(modelUrl);
+                if (!requestedReference) {
+                    return { error: 'Model URL is not an approved storage URL' };
+                }
+                const matchingModel = storedModels.find((model) => model.storagePath === requestedReference.storagePath);
+                if (!matchingModel) {
+                    return { error: 'Model URL does not belong to this pipeline' };
+                }
+                selectedModel = matchingModel;
+            }
+            const reference = (0, storage_validation_1.extractStorageReferenceFromUrl)(selectedModel.url);
+            if (!reference || reference.storagePath !== selectedModel.storagePath) {
+                return { error: 'Stored model URL does not match its storage path' };
+            }
+            const buffer = await (0, storage_1.downloadFile)(reference.storagePath, reference.backend);
+            return { buffer, storagePath: reference.storagePath };
         }
         catch (e) {
             return { error: `Failed to download model: ${e}` };
@@ -106,17 +126,18 @@ async function getModelBuffer(pipelineId, jobId, modelUrl) {
             return { error: 'Job not found' };
         }
         const job = jobDoc.data();
-        const modelUrl = job?.modelUrl || job?.result?.modelUrl;
+        const modelUrl = job?.outputModelUrl || job?.modelUrl || job?.result?.modelUrl;
         if (!modelUrl) {
             return { error: 'Job has no model URL' };
         }
         try {
-            // Download from URL
-            const response = await axios_1.default.get(modelUrl, {
-                responseType: 'arraybuffer',
-                timeout: 120000,
-            });
-            return { buffer: Buffer.from(response.data) };
+            const reference = (0, storage_validation_1.extractStorageReferenceFromUrl)(modelUrl);
+            if (!reference)
+                return { error: 'Job model URL is not an approved storage URL' };
+            return {
+                buffer: await (0, storage_1.downloadFile)(reference.storagePath, reference.backend),
+                storagePath: reference.storagePath,
+            };
         }
         catch (e) {
             return { error: `Failed to download model: ${e}` };
@@ -124,12 +145,13 @@ async function getModelBuffer(pipelineId, jobId, modelUrl) {
     }
     if (modelUrl) {
         try {
-            // Download from direct URL
-            const response = await axios_1.default.get(modelUrl, {
-                responseType: 'arraybuffer',
-                timeout: 120000,
-            });
-            return { buffer: Buffer.from(response.data) };
+            const reference = (0, storage_validation_1.extractStorageReferenceFromUrl)(modelUrl);
+            if (!reference)
+                return { error: 'Model URL is not an approved storage URL' };
+            return {
+                buffer: await (0, storage_1.downloadFile)(reference.storagePath, reference.backend),
+                storagePath: reference.storagePath,
+            };
         }
         catch (e) {
             return { error: `Failed to download model: ${e}` };
@@ -153,6 +175,7 @@ exports.optimizeMeshForPrint = functions
     .runWith({
     timeoutSeconds: 540, // 9 minutes for large meshes
     memory: '2GB',
+    secrets: ['TRIMESH_INTERNAL_TOKEN'],
 })
     .https.onCall(async (data, context) => {
     // 1. Verify authentication
@@ -310,6 +333,7 @@ exports.analyzeMeshForPrint = functions
     .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
+    secrets: ['TRIMESH_INTERNAL_TOKEN'],
 })
     .https.onCall(async (data, context) => {
     // 1. Verify authentication

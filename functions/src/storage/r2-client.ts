@@ -304,5 +304,5 @@ export async function uploadBase64ToR2(
 
   await r2.upload(path, buffer, contentType);
 
-  return r2.getPublicUrl(path);
+  return r2.getSignedDownloadUrl(path, 604800);
 }

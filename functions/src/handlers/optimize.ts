@@ -13,7 +13,6 @@
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
-import axios from 'axios';
 import {
   optimizeMesh,
   getMeshAnalysis,
@@ -21,6 +20,7 @@ import {
   type MeshStats,
 } from '../optimize/mesh-optimizer';
 import { uploadBuffer, downloadFile } from '../storage';
+import { extractStorageReferenceFromUrl } from '../utils/storage-validation';
 
 const db = admin.firestore();
 
@@ -147,17 +147,45 @@ async function getModelBuffer(
     }
 
     const pipeline = pipelineDoc.data();
-    // Use storagePath to download directly from R2 (bypasses HTTP proxy with hotlink protection)
-    const storagePath = pipeline?.meshStoragePath || pipeline?.texturedModelStoragePath;
+    const storedModels = [
+      {
+        storagePath: pipeline?.texturedModelStoragePath,
+        url: pipeline?.texturedModelUrl,
+      },
+      {
+        storagePath: pipeline?.meshStoragePath,
+        url: pipeline?.meshUrl,
+      },
+    ].filter((model) => typeof model.storagePath === 'string' && typeof model.url === 'string');
 
-    if (!storagePath) {
+    if (storedModels.length === 0) {
       return { error: 'Pipeline has no model storage path' };
     }
 
     try {
-      // Download directly from R2 using S3 client
-      const buffer = await downloadFile(storagePath);
-      return { buffer, storagePath };
+      let selectedModel = storedModels[0];
+
+      if (modelUrl) {
+        const requestedReference = extractStorageReferenceFromUrl(modelUrl);
+        if (!requestedReference) {
+          return { error: 'Model URL is not an approved storage URL' };
+        }
+        const matchingModel = storedModels.find(
+          (model) => model.storagePath === requestedReference.storagePath
+        );
+        if (!matchingModel) {
+          return { error: 'Model URL does not belong to this pipeline' };
+        }
+        selectedModel = matchingModel;
+      }
+
+      const reference = extractStorageReferenceFromUrl(selectedModel.url as string);
+      if (!reference || reference.storagePath !== selectedModel.storagePath) {
+        return { error: 'Stored model URL does not match its storage path' };
+      }
+
+      const buffer = await downloadFile(reference.storagePath, reference.backend);
+      return { buffer, storagePath: reference.storagePath };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
     }
@@ -171,19 +199,19 @@ async function getModelBuffer(
     }
 
     const job = jobDoc.data();
-    const modelUrl = job?.modelUrl || job?.result?.modelUrl;
+    const modelUrl = job?.outputModelUrl || job?.modelUrl || job?.result?.modelUrl;
 
     if (!modelUrl) {
       return { error: 'Job has no model URL' };
     }
 
     try {
-      // Download from URL
-      const response = await axios.get(modelUrl, {
-        responseType: 'arraybuffer',
-        timeout: 120000,
-      });
-      return { buffer: Buffer.from(response.data) };
+      const reference = extractStorageReferenceFromUrl(modelUrl);
+      if (!reference) return { error: 'Job model URL is not an approved storage URL' };
+      return {
+        buffer: await downloadFile(reference.storagePath, reference.backend),
+        storagePath: reference.storagePath,
+      };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
     }
@@ -191,12 +219,12 @@ async function getModelBuffer(
 
   if (modelUrl) {
     try {
-      // Download from direct URL
-      const response = await axios.get(modelUrl, {
-        responseType: 'arraybuffer',
-        timeout: 120000,
-      });
-      return { buffer: Buffer.from(response.data) };
+      const reference = extractStorageReferenceFromUrl(modelUrl);
+      if (!reference) return { error: 'Model URL is not an approved storage URL' };
+      return {
+        buffer: await downloadFile(reference.storagePath, reference.backend),
+        storagePath: reference.storagePath,
+      };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
     }
@@ -222,6 +250,7 @@ export const optimizeMeshForPrint = functions
   .runWith({
     timeoutSeconds: 540, // 9 minutes for large meshes
     memory: '2GB',
+    secrets: ['TRIMESH_INTERNAL_TOKEN'],
   })
   .https.onCall(
     async (
@@ -421,6 +450,7 @@ export const analyzeMeshForPrint = functions
   .runWith({
     timeoutSeconds: 120,
     memory: '1GB',
+    secrets: ['TRIMESH_INTERNAL_TOKEN'],
   })
   .https.onCall(
     async (

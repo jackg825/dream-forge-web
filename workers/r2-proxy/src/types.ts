@@ -6,8 +6,11 @@ export interface Env {
   // R2 Bucket 綁定
   R2_BUCKET: R2Bucket;
 
-  // KV Namespace 用於 Rate Limiting
-  RATE_LIMIT_KV: KVNamespace;
+  // Native Cloudflare rate limit bindings
+  IP_RATE_LIMITER: RateLimit;
+  UPLOAD_RATE_LIMITER: RateLimit;
+  DOWNLOAD_RATE_LIMITER: RateLimit;
+  PRESIGN_RATE_LIMITER: RateLimit;
 
   // 環境變數
   ALLOWED_ORIGINS: string;
