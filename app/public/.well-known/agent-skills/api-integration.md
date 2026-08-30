@@ -26,4 +26,4 @@ Tokens are issued by `https://securetoken.google.com/dreamforge-66998`.
 
 ## Storage Proxy
 
-The R2 proxy base URL is `https://r2-proxy.dreamforge.app`. The OpenAPI document covers health, upload presign, upload confirmation, public download, signed/authenticated download, and delete operations.
+The R2 proxy base URL is `https://dream-forge-r2-proxy.jackg825.workers.dev`. The OpenAPI document covers health, authenticated direct upload, short-lived download links, public download, signed/authenticated download, and delete operations.

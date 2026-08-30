@@ -10,7 +10,7 @@ import { compressImage, type CompressionResult } from './imageCompression';
 // Storage backend configuration
 const STORAGE_BACKEND = process.env.NEXT_PUBLIC_STORAGE_BACKEND || 'firebase';
 const R2_WORKER_URL = (
-  process.env.NEXT_PUBLIC_R2_WORKER_URL || 'https://r2-proxy.dreamforge.app'
+  process.env.NEXT_PUBLIC_R2_WORKER_URL || 'https://dream-forge-r2-proxy.jackg825.workers.dev'
 ).replace(/\/+$/, '');
 
 /** Identify persisted R2 URLs without assuming every historical object uses R2. */
