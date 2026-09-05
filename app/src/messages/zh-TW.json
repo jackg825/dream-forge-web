@@ -369,12 +369,25 @@
       "rotate": "左鍵拖曳：旋轉視角",
       "zoom": "滾輪：縮放",
       "pan": "Shift + 拖曳：平移",
-      "clipping": "使用剖面工具查看模型內部"
+      "clipping": "使用剖面工具查看模型內部",
+      "touch": "觸控：單指旋轉，雙指縮放或平移"
     },
     "cta": {
       "title": "需要生成 3D 模型？",
-      "description": "使用 AI 自動從照片生成可 3D 列印的模型",
+      "description": "從照片生成 3D 模型；列印前仍需確認尺寸與可製造性。",
       "button": "開始生成"
+    },
+    "localFileHint": "模型在瀏覽器內開啟，不會上傳。GLTF 請使用內嵌資源；有外部貼圖時建議先匯出 GLB。",
+    "fileTooLarge": "檔案過大，最大支援 100MB。",
+    "invalidModel": "無法讀取有效的模型網格。請確認檔案完整；GLTF 如有外部資源，請先匯出為內嵌貼圖的 GLB。",
+    "cameraViews": {
+      "title": "預覽視角",
+      "perspective": "立體",
+      "front": "正面",
+      "back": "背面",
+      "left": "左側",
+      "right": "右側",
+      "top": "俯視"
     }
   },
   "download": {
@@ -482,7 +495,8 @@
     "width": "X（寬）",
     "height": "Y（高）",
     "depth": "Z（深）",
-    "uploadHint": "上傳模型以查看資訊"
+    "uploadHint": "上傳模型以查看資訊",
+    "sourceUnitsHint": "顯示原始檔案座標單位，尚未換算實體列印尺寸。"
   },
   "clipping": {
     "title": "切面預覽",
@@ -692,6 +706,21 @@
     "styles": {
       "reanalyzeRequired": "風格已變更，需要重新分析以套用新風格",
       "reanalyze": "重新分析"
+    },
+    "costEstimate": {
+      "total": "完整生成預估：視角 {views} 點＋3D {mesh} 點＝{total} 點",
+      "details": "各步驟分開扣點；更換生成方案會影響總額。列印費用另計，目前尚未開放。",
+      "shortfall": "目前 {credits} 點，距完整生成還差 {missing} 點。可先體驗視角；生成 3D 前需由管理員補足點數，加值尚未開放。"
+    },
+    "recoverableError": "上次操作未完成。已儲存的作品仍在，請檢查連線或調整後重試。",
+    "viewPreview": {
+      "title": "確認外觀與細節",
+      "description": "放大對照原圖與輔助視角，再決定是否生成 3D。",
+      "angles": "選擇視角",
+      "original": "原始照片",
+      "open": "放大檢視{angle}",
+      "checklist": "確認輪廓、重要配件、左右及背面一致；AI 補出的不可見細節可能與實物不同。",
+      "fixView": "只修正這個視角"
     }
   },
   "selectors": {
@@ -707,7 +736,7 @@
   "regenerate": {
     "dialog": {
       "title": "重新生成 {angle} {type} 視圖",
-      "description": "您可以提供額外指示來調整生成結果，或留空直接重新生成。",
+      "description": "只重新生成所選視角，保留其他圖片。成功才計入修正次數；可輸入要保留或調整的細節。",
       "hintLabel": "額外指示（可選）",
       "hintPlaceholder": "例如：「耳朵要更明顯」或「保持原本的顏色」",
       "charCount": "{count}/100 字元",

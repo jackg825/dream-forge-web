@@ -369,12 +369,25 @@
       "rotate": "Left-click drag: Rotate view",
       "zoom": "Scroll: Zoom",
       "pan": "Shift + drag: Pan",
-      "clipping": "Use clipping plane to view cross-sections"
+      "clipping": "Use clipping plane to view cross-sections",
+      "touch": "Touch: one finger to rotate, two fingers to zoom or pan"
     },
     "cta": {
       "title": "Need to generate 3D models?",
-      "description": "Use AI to automatically generate 3D printable models from photos",
+      "description": "Generate a 3D model from photos. Check its scale and printability before manufacturing.",
       "button": "Start Generating"
+    },
+    "localFileHint": "Models open in your browser without uploading. Use embedded resources for GLTF, or export a GLB when textures are external.",
+    "fileTooLarge": "This file is too large. The limit is 100MB.",
+    "invalidModel": "No valid mesh could be loaded. Check the file, or export GLTF with external resources as a self-contained GLB.",
+    "cameraViews": {
+      "title": "Camera views",
+      "perspective": "3D",
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right",
+      "top": "Top"
     }
   },
   "download": {
@@ -482,7 +495,8 @@
     "width": "X (Width)",
     "height": "Y (Height)",
     "depth": "Z (Depth)",
-    "uploadHint": "Upload a model to view info"
+    "uploadHint": "Upload a model to view info",
+    "sourceUnitsHint": "Dimensions use the original file coordinate units, not a confirmed physical print size."
   },
   "clipping": {
     "title": "Clipping Plane",
@@ -692,6 +706,21 @@
     "styles": {
       "reanalyzeRequired": "Style changed. Re-analyze to apply the new style.",
       "reanalyze": "Re-analyze"
+    },
+    "costEstimate": {
+      "total": "Estimated total: views {views} + 3D {mesh} = {total} credits",
+      "details": "Each step is charged separately. Changing the generation options changes the total. Printing is separate and is not available yet.",
+      "shortfall": "Balance: {credits}; {missing} more needed for the full generation. You can preview the views first; an administrator must add credits before 3D generation. Top-ups are not available yet."
+    },
+    "recoverableError": "The last request did not finish. Your saved work is still available. Check your connection or adjust and retry.",
+    "viewPreview": {
+      "title": "Check appearance and details",
+      "description": "Compare the original with each generated view before creating the 3D model.",
+      "angles": "Choose a view",
+      "original": "Original photo",
+      "open": "Inspect {angle}",
+      "checklist": "Check the silhouette, accessories, sides and back. AI-inferred hidden details can differ from the real object.",
+      "fixView": "Fix only this view"
     }
   },
   "selectors": {
@@ -707,7 +736,7 @@
   "regenerate": {
     "dialog": {
       "title": "Regenerate {angle} {type} View",
-      "description": "You can provide additional instructions to adjust the result, or leave empty to regenerate directly.",
+      "description": "Regenerate only this view and keep the others. Only successful corrections count toward your allowance. Describe what to preserve or change.",
       "hintLabel": "Additional Instructions (optional)",
       "hintPlaceholder": "e.g., \"Make the ears more visible\" or \"Keep the original colors\"",
       "charCount": "{count}/100 characters",

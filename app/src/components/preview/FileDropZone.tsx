@@ -70,6 +70,7 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
       if (file) {
         handleFile(file);
       }
+      e.target.value = '';
     },
     [handleFile]
   );
@@ -102,7 +103,7 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
       aria-disabled={disabled}
       aria-label={`${t('dropZone.clickToUpload')} ${t('dropZone.orDragDrop')}`}
       className={cn(
-        'cursor-pointer transition-colors duration-200',
+        'cursor-pointer transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
         isDragging && 'border-primary bg-primary/5',
         error && 'border-destructive bg-destructive/5',
         disabled && 'opacity-50 cursor-not-allowed'

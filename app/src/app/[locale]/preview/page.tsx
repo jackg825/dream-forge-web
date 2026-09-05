@@ -12,6 +12,8 @@ import { useLighting } from '@/hooks/useLighting';
 import { useModelLoader } from '@/hooks/useModelLoader';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { cn } from '@/lib/utils';
+import type { PreviewCameraView, PreviewDisplayMode } from '@/lib/preview-scene';
+import { TranslatedModelViewerErrorBoundary } from '@/components/viewer/ModelViewerErrorBoundary';
 import { Link } from '@/i18n/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,6 +69,9 @@ export default function PreviewPage() {
   const [showGrid, setShowGrid] = useState(false);
   const [showAxes, setShowAxes] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
+  const [cameraView, setCameraView] = useState<PreviewCameraView>('perspective');
+  const [cameraResetKey, setCameraResetKey] = useState(0);
+  const [viewMode, setViewMode] = useState<PreviewDisplayMode>('textured');
   const [screenshotStatus, setScreenshotStatus] = useState<'success' | 'error' | null>(null);
 
   // Fullscreen hook with iOS fallback
@@ -85,6 +90,9 @@ export default function PreviewPage() {
       setClippingEnabled(false);
       setClippingPosition(50);
       setClippingInverted(false);
+      setAutoRotate(false);
+      setCameraView('perspective');
+      setCameraResetKey((key) => key + 1);
       loadFile(file);
     },
     [loadFile]
@@ -97,6 +105,12 @@ export default function PreviewPage() {
     setClippingPosition(50);
     setClippingInverted(false);
   }, [reset]);
+
+  const handleCameraReset = useCallback(() => {
+    setAutoRotate(false);
+    setCameraView('perspective');
+    setCameraResetKey((key) => key + 1);
+  }, []);
 
   const handleScreenshot = useCallback(() => {
     try {
@@ -138,6 +152,7 @@ export default function PreviewPage() {
             <p className="text-muted-foreground">
               {t('preview.subtitle')}
             </p>
+            <p className="text-xs text-muted-foreground mt-2">{t('preview.localFileHint')}</p>
           </div>
         </div>
 
@@ -200,7 +215,7 @@ export default function PreviewPage() {
                   ref={handleViewerContainerRef}
                   className={cn(
                     'relative',
-                    isPseudoFullscreen ? 'h-full' : 'h-[500px]'
+                    isPseudoFullscreen ? 'h-full' : 'h-[65dvh] min-h-[420px] sm:h-[560px]'
                   )}
                 >
                   {/* Close button for pseudo-fullscreen (iOS) */}
@@ -220,6 +235,14 @@ export default function PreviewPage() {
                     </button>
                   )}
 
+                  <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap gap-1 rounded-lg bg-black/70 p-1 w-fit max-w-[calc(100%-1.5rem)]" aria-label={t('preview.cameraViews.title')}>
+                    {(['perspective', 'front', 'back', 'left', 'right', 'top'] as const).map((view) => (
+                      <Button key={view} size="sm" variant="ghost" className="min-h-11 min-w-11 px-2 text-white hover:bg-white/20 hover:text-white aria-pressed:bg-white/20" aria-pressed={cameraView === view} onClick={() => { setAutoRotate(false); setCameraView(view); setCameraResetKey((key) => key + 1); }}>
+                        {t(`preview.cameraViews.${view}`)}
+                      </Button>
+                    ))}
+                  </div>
+                  <TranslatedModelViewerErrorBoundary key={model.info?.fileName}>
                   <PreviewViewer
                     geometry={model.geometry}
                     group={model.group}
@@ -228,13 +251,15 @@ export default function PreviewPage() {
                     clippingAxis={clippingAxis}
                     clippingPosition={clippingPosition}
                     clippingInverted={clippingInverted}
-                    boundingBox={model.info?.boundingBox}
-                    autoOrient={true}
+                    cameraView={cameraView}
+                    cameraResetKey={cameraResetKey}
+                    viewMode={viewMode}
                     lighting={lighting}
                     showGrid={showGrid}
                     showAxes={showAxes}
                     autoRotate={autoRotate}
                   />
+                  </TranslatedModelViewerErrorBoundary>
                   {/* Floating Toolbar */}
                   <UnifiedViewerToolbar
                     backgroundColor={backgroundColor}
@@ -246,7 +271,10 @@ export default function PreviewPage() {
                     onAmbientIntensityChange={updateAmbientIntensity}
                     onLightingReset={resetLighting}
                     showLightingControls={true}
-                    showViewMode={false}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    hasTextures={!!model.group}
+                    showViewMode={true}
                     showDisplayToggles={true}
                     showGrid={showGrid}
                     onShowGridChange={setShowGrid}
@@ -257,7 +285,7 @@ export default function PreviewPage() {
                     isFullscreen={isFullscreen}
                     onFullscreen={handleFullscreen}
                     onScreenshot={handleScreenshot}
-                    onReset={handleReset}
+                    onReset={handleCameraReset}
                     portalContainer={viewerContainer}
                   />
                 </div>
@@ -328,6 +356,7 @@ export default function PreviewPage() {
                   <li>• {t('preview.tips.zoom')}</li>
                   <li>• {t('preview.tips.pan')}</li>
                   <li>• {t('preview.tips.clipping')}</li>
+                  <li>• {t('preview.tips.touch')}</li>
                 </ul>
               </CardContent>
             </Card>

@@ -1,33 +1,19 @@
-/**
- * useModelLoader Hook
- *
- * Custom hook for loading 3D models from local files.
- * Supports multiple formats: STL, OBJ, GLB, GLTF
- */
+'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslations } from 'next-intl';
 import * as THREE from 'three';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import {
-  analyzeGeometry,
-  analyzeGroup,
-  getFileExtension,
-  isSupported3DFormat,
-  type ModelInfo,
-} from '@/lib/modelAnalysis';
+import { analyzeGeometry, analyzeGroup, getFileExtension, isSupported3DFormat, type ModelInfo } from '@/lib/modelAnalysis';
 
 export type LoaderState = 'idle' | 'loading' | 'ready' | 'error';
-
 export interface LoadedModel {
-  // For STL/OBJ: geometry is set, group is null
-  // For GLB/GLTF: group is set, geometry may be null
   geometry: THREE.BufferGeometry | null;
   group: THREE.Group | null;
   info: ModelInfo | null;
 }
-
 export interface UseModelLoaderResult {
   state: LoaderState;
   model: LoadedModel | null;
@@ -36,159 +22,80 @@ export interface UseModelLoaderResult {
   reset: () => void;
 }
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-const WARN_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+function disposeModel(model: LoadedModel) {
+  const geometries = new Set<THREE.BufferGeometry>();
+  const materials = new Set<THREE.Material>();
+  const textures = new Set<THREE.Texture>();
+  if (model.geometry) geometries.add(model.geometry);
+  model.group?.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    geometries.add(child.geometry);
+    (Array.isArray(child.material) ? child.material : [child.material]).forEach((material) => materials.add(material));
+  });
+  materials.forEach((material) => {
+    Object.values(material).forEach((value) => { if (value instanceof THREE.Texture) textures.add(value); });
+    material.dispose();
+  });
+  geometries.forEach((geometry) => geometry.dispose());
+  textures.forEach((texture) => texture.dispose());
+}
 
 export function useModelLoader(): UseModelLoaderResult {
+  const t = useTranslations('preview');
   const [state, setState] = useState<LoaderState>('idle');
   const [model, setModel] = useState<LoadedModel | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const requestId = useRef(0);
 
-  // Clean up object URL when component unmounts or file changes
-  useEffect(() => {
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
-  }, [objectUrl]);
+  useEffect(() => () => { requestId.current += 1; }, []);
+  useEffect(() => () => { if (model) disposeModel(model); }, [model]);
 
   const reset = useCallback(() => {
+    requestId.current += 1;
     setState('idle');
     setModel(null);
     setError(null);
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      setObjectUrl(null);
-    }
-  }, [objectUrl]);
-
-  function loadSTL(url: string, file: File) {
-    const loader = new STLLoader();
-    loader.load(
-      url,
-      (geometry) => {
-        const info = analyzeGeometry(geometry, file.name, file.size);
-        setModel({ geometry, group: null, info });
-        setState('ready');
-      },
-      undefined,
-      (err) => {
-        console.error('STL loading error:', err);
-        setError('無法載入 STL 檔案。請確認檔案格式正確。');
-        setState('error');
-      }
-    );
-  }
-
-  function loadOBJ(url: string, file: File) {
-    const loader = new OBJLoader();
-    loader.load(
-      url,
-      (group) => {
-        // OBJ returns a Group, extract geometry from first mesh
-        let geometry: THREE.BufferGeometry | null = null;
-        group.traverse((child) => {
-          if (child instanceof THREE.Mesh && !geometry) {
-            geometry = child.geometry;
-          }
-        });
-
-        const info = analyzeGroup(group, file.name, file.size);
-        setModel({ geometry, group, info });
-        setState('ready');
-      },
-      undefined,
-      (err) => {
-        console.error('OBJ loading error:', err);
-        setError('無法載入 OBJ 檔案。請確認檔案格式正確。');
-        setState('error');
-      }
-    );
-  }
-
-  function loadGLTF(url: string, file: File) {
-    const loader = new GLTFLoader();
-    loader.load(
-      url,
-      (gltf) => {
-        const group = gltf.scene;
-
-        // Extract geometry from first mesh for compatibility
-        let geometry: THREE.BufferGeometry | null = null;
-        group.traverse((child) => {
-          if (child instanceof THREE.Mesh && !geometry) {
-            geometry = child.geometry;
-          }
-        });
-
-        const info = analyzeGroup(group, file.name, file.size);
-        setModel({ geometry, group, info });
-        setState('ready');
-      },
-      undefined,
-      (err) => {
-        console.error('GLTF loading error:', err);
-        setError('無法載入 GLB/GLTF 檔案。請確認檔案格式正確。');
-        setState('error');
-      }
-    );
-  }
-
-  const loadFile = useCallback((file: File) => {
-    // Reset previous state
-    setError(null);
-    setModel(null);
-
-    // Validate file
-    if (!isSupported3DFormat(file.name)) {
-      setError('不支援的檔案格式。請上傳 STL、OBJ、GLB 或 GLTF 檔案。');
-      setState('error');
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      setError('檔案過大。最大支援 100MB。');
-      setState('error');
-      return;
-    }
-
-    if (file.size > WARN_FILE_SIZE) {
-      console.warn('Large file detected, loading may be slow:', file.name);
-    }
-
-    setState('loading');
-
-    // Create object URL for the file
-    const url = URL.createObjectURL(file);
-    setObjectUrl(url);
-
-    const ext = getFileExtension(file.name);
-
-    // Load based on extension
-    switch (ext) {
-      case 'stl':
-        loadSTL(url, file);
-        break;
-      case 'obj':
-        loadOBJ(url, file);
-        break;
-      case 'glb':
-      case 'gltf':
-        loadGLTF(url, file);
-        break;
-      default:
-        setError('不支援的檔案格式');
-        setState('error');
-    }
   }, []);
 
-  return {
-    state,
-    model,
-    error,
-    loadFile,
-    reset,
-  };
+  const loadFile = useCallback(async (file: File) => {
+    const attempt = ++requestId.current;
+    setError(null);
+    setModel(null);
+    if (!isSupported3DFormat(file.name) || file.size > 100 * 1024 * 1024) {
+      setError(t(!isSupported3DFormat(file.name) ? 'unsupportedFormat' : 'fileTooLarge'));
+      setState('error');
+      return;
+    }
+    setState('loading');
+    const url = URL.createObjectURL(file);
+    let loaded: LoadedModel | null = null;
+    try {
+      const extension = getFileExtension(file.name);
+      if (extension === 'stl') {
+        const geometry = await new STLLoader().loadAsync(url);
+        loaded = { geometry, group: null, info: analyzeGeometry(geometry, file.name, file.size) };
+      } else {
+        const group = extension === 'obj'
+          ? await new OBJLoader().loadAsync(url)
+          : (await new GLTFLoader().loadAsync(url)).scene;
+        loaded = { geometry: null, group, info: analyzeGroup(group, file.name, file.size) };
+      }
+      const dimensions = loaded.info?.boundingBox;
+      const extent = dimensions ? Math.max(dimensions.width, dimensions.height, dimensions.depth) : 0;
+      if (!loaded.info?.faceCount || !Number.isFinite(extent) || extent <= 0) throw new Error('Empty model');
+      if (attempt !== requestId.current) { disposeModel(loaded); return; }
+      setModel(loaded);
+      setState('ready');
+    } catch (err) {
+      if (loaded) disposeModel(loaded);
+      if (attempt !== requestId.current) return;
+      console.error('Model loading failed:', err);
+      setError(t('invalidModel'));
+      setState('error');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }, [t]);
+
+  return { state, model, error, loadFile, reset };
 }

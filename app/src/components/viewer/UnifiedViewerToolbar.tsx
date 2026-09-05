@@ -183,10 +183,10 @@ export function UnifiedViewerToolbar({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
+      <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 w-max max-w-[calc(100%-1.5rem)]">
         {/* Glassmorphism toolbar container */}
         <div
-          className="flex items-center gap-1 px-2 py-1.5 rounded-xl
+          className="flex flex-wrap justify-center items-center gap-1 px-2 py-1.5 rounded-xl
                      bg-black/70 backdrop-blur-xl border border-white/10
                      shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]"
         >
@@ -202,7 +202,7 @@ export function UnifiedViewerToolbar({
                       aria-label={t(
                         VIEW_MODES.find((m) => m.value === viewMode)?.labelKey ?? 'viewMode.clay'
                       )}
-                      className="h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
+                      className="h-11 sm:h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
                                  font-mono text-xs tracking-wide"
                     >
                       <Eye className="w-4 h-4" />
@@ -220,7 +220,7 @@ export function UnifiedViewerToolbar({
                   className="bg-black/90 text-white border-white/10"
                   {...portalProps}
                 >
-                  {t('viewMode.textured')}
+                  {t(VIEW_MODES.find((m) => m.value === viewMode)?.labelKey ?? 'viewMode.clay')}
                 </TooltipContent>
               </Tooltip>
               <PopoverContent
@@ -273,7 +273,7 @@ export function UnifiedViewerToolbar({
                     variant="ghost"
                     size="sm"
                     aria-label={t('background')}
-                    className="h-9 w-9 p-0 text-white/90 hover:text-white hover:bg-white/10"
+                    className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/90 hover:text-white hover:bg-white/10"
                   >
                     <div
                       className="w-5 h-5 rounded-full ring-2 ring-white/30"
@@ -331,7 +331,7 @@ export function UnifiedViewerToolbar({
                         variant="ghost"
                         size="sm"
                         aria-label={t('lightingControl')}
-                        className={`h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
+                        className={`h-11 sm:h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
                                    font-mono text-xs tracking-wide
                                    ${hasLightingChanges ? 'text-amber-400' : ''}`}
                       >
@@ -382,7 +382,7 @@ export function UnifiedViewerToolbar({
                       onPressedChange={onShowGridChange}
                       size="sm"
                       aria-label={t('grid')}
-                      className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
+                      className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                                  data-[state=on]:bg-white/20 data-[state=on]:text-white"
                     >
                       <Grid3X3 className="w-4 h-4" />
@@ -407,7 +407,7 @@ export function UnifiedViewerToolbar({
                       onPressedChange={onShowAxesChange}
                       size="sm"
                       aria-label={t('axes')}
-                      className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
+                      className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                                  data-[state=on]:bg-white/20 data-[state=on]:text-white"
                     >
                       <Axis3D className="w-4 h-4" />
@@ -432,7 +432,7 @@ export function UnifiedViewerToolbar({
                       onPressedChange={onAutoRotateChange}
                       size="sm"
                       aria-label={t('autoRotate')}
-                      className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
+                      className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                                  data-[state=on]:bg-white/20 data-[state=on]:text-white"
                     >
                       <RotateCw
@@ -463,7 +463,7 @@ export function UnifiedViewerToolbar({
                 size="sm"
                 onClick={onScreenshot}
                 aria-label={t('screenshot')}
-                className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
               >
                 <Camera className="w-4 h-4" />
               </Button>
@@ -487,7 +487,7 @@ export function UnifiedViewerToolbar({
                   onClick={onAR}
                   disabled={arLoading}
                   aria-label={t('arPreview')}
-                  className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                  className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
                 >
                   {arLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -515,7 +515,7 @@ export function UnifiedViewerToolbar({
                   size="sm"
                   onClick={onFullscreen}
                   aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
-                  className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                  className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
                 >
                   {isFullscreen ? (
                     <Minimize className="w-4 h-4" />
@@ -542,7 +542,7 @@ export function UnifiedViewerToolbar({
                 size="sm"
                 onClick={onReset}
                 aria-label={t('resetCamera')}
-                className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
+                className="h-11 w-11 sm:h-9 sm:w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
               >
                 <RefreshCw className="w-4 h-4" />
               </Button>

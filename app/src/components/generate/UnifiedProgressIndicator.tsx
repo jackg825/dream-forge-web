@@ -149,7 +149,7 @@ function calculateProgress(
 
   // Indeterminate progress for generating steps without data
   if (status.includes('generating') || status === 'batch-processing') {
-    return 50; // Show middle progress for indeterminate
+    return undefined; // No provider progress: do not invent a percentage.
   }
 
   return undefined;
