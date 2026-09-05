@@ -4,10 +4,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { preflight, buildRequest, runBenchmark, saveOutput } from './benchmark-images.mjs';
+import { preflight, requestMetadata, buildRequest, runBenchmark, saveOutput } from './benchmark-images.mjs';
 
 const sharp = createRequire(new URL('../functions/package.json', import.meta.url))('sharp');
 const env = { OPENAI_API_KEY: 'test-openai-credential', GEMINI_API_KEY: 'test-gemini-credential', BYTEPLUS_API_KEY: 'test-byteplus-credential' };
+const routerEnv = { OPENROUTER_API_KEY: 'test-openrouter-credential' };
 const exists = async (filename) => fs.lstat(filename).then(() => true, () => false);
 async function fixture(t, providers = ['openai', 'gemini', 'seedream']) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'image-benchmark-test-'));
@@ -214,5 +215,141 @@ test('native crop preserves quadrant pixels and saves odd/non-square originals a
     assert.equal(output.crops.length, 0);
     assert.ok(output.deviations.includes('native_crop_skipped_not_even_square'));
     assert.deepEqual(await fs.readFile(path.join(f.directory, `${width}-${height}`, output.original)), bytes);
+  }
+});
+
+test('OpenRouter preflight uses only its credential and validates sample prompts before spending', async (t) => {
+  const f = await fixture(t);
+  const config = { ...f.config, transport: 'openrouter' };
+  const options = { ...f.options, env: routerEnv };
+  const prepared = await preflight(config, options);
+  assert.equal(prepared.summary.transport, 'openrouter');
+  assert.ok(prepared.summary.providers.every((item) => item.credentialPresent));
+  assert.deepEqual(prepared.summary.providers.map((item) => item.model), ['openai/gpt-image-2', 'google/gemini-3-pro-image', 'bytedance-seed/seedream-5-0-lite']);
+  await assert.rejects(preflight(config, f.options), /all_selected_provider_credentials_required/);
+  for (const invalid of [
+    { ...config, transport: 'unknown' },
+    ...['', ' ', 42, 'x'.repeat(8001)].map((prompt) => ({ ...config, samples: [{ ...config.samples[0], prompt }] })),
+  ]) {
+    let calls = 0;
+    await assert.rejects(runBenchmark(invalid, { ...options, fetchImpl: () => { calls++; } }));
+    assert.equal(calls, 0);
+  }
+  assert.equal(await exists(path.join(f.directory, 'results')), false);
+});
+
+test('OpenRouter adapters pin verified routes, preserve input bytes, and avoid native-only parameters', async (t) => {
+  const f = await fixture(t);
+  const { samples } = await preflight(f.config, f.options);
+  for (const [provider, model, route] of [['openai', 'openai/gpt-image-2', 'openai'], ['gemini', 'google/gemini-3-pro-image', 'google-ai-studio/global'], ['seedream', 'bytedance-seed/seedream-5-0-lite', 'seed']]) {
+    const request = buildRequest(provider, samples[0], 'Specific subject prompt.', routerEnv, 'openrouter');
+    const metadata = requestMetadata(provider, 'openrouter');
+    const body = JSON.parse(request.body);
+    assert.equal(metadata.endpoint, 'https://openrouter.ai/api/v1/images');
+    assert.equal(request.headers.Authorization, `Bearer ${routerEnv.OPENROUTER_API_KEY}`);
+    assert.deepEqual(body, { model, n: 1, stream: false, ...(provider === 'openai' ? { size: '2048x2048', quality: 'medium' } : { resolution: '2K', aspect_ratio: '1:1' }), provider: { only: [route], allow_fallbacks: false }, prompt: 'Specific subject prompt.', input_references: [{ type: 'image_url', image_url: { url: `data:image/png;base64,${f.bytes.toString('base64')}` } }] });
+    const { prompt: _prompt, input_references: _images, ...parameters } = body;
+    assert.deepEqual(metadata.parameters, parameters);
+  }
+});
+
+test('per-sample prompts are actually sent and preserved, with global fallback on native routes', async (t) => {
+  const f = await fixture(t, ['openai']);
+  const prompts = ['Preserve the person and shoulder bag.', f.config.prompt];
+  const config = { ...f.config, samples: [{ ...f.config.samples[0], prompt: prompts[0] }, { id: 'second', path: 'sample.png', prompt: null }] };
+  let calls = 0;
+  const result = await runBenchmark(config, { ...f.options, fetchImpl: async (_url, request) => {
+    assert.equal(request.body.get('prompt'), prompts[calls++]);
+    return response({ data: [{ b64_json: f.bytes.toString('base64') }] });
+  } });
+  assert.equal(calls, 2);
+  assert.deepEqual(result.calls.map((call) => call.prompt), prompts);
+  assert.notEqual(result.calls[0].promptSha256, result.calls[1].promptSha256);
+});
+
+test('OpenRouter decodes all three models and records actual costs and safe identities', async (t) => {
+  const f = await fixture(t);
+  const bytes = await sharp({ create: { width: 2048, height: 2048, channels: 3, background: '#123456' } }).png().toBuffer();
+  const config = { ...f.config, transport: 'openrouter', samples: [{ ...f.config.samples[0], prompt: 'Preserve the dog and backpack.' }] };
+  let calls = 0;
+  const result = await runBenchmark(config, { ...f.options, env: routerEnv, fetchImpl: async (url, request) => {
+    assert.equal(url, 'https://openrouter.ai/api/v1/images');
+    const body = JSON.parse(request.body);
+    assert.equal(body.prompt, config.samples[0].prompt);
+    const provider = ['OpenAI', 'Google AI Studio', 'Seed'][calls++];
+    return response({ id: `gen-safe-${calls}`, model: body.model, provider, data: [{ b64_json: bytes.toString('base64'), media_type: 'image/png' }], usage: { prompt_tokens: 12, completion_tokens: 23, total_tokens: 35, cost: [0.125, 0.2, 0.4][calls - 1], secret: routerEnv.OPENROUTER_API_KEY } });
+  } });
+  assert.equal(calls, 3);
+  assert.equal(result.status, 'completed');
+  assert.equal(result.calls[0].usage.cost, 0.125);
+  assert.equal(result.calls[1].usage.cost, 0.2);
+  assert.equal(result.calls[1].accountedUsd, 0.3);
+  assert.equal(result.calls[2].usage.cost, 0.4);
+  assert.equal(result.budgetConsumedUsd, 1);
+  assert.equal(result.calls[1].returnedModel, 'google/gemini-3-pro-image');
+  assert.equal(result.calls[1].returnedProvider, 'Google AI Studio');
+  assert.equal(result.calls[1].responseId, 'gen-safe-2');
+  assert.deepEqual(result.calls[1].usage, { prompt_tokens: 12, completion_tokens: 23, total_tokens: 35, cost: 0.2 });
+  assert.deepEqual(await fs.readFile(path.join(f.directory, 'results/sample-gemini/original.png')), bytes);
+  assert.ok(!JSON.stringify(result).includes(routerEnv.OPENROUTER_API_KEY));
+});
+
+test('OpenRouter saves a non-2K original and cost before immediately stopping all subsequent calls', async (t) => {
+  const f = await fixture(t);
+  let calls = 0;
+  await assert.rejects(runBenchmark({ ...f.config, transport: 'openrouter' }, { ...f.options, env: routerEnv, fetchImpl: async () => {
+    calls++;
+    return response({ id: routerEnv.OPENROUTER_API_KEY, model: routerEnv.OPENROUTER_API_KEY, provider: routerEnv.OPENROUTER_API_KEY, data: [{ b64_json: f.bytes.toString('base64') }], usage: { prompt_tokens: 4 } });
+  } }), /benchmark_stopped/);
+  const raw = await fs.readFile(f.manifestPath, 'utf8');
+  const manifest = JSON.parse(raw);
+  assert.equal(calls, 1);
+  assert.equal(manifest.status, 'stopped');
+  assert.equal(manifest.calls[0].error, 'openrouter_output_dimensions_mismatch_stopped');
+  assert.equal(manifest.calls[0].output.width, 32);
+  assert.equal(manifest.calls[0].usage.cost, null);
+  assert.equal(manifest.budgetConsumedUsd, 0.3);
+  assert.deepEqual(await fs.readFile(path.join(f.directory, 'results/sample-openai/original.png')), f.bytes);
+  assert.ok(!raw.includes(routerEnv.OPENROUTER_API_KEY));
+});
+
+test('an actual OpenRouter charge above the estimate stops the next call before it exceeds remaining budget', async (t) => {
+  const f = await fixture(t);
+  const bytes = await sharp({ create: { width: 2048, height: 2048, channels: 3, background: '#123456' } }).png().toBuffer();
+  let calls = 0;
+  await assert.rejects(runBenchmark({ ...f.config, transport: 'openrouter' }, { ...f.options, budgetUsd: 0.9, env: routerEnv, fetchImpl: async () => {
+    calls++;
+    return response({ data: [{ b64_json: bytes.toString('base64') }], usage: { cost: 0.8 } });
+  } }), /remaining_budget_below_next_call_reservation/);
+  const manifest = JSON.parse(await fs.readFile(f.manifestPath, 'utf8'));
+  assert.equal(calls, 1);
+  assert.equal(manifest.status, 'stopped');
+  assert.equal(manifest.calls[0].status, 'succeeded');
+  assert.equal(manifest.calls[0].accountedUsd, 0.8);
+  assert.equal(manifest.budgetConsumedUsd, 0.8);
+  assert.equal(manifest.reservedUsd, 0.3);
+});
+
+test('missing or negative OpenRouter cost saves the image and generation id, then stops for reconciliation', async (t) => {
+  const f = await fixture(t);
+  const bytes = await sharp({ create: { width: 2048, height: 2048, channels: 3, background: '#123456' } }).png().toBuffer();
+  for (const [outputDir, cost] of [['missing', undefined], ['negative', -1]]) {
+    let calls = 0;
+    await assert.rejects(runBenchmark({ ...f.config, transport: 'openrouter', outputDir }, { ...f.options, env: routerEnv, fetchImpl: async () => {
+      calls++;
+      const result = response({ data: [{ b64_json: bytes.toString('base64') }], usage: { total_tokens: 18, cost } });
+      result.headers.set('x-generation-id', 'gen-for-reconciliation');
+      return result;
+    } }), /benchmark_stopped/);
+    const manifest = JSON.parse(await fs.readFile(path.join(f.directory, outputDir, 'manifest.json'), 'utf8'));
+    assert.equal(calls, 1);
+    assert.equal(manifest.status, 'stopped');
+    assert.equal(manifest.calls[0].error, 'cost_missing_reconcile_before_continuing');
+    assert.equal(manifest.calls[0].usage.cost, null);
+    assert.equal(manifest.calls[0].accountedUsd, 0.3);
+    assert.equal(manifest.calls[0].requestId, 'req-safe-1');
+    assert.equal(manifest.calls[0].generationId, 'gen-for-reconciliation');
+    assert.deepEqual(await fs.readFile(path.join(f.directory, outputDir, 'sample-openai/original.png')), bytes);
+    assert.equal(manifest.calls[0].output.width, 2048);
   }
 });
