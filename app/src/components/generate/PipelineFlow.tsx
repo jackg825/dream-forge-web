@@ -81,6 +81,7 @@ import {
 import { ProviderSelector } from './ProviderSelector';
 import { ProviderOptionsPanel } from './ProviderOptionsPanel';
 import { ViewModelSelector } from './ViewModelSelector';
+import { ViewComparisonDialog } from './ViewComparisonDialog';
 import {
   canAccessHiTem3DResolution,
   canAccessProvider,
@@ -181,6 +182,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Style change flow state - tracks when user wants to change style after analysis
   const [styleChangeRequested, setStyleChangeRequested] = useState(false);
+  const [previewAngle, setPreviewAngle] = useState<PipelineMeshAngle | null>(null);
 
   // Upgrade prompt state - shown when user clicks a Premium-only feature
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
@@ -396,7 +398,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       return;
     }
 
-    if (creditsLoading) return;
+    if (creditsLoading || actionLoading || analysisLoading || styleChangeRequested || !imageAnalysis) return;
 
     const viewCost = GEMINI_MODEL_OPTIONS[geminiModel].creditCost;
     if (credits < viewCost) {
@@ -453,17 +455,16 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Handle image analysis - creates draft pipeline after analysis completes
   const handleAnalyze = async () => {
-    if (!user || uploadedImages.length === 0) return;
+    if (!user || uploadedImages.length === 0 || actionLoading || analysisLoading) return;
 
+    setActionLoading(true);
     try {
       // Run analysis with current locale and selected style for context-aware results
       const result = await analyzeImage(uploadedImages[0].url, colorCount, 'fdm', locale, selectedStyle);
 
-      // Reset style change request flag after successful analysis
-      setStyleChangeRequested(false);
-
       if (pipelineId && pipeline?.status === 'draft') {
         await updateAnalysis(result, result.description, selectedStyle, geminiModel);
+        setStyleChangeRequested(false);
         return;
       }
 
@@ -482,10 +483,13 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
       // Update state and URL so user can return to this draft
       setPipelineId(newPipelineId);
+      setStyleChangeRequested(false);
       router.push(`?id=${newPipelineId}`, { scroll: false });
     } catch (err) {
       console.error('Analysis failed:', err);
       // Error is handled by useImageAnalysis hook
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -496,9 +500,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   // Handle style change confirmation - re-analyze with new style
   const handleStyleChangeConfirm = () => {
-    // Clear the displayed result; the next analysis updates the existing draft.
-    setAnalysis(null);
-    setStyleChangeRequested(false);
+    void handleAnalyze();
   };
 
   // Handle style change cancel - revert to original style
@@ -623,10 +625,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 {t('styles.reanalyzeRequired')}
               </span>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={handleStyleChangeCancel}>
+                <Button size="sm" variant="outline" onClick={handleStyleChangeCancel} disabled={analysisLoading || actionLoading}>
                   {t('buttons.cancel')}
                 </Button>
-                <Button size="sm" onClick={handleStyleChangeConfirm}>
+                <Button size="sm" onClick={handleStyleChangeConfirm} disabled={analysisLoading || actionLoading}>
                   {t('styles.reanalyze')}
                 </Button>
               </div>
@@ -673,7 +675,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 <Button
                   size="lg"
                   onClick={handleStartPipeline}
-                  disabled={uploadedImages.length === 0 || actionLoading || authLoading || creditsLoading || styleChangeRequested}
+                  disabled={uploadedImages.length === 0 || actionLoading || analysisLoading || authLoading || creditsLoading || styleChangeRequested}
                   className="px-8"
                 >
                   {actionLoading ? (
@@ -763,10 +765,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               {t('styles.reanalyzeRequired')}
             </span>
             <div className="flex gap-2">
-              <Button size="sm" variant="outline" onClick={handleStyleChangeCancel}>
+              <Button size="sm" variant="outline" onClick={handleStyleChangeCancel} disabled={analysisLoading || actionLoading}>
                 {t('buttons.cancel')}
               </Button>
-              <Button size="sm" onClick={handleStyleChangeConfirm}>
+              <Button size="sm" onClick={handleStyleChangeConfirm} disabled={analysisLoading || actionLoading}>
                 {t('styles.reanalyze')}
               </Button>
             </div>
@@ -821,7 +823,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             <Button
               size="lg"
               onClick={handleStartPipeline}
-              disabled={actionLoading || creditsLoading || isGeneratingImages}
+              disabled={actionLoading || analysisLoading || creditsLoading || isGeneratingImages || styleChangeRequested || !imageAnalysis}
               className="px-8"
             >
               {actionLoading || isGeneratingImages ? (
@@ -863,7 +865,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                 variant="outline"
                 size="lg"
                 onClick={handleStartPipeline}
-                disabled={actionLoading || creditsLoading || isGeneratingImages}
+                disabled={actionLoading || analysisLoading || creditsLoading || isGeneratingImages || styleChangeRequested || !imageAnalysis}
               >
                 {actionLoading || isGeneratingImages ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -929,38 +931,34 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
               {meshAngles.map((angle) => {
                 const image = pipeline?.meshImages[angle];
                 return (
-                  <div key={angle} className="relative group rounded-xl overflow-hidden bg-muted">
-                    {image ? (
-                      <div className="relative aspect-square w-full">
-                        <FillImage
-                          src={image.url}
-                          alt={`${angle} view`}
-                          className="object-cover"
-                          sizes="(min-width: 768px) 25vw, 50vw"
-                        />
-                      </div>
-                    ) : (
-                      <Skeleton className="w-full aspect-square" />
-                    )}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div key={angle} className="rounded-xl overflow-hidden border bg-muted">
+                    <button
+                      type="button"
+                      className="relative aspect-square w-full block focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2"
+                      onClick={() => setPreviewAngle(angle)}
+                      disabled={!image}
+                      aria-label={t('viewPreview.open', { angle: t(`angles.${angle}`) })}
+                    >
+                      {image ? (
+                        <FillImage src={image.url} alt={t(`angles.${angle}`)} className="object-contain" sizes="(min-width: 768px) 25vw, 50vw" />
+                      ) : <Skeleton className="w-full h-full" />}
+                    </button>
+                    <div className="p-2 space-y-1">
+                      <p className="text-sm font-medium">{t(`angles.${angle}`)}</p>
                       <Button
                         size="sm"
-                        variant="secondary"
+                        variant="outline"
+                        className="min-h-11 w-full"
                         onClick={() => openRegenerateDialog('mesh', angle)}
                         disabled={actionLoading || regenerateLoading || !canRegenerate}
                       >
                         <RefreshCw className="h-4 w-4 mr-1" />
                         {t('images.regenerate')}
                       </Button>
-                      {canRegenerate ? (
-                        <span className="text-xs text-white/70">{t('images.remaining', { count: regenerationsRemaining })}</span>
-                      ) : (
-                        <span className="text-xs text-red-300">{t('images.limitReached')}</span>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {canRegenerate ? t('images.remaining', { count: regenerationsRemaining }) : t('images.limitReached')}
+                      </p>
                     </div>
-                    <span className="absolute bottom-2 left-2 text-xs font-medium text-white bg-black/50 px-2 py-0.5 rounded">
-                      {t(`angles.${angle}`)}
-                    </span>
                   </div>
                 );
               })}
@@ -1528,6 +1526,14 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
   return (
     <div className="space-y-6">
+      <ViewComparisonDialog
+        angle={previewAngle}
+        onAngleChange={setPreviewAngle}
+        images={pipeline?.meshImages ?? {}}
+        originalUrl={pipeline?.inputImages[0]?.url}
+        onRegenerate={(angle) => { setPreviewAngle(null); openRegenerateDialog('mesh', angle); }}
+        canRegenerate={canRegenerate && !actionLoading && !regenerateLoading}
+      />
       <PipelineProgressBar
         currentStep={displayStep}
         isFailed={isFailed}
@@ -1537,7 +1543,24 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         onStepClick={handleStepClick}
       />
 
-      {pipeline?.status === 'failed' || error ? (
+      {user && (!pipelineId || pipeline?.status === 'draft') && (
+        <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-1">
+          <p className="font-medium">{t('costEstimate.total', { views: GEMINI_MODEL_OPTIONS[geminiModel].creditCost, mesh: PROVIDER_OPTIONS[selectedProvider].creditCost, total: GEMINI_MODEL_OPTIONS[geminiModel].creditCost + PROVIDER_OPTIONS[selectedProvider].creditCost })}</p>
+          <p className="text-muted-foreground">{t('costEstimate.details')}</p>
+          {!creditsLoading && credits < GEMINI_MODEL_OPTIONS[geminiModel].creditCost + PROVIDER_OPTIONS[selectedProvider].creditCost && (
+            <p className="text-amber-800 dark:text-amber-300">{t('costEstimate.shortfall', { credits, missing: GEMINI_MODEL_OPTIONS[geminiModel].creditCost + PROVIDER_OPTIONS[selectedProvider].creditCost - credits })}</p>
+          )}
+        </div>
+      )}
+
+      {error && pipeline && pipeline.status !== 'failed' && (
+        <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+          <p className="font-medium">{t('recoverableError')}</p>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {pipeline?.status === 'failed' || (error && !pipeline) ? (
         <PipelineErrorState
           pipeline={pipeline}
           error={error}

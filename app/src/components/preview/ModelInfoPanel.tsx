@@ -75,6 +75,7 @@ export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
           <DimensionCard label={t('height')} value={info.boundingBox.height} color="text-green-500" />
           <DimensionCard label={t('depth')} value={info.boundingBox.depth} color="text-blue-500" />
         </div>
+        <p className="text-xs text-muted-foreground mt-2">{t('sourceUnitsHint')}</p>
       </CardContent>
     </Card>
   );
@@ -93,7 +94,7 @@ function DimensionCard({
     <div className="bg-muted rounded p-2 text-center">
       <div className={`text-xs ${color} font-medium`}>{label}</div>
       <div className="text-sm mt-0.5">
-        {formatDimension(value)}
+        {formatDimension(value, '')}
       </div>
     </div>
   );

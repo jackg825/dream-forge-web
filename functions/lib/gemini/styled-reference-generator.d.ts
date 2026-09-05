@@ -10,6 +10,7 @@
  */
 import type { ViewAngle, ImageAnalysisResult } from '../rodin/types';
 import { type StyleId } from '../config/styles';
+import { type GeminiImageModel, type GenerationColors } from './generation-options';
 /**
  * Result of styled reference generation
  */
@@ -20,13 +21,15 @@ export interface StyledReferenceResult {
     mimeType: string;
     /** The view angle this reference represents */
     sourceAngle: ViewAngle;
-    /** Extracted color palette (7 dominant colors) */
+    /** Requested color palette, or extracted colors when no swatches were supplied */
     colorPalette: string[];
 }
 /**
  * Options for styled reference generation
  */
-export interface StyledReferenceOptions {
+export interface StyledReferenceOptions extends GenerationColors {
+    geminiModel?: GeminiImageModel;
+    hint?: string;
     /** Detected view angle of the original image */
     detectedAngle: ViewAngle;
     /** Selected figure style (bobblehead, chibi, cartoon, emoji, none) */

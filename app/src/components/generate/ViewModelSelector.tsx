@@ -81,6 +81,7 @@ export function ViewModelSelector({
             <button
               key={modelId}
               type="button"
+              aria-pressed={isSelected}
               onClick={() => handleModelClick(modelId)}
               disabled={disabled}
               className={cn(

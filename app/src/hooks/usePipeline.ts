@@ -217,6 +217,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
 
           latestPipeline = nextPipeline;
           setPipeline(nextPipeline);
+          setError(null);
           setLoading(false);
           refreshUrlsInBackground(nextPipeline, revision);
         } else {
@@ -279,6 +280,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
           imageAnalysis,
           geminiModel,
         });
+        setError(null);
         return result.data.pipelineId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create pipeline';
@@ -289,7 +291,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
     []
   );
 
-  // Generate all 6 images (realtime mode)
+  // Generate four views (realtime mode)
   // Accepts optional overridePipelineId for immediate use after creation
   const generateImages = useCallback(async (overridePipelineId?: string): Promise<GeneratePipelineImagesResponse> => {
     const targetPipelineId = overridePipelineId || pipelineId;
@@ -304,9 +306,10 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       const generateFn = httpsCallable<
         { pipelineId: string },
         GeneratePipelineImagesResponse
-      >(functions, 'generatePipelineImages', { timeout: 120000 });
+      >(functions, 'generatePipelineImages', { timeout: 310000 });
 
       const result = await generateFn({ pipelineId: targetPipelineId });
+      setError(null);
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to generate images';
@@ -329,9 +332,10 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
         const regenerateFn = httpsCallable<
           { pipelineId: string; viewType: string; angle: string; hint?: string },
           { viewType: string; angle: string }
-        >(functions, 'regeneratePipelineImage');
+        >(functions, 'regeneratePipelineImage', { timeout: 130000 });
 
         await regenerateFn({ pipelineId, viewType, angle, hint });
+        setError(null);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to regenerate image';
         setError(message);
@@ -357,9 +361,10 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       const startMeshFn = httpsCallable<
         { pipelineId: string; provider?: ModelProvider; providerOptions?: ProviderOptions },
         StartPipelineMeshResponse
-      >(functions, 'startPipelineMesh');
+      >(functions, 'startPipelineMesh', { timeout: 130000 });
 
       const result = await startMeshFn({ pipelineId, provider, providerOptions });
+      setError(null);
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start mesh generation';
@@ -381,9 +386,10 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       const checkStatusFn = httpsCallable<
         { pipelineId: string },
         CheckPipelineStatusResponse
-      >(functions, 'checkPipelineStatus');
+      >(functions, 'checkPipelineStatus', { timeout: 130000 });
 
       const result = await checkStatusFn({ pipelineId });
+      setError(null);
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to check status';
@@ -405,9 +411,10 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       const startTextureFn = httpsCallable<
         { pipelineId: string },
         StartPipelineTextureResponse
-      >(functions, 'startPipelineTexture');
+      >(functions, 'startPipelineTexture', { timeout: 130000 });
 
       const result = await startTextureFn({ pipelineId });
+      setError(null);
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to start texture generation';
@@ -443,6 +450,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       >(functions, 'updatePipelineAnalysis');
 
       await updateFn({ pipelineId, imageAnalysis, userDescription, selectedStyle, geminiModel });
+      setError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update analysis';
       setError(message);
@@ -469,6 +477,7 @@ export function usePipeline(pipelineId: string | null): UsePipelineReturn {
       >(functions, 'resetPipelineStep');
 
       await resetFn({ pipelineId, targetStep, keepResults });
+      setError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to reset step';
       setError(message);

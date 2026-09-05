@@ -1016,6 +1016,7 @@ export interface Pipeline {
 
   // Credits
   creditsCharged: {
+    views?: number;
     mesh: number;
     texture: number;
   };

@@ -76,6 +76,7 @@ export function ProviderSelector({
             <button
               key={provider.id}
               type="button"
+              aria-pressed={isSelected}
               onClick={() => handleProviderClick(provider.id)}
               disabled={disabled}
               className={cn(

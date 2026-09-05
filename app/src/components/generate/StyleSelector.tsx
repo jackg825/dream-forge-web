@@ -127,11 +127,8 @@ export function StyleSelector({
           const hasPreviewImages = style.previewImages.length > 0;
 
           return (
-            <button
+            <div
               key={styleId}
-              type="button"
-              onClick={() => onChange(styleId)}
-              disabled={isDisabled}
               style={{
                 '--style-accent': colorValue,
               } as React.CSSProperties}
@@ -158,6 +155,14 @@ export function StyleSelector({
                 ],
               )}
             >
+              <button
+                type="button"
+                className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2 disabled:cursor-not-allowed"
+                aria-label={t(`${styleId}.name`)}
+                aria-pressed={isSelected}
+                onClick={() => onChange(styleId)}
+                disabled={isDisabled}
+              />
               {/* AI Recommended Badge */}
               {isRecommended && !isSelected && (
                 <div className="absolute -top-2 -right-2 z-10">
@@ -240,7 +245,7 @@ export function StyleSelector({
                       setPreviewStyle(style);
                     }}
                     className={cn(
-                      "inline-flex items-center gap-1 text-xs font-medium mt-1",
+                      "relative z-20 inline-flex items-center gap-1 text-xs font-medium mt-1 min-h-11",
                       "transition-colors duration-200",
                       "hover:underline underline-offset-2"
                     )}
@@ -251,7 +256,7 @@ export function StyleSelector({
                   </button>
                 )}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

@@ -53,14 +53,8 @@ const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
 const mode_configs_1 = require("./mode-configs");
 const styles_1 = require("../config/styles");
+const generation_options_1 = require("./generation-options");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-// Maps model keys to actual Gemini API model IDs
-const GEMINI_MODEL_IDS = {
-    'gemini-2.5-flash': 'gemini-2.5-flash-image', // Legacy -> same API model
-    'gemini-2.5-flash-image': 'gemini-2.5-flash-image', // Direct mapping
-    'gemini-3-pro-image-preview': 'gemini-2.5-flash-image', // TODO: Update when Pro image model available
-};
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash-image';
 // Minimum delay between sequential API calls to avoid rate limiting
 const MIN_DELAY_BETWEEN_CALLS_MS = 500;
 /**
@@ -143,13 +137,16 @@ class MultiViewGenerator {
     imageAnalysis; // Full image analysis for feature extraction
     geminiModel; // Selected Gemini model for image generation
     selectedStyle; // User-selected figure style
-    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription, imageAnalysis, geminiModel = DEFAULT_GEMINI_MODEL, selectedStyle) {
+    colors;
+    constructor(apiKey, modeId = mode_configs_1.DEFAULT_MODE, userDescription, imageAnalysis, geminiModel = generation_options_1.DEFAULT_GEMINI_MODEL, selectedStyle, colors = {}) {
         this.apiKey = apiKey;
-        this.modeConfig = (0, mode_configs_1.getMode)(modeId);
+        const mode = (0, mode_configs_1.getMode)(modeId);
         this.userDescription = userDescription;
         this.imageAnalysis = imageAnalysis;
         this.geminiModel = geminiModel;
         this.selectedStyle = selectedStyle;
+        this.colors = (0, generation_options_1.resolveGenerationColors)({ ...colors, colorPalette: colors.colorPalette ?? imageAnalysis?.colorPalette });
+        this.modeConfig = { ...mode, mesh: { ...mode.mesh, colorCount: this.colors.colorCount } };
     }
     /**
      * Get the current mode configuration
@@ -166,7 +163,7 @@ class MultiViewGenerator {
      */
     async generateAllViews(referenceImageBase64, mimeType) {
         functions.logger.info('Starting multi-view generation', {
-            model: GEMINI_MODEL_IDS[this.geminiModel],
+            model: (0, generation_options_1.resolveGeminiImageModel)(this.geminiModel),
             geminiModel: this.geminiModel,
             mode: this.modeConfig.id,
             modeName: this.modeConfig.name,
@@ -223,7 +220,7 @@ class MultiViewGenerator {
         return {
             byView: byView,
             unified: sortedColors,
-            dominantColors: sortedColors.slice(0, 7), // Top 7 colors
+            dominantColors: sortedColors.slice(0, this.colors.colorCount),
         };
     }
     /**
@@ -243,7 +240,7 @@ class MultiViewGenerator {
     async generateAllViewsParallel(referenceImageBase64, mimeType, onProgress) {
         const meshAngles = ['front', 'back', 'left', 'right'];
         functions.logger.info('Starting parallel multi-view generation', {
-            model: GEMINI_MODEL_IDS[this.geminiModel],
+            model: (0, generation_options_1.resolveGeminiImageModel)(this.geminiModel),
             geminiModel: this.geminiModel,
             mode: this.modeConfig.id,
             modeName: this.modeConfig.name,
@@ -320,11 +317,12 @@ class MultiViewGenerator {
      * @returns Views for the 3 remaining angles (excluding sourceAngle)
      */
     async generateViewsFromStyledReference(styledReferenceBase64, mimeType, sourceAngle, referenceColorPalette, onProgress) {
+        (0, generation_options_1.assertSupportedReferenceAngle)(sourceAngle);
         // Determine which angles to generate (all except sourceAngle)
         const allAngles = ['front', 'back', 'left', 'right'];
         const targetAngles = allAngles.filter((a) => a !== sourceAngle);
         functions.logger.info('Starting views from styled reference', {
-            model: GEMINI_MODEL_IDS[this.geminiModel],
+            model: (0, generation_options_1.resolveGeminiImageModel)(this.geminiModel),
             sourceAngle,
             targetAngles,
             colorPaletteCount: referenceColorPalette.length,
@@ -367,7 +365,7 @@ class MultiViewGenerator {
         });
         const prompt = this.buildFromReferencePrompt(sourceAngle, targetAngle, referenceColorPalette);
         return this.generateSingleView(styledReferenceBase64, mimeType, prompt, true, // Always extract colors for consistency
-        7);
+        this.colors.colorCount);
     }
     /**
      * Generate a single view from styled reference (for regeneration)
@@ -381,7 +379,7 @@ class MultiViewGenerator {
      */
     async generateSingleViewFromReference(styledReferenceBase64, mimeType, sourceAngle, targetAngle, referenceColorPalette, hint) {
         const prompt = this.buildFromReferencePrompt(sourceAngle, targetAngle, referenceColorPalette, hint);
-        return this.generateSingleView(styledReferenceBase64, mimeType, prompt, true, 7);
+        return this.generateSingleView(styledReferenceBase64, mimeType, prompt, true, this.colors.colorCount);
     }
     /**
      * Build prompt for generating a view from styled reference
@@ -392,15 +390,15 @@ class MultiViewGenerator {
      * - Only changes camera angle
      */
     buildFromReferencePrompt(sourceAngle, targetAngle, referenceColorPalette, hint) {
+        (0, generation_options_1.assertSupportedReferenceAngle)(sourceAngle);
         const styleConfig = this.selectedStyle ? (0, styles_1.getStyleConfig)(this.selectedStyle) : null;
         const styleName = styleConfig?.name || 'styled';
         // Get view info for target angle
         const targetInfo = this.getAngleInfo(targetAngle);
         const sourceInfo = this.getAngleInfo(sourceAngle);
         // Build color reference block
-        const colorBlock = referenceColorPalette.length > 0
-            ? `\nREFERENCE COLORS (use EXACTLY these colors):\n${referenceColorPalette.join(', ')}\n`
-            : '';
+        const colors = this.colors.colorPalette.length ? this.colors : { ...this.colors, colorPalette: referenceColorPalette };
+        const colorBlock = (0, generation_options_1.buildGenerationColorPrompt)(colors);
         // Build hint block if provided
         const hintBlock = hint
             ? `\n=== USER ADJUSTMENT ===\nThe user requests: "${hint}"\nApply this adjustment while maintaining style consistency and correct angle.\n=== END USER ADJUSTMENT ===\n`
@@ -446,7 +444,7 @@ ${hintBlock}
 === END REQUIREMENTS ===
 
 After generating the image, output the colors used:
-COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB
+COLORS: List the ${this.colors.colorCount} subject colors as comma-separated HEX codes.
 
 Generate the ${targetAngle.toUpperCase()} view now.`;
     }
@@ -483,7 +481,8 @@ Generate the ${targetAngle.toUpperCase()} view now.`;
      * Generate a single view with the given prompt
      */
     async generateSingleView(referenceImageBase64, mimeType, prompt, extractColors, expectedColorCount) {
-        const modelId = GEMINI_MODEL_IDS[this.geminiModel];
+        const modelId = (0, generation_options_1.resolveGeminiImageModel)(this.geminiModel);
+        prompt = `${prompt}\n\n${(0, generation_options_1.buildGenerationColorPrompt)(this.colors)}`;
         // Build generation config for Flash model
         const generationConfig = {
             responseModalities: ['TEXT', 'IMAGE'],
@@ -565,6 +564,9 @@ Generate the ${targetAngle.toUpperCase()} view now.`;
                 });
             }
         }
+        if (this.colors.colorPalette.length) {
+            result.colorPalette = this.colors.colorPalette;
+        }
         return result;
     }
 }
@@ -578,11 +580,11 @@ exports.MultiViewGenerator = MultiViewGenerator;
  * @param geminiModel - Gemini model for image generation (default: 'gemini-2.5-flash')
  * @param selectedStyle - User-selected figure style (bobblehead, chibi, cartoon, emoji)
  */
-function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription, imageAnalysis, geminiModel = DEFAULT_GEMINI_MODEL, selectedStyle) {
+function createMultiViewGenerator(modeId = mode_configs_1.DEFAULT_MODE, userDescription, imageAnalysis, geminiModel = generation_options_1.DEFAULT_GEMINI_MODEL, selectedStyle, colors = {}) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new functions.https.HttpsError('failed-precondition', 'Gemini API key not configured');
     }
-    return new MultiViewGenerator(apiKey, modeId, userDescription, imageAnalysis, geminiModel, selectedStyle);
+    return new MultiViewGenerator(apiKey, modeId, userDescription, imageAnalysis, geminiModel, selectedStyle, colors);
 }
 //# sourceMappingURL=multi-view-generator.js.map

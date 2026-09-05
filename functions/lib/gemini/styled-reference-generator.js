@@ -50,8 +50,8 @@ exports.generateStyledReference = generateStyledReference;
 const axios_1 = __importDefault(require("axios"));
 const functions = __importStar(require("firebase-functions"));
 const styles_1 = require("../config/styles");
+const generation_options_1 = require("./generation-options");
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL_ID = 'gemini-2.5-flash-image';
 /**
  * Analyze Gemini response for image and text data
  */
@@ -100,7 +100,7 @@ function analyzeGeminiResponse(response) {
 /**
  * Extract color palette from Gemini's text response
  */
-function extractColorPalette(text) {
+function extractColorPalette(text, colorCount) {
     if (!text)
         return [];
     // Look for COLORS: #RRGGBB, #RRGGBB, ... format
@@ -115,7 +115,7 @@ function extractColorPalette(text) {
     const hexColors = text.match(/#[0-9A-Fa-f]{6}/gi);
     if (hexColors && hexColors.length > 0) {
         const uniqueColors = [...new Set(hexColors.map((c) => c.toUpperCase()))];
-        return uniqueColors.slice(0, 7);
+        return uniqueColors.slice(0, colorCount);
     }
     return [];
 }
@@ -135,7 +135,7 @@ function getViewAngleDescription(angle) {
 /**
  * Build the prompt for styled reference generation
  */
-function buildStyledReferencePrompt(options) {
+function buildStyledReferencePrompt(options, colorCount) {
     const { detectedAngle, style, imageAnalysis, userDescription } = options;
     const styleConfig = (0, styles_1.getStyleConfig)(style);
     const viewDescription = getViewAngleDescription(detectedAngle);
@@ -192,8 +192,8 @@ REQUIREMENTS:
 IMPORTANT: Do NOT apply any stylization. Keep the subject looking natural and realistic.
 
 After generating the image, also output a color palette:
-COLORS: Extract the 7 most prominent colors from the subject as hex codes, comma-separated.
-Format: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB`;
+COLORS: Extract the ${colorCount} subject colors from the subject as hex codes, comma-separated.
+Format: COLORS: comma-separated HEX codes for the ${colorCount} subject colors`;
     }
     // For other styles, apply transformation
     return `You are generating a STYLED REFERENCE IMAGE for 3D figure generation.
@@ -224,8 +224,8 @@ The style, colors, and proportions you establish here will be replicated in all 
 Be precise and consistent with the style application.
 
 After generating the image, also output a color palette:
-COLORS: Extract the 7 most prominent colors from the styled figure as hex codes, comma-separated.
-Format: COLORS: #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB`;
+COLORS: Extract the ${colorCount} subject colors from the styled figure as hex codes, comma-separated.
+Format: COLORS: comma-separated HEX codes for the ${colorCount} subject colors`;
 }
 /**
  * Generate a styled reference image from the original photo
@@ -244,15 +244,20 @@ async function generateStyledReference(referenceImageBase64, mimeType, options) 
         throw new functions.https.HttpsError('failed-precondition', 'Gemini API key not configured');
     }
     const { detectedAngle, style } = options;
+    (0, generation_options_1.assertSupportedReferenceAngle)(detectedAngle);
+    const modelId = (0, generation_options_1.resolveGeminiImageModel)(options.geminiModel);
+    const colors = (0, generation_options_1.resolveGenerationColors)({ ...options, colorPalette: options.colorPalette ?? options.imageAnalysis?.colorPalette });
     functions.logger.info('Generating styled reference image', {
-        model: GEMINI_MODEL_ID,
+        model: modelId,
         style,
         detectedAngle,
         hasImageAnalysis: !!options.imageAnalysis,
         hasUserDescription: !!options.userDescription,
     });
-    const prompt = buildStyledReferencePrompt(options);
-    const response = await axios_1.default.post(`${GEMINI_API_BASE}/${GEMINI_MODEL_ID}:generateContent`, {
+    const colorPrompt = (0, generation_options_1.buildGenerationColorPrompt)(colors);
+    const hintPrompt = options.hint ? `\nUSER ADJUSTMENT: ${options.hint}\nApply this adjustment while preserving the requested angle and identity.` : '';
+    const prompt = `${buildStyledReferencePrompt(options, colors.colorCount)}\n\n${colorPrompt}${hintPrompt}`;
+    const response = await axios_1.default.post(`${GEMINI_API_BASE}/${modelId}:generateContent`, {
         contents: [
             {
                 parts: [
@@ -282,7 +287,7 @@ async function generateStyledReference(referenceImageBase64, mimeType, options) 
     });
     const analysis = analyzeGeminiResponse(response.data);
     functions.logger.info('Styled reference generation response', {
-        model: GEMINI_MODEL_ID,
+        model: modelId,
         hasImage: analysis.hasImage,
         hasText: !!analysis.textContent,
         blockReason: analysis.blockReason,
@@ -314,7 +319,7 @@ async function generateStyledReference(referenceImageBase64, mimeType, options) 
     const responseMimeType = imagePart.inlineData.mimeType;
     const validMimeTypes = ['image/png', 'image/jpeg', 'image/webp'];
     // Extract color palette from text response
-    const colorPalette = extractColorPalette(analysis.textContent);
+    const colorPalette = colors.colorPalette.length ? colors.colorPalette : extractColorPalette(analysis.textContent, colors.colorCount).slice(0, colors.colorCount);
     functions.logger.info('Styled reference generation complete', {
         style,
         sourceAngle: detectedAngle,

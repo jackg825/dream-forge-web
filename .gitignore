@@ -57,3 +57,6 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# Local image benchmark inputs, outputs, and credentials
+.image-benchmark/
