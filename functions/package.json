@@ -4,6 +4,7 @@
   "description": "Cloud Functions for Dream Forge Photo-to-3D",
   "main": "lib/index.js",
   "scripts": {
+    "test": "node --test tests/*.test.cjs",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",

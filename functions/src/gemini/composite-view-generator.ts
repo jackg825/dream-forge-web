@@ -1,11 +1,11 @@
 /**
  * Composite View Generator
  *
- * Generates a 2x2 grid image with 4 orthographic views using Gemini 3 Pro.
+ * Generates a 2x2 grid image with 4 orthographic views using the selected Gemini model.
  * This replaces the multi-view generator's 4 separate API calls with a single call,
- * ensuring perfect consistency across all views.
+ * requesting consistent appearance across all views.
  *
- * Output: 2048x2048 image containing:
+ * Output: a native-resolution square image containing:
  * - Top-left: FRONT view (0 degrees)
  * - Top-right: BACK view (180 degrees)
  * - Bottom-left: LEFT view (90 degrees)
@@ -18,14 +18,18 @@ import type { GeminiResponse } from './types';
 import type { ImageAnalysisResult } from '../rodin/types';
 import { type StyleId, getStyleConfig, DEFAULT_STYLE } from '../config/styles';
 import { cropCompositeView, type CropResult } from './image-cropper';
+import {
+  type GeminiImageModel, type GenerationColors,
+  resolveGeminiImageModel, resolveGenerationColors, buildGenerationColorPrompt,
+} from './generation-options';
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const COMPOSITE_MODEL = 'gemini-3-pro-image-preview';
 
 /**
  * Options for composite view generation
  */
-export interface CompositeViewOptions {
+export interface CompositeViewOptions extends GenerationColors {
+  geminiModel?: GeminiImageModel;
   userDescription?: string | null;
   imageAnalysis?: ImageAnalysisResult | null;
   selectedStyle?: StyleId;
@@ -44,27 +48,18 @@ export interface CompositeViewResult {
 /**
  * Build the composite view prompt
  */
-function buildCompositePrompt(options: CompositeViewOptions): string {
+function buildCompositePrompt(options: CompositeViewOptions, boardSize: number, colorCount: number): string {
+  const viewSize = boardSize / 2;
   const style = getStyleConfig(options.selectedStyle || DEFAULT_STYLE);
   const { meshStyle, proportions, features } = style.promptModifiers;
 
   // Build subject description from analysis
   let subjectBlock = '';
-  if (options.imageAnalysis?.promptDescription) {
+  if (options.userDescription || options.imageAnalysis?.promptDescription) {
     subjectBlock = `
 === SUBJECT DESCRIPTION ===
 
-${options.imageAnalysis.promptDescription}
-
-Maintain this exact subject identity across all 4 views.
-
-=== END SUBJECT DESCRIPTION ===
-`;
-  } else if (options.userDescription) {
-    subjectBlock = `
-=== SUBJECT DESCRIPTION ===
-
-This is ${options.userDescription}.
+${options.userDescription || options.imageAnalysis?.promptDescription}
 
 Maintain this exact subject identity across all 4 views.
 
@@ -76,18 +71,18 @@ Maintain this exact subject identity across all 4 views.
 
 === GRID LAYOUT (CRITICAL) ===
 
-The output image MUST be exactly 2048x2048 pixels, divided into 4 equal quadrants:
+The output image MUST be exactly ${boardSize}x${boardSize} pixels, divided into 4 equal quadrants:
 
 +-------------------+-------------------+
 |   TOP-LEFT        |   TOP-RIGHT       |
 |   FRONT VIEW      |   BACK VIEW       |
 |   (0 degrees)     |   (180 degrees)   |
-|   1024x1024       |   1024x1024       |
+|   ${viewSize}x${viewSize}       |   ${viewSize}x${viewSize}       |
 +-------------------+-------------------+
 |   BOTTOM-LEFT     |   BOTTOM-RIGHT    |
 |   LEFT VIEW       |   RIGHT VIEW      |
 |   (90 degrees)    |   (270 degrees)   |
-|   1024x1024       |   1024x1024       |
+|   ${viewSize}x${viewSize}       |   ${viewSize}x${viewSize}       |
 +-------------------+-------------------+
 
 === END GRID LAYOUT ===
@@ -100,7 +95,7 @@ ${subjectBlock}
 
 **Feature Emphasis**: ${features}
 
-Render in cel-shaded style with approximately 7 distinct, high-contrast solid colors.
+Render in cel-shaded style with approximately ${colorCount} distinct, high-contrast solid colors.
 No gradients, no soft shadows - just clean blocks of flat color.
 Each color zone has crisp, pixel-sharp edges.
 
@@ -155,7 +150,7 @@ DO NOT:
 - Orthographic projection (no perspective distortion)
 - Subject centered in each quadrant, fills 90% of quadrant
 - Completely flat lighting - no cast shadows, no highlights
-- Output exactly 2048x2048 pixels
+- Output exactly ${boardSize}x${boardSize} pixels
 
 === END RENDERING REQUIREMENTS ===
 
@@ -163,7 +158,7 @@ Generate the 2x2 grid image now.`;
 }
 
 /**
- * Generate composite view using Gemini 3 Pro
+ * Generate a composite view using the selected Gemini image model
  *
  * @param referenceImageBase64 - Base64 encoded reference image
  * @param mimeType - MIME type of the input image
@@ -183,18 +178,21 @@ export async function generateCompositeView(
     );
   }
 
+  const modelId = resolveGeminiImageModel(options.geminiModel);
+  const colors = resolveGenerationColors({ ...options, colorPalette: options.colorPalette ?? options.imageAnalysis?.colorPalette });
   functions.logger.info('Starting composite view generation', {
-    model: COMPOSITE_MODEL,
+    model: modelId,
     hasUserDescription: !!options.userDescription,
     hasImageAnalysis: !!options.imageAnalysis,
     selectedStyle: options.selectedStyle || DEFAULT_STYLE,
   });
 
-  const prompt = buildCompositePrompt(options);
+  const boardSize = modelId === 'gemini-3-pro-image' ? 2048 : 1024;
+  const prompt = `${buildCompositePrompt(options, boardSize, colors.colorCount)}\n\n${buildGenerationColorPrompt(colors)}`;
 
-  // Call Gemini 3 Pro API
+  // Request 2K only on models that support it; Flash keeps its native 1K output.
   const response = await axios.post<GeminiResponse>(
-    `${GEMINI_API_BASE}/${COMPOSITE_MODEL}:generateContent`,
+    `${GEMINI_API_BASE}/${modelId}:generateContent`,
     {
       contents: [
         {
@@ -213,6 +211,10 @@ export async function generateCompositeView(
       ],
       generationConfig: {
         responseModalities: ['IMAGE'],
+        imageConfig: {
+          aspectRatio: '1:1',
+          ...(modelId === 'gemini-3-pro-image' && { imageSize: '2K' }),
+        },
       },
     },
     {

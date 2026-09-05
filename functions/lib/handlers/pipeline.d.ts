@@ -42,7 +42,7 @@ export declare const generatePipelineImages: functions.HttpsFunction & functions
 /**
  * Regenerate a single view
  *
- * Allows user to regenerate individual views without regenerating all 6.
+ * Allows user to regenerate individual views without regenerating the other views.
  */
 export declare const regeneratePipelineImage: functions.HttpsFunction & functions.Runnable<any>;
 /**

@@ -2,7 +2,7 @@
  * Image Cropper for Composite View Generation
  *
  * Crops a 2×2 grid image into 4 separate view images.
- * Used with Gemini 3 Pro composite generation.
+ * Preserves the model's native output resolution.
  */
 /**
  * Result of cropping a composite 2×2 grid image
@@ -25,7 +25,7 @@ export interface CropResult {
  * │ (0,half) │ (half,half)│
  * └──────────┴──────────┘
  *
- * @param compositeImage - The 2048×2048 composite image buffer
- * @returns 4 separate 1024×1024 view images
+ * @param compositeImage - A square composite image with even dimensions
+ * @returns 4 separate view images, each half the board width and height
  */
 export declare function cropCompositeView(compositeImage: Buffer): Promise<CropResult>;
