@@ -1,0 +1,19 @@
+{
+  "samples": [
+    {
+      "id": "cowboy",
+      "path": ".image-benchmark/inputs/cowboy.png"
+    },
+    {
+      "id": "handbag",
+      "path": ".image-benchmark/inputs/handbag.png"
+    },
+    {
+      "id": "race-car",
+      "path": "app/public/showcase/race_car_origin.jpg"
+    }
+  ],
+  "providers": ["openai", "gemini", "seedream"],
+  "outputDir": ".image-benchmark/2026-09-05-pilot",
+  "prompt": "Create one square 2048 by 2048 image containing a precisely aligned 2 by 2 turnaround sheet of the SINGLE main object in the reference image. Preserve the object's existing style, identity, proportions, materials, colors, visible text and every distinctive accessory. Do not redesign or stylize it. Use four equal square cells with these exact positions: TOP LEFT = straight front view, TOP RIGHT = straight rear view, BOTTOM LEFT = the object's own left side profile, BOTTOM RIGHT = the object's own right side profile. The camera moves around one unchanged object; the object does not change its pose or rearrange its parts. For a person, left and right are the person's anatomical sides. For a vehicle, left and right are defined from the driver's seat facing forward. Side views must be opposite true profiles, not duplicate or mirrored copies with accessories swapped. Keep accessories attached to the same physical side in all views. Preserve visible lettering where it belongs on the object, but do not invent lettering on unseen surfaces. Infer unseen surfaces conservatively and consistently. Use a pure white background and even neutral lighting throughout. Keep the complete object, including any existing base, within each cell with at least five percent clear margin. Use a consistent physical scale across the four views. No object or shadow may cross a cell boundary. Do not add a new base, extra accessories, another subject, panel labels, captions, borders, grid lines, or watermarks. Return only the single four-view sheet."
+}

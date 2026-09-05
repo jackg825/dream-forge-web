@@ -102,6 +102,8 @@ Gemini 2.5 Flash Image 與 3.1 Flash Lite Image 的四張 1K 輸出分別約 $0.
 
 ## 5. 可重現 benchmark：以通過成本決定，不把文件宣稱當實測
 
+**後續首輪小樣已收斂為 GPT Image 2 medium、Gemini 3 Pro Image、Seedream 5.0 Lite。** GPT medium 的 2K 圖片輸出估價低於 Gemini Pro，不應因整合便利或 high 檔的價格被延後測試。以下六模型／24 件設計是擴大評估方案；先執行 [三樣本、九次請求的小樣計畫](2026-09-05-image-generation-pilot.md)，再依結果決定擴大範圍。
+
 **第一階段只比較圖片，執行前另行核准付費額度；本次不執行。** 建議先測 Gemini 3.1 Flash、Gemini 3 Pro、Seedream 5.0 Lite、FLUX.2 Klein 9B、FLUX.2 Pro、GPT Image 2 medium 六個設定。用相同輸入、相同視角要求，各測「四張／基準加三張」與「2K 四格」，再為前兩名加測 4K 或 high。不要一次測所有品質與模型，造成難以解讀的成本擴張。
 
 1. **資料集**：24 件有使用權的實物，分為單色簡單造型、不對稱配件、文字／標誌、細肢或突出部件、毛髮／紋理、透明／反光六類，每類 4 件。每件保留一張前視輸入及四面真實照片。真實背面只供評分，不送入單照片實驗；另外建立多照片輸入組，區分「資料不足」與「模型能力不足」。
