@@ -333,6 +333,9 @@ export interface AdminPreview {
     provider?: ProviderType;
     taskId?: string;
     taskStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+    operationId?: string;
+    imageOperationIds?: Partial<Record<PipelineMeshAngle, string>>;
+    subscriptionKey?: string;
     createdAt?: FirebaseFirestore.Timestamp;
     createdBy?: string;
 }

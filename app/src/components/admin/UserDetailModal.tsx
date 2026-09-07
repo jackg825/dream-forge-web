@@ -28,12 +28,13 @@ import type { AdminUser, AdminTransaction, AdminTransactionType, UserTier } from
 
 interface UserDetailModalProps {
   user: AdminUser | null;
+  error: string | null;
   open: boolean;
   onClose: () => void;
   transactions: AdminTransaction[];
   transactionsLoading: boolean;
-  transactionsPagination: { total: number; hasMore: boolean } | null;
-  onFetchTransactions: (userId: string) => Promise<void>;
+  transactionsPagination: { total: number; hasMore: boolean; limit: number; offset: number } | null;
+  onFetchTransactions: (userId: string, limit?: number, offset?: number) => Promise<void>;
   onAddCredits: (userId: string, amount: number, reason?: string) => Promise<boolean>;
   onDeductCredits: (userId: string, amount: number, reason: string) => Promise<boolean>;
   onUpdateTier: (userId: string, tier: UserTier) => Promise<boolean>;
@@ -64,6 +65,7 @@ function formatDate(dateStr: string | null): string {
 
 export function UserDetailModal({
   user,
+  error,
   open,
   onClose,
   transactions,
@@ -83,20 +85,26 @@ export function UserDetailModal({
   const [deductAmount, setDeductAmount] = useState('');
   const [deductReason, setDeductReason] = useState('');
 
+  const userId = user?.uid;
+  const isMutating = addingCredits || deductingCredits || updatingTier;
+  const validAddAmount = Number.isSafeInteger(Number(addAmount)) && Number(addAmount) > 0;
+  const validDeductAmount = Number.isSafeInteger(Number(deductAmount))
+    && Number(deductAmount) > 0 && Number(deductAmount) <= (user?.credits ?? 0);
+
   // Fetch transactions when user changes
   useEffect(() => {
-    if (user && open) {
-      onFetchTransactions(user.uid);
+    if (userId && open) {
+      onFetchTransactions(userId);
     }
-  }, [user, open, onFetchTransactions]);
+  }, [userId, open, onFetchTransactions]);
 
   if (!user) return null;
 
   const handleAddCredits = async () => {
-    const amount = parseInt(addAmount, 10);
-    if (isNaN(amount) || amount <= 0) return;
+    const amount = Number(addAmount);
+    if (!validAddAmount || isMutating) return;
 
-    const success = await onAddCredits(user.uid, amount, addReason || undefined);
+    const success = await onAddCredits(user.uid, amount, addReason.trim() || undefined);
     if (success) {
       setAddAmount('10');
       setAddReason('');
@@ -106,8 +114,8 @@ export function UserDetailModal({
   };
 
   const handleDeductCredits = async () => {
-    const amount = parseInt(deductAmount, 10);
-    if (isNaN(amount) || amount <= 0 || !deductReason.trim()) return;
+    const amount = Number(deductAmount);
+    if (!validDeductAmount || !deductReason.trim() || isMutating) return;
 
     const success = await onDeductCredits(user.uid, amount, deductReason.trim());
     if (success) {
@@ -119,14 +127,14 @@ export function UserDetailModal({
   };
 
   const handleTierChange = async (newTier: UserTier) => {
-    await onUpdateTier(user.uid, newTier);
+    if (!isMutating) await onUpdateTier(user.uid, newTier);
   };
 
   const isUnlimited = user.credits >= 999999;
   const isPremium = user.tier === 'premium';
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !isMutating && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-3">
@@ -145,6 +153,8 @@ export function UserDetailModal({
             )}
           </DialogTitle>
         </DialogHeader>
+
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
         <Tabs defaultValue="credits" className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="flex-shrink-0 w-full grid grid-cols-2">
@@ -194,7 +204,7 @@ export function UserDetailModal({
                     size="sm"
                     variant="outline"
                     onClick={() => handleTierChange('free')}
-                    disabled={updatingTier}
+                    disabled={isMutating}
                     className="gap-1"
                   >
                     {updatingTier ? (
@@ -208,7 +218,7 @@ export function UserDetailModal({
                   <Button
                     size="sm"
                     onClick={() => handleTierChange('premium')}
-                    disabled={updatingTier}
+                    disabled={isMutating}
                     className="gap-1 bg-purple-600 hover:bg-purple-700"
                   >
                     {updatingTier ? (
@@ -235,6 +245,8 @@ export function UserDetailModal({
                     id="add-amount"
                     type="number"
                     min="1"
+                    step="1"
+                    disabled={isMutating}
                     value={addAmount}
                     onChange={(e) => setAddAmount(e.target.value)}
                     placeholder="10"
@@ -244,6 +256,8 @@ export function UserDetailModal({
                   <Label htmlFor="add-reason">原因 (選填)</Label>
                   <Input
                     id="add-reason"
+                    maxLength={1000}
+                    disabled={isMutating}
                     value={addReason}
                     onChange={(e) => setAddReason(e.target.value)}
                     placeholder="活動獎勵"
@@ -252,7 +266,7 @@ export function UserDetailModal({
               </div>
               <Button
                 onClick={handleAddCredits}
-                disabled={addingCredits || !addAmount}
+                disabled={isMutating || !validAddAmount}
                 className="w-full gap-2"
               >
                 {addingCredits ? (
@@ -277,6 +291,8 @@ export function UserDetailModal({
                     id="deduct-amount"
                     type="number"
                     min="1"
+                    step="1"
+                    disabled={isMutating}
                     max={user.credits}
                     value={deductAmount}
                     onChange={(e) => setDeductAmount(e.target.value)}
@@ -287,6 +303,8 @@ export function UserDetailModal({
                   <Label htmlFor="deduct-reason">原因 (必填)</Label>
                   <Input
                     id="deduct-reason"
+                    maxLength={1000}
+                    disabled={isMutating}
                     value={deductReason}
                     onChange={(e) => setDeductReason(e.target.value)}
                     placeholder="手動調整"
@@ -295,7 +313,7 @@ export function UserDetailModal({
               </div>
               <Button
                 onClick={handleDeductCredits}
-                disabled={deductingCredits || !deductAmount || !deductReason.trim()}
+                disabled={isMutating || !validDeductAmount || !deductReason.trim()}
                 variant="destructive"
                 className="w-full gap-2"
               >
@@ -310,7 +328,7 @@ export function UserDetailModal({
           </TabsContent>
 
           <TabsContent value="transactions" className="flex-1 overflow-y-auto mt-4">
-            {transactionsLoading ? (
+            {transactionsLoading && transactions.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
@@ -354,6 +372,20 @@ export function UserDetailModal({
                   );
                 })}
               </div>
+            )}
+            {transactionsPagination?.hasMore && (
+              <Button
+                variant="outline"
+                className="mt-4 w-full"
+                disabled={transactionsLoading}
+                onClick={() => onFetchTransactions(
+                  user.uid,
+                  transactionsPagination.limit,
+                  transactionsPagination.offset + transactionsPagination.limit
+                )}
+              >
+                {transactionsLoading ? t('common.loading') : t('admin.loadMore')}
+              </Button>
             )}
           </TabsContent>
         </Tabs>

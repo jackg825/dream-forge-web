@@ -6,7 +6,7 @@
  * Displays orders in a kanban-style board grouped by status
  */
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,9 +17,10 @@ import {
   AlertTriangle,
   Truck,
   Package,
+  XCircle,
+  RotateCcw,
 } from 'lucide-react';
 import type { AdminOrder, OrderStatus } from '@/types/order';
-import { ORDER_STATUS_LABELS } from '@/types/order';
 import { FillImage } from '@/components/ui/fill-image';
 
 interface OrderKanbanProps {
@@ -41,10 +42,13 @@ const KANBAN_COLUMNS: {
   { status: 'quality_check', icon: AlertTriangle, color: 'text-orange-600', bgColor: 'bg-orange-50 dark:bg-orange-900/20' },
   { status: 'shipping', icon: Truck, color: 'text-cyan-600', bgColor: 'bg-cyan-50 dark:bg-cyan-900/20' },
   { status: 'delivered', icon: Package, color: 'text-green-600', bgColor: 'bg-green-50 dark:bg-green-900/20' },
+  { status: 'cancelled', icon: XCircle, color: 'text-gray-600', bgColor: 'bg-gray-50 dark:bg-gray-900/20' },
+  { status: 'refunded', icon: RotateCcw, color: 'text-red-600', bgColor: 'bg-red-50 dark:bg-red-900/20' },
 ];
 
 export function OrderKanban({ orders, onSelectOrder, selectedOrderId }: OrderKanbanProps) {
   const t = useTranslations('adminOrders');
+  const locale = useLocale();
 
   // Group orders by status
   const ordersByStatus = KANBAN_COLUMNS.reduce((acc, col) => {
@@ -52,15 +56,15 @@ export function OrderKanban({ orders, onSelectOrder, selectedOrderId }: OrderKan
     return acc;
   }, {} as Record<OrderStatus, AdminOrder[]>);
 
-  const formatPrice = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatPrice = (cents: number, currency: string) => {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'USD',
+      currency,
     }).format(cents / 100);
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('zh-TW', {
+    return new Date(dateStr).toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
@@ -81,7 +85,7 @@ export function OrderKanban({ orders, onSelectOrder, selectedOrderId }: OrderKan
                 <CardTitle className="flex items-center justify-between text-sm">
                   <span className={`flex items-center gap-2 ${column.color}`}>
                     <Icon className="h-4 w-4" />
-                    {ORDER_STATUS_LABELS[column.status]}
+                    {t(`status.${column.status}`)}
                   </span>
                   <Badge variant="secondary" className="ml-2">
                     {columnOrders.length}
@@ -122,17 +126,19 @@ interface OrderKanbanCardProps {
   order: AdminOrder;
   onClick: () => void;
   isSelected: boolean;
-  formatPrice: (cents: number) => string;
+  formatPrice: (cents: number, currency: string) => string;
   formatDate: (dateStr: string) => string;
 }
 
 function OrderKanbanCard({ order, onClick, isSelected, formatPrice, formatDate }: OrderKanbanCardProps) {
+  const t = useTranslations('adminOrders');
   const thumbnail = order.items[0]?.modelThumbnail;
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className={`p-3 rounded-lg bg-card border cursor-pointer transition-all hover:shadow-md ${
+      className={`w-full text-left p-3 rounded-lg bg-card border cursor-pointer transition-all hover:shadow-md ${
         isSelected ? 'ring-2 ring-primary' : ''
       }`}
     >
@@ -160,17 +166,17 @@ function OrderKanbanCard({ order, onClick, isSelected, formatPrice, formatDate }
               #{order.id.slice(-6).toUpperCase()}
             </span>
             <span className="text-sm font-semibold text-primary">
-              {formatPrice(order.payment.totalAmount)}
+              {formatPrice(order.payment.totalAmount, order.payment.currency)}
             </span>
           </div>
           <p className="text-xs text-muted-foreground truncate">
             {order.userDisplayName || order.userEmail}
           </p>
           <p className="text-xs text-muted-foreground">
-            {order.items.length} item{order.items.length > 1 ? 's' : ''} · {formatDate(order.createdAt)}
+            {t('itemCount', { count: order.items.reduce((sum, item) => sum + item.quantity, 0) })} · {formatDate(order.createdAt)}
           </p>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

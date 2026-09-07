@@ -42,7 +42,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateOrderStatusUseCase = void 0;
 const functions = __importStar(require("firebase-functions"));
 const order_1 = require("../../domain/order");
-const credits_1 = require("../../utils/credits");
 /**
  * Update Order Status Use Case
  */
@@ -62,56 +61,56 @@ class UpdateOrderStatusUseCase {
             newStatus: request.newStatus,
             adminId: request.adminId,
         });
-        // 1. Get order from repository
-        const order = await this.orderRepository.getById(request.orderId);
-        if (!order) {
-            throw new functions.https.HttpsError('not-found', 'Order not found');
-        }
-        const previousStatus = order.status;
-        // 2. Create aggregate and transition status
-        const orderAggregate = order_1.OrderAggregate.fromData(order);
-        let bonusCreditsAwarded;
-        // Handle special cases
-        switch (request.newStatus) {
-            case 'confirmed':
-                orderAggregate.confirm(request.adminId, request.adminNotes);
-                break;
-            case 'printing':
-                orderAggregate.startPrinting(request.adminId);
-                break;
-            case 'quality_check':
-                orderAggregate.startQualityCheck(request.adminId, request.adminNotes);
-                break;
-            case 'shipping':
-                if (!request.tracking) {
-                    throw new functions.https.HttpsError('invalid-argument', 'Tracking information required for shipping status');
+        const { previousOrder, order: updatedOrder } = await this.orderRepository.updateAtomically(request.orderId, (order) => {
+            const aggregate = order_1.OrderAggregate.fromData(order);
+            try {
+                switch (request.newStatus) {
+                    case 'confirmed':
+                        aggregate.confirm(request.adminId, request.adminNotes);
+                        break;
+                    case 'printing':
+                        aggregate.startPrinting(request.adminId);
+                        break;
+                    case 'quality_check':
+                        aggregate.startQualityCheck(request.adminId, request.adminNotes);
+                        break;
+                    case 'shipping':
+                        if (!request.tracking) {
+                            throw new functions.https.HttpsError('invalid-argument', 'Tracking information required for shipping status');
+                        }
+                        aggregate.ship(request.adminId, request.tracking);
+                        break;
+                    case 'delivered':
+                        aggregate.markDelivered(request.adminId);
+                        break;
+                    case 'refunded':
+                        aggregate.refund(request.adminId, request.reason || 'Refund recorded by admin');
+                        break;
+                    default:
+                        aggregate.transitionTo(request.newStatus, `admin:${request.adminId}`, request.reason);
                 }
-                orderAggregate.ship(request.adminId, request.tracking);
-                break;
-            case 'delivered':
-                bonusCreditsAwarded = orderAggregate.markDelivered(request.adminId);
-                // Award bonus credits to user
-                if (bonusCreditsAwarded > 0) {
-                    try {
-                        await (0, credits_1.refundCredits)(order.userId, bonusCreditsAwarded, `delivery-bonus:${order.id}`);
-                        functions.logger.info('Bonus credits awarded', {
-                            userId: order.userId,
-                            credits: bonusCreditsAwarded,
-                            orderId: order.id,
-                        });
-                    }
-                    catch (error) {
-                        functions.logger.error('Failed to award bonus credits', { error });
-                        // Don't fail the status update
-                    }
+            }
+            catch (error) {
+                if (error instanceof order_1.OrderTransitionError || error instanceof order_1.OrderValidationError) {
+                    throw new functions.https.HttpsError('failed-precondition', error.message);
                 }
-                break;
-            default:
-                orderAggregate.transitionTo(request.newStatus, `admin:${request.adminId}`, request.reason, request.adminNotes);
-        }
-        // 3. Save updated order
-        const updatedOrder = orderAggregate.toData();
-        await this.orderRepository.update(request.orderId, updatedOrder);
+                throw error;
+            }
+            const updated = aggregate.toData();
+            // Preserve administrator input for every transition, including delivery.
+            const change = updated.statusHistory[updated.statusHistory.length - 1];
+            if (request.reason)
+                change.reason = request.reason;
+            if (request.adminNotes) {
+                change.adminNotes = request.adminNotes;
+                updated.adminNotes = request.adminNotes;
+            }
+            return updated;
+        });
+        const previousStatus = previousOrder.status;
+        const bonusCreditsAwarded = request.newStatus === 'delivered'
+            ? updatedOrder.bonusCreditsAwarded
+            : undefined;
         // 4. Send notification
         try {
             await this.notificationService.sendOrderStatusNotification({

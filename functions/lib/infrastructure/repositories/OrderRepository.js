@@ -49,6 +49,17 @@ const ORDERS_COLLECTION = 'orders';
 const SHIPPING_ADDRESSES_COLLECTION = 'shippingAddresses';
 const PRINT_CONFIG_COLLECTION = 'printConfig';
 const USERS_COLLECTION = 'users';
+/** Firestore rejects optional fields whose values are undefined, including nested fields. */
+function omitUndefined(value) {
+    if (Array.isArray(value))
+        return value.map(omitUndefined);
+    if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+        return Object.fromEntries(Object.entries(value)
+            .filter(([, item]) => item !== undefined)
+            .map(([key, item]) => [key, omitUndefined(item)]));
+    }
+    return value;
+}
 /**
  * Convert Firestore Timestamp to Date
  */
@@ -103,7 +114,7 @@ class FirestoreOrderRepository {
     async create(order) {
         const orderRef = db.collection(ORDERS_COLLECTION).doc(order.id);
         await orderRef.set({
-            ...order,
+            ...omitUndefined(order),
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -132,7 +143,7 @@ class FirestoreOrderRepository {
     async update(orderId, updates) {
         const orderRef = db.collection(ORDERS_COLLECTION).doc(orderId);
         await orderRef.update({
-            ...updates,
+            ...omitUndefined(updates),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         functions.logger.info('Order updated', { orderId, updates: Object.keys(updates) });
@@ -142,6 +153,44 @@ class FirestoreOrderRepository {
         await this.update(orderId, {
             status: 'cancelled',
             cancelledAt: new Date(),
+        });
+    }
+    async updateAtomically(orderId, mutate) {
+        const orderRef = db.collection(ORDERS_COLLECTION).doc(orderId);
+        return db.runTransaction(async (transaction) => {
+            const previousOrder = convertOrderDoc(await transaction.get(orderRef));
+            if (!previousOrder) {
+                throw new functions.https.HttpsError('not-found', 'Order not found');
+            }
+            const order = mutate(structuredClone(previousOrder));
+            const bonus = order.status === 'delivered' && previousOrder.status !== 'delivered'
+                ? order.bonusCreditsAwarded || 0
+                : 0;
+            // Credits and the delivery record must commit together; transaction retries
+            // revalidate the status before awarding anything to the customer.
+            if (bonus > 0) {
+                const userRef = db.collection(USERS_COLLECTION).doc(order.userId);
+                const userDoc = await transaction.get(userRef);
+                if (!userDoc.exists) {
+                    throw new functions.https.HttpsError('failed-precondition', 'Order customer no longer exists');
+                }
+                transaction.update(userRef, {
+                    credits: admin.firestore.FieldValue.increment(bonus),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+                transaction.set(db.collection('transactions').doc(`delivery-bonus:${order.id}`), {
+                    userId: order.userId,
+                    type: 'bonus',
+                    amount: bonus,
+                    jobId: `delivery-bonus:${order.id}`,
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+            }
+            transaction.update(orderRef, {
+                ...omitUndefined(order),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            return { previousOrder, order };
         });
     }
     // ============================================
@@ -365,18 +414,19 @@ class FirestoreOrderRepository {
     // Admin Configuration (Write)
     // ============================================
     async updateMaterial(material) {
-        const doc = await db.collection(PRINT_CONFIG_COLLECTION).doc('materials').get();
-        const existing = doc.exists ? doc.data()?.items || [] : Object.values(types_1.MATERIAL_CONFIGS);
-        const index = existing.findIndex((m) => m.id === material.id);
-        if (index >= 0) {
-            existing[index] = material;
-        }
-        else {
-            existing.push(material);
-        }
-        await db.collection(PRINT_CONFIG_COLLECTION).doc('materials').set({
-            items: existing,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        const ref = db.collection(PRINT_CONFIG_COLLECTION).doc('materials');
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(ref);
+            const existing = doc.exists ? doc.data()?.items || [] : Object.values(types_1.MATERIAL_CONFIGS);
+            const index = existing.findIndex((item) => item.id === material.id);
+            if (index >= 0)
+                existing[index] = material;
+            else
+                existing.push(material);
+            transaction.set(ref, {
+                items: existing,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
         });
     }
     async updateSize(size) {
@@ -486,10 +536,19 @@ class FirestoreOrderRepository {
                 newCustomers++;
             }
         }
-        const revenue = orders.reduce((sum, o) => sum + o.payment.totalAmount, 0);
+        const revenueByCurrency = {};
+        for (const order of orders) {
+            if (order.payment.status !== 'completed')
+                continue;
+            const currency = order.payment.currency;
+            revenueByCurrency[currency] = (revenueByCurrency[currency] || 0) + order.payment.totalAmount;
+        }
+        // Keep the legacy field for compatibility. The dashboard uses currency totals.
+        const revenue = Object.values(revenueByCurrency).reduce((sum, value) => sum + value, 0);
         return {
             orders: orders.length,
             revenue,
+            revenueByCurrency,
             newCustomers,
         };
     }

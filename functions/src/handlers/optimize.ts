@@ -13,6 +13,8 @@
 
 import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
+import { randomUUID } from 'node:crypto';
+import { assertRecord, assertDocumentId, normalizeCallableData } from '../utils/admin-validation';
 import {
   optimizeMesh,
   getMeshAnalysis,
@@ -129,6 +131,72 @@ interface GetMeshAnalysisResponse {
 // Helper Functions
 // ============================================
 
+function validateModelSource(data: GetMeshAnalysisRequest): void {
+  assertRecord(data);
+  if (data.pipelineId !== undefined) assertDocumentId(data.pipelineId, 'Pipeline ID');
+  if (data.jobId !== undefined) assertDocumentId(data.jobId, 'Job ID');
+  if (data.pipelineId && data.jobId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Provide only one pipeline or job');
+  }
+  if (data.modelUrl !== undefined && (typeof data.modelUrl !== 'string' || !extractStorageReferenceFromUrl(data.modelUrl))) {
+    throw new functions.https.HttpsError('invalid-argument', 'Model URL must reference approved storage');
+  }
+  if (!data.pipelineId && !data.jobId && !data.modelUrl) {
+    throw new functions.https.HttpsError('invalid-argument', 'Must provide pipelineId, jobId, or modelUrl');
+  }
+}
+
+function validateOptimization(data: OptimizeMeshRequest): void {
+  validateModelSource(data);
+  if (data.outputFormat !== undefined && !['stl', 'glb'].includes(data.outputFormat)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Output format must be stl or glb');
+  }
+  if (data.previewOnly !== undefined && typeof data.previewOnly !== 'boolean') {
+    throw new functions.https.HttpsError('invalid-argument', 'previewOnly must be a boolean');
+  }
+  assertRecord(data.options, 'Optimization options');
+  const { simplify, repair, scale } = data.options;
+  for (const option of [simplify, repair, scale]) {
+    if (option !== undefined) {
+      assertRecord(option, 'Optimization option');
+      if (typeof option.enabled !== 'boolean') {
+        throw new functions.https.HttpsError('invalid-argument', 'Option enabled must be a boolean');
+      }
+    }
+  }
+  if (!simplify?.enabled && !repair?.enabled && !scale?.enabled) {
+    throw new functions.https.HttpsError('invalid-argument', 'At least one optimization option must be enabled');
+  }
+  if (simplify?.targetRatio !== undefined &&
+      (!Number.isFinite(simplify.targetRatio) || simplify.targetRatio < 0.1 || simplify.targetRatio > 1)) {
+    throw new functions.https.HttpsError('invalid-argument', 'Simplification ratio must be between 0.1 and 1');
+  }
+  for (const value of [simplify?.preserveTopology, repair?.fillHoles, repair?.fixNormals, repair?.makeWatertight]) {
+    if (value !== undefined && typeof value !== 'boolean') {
+      throw new functions.https.HttpsError('invalid-argument', 'Optimization flags must be booleans');
+    }
+  }
+  if (scale) {
+    for (const dimensions of [scale.targetSize, scale.printBedSize]) {
+      if (dimensions !== undefined) {
+        assertRecord(dimensions, 'Dimensions');
+        const values = [dimensions.width, dimensions.height, dimensions.depth];
+        if (!values.some((value) => value !== undefined) ||
+            values.some((value) => value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value <= 0)) ||
+            (dimensions === scale.printBedSize && values.some((value) => value === undefined))) {
+          throw new functions.https.HttpsError('invalid-argument', 'Dimensions must contain positive finite sizes');
+        }
+      }
+    }
+    if (scale.uniformScale !== undefined && (!Number.isFinite(scale.uniformScale) || scale.uniformScale <= 0)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Scale factor must be a positive finite number');
+    }
+    if (scale.enabled && !scale.targetSize && !scale.printBedSize && scale.uniformScale === undefined) {
+      throw new functions.https.HttpsError('invalid-argument', 'Scaling requires a target size, print bed or scale factor');
+    }
+  }
+}
+
 /**
  * Get model buffer from various sources
  */
@@ -136,7 +204,7 @@ async function getModelBuffer(
   pipelineId?: string,
   jobId?: string,
   modelUrl?: string
-): Promise<{ buffer: Buffer; storagePath?: string } | { error: string }> {
+): Promise<{ buffer: Buffer; storagePath: string; sourceField?: string; backend: string } | { error: string }> {
   // Priority: pipelineId > jobId > modelUrl
 
   if (pipelineId) {
@@ -149,10 +217,12 @@ async function getModelBuffer(
     const pipeline = pipelineDoc.data();
     const storedModels = [
       {
+        sourceField: 'texturedModelUrl',
         storagePath: pipeline?.texturedModelStoragePath,
         url: pipeline?.texturedModelUrl,
       },
       {
+        sourceField: 'meshUrl',
         storagePath: pipeline?.meshStoragePath,
         url: pipeline?.meshUrl,
       },
@@ -185,7 +255,7 @@ async function getModelBuffer(
       }
 
       const buffer = await downloadFile(reference.storagePath, reference.backend);
-      return { buffer, storagePath: reference.storagePath };
+      return { buffer, storagePath: reference.storagePath, sourceField: selectedModel.sourceField, backend: reference.backend };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
     }
@@ -199,18 +269,26 @@ async function getModelBuffer(
     }
 
     const job = jobDoc.data();
-    const modelUrl = job?.outputModelUrl || job?.modelUrl || job?.result?.modelUrl;
+    const storedModelUrl = job?.outputModelUrl || job?.modelUrl || job?.result?.modelUrl;
 
-    if (!modelUrl) {
+    if (!storedModelUrl) {
       return { error: 'Job has no model URL' };
     }
 
     try {
-      const reference = extractStorageReferenceFromUrl(modelUrl);
+      const reference = extractStorageReferenceFromUrl(storedModelUrl);
       if (!reference) return { error: 'Job model URL is not an approved storage URL' };
+      if (modelUrl) {
+        const requested = extractStorageReferenceFromUrl(modelUrl);
+        if (!requested || requested.storagePath !== reference.storagePath || requested.backend !== reference.backend) {
+          return { error: 'Model URL does not belong to this job' };
+        }
+      }
       return {
         buffer: await downloadFile(reference.storagePath, reference.backend),
         storagePath: reference.storagePath,
+        sourceField: job?.outputModelUrl ? 'outputModelUrl' : job?.modelUrl ? 'modelUrl' : 'result.modelUrl',
+        backend: reference.backend,
       };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
@@ -224,6 +302,7 @@ async function getModelBuffer(
       return {
         buffer: await downloadFile(reference.storagePath, reference.backend),
         storagePath: reference.storagePath,
+        backend: reference.backend,
       };
     } catch (e) {
       return { error: `Failed to download model: ${e}` };
@@ -273,23 +352,10 @@ export const optimizeMeshForPrint = functions
         );
       }
 
+      data = normalizeCallableData(data);
+      validateOptimization(data);
       const userId = context.auth.uid;
       const { pipelineId, jobId, modelUrl, options, outputFormat = 'stl', previewOnly = false } = data;
-
-      // 3. Validate request
-      if (!pipelineId && !jobId && !modelUrl) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Must provide pipelineId, jobId, or modelUrl'
-        );
-      }
-
-      if (!options || (!options.simplify?.enabled && !options.repair?.enabled && !options.scale?.enabled)) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'At least one optimization option must be enabled'
-        );
-      }
 
       try {
         // 3. Get model buffer
@@ -391,9 +457,8 @@ export const optimizeMeshForPrint = functions
         }
 
         // 6. Upload optimized model
-        const timestamp = Date.now();
         const extension = outputFormat;
-        const storagePath = `optimized/${userId}/${timestamp}_optimized.${extension}`;
+        const storagePath = `optimized/${userId}/${randomUUID()}_optimized.${extension}`;
         const contentType = outputFormat === 'stl' ? 'model/stl' : 'model/gltf-binary';
 
         const optimizedUrl = await uploadBuffer(
@@ -402,24 +467,24 @@ export const optimizeMeshForPrint = functions
           contentType
         );
 
-        // 7. Update pipeline/job document with optimized model info
-        if (pipelineId) {
-          await db.collection('pipelines').doc(pipelineId).update({
-            'optimization.status': 'completed',
-            'optimization.optimizedModelUrl': optimizedUrl,
-            'optimization.optimizedStoragePath': storagePath,
-            'optimization.preview': optimizationResult.preview,
-            'optimization.completedAt': admin.firestore.FieldValue.serverTimestamp(),
-          });
-        }
-
-        if (jobId) {
-          await db.collection('jobs').doc(jobId).update({
-            'optimization.status': 'completed',
-            'optimization.optimizedModelUrl': optimizedUrl,
-            'optimization.optimizedStoragePath': storagePath,
-            'optimization.preview': optimizationResult.preview,
-            'optimization.completedAt': admin.firestore.FieldValue.serverTimestamp(),
+        // Save only if the source still points to the model that was optimized.
+        // A confirmation during a long optimization must not attach the old result to a new mesh.
+        if (pipelineId || jobId) {
+          const sourceRef = db.collection(pipelineId ? 'pipelines' : 'jobs').doc((pipelineId || jobId)!);
+          await db.runTransaction(async (transaction) => {
+            const current = await transaction.get(sourceRef);
+            const currentUrl = modelResult.sourceField ? current.get(modelResult.sourceField) : undefined;
+            const reference = typeof currentUrl === 'string' ? extractStorageReferenceFromUrl(currentUrl) : null;
+            if (!reference || reference.storagePath !== modelResult.storagePath || reference.backend !== modelResult.backend) {
+              throw new functions.https.HttpsError('aborted', 'The source model changed during optimization; optimize the current model again');
+            }
+            transaction.update(sourceRef, {
+              'optimization.status': 'completed',
+              'optimization.optimizedModelUrl': optimizedUrl,
+              'optimization.optimizedStoragePath': storagePath,
+              'optimization.preview': optimizationResult.preview,
+              'optimization.completedAt': admin.firestore.FieldValue.serverTimestamp(),
+            });
           });
         }
 
@@ -430,6 +495,7 @@ export const optimizeMeshForPrint = functions
           optimizedStoragePath: storagePath,
         };
       } catch (error) {
+        if (error instanceof functions.https.HttpsError) throw error;
         console.error('Optimization error:', error);
 
         throw new functions.https.HttpsError(
@@ -473,15 +539,9 @@ export const analyzeMeshForPrint = functions
         );
       }
 
+      data = normalizeCallableData(data);
+      validateModelSource(data);
       const { pipelineId, jobId, modelUrl } = data;
-
-      // 3. Validate request
-      if (!pipelineId && !jobId && !modelUrl) {
-        throw new functions.https.HttpsError(
-          'invalid-argument',
-          'Must provide pipelineId, jobId, or modelUrl'
-        );
-      }
 
       try {
         // 3. Get model buffer
@@ -509,6 +569,7 @@ export const analyzeMeshForPrint = functions
           analysis: analysisResult.analysis,
         };
       } catch (error) {
+        if (error instanceof functions.https.HttpsError) throw error;
         console.error('Analysis error:', error);
 
         throw new functions.https.HttpsError(

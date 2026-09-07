@@ -15,6 +15,10 @@ export declare class FirestoreOrderRepository implements IOrderRepository {
     getByIdWithUser(orderId: string): Promise<AdminOrder | null>;
     update(orderId: string, updates: Partial<Order>): Promise<void>;
     delete(orderId: string): Promise<void>;
+    updateAtomically(orderId: string, mutate: (order: Order) => Order): Promise<{
+        previousOrder: Order;
+        order: Order;
+    }>;
     getByUserId(userId: string, pagination?: PaginationParams): Promise<PaginatedResult<Order>>;
     getAll(filters?: OrderFilterParams, pagination?: PaginationParams): Promise<PaginatedResult<AdminOrder>>;
     getByStatus(status: OrderStatus, pagination?: PaginationParams): Promise<PaginatedResult<AdminOrder>>;
@@ -43,6 +47,7 @@ export declare class FirestoreOrderRepository implements IOrderRepository {
     getDailyStats(date: Date): Promise<{
         orders: number;
         revenue: number;
+        revenueByCurrency: Record<string, number>;
         newCustomers: number;
     }>;
 }

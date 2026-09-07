@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -36,6 +36,7 @@ export function useAuth(): UseAuthReturn {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const activeIdentity = useRef<string | null>(null);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -45,11 +46,12 @@ export function useAuth(): UseAuthReturn {
     }
 
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+      // A role belongs to one authenticated identity. Do not retain an admin
+      // profile while a different account's Firestore document is loading.
+      activeIdentity.current = fbUser?.uid ?? null;
+      setUser(null);
       setFirebaseUser(fbUser);
-      if (!fbUser) {
-        setUser(null);
-        setLoading(false);
-      }
+      setLoading(!!fbUser);
     });
 
     return () => unsubscribe();
@@ -67,10 +69,12 @@ export function useAuth(): UseAuthReturn {
     let claimInFlight = false;
     let claimAttempts = 0;
     let claimRetryTimer: ReturnType<typeof setTimeout> | null = null;
+    // Auth callbacks run before React cleans up the old profile subscription.
+    const isCurrentIdentity = () => active && activeIdentity.current === firebaseUser.uid;
 
     const claimWelcomeCreditsWithRetry = () => {
       if (
-        !active ||
+        !isCurrentIdentity() ||
         !firebaseUser.emailVerified ||
         !welcomeCreditsCallable ||
         claimInFlight ||
@@ -86,7 +90,7 @@ export function useAuth(): UseAuthReturn {
         })
         .catch(() => {
           claimAttempts += 1;
-          if (active && claimAttempts < 3) {
+          if (isCurrentIdentity() && claimAttempts < 3) {
             claimRetryTimer = setTimeout(() => {
               claimRetryTimer = null;
               claimWelcomeCreditsWithRetry();
@@ -101,10 +105,11 @@ export function useAuth(): UseAuthReturn {
     const unsubscribe = onSnapshot(
       userDocRef,
       (docSnap) => {
+        if (!isCurrentIdentity()) return;
         if (docSnap.exists()) {
           const data = docSnap.data();
           setUser({
-            uid: data.uid,
+            uid: firebaseUser.uid,
             email: data.email,
             displayName: data.displayName,
             photoURL: data.photoURL,
@@ -141,7 +146,10 @@ export function useAuth(): UseAuthReturn {
         setLoading(false);
       },
       (err) => {
+        if (!isCurrentIdentity()) return;
         console.error('Error fetching user document:', err);
+        setUser(null);
+        setError(err.message);
         setLoading(false);
       }
     );

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { omitUndefinedFields } from '@/lib/callable-payload';
 import type {
   AdminPipeline,
   ListAllPipelinesResponse,
@@ -41,6 +42,8 @@ export function useAdminPipelines(): UseAdminPipelinesReturn {
   } | null>(null);
   const [filters, setFiltersState] = useState<PipelineFilters>({});
   const [error, setError] = useState<string | null>(null);
+  const latestRequest = useRef(0);
+  const activeFilterKey = useRef('');
 
   const fetchPipelines = useCallback(async (
     limit = 20,
@@ -52,10 +55,17 @@ export function useAdminPipelines(): UseAdminPipelinesReturn {
       return;
     }
 
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setError(null);
 
     const activeFilters = newFilters ?? filters;
+    const filterKey = JSON.stringify([activeFilters.status, activeFilters.userId]);
+    if (filterKey !== activeFilterKey.current) {
+      activeFilterKey.current = filterKey;
+      setPipelines([]);
+      setPagination(null);
+    }
 
     try {
       const listAllPipelinesFunc = httpsCallable<
@@ -63,27 +73,37 @@ export function useAdminPipelines(): UseAdminPipelinesReturn {
         ListAllPipelinesResponse
       >(functions, 'listAllPipelines');
 
-      const result = await listAllPipelinesFunc({
-        limit,
-        offset,
-        status: activeFilters.status,
-        userId: activeFilters.userId,
-      });
+      // The API caps each response at 50; refresh every loaded row, including
+      // the pipeline currently open in the detail dialog.
+      const loaded: AdminPipeline[] = [];
+      let lastPagination: ListAllPipelinesResponse['pagination'] | null = null;
+      while (loaded.length < limit) {
+        const result = await listAllPipelinesFunc(omitUndefinedFields({
+          limit: Math.min(50, limit - loaded.length),
+          offset: offset + loaded.length,
+          status: activeFilters.status,
+          userId: activeFilters.userId,
+        }));
+        if (requestId !== latestRequest.current) return;
+        loaded.push(...result.data.pipelines);
+        lastPagination = result.data.pagination;
+        if (!lastPagination.hasMore || result.data.pipelines.length === 0) break;
+      }
 
       setPipelines((current) => {
-        if (offset === 0) return result.data.pipelines;
-
+        if (offset === 0) return loaded;
         const byId = new Map(current.map((pipeline) => [pipeline.id, pipeline]));
-        result.data.pipelines.forEach((pipeline) => byId.set(pipeline.id, pipeline));
+        loaded.forEach((pipeline) => byId.set(pipeline.id, pipeline));
         return [...byId.values()];
       });
-      setPagination(result.data.pagination);
+      setPagination(lastPagination);
     } catch (err) {
+      if (requestId !== latestRequest.current) return;
       const message = err instanceof Error ? err.message : 'Failed to fetch pipelines';
       setError(message);
       console.error('Error fetching pipelines:', err);
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }, [filters]);
 

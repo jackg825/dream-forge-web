@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.adminRejectPreview = exports.adminConfirmPreview = exports.adminCheckPreviewStatus = exports.adminStartPipelineMesh = exports.adminRegeneratePipelineImage = exports.checkAllProviderBalances = exports.getUserTransactions = exports.deductCredits = exports.listAllPipelines = exports.listUsers = exports.getAdminStats = exports.checkRodinBalance = exports.updateUserTier = exports.addCredits = void 0;
 const functions = __importStar(require("firebase-functions/v1"));
 const admin = __importStar(require("firebase-admin"));
+const node_crypto_1 = require("node:crypto");
 const client_1 = require("../rodin/client");
 const client_2 = require("../providers/meshy/client");
 const client_3 = require("../providers/tripo/client");
@@ -43,6 +44,7 @@ const factory_1 = require("../providers/factory");
 const multi_view_generator_1 = require("../gemini/multi-view-generator");
 const storage_1 = require("../storage");
 const storage_validation_1 = require("../utils/storage-validation");
+const admin_validation_1 = require("../utils/admin-validation");
 const db = admin.firestore();
 function parsePaginationValue(value, fallback, minimum, maximum, field) {
     if (value === undefined || value === null)
@@ -107,41 +109,38 @@ exports.addCredits = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { targetUserId, amount, reason } = data;
-    // Validate input
-    if (!targetUserId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Target user ID is required');
-    }
-    if (!amount || amount <= 0) {
-        throw new functions.https.HttpsError('invalid-argument', 'Amount must be a positive number');
-    }
-    // Check target user exists
+    data = (0, admin_validation_1.normalizeCallableData)(data);
+    const { targetUserId, amount } = data;
+    (0, admin_validation_1.assertDocumentId)(targetUserId, 'Target user ID');
+    (0, admin_validation_1.validateCreditAmount)(amount);
+    const reason = (0, admin_validation_1.validateReason)(data.reason);
     const userRef = db.collection('users').doc(targetUserId);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Target user not found');
-    }
-    // Add credits using transaction
-    await db.runTransaction(async (transaction) => {
-        // Update user credits
+    const txRef = db.collection('transactions').doc();
+    const newCredits = await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Target user not found');
+        }
+        const currentCredits = (0, admin_validation_1.readCreditBalance)(userDoc.data()?.credits);
+        const newBalance = currentCredits + amount;
+        if (!Number.isSafeInteger(newBalance)) {
+            throw new functions.https.HttpsError('failed-precondition', 'Credit balance would exceed the supported limit');
+        }
         transaction.update(userRef, {
-            credits: admin.firestore.FieldValue.increment(amount),
+            credits: newBalance,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-        // Create transaction record
-        const txDoc = {
+        transaction.set(txRef, {
             userId: targetUserId,
             type: 'bonus',
-            amount: amount,
+            amount,
             jobId: null,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             adminId: context.auth.uid,
             reason: reason || 'Admin credit addition',
-        };
-        const txRef = db.collection('transactions').doc();
-        transaction.set(txRef, txDoc);
+        });
+        return newBalance;
     });
-    const newCredits = (userDoc.data()?.credits || 0) + amount;
     functions.logger.info('Admin added credits', {
         adminId: context.auth.uid,
         targetUserId,
@@ -181,47 +180,31 @@ exports.updateUserTier = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { targetUserId, tier, reason } = data;
-    // Validate input
-    if (!targetUserId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Target user ID is required');
-    }
-    if (!tier || !['free', 'premium'].includes(tier)) {
+    data = (0, admin_validation_1.normalizeCallableData)(data);
+    const { targetUserId, tier } = data;
+    (0, admin_validation_1.assertDocumentId)(targetUserId, 'Target user ID');
+    const reason = (0, admin_validation_1.validateReason)(data.reason);
+    if (tier !== 'free' && tier !== 'premium') {
         throw new functions.https.HttpsError('invalid-argument', 'Tier must be "free" or "premium"');
     }
-    // Check target user exists
     const userRef = db.collection('users').doc(targetUserId);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Target user not found');
-    }
-    const previousTier = userDoc.data()?.tier || 'free';
-    // No change needed
-    if (previousTier === tier) {
-        return {
-            success: true,
-            targetUserId,
-            tier,
-            message: 'User already has this tier',
-        };
-    }
-    // Update user tier
-    const updateData = {
-        tier,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-    // Add subscription metadata when upgrading to premium
-    if (tier === 'premium') {
-        updateData['subscription'] = {
-            startedAt: admin.firestore.FieldValue.serverTimestamp(),
-            paymentProvider: 'manual',
-        };
-    }
-    else {
-        // Clear subscription when downgrading to free
-        updateData['subscription'] = admin.firestore.FieldValue.delete();
-    }
-    await userRef.update(updateData);
+    const previousTier = await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Target user not found');
+        }
+        const previousTier = userDoc.data()?.tier || 'free';
+        if (previousTier !== tier) {
+            transaction.update(userRef, {
+                tier,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                subscription: tier === 'premium'
+                    ? { startedAt: admin.firestore.FieldValue.serverTimestamp(), paymentProvider: 'manual' }
+                    : admin.firestore.FieldValue.delete(),
+            });
+        }
+        return previousTier;
+    });
     functions.logger.info('Admin updated user tier', {
         adminId: context.auth.uid,
         targetUserId,
@@ -290,34 +273,27 @@ exports.getAdminStats = functions
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
     try {
-        // Get user count
-        const usersSnapshot = await db.collection('users').count().get();
-        const totalUsers = usersSnapshot.data().count;
-        // Get job counts by status
-        const jobsSnapshot = await db.collection('jobs').get();
+        // Aggregate on the server instead of downloading every job and transaction.
+        const jobs = db.collection('jobs');
+        const [usersCount, jobsCount, pendingCount, processingCount, completedCount, failedCount, creditsSum] = await Promise.all([
+            db.collection('users').count().get(),
+            jobs.count().get(),
+            jobs.where('status', '==', 'pending').count().get(),
+            jobs.where('status', '==', 'processing').count().get(),
+            jobs.where('status', '==', 'completed').count().get(),
+            jobs.where('status', '==', 'failed').count().get(),
+            db.collection('transactions').where('type', '==', 'bonus')
+                .aggregate({ total: admin.firestore.AggregateField.sum('amount') }).get(),
+        ]);
+        const totalUsers = usersCount.data().count;
         const jobStats = {
-            total: 0,
-            pending: 0,
-            processing: 0,
-            completed: 0,
-            failed: 0,
+            total: jobsCount.data().count,
+            pending: pendingCount.data().count,
+            processing: processingCount.data().count,
+            completed: completedCount.data().count,
+            failed: failedCount.data().count,
         };
-        jobsSnapshot.forEach((doc) => {
-            const status = doc.data().status;
-            jobStats.total++;
-            if (status in jobStats) {
-                jobStats[status]++;
-            }
-        });
-        // Get total credits distributed
-        const transactionsSnapshot = await db
-            .collection('transactions')
-            .where('type', '==', 'bonus')
-            .get();
-        let totalCreditsDistributed = 0;
-        transactionsSnapshot.forEach((doc) => {
-            totalCreditsDistributed += doc.data().amount || 0;
-        });
+        const totalCreditsDistributed = creditsSum.data().total;
         functions.logger.info('Admin fetched stats', {
             adminId: context.auth.uid,
         });
@@ -352,6 +328,7 @@ exports.listUsers = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
+    data = (0, admin_validation_1.normalizeCallableData)(data ?? {});
     const limit = parsePaginationValue(data?.limit, 50, 1, 100, 'limit');
     const offset = parsePaginationValue(data?.offset, 0, 0, 1000, 'offset');
     try {
@@ -434,6 +411,16 @@ async function refreshStoredAdminImages(images) {
     ]));
     return Object.fromEntries(entries);
 }
+async function refreshAdminPreview(preview) {
+    if (!preview)
+        return null;
+    return {
+        ...preview,
+        meshImages: await refreshStoredAdminImages(preview.meshImages),
+        meshUrl: await refreshStoredAdminUrl(preview.meshUrl, preview.meshStoragePath),
+        texturedModelUrl: await refreshStoredAdminUrl(preview.texturedModelUrl, preview.texturedModelStoragePath),
+    };
+}
 /**
  * Cloud Function: listAllPipelines
  *
@@ -451,10 +438,11 @@ exports.listAllPipelines = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
+    data = (0, admin_validation_1.normalizeCallableData)(data ?? {});
     const limit = parsePaginationValue(data?.limit, 20, 1, 50, 'limit');
     const offset = parsePaginationValue(data?.offset, 0, 0, 1000, 'offset');
     const { status, userId } = data || {};
-    if (status && !VALID_PIPELINE_STATUSES.has(status)) {
+    if (status !== undefined && (typeof status !== 'string' || !VALID_PIPELINE_STATUSES.has(status))) {
         throw new functions.https.HttpsError('invalid-argument', 'Invalid pipeline status');
     }
     if (userId !== undefined &&
@@ -566,48 +554,38 @@ exports.deductCredits = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { targetUserId, amount, reason } = data;
-    // Validate input
-    if (!targetUserId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Target user ID is required');
-    }
-    if (!amount || amount <= 0) {
-        throw new functions.https.HttpsError('invalid-argument', 'Amount must be a positive number');
-    }
-    if (!reason || reason.trim().length === 0) {
-        throw new functions.https.HttpsError('invalid-argument', 'Reason is required for deductions');
-    }
-    // Check target user exists and has enough credits
+    data = (0, admin_validation_1.normalizeCallableData)(data);
+    const { targetUserId, amount } = data;
+    (0, admin_validation_1.assertDocumentId)(targetUserId, 'Target user ID');
+    (0, admin_validation_1.validateCreditAmount)(amount);
+    const reason = (0, admin_validation_1.validateReason)(data.reason, true);
     const userRef = db.collection('users').doc(targetUserId);
-    const userDoc = await userRef.get();
-    if (!userDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Target user not found');
-    }
-    const currentCredits = userDoc.data()?.credits || 0;
-    if (currentCredits < amount) {
-        throw new functions.https.HttpsError('failed-precondition', `User only has ${currentCredits} credits, cannot deduct ${amount}`);
-    }
-    // Deduct credits using transaction
-    await db.runTransaction(async (transaction) => {
-        // Update user credits
+    const txRef = db.collection('transactions').doc();
+    const { currentCredits, newCredits } = await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Target user not found');
+        }
+        const currentCredits = (0, admin_validation_1.readCreditBalance)(userDoc.data()?.credits);
+        if (currentCredits < amount) {
+            throw new functions.https.HttpsError('failed-precondition', `User only has ${currentCredits} credits, cannot deduct ${amount}`);
+        }
+        const newCredits = currentCredits - amount;
         transaction.update(userRef, {
-            credits: admin.firestore.FieldValue.increment(-amount),
+            credits: newCredits,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-        // Create transaction record with type 'adjustment' (negative amount)
-        const txDoc = {
+        transaction.set(txRef, {
             userId: targetUserId,
             type: 'adjustment',
-            amount: -amount, // Negative to indicate deduction
+            amount: -amount,
             jobId: null,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             adminId: context.auth.uid,
-            reason: reason.trim(),
-        };
-        const txRef = db.collection('transactions').doc();
-        transaction.set(txRef, txDoc);
+            reason,
+        });
+        return { currentCredits, newCredits };
     });
-    const newCredits = currentCredits - amount;
     functions.logger.info('Admin deducted credits', {
         adminId: context.auth.uid,
         targetUserId,
@@ -640,12 +618,11 @@ exports.getUserTransactions = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
+    data = (0, admin_validation_1.normalizeCallableData)(data);
     const targetUserId = data?.targetUserId;
     const limit = parsePaginationValue(data?.limit, 50, 1, 100, 'limit');
     const offset = parsePaginationValue(data?.offset, 0, 0, 1000, 'offset');
-    if (!targetUserId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Target user ID is required');
-    }
+    (0, admin_validation_1.assertDocumentId)(targetUserId, 'Target user ID');
     try {
         // Verify user exists
         const userDoc = await db.collection('users').doc(targetUserId).get();
@@ -806,14 +783,36 @@ async function getAdminEmail(adminId) {
  * Note: Using Timestamp.now() instead of serverTimestamp() because
  * serverTimestamp() cannot be used inside arrayUnion operations
  */
-async function addAdminAction(pipelineRef, action) {
-    const actionWithTimestamp = {
-        ...action,
-        timestamp: admin.firestore.Timestamp.now(),
-    };
-    await pipelineRef.update({
-        adminActions: admin.firestore.FieldValue.arrayUnion(actionWithTimestamp),
+function adminActionFields(action) {
+    return {
+        adminActions: admin.firestore.FieldValue.arrayUnion({
+            ...action,
+            timestamp: admin.firestore.Timestamp.now(),
+        }),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+}
+const ADMIN_PREVIEW_START_LEASE_MS = 10 * 60 * 1000;
+const MESH_PREVIEW_FIELDS = [
+    'meshUrl', 'meshStoragePath', 'meshDownloadFiles', 'taskId', 'taskStatus',
+    'provider', 'subscriptionKey', 'operationId',
+];
+function clearMeshPreview() {
+    return Object.fromEntries(MESH_PREVIEW_FIELDS.map((field) => [
+        `adminPreview.${field}`, admin.firestore.FieldValue.delete(),
+    ]));
+}
+async function updateCurrentPreviewTask(pipelineRef, taskId, updates) {
+    await db.runTransaction(async (transaction) => {
+        const current = await transaction.get(pipelineRef);
+        if (current.data()?.adminPreview?.taskId !== taskId) {
+            throw new functions.https.HttpsError('aborted', 'Preview changed; refresh before continuing');
+        }
+        // A slower poll must not downgrade or overwrite an already finalized result.
+        if (current.data()?.adminPreview?.taskStatus === 'completed') {
+            throw new functions.https.HttpsError('aborted', 'Preview was finalized by another request; refresh its status');
+        }
+        transaction.update(pipelineRef, updates);
     });
 }
 /**
@@ -838,7 +837,12 @@ exports.adminRegeneratePipelineImage = functions
     }
     const adminId = context.auth.uid;
     const adminEmail = await getAdminEmail(adminId);
+    data = (0, admin_validation_1.normalizeCallableData)(data);
     const { pipelineId, viewType, angle, hint } = data;
+    (0, admin_validation_1.assertDocumentId)(pipelineId, 'Pipeline ID');
+    if (hint !== undefined && (typeof hint !== 'string' || hint.length > 2000)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Hint must be text of at most 2000 characters');
+    }
     // Validate viewType and angle - only mesh views can be regenerated
     const validMeshAngles = ['front', 'back', 'left', 'right'];
     if (viewType !== 'mesh') {
@@ -854,48 +858,50 @@ exports.adminRegeneratePipelineImage = functions
         throw new functions.https.HttpsError('not-found', 'Pipeline not found');
     }
     const pipeline = pipelineDoc.data();
+    const operationId = (0, node_crypto_1.randomUUID)();
+    await pipelineRef.update({ [`adminPreview.imageOperationIds.${angle}`]: operationId });
     try {
         // Download reference image
-        const referenceImageUrl = pipeline.inputImages[0].url;
+        const referenceImageUrl = pipeline.inputImages?.[0]?.url;
+        if (!referenceImageUrl) {
+            throw new functions.https.HttpsError('failed-precondition', 'Pipeline has no reference image');
+        }
         const { base64, mimeType } = await (0, storage_validation_1.downloadValidatedImageAsBase64)(referenceImageUrl, pipeline.userId, ['uploads']);
         // Generate view using pipeline's settings
         const modeId = pipeline.generationMode || 'simplified-texture';
-        const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash');
+        const geminiModel = (pipeline.settings?.geminiModel || 'gemini-2.5-flash-image');
         const generator = (0, multi_view_generator_1.createMultiViewGenerator)(modeId, pipeline.userDescription, pipeline.imageAnalysis, geminiModel);
         const now = admin.firestore.FieldValue.serverTimestamp();
-        // Only mesh views can be regenerated
-        if (viewType !== 'mesh') {
-            throw new functions.https.HttpsError('invalid-argument', 'Texture view regeneration is not supported. Only mesh views can be regenerated.');
-        }
-        const previousUrl = pipeline.meshImages[angle]?.url;
+        const previousUrl = pipeline.meshImages?.[angle]?.url;
         const view = await generator.generateMeshView(base64, mimeType, angle, hint);
         const ext = getExtensionFromMimeType(view.mimeType);
         // Store in preview/ subdirectory
-        const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/mesh_${angle}.${ext}`;
+        const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/${(0, node_crypto_1.randomUUID)()}/mesh_${angle}.${ext}`;
         const url = await uploadImageToStorage(view.imageBase64, view.mimeType, storagePath);
         const processedImage = {
             url,
             storagePath,
             source: 'gemini',
-            generatedAt: now,
+            generatedAt: admin.firestore.Timestamp.now(),
         };
         if (view.colorPalette?.length) {
             processedImage.colorPalette = view.colorPalette;
         }
-        // Update adminPreview
-        await pipelineRef.update({
-            [`adminPreview.meshImages.${angle}`]: processedImage,
-            'adminPreview.createdAt': now,
-            'adminPreview.createdBy': adminId,
-            updatedAt: now,
-        });
-        // Add audit trail
-        await addAdminAction(pipelineRef, {
-            adminId,
-            adminEmail,
-            actionType: 'regenerate-image',
-            targetField: `${viewType}Images.${angle}`,
-            previousValue: previousUrl || null,
+        await db.runTransaction(async (transaction) => {
+            const current = await transaction.get(pipelineRef);
+            if (current.data()?.adminPreview?.imageOperationIds?.[angle] !== operationId) {
+                throw new functions.https.HttpsError('aborted', 'Image preview changed; refresh before continuing');
+            }
+            transaction.update(pipelineRef, {
+                [`adminPreview.meshImages.${angle}`]: processedImage,
+                [`adminPreview.imageOperationIds.${angle}`]: admin.firestore.FieldValue.delete(),
+                'adminPreview.createdAt': now,
+                'adminPreview.createdBy': adminId,
+                ...adminActionFields({
+                    adminId, adminEmail, actionType: 'regenerate-image',
+                    targetField: `${viewType}Images.${angle}`, previousValue: previousUrl || null,
+                }),
+            });
         });
         functions.logger.info('Admin regenerated pipeline image to preview', {
             adminId,
@@ -912,6 +918,16 @@ exports.adminRegeneratePipelineImage = functions
         };
     }
     catch (error) {
+        await db.runTransaction(async (transaction) => {
+            const current = await transaction.get(pipelineRef);
+            if (current.data()?.adminPreview?.imageOperationIds?.[angle] === operationId) {
+                transaction.update(pipelineRef, {
+                    [`adminPreview.imageOperationIds.${angle}`]: admin.firestore.FieldValue.delete(),
+                });
+            }
+        });
+        if (error instanceof functions.https.HttpsError)
+            throw error;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         functions.logger.error('Admin image regeneration failed', { pipelineId, viewType, angle, error: errorMessage });
         throw new functions.https.HttpsError('internal', `Regeneration failed: ${errorMessage}`);
@@ -938,17 +954,43 @@ exports.adminStartPipelineMesh = functions
     }
     const adminId = context.auth.uid;
     const adminEmail = await getAdminEmail(adminId);
+    data = (0, admin_validation_1.normalizeCallableData)(data);
     const { pipelineId, provider: requestedProvider, providerOptions } = data;
+    (0, admin_validation_1.assertDocumentId)(pipelineId, 'Pipeline ID');
+    if (requestedProvider !== undefined && (typeof requestedProvider !== 'string' || !(0, factory_1.isValidProvider)(requestedProvider))) {
+        throw new functions.https.HttpsError('invalid-argument', 'Invalid provider');
+    }
+    if (providerOptions !== undefined) {
+        (0, admin_validation_1.assertRecord)(providerOptions, 'Provider options');
+        if (providerOptions.faceCount !== undefined && (typeof providerOptions.faceCount !== 'number' || !Number.isInteger(providerOptions.faceCount) || providerOptions.faceCount < 40000 || providerOptions.faceCount > 1500000)) {
+            throw new functions.https.HttpsError('invalid-argument', 'Face count must be an integer between 40000 and 1500000');
+        }
+    }
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
-    const pipelineDoc = await pipelineRef.get();
-    if (!pipelineDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Pipeline not found');
-    }
-    const pipeline = pipelineDoc.data();
-    // Check pipeline has images ready
-    if (!pipeline.meshImages || Object.keys(pipeline.meshImages).length < 4) {
-        throw new functions.https.HttpsError('failed-precondition', 'Pipeline images not ready');
-    }
+    const operationId = (0, node_crypto_1.randomUUID)();
+    const pipeline = await db.runTransaction(async (transaction) => {
+        const pipelineDoc = await transaction.get(pipelineRef);
+        if (!pipelineDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+        }
+        const pipeline = pipelineDoc.data();
+        if (!['front', 'back', 'left', 'right'].every((angle) => pipeline.meshImages?.[angle]?.url)) {
+            throw new functions.https.HttpsError('failed-precondition', 'Pipeline images not ready');
+        }
+        const preview = pipeline.adminPreview;
+        if (preview && ['pending', 'processing'].includes(preview.taskStatus || '') &&
+            (preview.taskId || (preview.createdAt?.toMillis?.() || 0) > Date.now() - ADMIN_PREVIEW_START_LEASE_MS)) {
+            throw new functions.https.HttpsError('failed-precondition', 'A mesh preview is already being generated');
+        }
+        transaction.update(pipelineRef, {
+            ...clearMeshPreview(),
+            'adminPreview.operationId': operationId,
+            'adminPreview.taskStatus': 'pending',
+            'adminPreview.createdAt': admin.firestore.FieldValue.serverTimestamp(),
+            'adminPreview.createdBy': adminId,
+        });
+        return pipeline;
+    });
     try {
         // Collect mesh image URLs
         const meshAngles = ['front', 'back', 'left', 'right'];
@@ -972,7 +1014,7 @@ exports.adminStartPipelineMesh = functions
             const tripoProvider = provider;
             result = await tripoProvider.generateFromUrls(validatedImageUrls, {
                 quality: pipeline.settings?.quality || 'standard',
-                format: pipeline.settings?.format || 'glb',
+                format: 'glb',
                 enableTexture: true,
                 enablePBR: true,
             });
@@ -981,7 +1023,7 @@ exports.adminStartPipelineMesh = functions
             const meshyProvider = provider;
             result = await meshyProvider.generateMeshOnlyFromUrls(validatedImageUrls, {
                 quality: pipeline.settings?.quality || 'standard',
-                format: pipeline.settings?.format || 'glb',
+                format: 'glb',
                 precision: pipeline.settings?.meshPrecision || 'standard',
             });
         }
@@ -989,9 +1031,9 @@ exports.adminStartPipelineMesh = functions
             const hunyuanProvider = provider;
             result = await hunyuanProvider.generateFromUrls(validatedImageUrls, {
                 quality: pipeline.settings?.quality || 'standard',
-                format: pipeline.settings?.format || 'glb',
+                format: 'glb',
                 enablePBR: false,
-                providerOptions: providerOptions?.faceCount ? {
+                providerOptions: typeof providerOptions?.faceCount === 'number' ? {
                     hunyuan: { faceCount: providerOptions.faceCount },
                 } : undefined,
             });
@@ -1005,30 +1047,30 @@ exports.adminStartPipelineMesh = functions
             }
             result = await provider.generateFromMultipleImages(imageBuffers, {
                 quality: pipeline.settings?.quality || 'standard',
-                format: pipeline.settings?.format || 'glb',
+                format: 'glb',
                 enableTexture: true,
                 enablePBR: true,
             });
         }
         const now = admin.firestore.FieldValue.serverTimestamp();
-        // Store task info in adminPreview
-        await pipelineRef.update({
-            'adminPreview.provider': providerType,
-            'adminPreview.taskId': result.taskId,
-            'adminPreview.taskStatus': 'pending',
-            'adminPreview.createdAt': now,
-            'adminPreview.createdBy': adminId,
-            updatedAt: now,
-        });
-        // Add audit trail
-        const previousProvider = pipeline.settings?.provider;
-        await addAdminAction(pipelineRef, {
-            adminId,
-            adminEmail,
-            actionType: previousProvider !== providerType ? 'change-provider' : 'regenerate-mesh',
-            targetField: 'mesh',
-            provider: providerType,
-            previousValue: pipeline.meshUrl || null,
+        await db.runTransaction(async (transaction) => {
+            const current = await transaction.get(pipelineRef);
+            if (current.data()?.adminPreview?.operationId !== operationId) {
+                throw new functions.https.HttpsError('aborted', 'Mesh preview was discarded or replaced');
+            }
+            transaction.update(pipelineRef, {
+                'adminPreview.provider': providerType,
+                'adminPreview.taskId': result.taskId,
+                'adminPreview.subscriptionKey': result.subscriptionKey || admin.firestore.FieldValue.delete(),
+                'adminPreview.taskStatus': 'pending',
+                'adminPreview.createdAt': now,
+                'adminPreview.createdBy': adminId,
+                ...adminActionFields({
+                    adminId, adminEmail,
+                    actionType: pipeline.settings?.provider !== providerType ? 'change-provider' : 'regenerate-mesh',
+                    targetField: 'mesh', provider: providerType, previousValue: pipeline.meshUrl || null,
+                }),
+            });
         });
         functions.logger.info('Admin started mesh regeneration', {
             adminId,
@@ -1044,6 +1086,14 @@ exports.adminStartPipelineMesh = functions
         };
     }
     catch (error) {
+        await db.runTransaction(async (transaction) => {
+            const current = await transaction.get(pipelineRef);
+            if (current.data()?.adminPreview?.operationId === operationId) {
+                transaction.update(pipelineRef, { 'adminPreview.taskStatus': 'failed' });
+            }
+        });
+        if (error instanceof functions.https.HttpsError)
+            throw error;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         functions.logger.error('Admin mesh regeneration failed', { pipelineId, error: errorMessage });
         throw new functions.https.HttpsError('internal', `Mesh regeneration failed: ${errorMessage}`);
@@ -1067,40 +1117,85 @@ exports.adminCheckPreviewStatus = functions
     if (!(await isAdmin(context))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
+    data = (0, admin_validation_1.normalizeCallableData)(data);
     const { pipelineId } = data;
+    if (data.readOnly !== undefined && typeof data.readOnly !== 'boolean') {
+        throw new functions.https.HttpsError('invalid-argument', 'readOnly must be a boolean');
+    }
+    (0, admin_validation_1.assertDocumentId)(pipelineId, 'Pipeline ID');
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
     const pipelineDoc = await pipelineRef.get();
     if (!pipelineDoc.exists) {
         throw new functions.https.HttpsError('not-found', 'Pipeline not found');
     }
     const pipeline = pipelineDoc.data();
-    const preview = pipeline.adminPreview;
-    if (!preview?.taskId || !preview?.provider) {
-        const refreshedPreview = preview
-            ? {
-                ...preview,
-                meshUrl: await refreshStoredAdminUrl(preview.meshUrl, preview.meshStoragePath),
-                texturedModelUrl: await refreshStoredAdminUrl(preview.texturedModelUrl, preview.texturedModelStoragePath),
+    let preview = pipeline.adminPreview;
+    if (data.readOnly) {
+        return { success: true, status: 'snapshot', preview: await refreshAdminPreview(preview) };
+    }
+    // Startup reserves a preview before a provider task ID is available. Keep
+    // polling that claim, and release abandoned claims after the startup lease.
+    if ((!preview?.taskId || !preview?.provider) &&
+        ['pending', 'processing'].includes(preview?.taskStatus || '')) {
+        preview = await db.runTransaction(async (transaction) => {
+            const currentDoc = await transaction.get(pipelineRef);
+            if (!currentDoc.exists) {
+                throw new functions.https.HttpsError('not-found', 'Pipeline not found');
             }
-            : null;
+            const current = currentDoc.data().adminPreview;
+            if (current && (!current.taskId || !current.provider) &&
+                ['pending', 'processing'].includes(current.taskStatus || '') &&
+                (current.createdAt?.toMillis?.() || 0) <= Date.now() - ADMIN_PREVIEW_START_LEASE_MS) {
+                transaction.update(pipelineRef, {
+                    'adminPreview.taskStatus': 'failed',
+                    'adminPreview.operationId': admin.firestore.FieldValue.delete(),
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+                const failedPreview = { ...current, taskStatus: 'failed' };
+                delete failedPreview.operationId;
+                return failedPreview;
+            }
+            return current;
+        });
+    }
+    if (!preview?.taskId || !preview?.provider) {
+        const refreshedPreview = await refreshAdminPreview(preview);
         return {
             success: true,
-            status: 'no-active-task',
+            status: ['pending', 'processing'].includes(preview?.taskStatus || '')
+                ? 'processing' : preview?.taskStatus === 'failed' ? 'failed' : 'no-active-task',
+            ...(preview?.taskStatus === 'failed' && { error: 'Preview startup failed or expired; please retry generation' }),
             preview: refreshedPreview,
+        };
+    }
+    if (preview.taskStatus === 'completed' && preview.meshUrl) {
+        return {
+            success: true,
+            status: 'completed',
+            meshUrl: await refreshStoredAdminUrl(preview.meshUrl, preview.meshStoragePath),
+            meshStoragePath: preview.meshStoragePath,
+            downloadFiles: preview.meshDownloadFiles || [],
         };
     }
     try {
         const providerInstance = factory_1.ProviderFactory.getProvider(preview.provider);
-        const status = await providerInstance.checkStatus(preview.taskId);
+        const status = await providerInstance.checkStatus(preview.taskId, preview.subscriptionKey);
         if (status.status === 'completed') {
             // Download model to preview storage
-            const downloadUrls = await providerInstance.getDownloadUrls(preview.taskId);
-            const glbFile = downloadUrls.files.find((f) => f.name.endsWith('.glb'));
+            const downloadUrls = await providerInstance.getDownloadUrls(preview.taskId, 'glb');
+            const glbFile = downloadUrls.files.find((file) => file.format.toLowerCase() === 'glb' || file.name.toLowerCase().endsWith('.glb'));
+            if (!glbFile) {
+                await updateCurrentPreviewTask(pipelineRef, preview.taskId, {
+                    'adminPreview.taskStatus': 'failed',
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+                return { success: true, status: 'failed', error: 'The completed preview has no GLB model' };
+            }
             if (glbFile) {
                 const modelBuffer = await providerInstance.downloadModel(glbFile.url);
-                const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/model.glb`;
+                const storagePath = `pipelines/${pipeline.userId}/${pipelineId}/preview/${(0, node_crypto_1.randomUUID)()}/model.glb`;
                 const meshUrl = await (0, storage_1.uploadBuffer)(modelBuffer, storagePath, 'model/gltf-binary');
-                await pipelineRef.update({
+                await updateCurrentPreviewTask(pipelineRef, preview.taskId, {
                     'adminPreview.meshUrl': meshUrl,
                     'adminPreview.meshStoragePath': storagePath,
                     'adminPreview.meshDownloadFiles': downloadUrls.files,
@@ -1111,12 +1206,13 @@ exports.adminCheckPreviewStatus = functions
                     success: true,
                     status: 'completed',
                     meshUrl,
+                    meshStoragePath: storagePath,
                     downloadFiles: downloadUrls.files,
                 };
             }
         }
         else if (status.status === 'failed') {
-            await pipelineRef.update({
+            await updateCurrentPreviewTask(pipelineRef, preview.taskId, {
                 'adminPreview.taskStatus': 'failed',
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
@@ -1127,7 +1223,7 @@ exports.adminCheckPreviewStatus = functions
             };
         }
         // Still processing
-        await pipelineRef.update({
+        await updateCurrentPreviewTask(pipelineRef, preview.taskId, {
             'adminPreview.taskStatus': 'processing',
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
@@ -1138,6 +1234,8 @@ exports.adminCheckPreviewStatus = functions
         };
     }
     catch (error) {
+        if (error instanceof functions.https.HttpsError)
+            throw error;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         functions.logger.error('Admin preview status check failed', { pipelineId, error: errorMessage });
         throw new functions.https.HttpsError('internal', `Status check failed: ${errorMessage}`);
@@ -1163,61 +1261,80 @@ exports.adminConfirmPreview = functions
     }
     const adminId = context.auth.uid;
     const adminEmail = await getAdminEmail(adminId);
+    data = (0, admin_validation_1.normalizeCallableData)(data);
     const { pipelineId, targetField, angle } = data;
+    (0, admin_validation_1.assertDocumentId)(pipelineId, 'Pipeline ID');
+    (0, admin_validation_1.validatePreviewTarget)(targetField, angle, false);
+    if (data.expectedStoragePath !== undefined && (typeof data.expectedStoragePath !== 'string' || !data.expectedStoragePath)) {
+        throw new functions.https.HttpsError('invalid-argument', 'Expected preview storage path must be text');
+    }
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
-    const pipelineDoc = await pipelineRef.get();
-    if (!pipelineDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Pipeline not found');
-    }
-    const pipeline = pipelineDoc.data();
-    const preview = pipeline.adminPreview;
-    if (!preview) {
-        throw new functions.https.HttpsError('failed-precondition', 'No preview to confirm');
-    }
-    const updates = {
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-    let confirmedField = targetField;
-    if (targetField === 'meshImages' && angle) {
-        const previewImage = preview.meshImages?.[angle];
-        if (!previewImage) {
-            throw new functions.https.HttpsError('failed-precondition', `No preview for meshImages.${angle}`);
+    const confirmedField = targetField === 'meshImages' ? `meshImages.${angle}` : 'mesh';
+    const userId = await db.runTransaction(async (transaction) => {
+        const pipelineDoc = await transaction.get(pipelineRef);
+        if (!pipelineDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Pipeline not found');
         }
-        updates[`meshImages.${angle}`] = previewImage;
-        updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
-        confirmedField = `meshImages.${angle}`;
-    }
-    else if (targetField === 'mesh') {
-        if (!preview.meshUrl) {
-            throw new functions.https.HttpsError('failed-precondition', 'No mesh preview to confirm');
+        const pipeline = pipelineDoc.data();
+        const preview = pipeline.adminPreview;
+        if (!preview) {
+            throw new functions.https.HttpsError('failed-precondition', 'No preview to confirm');
         }
-        updates['meshUrl'] = preview.meshUrl;
-        updates['meshStoragePath'] = preview.meshStoragePath;
-        updates['meshDownloadFiles'] = preview.meshDownloadFiles;
-        if (preview.provider) {
-            updates['settings.provider'] = preview.provider;
+        const currentStoragePath = targetField === 'meshImages'
+            ? preview.meshImages?.[angle]?.storagePath
+            : preview.meshStoragePath;
+        if (data.expectedStoragePath !== undefined && data.expectedStoragePath !== currentStoragePath) {
+            throw new functions.https.HttpsError('aborted', 'Preview changed; review the new preview before confirming');
         }
-        // Clear mesh preview fields
-        updates['adminPreview.meshUrl'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.meshStoragePath'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.meshDownloadFiles'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.taskId'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.taskStatus'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.provider'] = admin.firestore.FieldValue.delete();
-    }
-    await pipelineRef.update(updates);
-    // Add audit trail
-    await addAdminAction(pipelineRef, {
-        adminId,
-        adminEmail,
-        actionType: 'confirm-preview',
-        targetField: confirmedField,
+        if (['batch-queued', 'batch-processing', 'generating-images', 'generating-mesh', 'generating-texture'].includes(pipeline.status)) {
+            throw new functions.https.HttpsError('failed-precondition', 'Wait for the active pipeline generation to finish');
+        }
+        const updates = adminActionFields({
+            adminId, adminEmail, actionType: 'confirm-preview', targetField: confirmedField,
+        });
+        if (targetField === 'meshImages') {
+            const previewImage = preview.meshImages?.[angle];
+            if (!previewImage || preview.imageOperationIds?.[angle]) {
+                throw new functions.https.HttpsError('failed-precondition', 'No completed image preview to confirm');
+            }
+            updates[`meshImages.${angle}`] = previewImage;
+            updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
+        }
+        else {
+            if (!preview.meshUrl || !preview.meshStoragePath || preview.taskStatus !== 'completed') {
+                throw new functions.https.HttpsError('failed-precondition', 'No completed mesh preview to confirm');
+            }
+            Object.assign(updates, clearMeshPreview(), {
+                meshUrl: preview.meshUrl,
+                meshStoragePath: preview.meshStoragePath,
+                meshDownloadFiles: preview.meshDownloadFiles || [],
+                meshFormat: 'glb',
+                status: 'mesh-ready',
+                // Replace derived results and task metadata that belonged to the previous mesh.
+                texturedModelUrl: admin.firestore.FieldValue.delete(),
+                texturedModelStoragePath: admin.firestore.FieldValue.delete(),
+                texturedDownloadFiles: admin.firestore.FieldValue.delete(),
+                meshyTextureTaskId: admin.firestore.FieldValue.delete(),
+                providerTaskId: preview.taskId || admin.firestore.FieldValue.delete(),
+                meshyMeshTaskId: preview.provider === 'meshy' && preview.taskId
+                    ? preview.taskId : admin.firestore.FieldValue.delete(),
+                finalizationClaim: admin.firestore.FieldValue.delete(),
+                optimization: admin.firestore.FieldValue.delete(),
+                completedAt: admin.firestore.FieldValue.delete(),
+                error: admin.firestore.FieldValue.delete(),
+                errorStep: admin.firestore.FieldValue.delete(),
+            });
+            if (preview.provider)
+                updates['settings.provider'] = preview.provider;
+        }
+        transaction.update(pipelineRef, updates);
+        return pipeline.userId;
     });
     functions.logger.info('Admin confirmed preview', {
         adminId,
         pipelineId,
         targetField: confirmedField,
-        userId: pipeline.userId,
+        userId,
     });
     return {
         success: true,
@@ -1244,46 +1361,39 @@ exports.adminRejectPreview = functions
     }
     const adminId = context.auth.uid;
     const adminEmail = await getAdminEmail(adminId);
+    data = (0, admin_validation_1.normalizeCallableData)(data);
     const { pipelineId, targetField, angle } = data;
+    (0, admin_validation_1.assertDocumentId)(pipelineId, 'Pipeline ID');
+    (0, admin_validation_1.validatePreviewTarget)(targetField, angle, true);
     const pipelineRef = db.collection('pipelines').doc(pipelineId);
-    const pipelineDoc = await pipelineRef.get();
-    if (!pipelineDoc.exists) {
-        throw new functions.https.HttpsError('not-found', 'Pipeline not found');
-    }
-    const pipeline = pipelineDoc.data();
-    const updates = {
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-    let rejectedField = targetField;
-    if (targetField === 'all') {
-        updates['adminPreview'] = admin.firestore.FieldValue.delete();
-        rejectedField = 'all';
-    }
-    else if (targetField === 'meshImages' && angle) {
-        updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
-        rejectedField = `meshImages.${angle}`;
-    }
-    else if (targetField === 'mesh') {
-        updates['adminPreview.meshUrl'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.meshStoragePath'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.meshDownloadFiles'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.taskId'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.taskStatus'] = admin.firestore.FieldValue.delete();
-        updates['adminPreview.provider'] = admin.firestore.FieldValue.delete();
-    }
-    await pipelineRef.update(updates);
-    // Add audit trail
-    await addAdminAction(pipelineRef, {
-        adminId,
-        adminEmail,
-        actionType: 'reject-preview',
-        targetField: rejectedField,
+    const rejectedField = targetField === 'meshImages' ? `meshImages.${angle}` : targetField;
+    const userId = await db.runTransaction(async (transaction) => {
+        const pipelineDoc = await transaction.get(pipelineRef);
+        if (!pipelineDoc.exists) {
+            throw new functions.https.HttpsError('not-found', 'Pipeline not found');
+        }
+        const pipeline = pipelineDoc.data();
+        const updates = adminActionFields({
+            adminId, adminEmail, actionType: 'reject-preview', targetField: rejectedField,
+        });
+        if (targetField === 'all') {
+            updates.adminPreview = admin.firestore.FieldValue.delete();
+        }
+        else if (targetField === 'meshImages') {
+            updates[`adminPreview.meshImages.${angle}`] = admin.firestore.FieldValue.delete();
+            updates[`adminPreview.imageOperationIds.${angle}`] = admin.firestore.FieldValue.delete();
+        }
+        else {
+            Object.assign(updates, clearMeshPreview());
+        }
+        transaction.update(pipelineRef, updates);
+        return pipeline.userId;
     });
     functions.logger.info('Admin rejected preview', {
         adminId,
         pipelineId,
         targetField: rejectedField,
-        userId: pipeline.userId,
+        userId,
     });
     return {
         success: true,

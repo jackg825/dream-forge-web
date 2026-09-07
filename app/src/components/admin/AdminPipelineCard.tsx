@@ -73,7 +73,17 @@ export function AdminPipelineCard({ pipeline, onClick }: AdminPipelineCardProps)
 
   return (
     <Card
-      className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+      className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-haspopup={onClick ? "dialog" : undefined}
+      aria-label={onClick ? `${t('admin.manage')} ${pipeline.userDisplayName || pipeline.id}` : undefined}
+      onKeyDown={(event) => {
+        if (onClick && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onClick();
+        }
+      }}
       onClick={onClick}
     >
       {/* Preview image */}

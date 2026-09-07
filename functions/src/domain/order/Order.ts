@@ -133,7 +133,7 @@ export class OrderAggregate {
    * Reconstruct an order from stored data
    */
   static fromData(data: Order): OrderAggregate {
-    return new OrderAggregate(data);
+    return new OrderAggregate(structuredClone(data));
   }
 
   // ============================================
@@ -262,8 +262,8 @@ export class OrderAggregate {
    * Mark order as shipped with tracking info
    */
   ship(adminId: string, tracking: ShippingTracking): void {
-    this._order.tracking = tracking;
     this.transitionTo('shipping', `admin:${adminId}`, 'Order shipped');
+    this._order.tracking = tracking;
   }
 
   /**
@@ -308,6 +308,7 @@ export class OrderAggregate {
 
     this.transitionTo('refunded', `admin:${adminId}`, reason);
     this._order.payment.status = 'refunded';
+    this._order.payment.refundedAt = new Date();
   }
 
   // ============================================

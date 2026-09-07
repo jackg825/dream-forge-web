@@ -20,9 +20,9 @@ export function AdminGuard({ children, fallback }: AdminGuardProps) {
   useEffect(() => {
     if (!loading) {
       if (!user) {
-        router.push('/auth');
+        router.replace('/auth');
       } else if (user.role !== 'admin') {
-        router.push('/dashboard');
+        router.replace('/dashboard');
       }
     }
   }, [user, loading, router]);

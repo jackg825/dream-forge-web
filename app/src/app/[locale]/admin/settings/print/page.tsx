@@ -6,8 +6,8 @@
  * Configure print materials, sizes, colors, and pricing
  */
 
-import { useEffect, useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useRef, useState } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
 import { AdminGuard } from '@/components/auth/AdminGuard';
 import { AdminHeader } from '@/components/layout/headers';
 import { usePrintConfig } from '@/hooks/useOrders';
@@ -36,63 +36,60 @@ import {
   DollarSign,
 } from 'lucide-react';
 import type { PrintMaterial, PrintSizeId } from '@/types/order';
-
-const EMPTY_PRICING = {} as Record<PrintMaterial, Record<PrintSizeId, number>>;
+import { createPricingDraft, parsePrintPrice, parsePricingDraft, type PricingDraft } from '@/lib/print-pricing';
 
 function PrintSettingsContent() {
   const t = useTranslations('adminSettings');
 
-  const { materials, sizes, colors, pricing, loading, refresh } = usePrintConfig();
+  const locale = useLocale();
+  const { materials, sizes, colors, pricing, loading, error, refresh } = usePrintConfig(true);
 
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [saveResult, setSaveResult] = useState<'success' | 'error' | null>(null);
-  const [editedPricing, setEditedPricing] = useState<Record<PrintMaterial, Record<PrintSizeId, number>>>(EMPTY_PRICING);
-
-  // Initialize edited pricing from loaded config
-  useEffect(() => {
-    if (pricing && Object.keys(pricing).length > 0) {
-      setEditedPricing(structuredClone(pricing));
-    }
-  }, [pricing]);
+  const [draft, setDraft] = useState<PricingDraft | null>(null);
+  const editedPricing = draft ?? createPricingDraft(pricing);
+  const parsedPricing = parsePricingDraft(editedPricing, materials.map(({ id }) => id), sizes.map(({ id }) => id));
+  const hasChanges = draft !== null;
 
   const handlePricingChange = (material: PrintMaterial, size: PrintSizeId, value: string) => {
-    const cents = Math.round(parseFloat(value) * 100) || 0;
     setSaveResult(null);
-    setEditedPricing((prev) => ({
-      ...prev,
-      [material]: {
-        ...prev[material],
-        [size]: cents,
-      },
-    }));
+    setDraft((prev) => {
+      const current = prev ?? createPricingDraft(pricing);
+      return { ...current, [material]: { ...current[material], [size]: value } };
+    });
   };
 
   const handleSavePricing = async () => {
-    if (!functions) return;
+    if (!parsedPricing || savingRef.current || loading || error || !hasChanges) return;
+    if (!functions) {
+      setSaveResult('error');
+      return;
+    }
 
+    savingRef.current = true;
     setSaving(true);
     setSaveResult(null);
     try {
-      const updatePricingFn = httpsCallable<{ pricing: typeof editedPricing }, { success: boolean }>(
+      const updatePricingFn = httpsCallable<{ pricing: typeof parsedPricing }, { success: boolean }>(
         functions,
         'updatePricing'
       );
-      await updatePricingFn({ pricing: editedPricing });
-      await refresh();
+      const result = await updatePricingFn({ pricing: parsedPricing });
+      if (!result.data.success) throw new Error('Pricing update failed');
+      // Preserve the submitted values if the subsequent read fails.
+      if (await refresh()) setDraft(null);
       setSaveResult('success');
     } catch (error) {
       console.error('Failed to save pricing:', error);
       setSaveResult('error');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
-  const formatPrice = (cents: number) => {
-    return (cents / 100).toFixed(2);
-  };
-
-  if (loading) {
+  if (loading && materials.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <AdminHeader />
@@ -121,7 +118,7 @@ function PrintSettingsContent() {
             </p>
           </div>
 
-          <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => { void refresh(); }} disabled={loading || saving || hasChanges}>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -131,8 +128,17 @@ function PrintSettingsContent() {
           </Button>
         </div>
 
+        {error && (
+          <div role="alert" className="mb-4 rounded-md border border-destructive p-4 text-sm text-destructive">
+            {t('print.loadError')}
+            <Button className="ml-2" variant="outline" size="sm" disabled={loading || saving} onClick={() => { void refresh(); }}>
+              {t('print.refresh')}
+            </Button>
+          </div>
+        )}
+
         <Tabs defaultValue="pricing">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 h-auto w-full flex-wrap sm:w-fit">
             <TabsTrigger value="pricing" className="gap-2">
               <DollarSign className="h-4 w-4" />
               {t('print.tabs.pricing')}
@@ -166,7 +172,7 @@ function PrintSettingsContent() {
                         <TableHead>{t('print.pricing.material')}</TableHead>
                         {sizes.map((size) => (
                           <TableHead key={size.id} className="text-center">
-                            {size.displayName}
+                            {locale === 'zh-TW' ? size.displayNameZh : size.displayName}
                           </TableHead>
                         ))}
                       </TableRow>
@@ -174,8 +180,8 @@ function PrintSettingsContent() {
                     <TableBody>
                       {materials.map((material) => (
                         <TableRow key={material.id}>
-                          <TableCell className="font-medium">
-                            {material.name}
+                          <TableCell className="font-medium whitespace-nowrap">
+                            {locale === 'zh-TW' ? material.nameZh : material.name}
                           </TableCell>
                           {sizes.map((size) => (
                             <TableCell key={size.id} className="text-center">
@@ -185,7 +191,13 @@ function PrintSettingsContent() {
                                   type="number"
                                   step="0.01"
                                   min="0"
-                                  value={formatPrice(editedPricing[material.id]?.[size.id] || 0)}
+                                  max="1000000"
+                                  inputMode="decimal"
+                                  aria-label={`${locale === 'zh-TW' ? material.nameZh : material.name} ${locale === 'zh-TW' ? size.displayNameZh : size.displayName}`}
+                                  aria-invalid={parsePrintPrice(editedPricing[material.id]?.[size.id] ?? '') === null}
+                                  aria-describedby={hasChanges && !parsedPricing ? 'pricing-validation' : undefined}
+                                  disabled={saving || loading || !!error}
+                                  value={editedPricing[material.id]?.[size.id] ?? ''}
                                   onChange={(e) => handlePricingChange(material.id, size.id, e.target.value)}
                                   className="w-24 text-center"
                                 />
@@ -199,7 +211,18 @@ function PrintSettingsContent() {
                 </div>
 
                 <div className="mt-4 flex flex-col items-end gap-2">
-                  <Button onClick={handleSavePricing} disabled={saving}>
+                  {hasChanges && !parsedPricing && (
+                    <p id="pricing-validation" role="alert" className="text-sm text-destructive">{t('print.pricing.invalid')}</p>
+                  )}
+                  {hasChanges && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span>{t('print.pricing.unsaved')}</span>
+                      <Button variant="outline" size="sm" disabled={saving || loading} onClick={() => { setDraft(null); setSaveResult(null); }}>
+                        {t('print.pricing.discard')}
+                      </Button>
+                    </div>
+                  )}
+                  <Button onClick={handleSavePricing} disabled={saving || loading || !!error || !hasChanges || !parsedPricing}>
                     {saving ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -233,7 +256,7 @@ function PrintSettingsContent() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t('print.materials.name')}</TableHead>
-                        <TableHead>{t('print.materials.description')}</TableHead>
+                        <TableHead>{t('print.materials.descriptionLabel')}</TableHead>
                         <TableHead className="text-center">{t('print.materials.maxColors')}</TableHead>
                         <TableHead className="text-center">{t('print.materials.estimatedDays')}</TableHead>
                         <TableHead className="text-center">{t('print.materials.available')}</TableHead>
@@ -242,19 +265,19 @@ function PrintSettingsContent() {
                     <TableBody>
                       {materials.map((material) => (
                         <TableRow key={material.id}>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium whitespace-nowrap">
                             <div>
-                              <p>{material.name}</p>
+                              <p>{locale === 'zh-TW' ? material.nameZh : material.name}</p>
                               <p className="text-sm text-muted-foreground">{material.nameZh}</p>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <p className="text-sm">{material.description}</p>
+                            <p className="text-sm">{locale === 'zh-TW' ? material.descriptionZh : material.description}</p>
                           </TableCell>
                           <TableCell className="text-center">{material.maxColors}</TableCell>
-                          <TableCell className="text-center">{material.estimatedDays} days</TableCell>
+                          <TableCell className="text-center">{t('print.materials.days', { count: material.estimatedDays })}</TableCell>
                           <TableCell className="text-center">
-                            <Switch checked={material.available} disabled />
+                            <Switch checked={material.available} disabled aria-label={`${material.name} ${t('print.materials.available')}`} />
                           </TableCell>
                         </TableRow>
                       ))}
@@ -288,9 +311,9 @@ function PrintSettingsContent() {
                     <TableBody>
                       {sizes.map((size) => (
                         <TableRow key={size.id}>
-                          <TableCell className="font-medium">
+                          <TableCell className="font-medium whitespace-nowrap">
                             <div>
-                              <p>{size.displayName}</p>
+                              <p>{locale === 'zh-TW' ? size.displayNameZh : size.displayName}</p>
                               <p className="text-sm text-muted-foreground">{size.displayNameZh}</p>
                             </div>
                           </TableCell>
@@ -298,7 +321,7 @@ function PrintSettingsContent() {
                             {size.dimensions.x} × {size.dimensions.y} × {size.dimensions.z} cm
                           </TableCell>
                           <TableCell className="text-center">
-                            <Switch checked={size.available} disabled />
+                            <Switch checked={size.available} disabled aria-label={`${size.displayName} ${t('print.sizes.available')}`} />
                           </TableCell>
                         </TableRow>
                       ))}

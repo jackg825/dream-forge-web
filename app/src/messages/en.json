@@ -1519,9 +1519,11 @@
     },
     "stats": {
       "todayOrders": "Today's Orders",
-      "todayRevenue": "Today's Revenue",
+      "todayRevenue": "Today's Paid Revenue",
       "weeklyOrders": "Weekly Orders",
-      "newCustomers": "New Customers"
+      "newCustomers": "New Customers",
+      "noPaidOrders": "No paid orders",
+      "revenueUnavailable": "Currency breakdown unavailable"
     },
     "status": {
       "pending": "Pending",
@@ -1579,14 +1581,26 @@
       "notesPlaceholder": "Internal notes (not visible to customer)",
       "updateStatusButton": "Update Status",
       "addTracking": "Add Tracking Info",
-      "addTrackingButton": "Add Tracking"
-    }
+      "addTrackingButton": "Add Tracking",
+      "trackingRequired": "Enter a carrier and tracking number.",
+      "invalidTrackingUrl": "Use an HTTP or HTTPS tracking URL.",
+      "editTracking": "Edit Tracking Info",
+      "saveTracking": "Save Tracking"
+    },
+    "filterStatus": "Filter by status",
+    "allStatuses": "All statuses",
+    "pageSummary": "Showing {start}–{end} of {total} orders. Board counts reflect this page.",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "itemCount": "{count, plural, one {# item} other {# items}}"
   },
+
   "adminSettings": {
     "print": {
       "title": "Print Configuration",
       "subtitle": "Configure materials, sizes, colors, and pricing for 3D prints",
       "refresh": "Refresh",
+      "loadError": "Print configuration could not be loaded. Your edits are preserved; retry before saving.",
       "tabs": {
         "pricing": "Pricing",
         "materials": "Materials",
@@ -1599,15 +1613,19 @@
         "material": "Material",
         "save": "Save Pricing",
         "success": "Pricing saved.",
-        "error": "Pricing could not be saved. Try again."
+        "error": "Pricing could not be saved. Try again.",
+        "invalid": "Enter a price from 0 to 1,000,000 with at most two decimal places in every field.",
+        "unsaved": "You have unsaved pricing changes.",
+        "discard": "Discard changes"
       },
       "materials": {
         "title": "Print Materials",
         "description": "Available material options for 3D printing",
         "name": "Material",
-        "description": "Description",
+        "descriptionLabel": "Description",
         "maxColors": "Max Colors",
         "estimatedDays": "Est. Days",
+        "days": "{count} days",
         "available": "Available",
         "editNote": "Material configuration is managed via Firebase. Contact admin to modify."
       },

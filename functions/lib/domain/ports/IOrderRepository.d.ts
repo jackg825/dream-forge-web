@@ -51,6 +51,11 @@ export interface IOrderRepository {
      * Update an order
      */
     update(orderId: string, updates: Partial<Order>): Promise<void>;
+    /** Read, validate and save a mutation against the latest order atomically. */
+    updateAtomically(orderId: string, mutate: (order: Order) => Order): Promise<{
+        previousOrder: Order;
+        order: Order;
+    }>;
     /**
      * Delete an order (soft delete by marking cancelled)
      */
@@ -143,6 +148,7 @@ export interface IOrderRepository {
     getDailyStats(date: Date): Promise<{
         orders: number;
         revenue: number;
+        revenueByCurrency: Record<string, number>;
         newCustomers: number;
     }>;
 }

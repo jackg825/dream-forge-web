@@ -6,6 +6,8 @@ import {
   Shield,
   Workflow,
   Settings,
+  ShoppingBag,
+  Printer,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -36,6 +38,8 @@ export const userNavItems: NavItem[] = [
 export const adminNavItems: NavItem[] = [
   { href: '/admin', labelKey: 'admin.dashboard', icon: Shield },
   { href: '/admin/pipelines', labelKey: 'admin.pipelines', icon: Workflow },
+  { href: '/admin/orders', labelKey: 'adminOrders.title', icon: ShoppingBag },
+  { href: '/admin/settings/print', labelKey: 'adminSettings.print.title', icon: Printer },
 ];
 
 // Mobile navigation sections for UserHeader
