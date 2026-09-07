@@ -1,6 +1,6 @@
 # Administrator audit — 2026-09-07
 
-This change addresses administrator access, user credits and tiers, generation previews, order fulfilment, and print pricing. It does not deploy services or change production accounts.
+This change addresses administrator access, user credits and tiers, generation previews, order fulfilment, and print pricing. It does not change production accounts.
 
 ## Resolved findings
 
@@ -9,6 +9,7 @@ This change addresses administrator access, user credits and tiers, generation p
 | Authentication | A previous administrator profile could survive an account switch or a late Firestore callback. | Identity changes immediately invalidate the profile, including callbacks arriving before effect cleanup. |
 | Order privacy | Customers could read internal notes through callable responses and direct Firestore reads. | Customer responses remove internal fields; direct order reads require a Firestore administrator role. Customer screens already use the callables. |
 | Credits | Concurrent deductions could pass a stale balance check and produce a negative balance. | Validation, balance changes and ledger writes happen in one transaction and return the committed balance. |
+| Statistics index | The production `type == bonus` credit sum requires a composite index that the emulator does not enforce. | Declare the `transactions` index on `type` and `amount`; deploy it and wait for the aggregation query to succeed before updating the statistics callable. |
 | User management | Loading another page replaced earlier users; details stayed stale after updates. | Pages append without duplicates, selected users update in place, transaction history supports pagination, and stale responses are ignored. |
 | Preview assets | Reusing preview filenames could overwrite a previously accepted model or image. | Every preview uses a unique path; confirmation and audit records commit atomically. |
 | Preview workflow | Duplicate starts, late callbacks, missing Rodin subscription keys and abandoned startup claims could break generation. | Claims prevent duplicate starts, expired claims can be retried, polling retains provider metadata, and late callbacks cannot restore rejected previews. |
@@ -42,3 +43,4 @@ Browser checks used actual administrator components bundled with synthetic authe
 - Generation dashboard statistics retain the existing legacy `jobs` definition; they are not a combined count of jobs and pipelines.
 - Some pre-existing administrator detail-dialog text remains Chinese in the English locale. Key parity is not a claim of complete English localization.
 - Deploy the callable changes and Firestore Rules together with the application. Older integrations that read `/orders` directly must use the customer callables; browser routing alone is not an authorization boundary.
+- Build Hosting with the registered production Firebase web app configuration. The existing deployed bundle omitted these values; deployment must provide the six `NEXT_PUBLIC_FIREBASE_*` variables and use the existing backend's R2 configuration. Keep local environment files out of Git.
