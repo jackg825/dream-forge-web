@@ -18,6 +18,17 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded';
 
+export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['printing', 'cancelled'],
+  printing: ['quality_check'],
+  quality_check: ['shipping', 'cancelled'],
+  shipping: ['delivered', 'cancelled'],
+  delivered: ['refunded'],
+  cancelled: ['refunded'],
+  refunded: [],
+};
+
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: '待確認',
   confirmed: '已確認',
@@ -296,6 +307,7 @@ export interface OrderStatsResponse {
   daily: {
     orders: number;
     revenue: number;
+    revenueByCurrency?: Record<string, number>;
     newCustomers: number;
   };
   weekly: {

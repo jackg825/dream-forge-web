@@ -7,12 +7,13 @@
  */
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,27 +41,18 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import type { AdminOrder, OrderStatus, UpdateOrderStatusRequest } from '@/types/order';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
+import { ORDER_STATUS_TRANSITIONS, ORDER_STATUS_COLORS } from '@/types/order';
 
 interface OrderDetailPanelProps {
   order: AdminOrder | null;
   open: boolean;
   onClose: () => void;
-  onUpdateStatus: (request: UpdateOrderStatusRequest) => Promise<void>;
-  onUpdateTracking: (orderId: string, tracking: { carrier: string; trackingNumber: string; trackingUrl?: string }) => Promise<void>;
+  onUpdateStatus: (request: UpdateOrderStatusRequest) => Promise<boolean>;
+  onUpdateTracking: (orderId: string, tracking: { carrier: string; trackingNumber: string; trackingUrl?: string }) => Promise<boolean>;
   updating?: boolean;
+  error?: string | null;
+  initialStatus?: OrderStatus | '';
 }
-
-const STATUS_OPTIONS: OrderStatus[] = [
-  'pending',
-  'confirmed',
-  'printing',
-  'quality_check',
-  'shipping',
-  'delivered',
-  'cancelled',
-  'refunded',
-];
 
 export function OrderDetailPanel({
   order,
@@ -69,25 +61,29 @@ export function OrderDetailPanel({
   onUpdateStatus,
   onUpdateTracking,
   updating,
+  error,
+  initialStatus = '',
 }: OrderDetailPanelProps) {
   const t = useTranslations('adminOrders');
+  const locale = useLocale();
 
-  const [newStatus, setNewStatus] = useState<OrderStatus | ''>('');
+  const [newStatus, setNewStatus] = useState<OrderStatus | ''>(initialStatus);
   const [statusReason, setStatusReason] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
-  const [trackingCarrier, setTrackingCarrier] = useState('');
-  const [trackingNumber, setTrackingNumber] = useState('');
-  const [trackingUrl, setTrackingUrl] = useState('');
+  const [trackingCarrier, setTrackingCarrier] = useState(order?.tracking?.carrier || '');
+  const [trackingNumber, setTrackingNumber] = useState(order?.tracking?.trackingNumber || '');
+  const [trackingUrl, setTrackingUrl] = useState(order?.tracking?.trackingUrl || '');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const formatPrice = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'USD',
+      currency: order?.payment.currency || 'USD',
     }).format(cents / 100);
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('zh-TW', {
+    return new Date(dateStr).toLocaleDateString(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -110,58 +106,67 @@ export function OrderDetailPanel({
     return colorMap[ORDER_STATUS_COLORS[status]] || colorMap.gray;
   };
 
-  const handleUpdateStatus = async () => {
-    if (!order || !newStatus) return;
+  const validateTracking = () => {
+    if (!trackingCarrier.trim() || !trackingNumber.trim()) {
+      setValidationError(t('detail.trackingRequired'));
+      return false;
+    }
+    if (trackingUrl.trim()) {
+      try {
+        if (!['https:', 'http:'].includes(new URL(trackingUrl.trim()).protocol)) throw new Error();
+      } catch {
+        setValidationError(t('detail.invalidTrackingUrl'));
+        return false;
+      }
+    }
+    return true;
+  };
 
+  const handleUpdateStatus = async () => {
+    if (!order || !newStatus || updating) return;
+    setValidationError(null);
+    if (newStatus === 'shipping' && !validateTracking()) return;
     await onUpdateStatus({
       orderId: order.id,
       newStatus,
-      reason: statusReason || undefined,
-      adminNotes: adminNotes || undefined,
-      tracking: newStatus === 'shipping' && trackingCarrier && trackingNumber
-        ? { carrier: trackingCarrier, trackingNumber, trackingUrl: trackingUrl || undefined }
+      reason: statusReason.trim() || undefined,
+      adminNotes: adminNotes.trim() || undefined,
+      tracking: newStatus === 'shipping'
+        ? { carrier: trackingCarrier.trim(), trackingNumber: trackingNumber.trim(), trackingUrl: trackingUrl.trim() || undefined }
         : undefined,
     });
-
-    // Reset form
-    setNewStatus('');
-    setStatusReason('');
-    setAdminNotes('');
-    setTrackingCarrier('');
-    setTrackingNumber('');
-    setTrackingUrl('');
   };
 
   const handleUpdateTracking = async () => {
-    if (!order || !trackingCarrier || !trackingNumber) return;
-
+    if (!order || updating) return;
+    setValidationError(null);
+    if (!validateTracking()) return;
     await onUpdateTracking(order.id, {
-      carrier: trackingCarrier,
-      trackingNumber,
-      trackingUrl: trackingUrl || undefined,
+      carrier: trackingCarrier.trim(),
+      trackingNumber: trackingNumber.trim(),
+      trackingUrl: trackingUrl.trim(),
     });
-
-    // Reset form
-    setTrackingCarrier('');
-    setTrackingNumber('');
-    setTrackingUrl('');
   };
 
   if (!order) return null;
 
   return (
-    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && !updating && onClose()}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             <span>{t('detail.title')} #{order.id.slice(-6).toUpperCase()}</span>
             <Badge className={`${getStatusBadgeClass(order.status)} border-0`}>
-              {ORDER_STATUS_LABELS[order.status]}
+              {t(`status.${order.status}`)}
             </Badge>
           </SheetTitle>
+          <SheetDescription>{order.id}</SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
+          {(validationError || error) && (
+            <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{validationError || error}</p>
+          )}
           {/* Customer info */}
           <Card>
             <CardHeader className="py-3">
@@ -327,10 +332,11 @@ export function OrderDetailPanel({
                     <div className="w-2 h-2 rounded-full bg-primary mt-2" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">
-                        {ORDER_STATUS_LABELS[change.from]} → {ORDER_STATUS_LABELS[change.to]}
+                        {t(`status.${change.from}`)} → {t(`status.${change.to}`)}
                       </p>
                       <p className="text-xs text-muted-foreground">{formatDate(change.changedAt)}</p>
                       {change.reason && <p className="text-xs mt-1">{change.reason}</p>}
+                      {change.adminNotes && <p className="text-xs mt-1">{t('detail.adminNotes')}: {change.adminNotes}</p>}
                     </div>
                   </div>
                 ))}
@@ -339,6 +345,7 @@ export function OrderDetailPanel({
           </Card>
 
           {/* Update status */}
+          {ORDER_STATUS_TRANSITIONS[order.status].length > 0 && (
           <Card>
             <CardHeader className="py-3">
               <CardTitle className="text-sm">{t('detail.updateStatus')}</CardTitle>
@@ -346,14 +353,14 @@ export function OrderDetailPanel({
             <CardContent className="py-3 space-y-4">
               <div className="space-y-2">
                 <Label>{t('detail.newStatus')}</Label>
-                <Select value={newStatus} onValueChange={(v) => setNewStatus(v as OrderStatus)}>
+                <Select disabled={updating} value={newStatus} onValueChange={(v) => setNewStatus(v as OrderStatus)}>
                   <SelectTrigger aria-label={t('detail.newStatus')}>
                     <SelectValue placeholder={t('detail.selectStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUS_OPTIONS.map((status) => (
+                    {ORDER_STATUS_TRANSITIONS[order.status].map((status) => (
                       <SelectItem key={status} value={status}>
-                        {ORDER_STATUS_LABELS[status]}
+                        {t(`status.${status}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -361,8 +368,12 @@ export function OrderDetailPanel({
               </div>
 
               <div className="space-y-2">
-                <Label>{t('detail.reason')}</Label>
+                <Label htmlFor="order-reason">{t('detail.reason')}</Label>
                 <Input
+                  id="order-reason"
+                  aria-label={t('detail.reason')}
+                  maxLength={2000}
+                  disabled={updating}
                   value={statusReason}
                   onChange={(e) => setStatusReason(e.target.value)}
                   placeholder={t('detail.reasonPlaceholder')}
@@ -370,8 +381,12 @@ export function OrderDetailPanel({
               </div>
 
               <div className="space-y-2">
-                <Label>{t('detail.adminNotes')}</Label>
+                <Label htmlFor="order-adminNotes">{t('detail.adminNotes')}</Label>
                 <Textarea
+                  id="order-adminNotes"
+                  aria-label={t('detail.adminNotes')}
+                  maxLength={5000}
+                  disabled={updating}
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder={t('detail.notesPlaceholder')}
@@ -384,24 +399,36 @@ export function OrderDetailPanel({
                 <>
                   <Separator />
                   <div className="space-y-2">
-                    <Label>{t('detail.carrier')}</Label>
+                    <Label htmlFor="order-carrier">{t('detail.carrier')}</Label>
                     <Input
+                      id="order-carrier"
+                      aria-label={t('detail.carrier')}
+                      maxLength={100}
+                      disabled={updating}
                       value={trackingCarrier}
                       onChange={(e) => setTrackingCarrier(e.target.value)}
                       placeholder="e.g., FedEx, DHL"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>{t('detail.trackingNumber')}</Label>
+                    <Label htmlFor="order-trackingNumber">{t('detail.trackingNumber')}</Label>
                     <Input
+                      id="order-trackingNumber"
+                      aria-label={t('detail.trackingNumber')}
+                      maxLength={200}
+                      disabled={updating}
                       value={trackingNumber}
                       onChange={(e) => setTrackingNumber(e.target.value)}
                       placeholder="e.g., 1234567890"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>{t('detail.trackingUrl')}</Label>
+                    <Label htmlFor="order-trackingUrl">{t('detail.trackingUrl')}</Label>
                     <Input
+                      id="order-trackingUrl"
+                      aria-label={t('detail.trackingUrl')}
+                      maxLength={2048}
+                      disabled={updating}
                       value={trackingUrl}
                       onChange={(e) => setTrackingUrl(e.target.value)}
                       placeholder="https://..."
@@ -412,7 +439,7 @@ export function OrderDetailPanel({
 
               <Button
                 onClick={handleUpdateStatus}
-                disabled={!newStatus || updating}
+                disabled={!newStatus || updating || (newStatus === 'shipping' && (!trackingCarrier.trim() || !trackingNumber.trim()))}
                 className="w-full"
               >
                 {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -420,33 +447,46 @@ export function OrderDetailPanel({
               </Button>
             </CardContent>
           </Card>
+          )}
 
           {/* Update tracking separately */}
-          {order.status === 'shipping' && !order.tracking && (
+          {(order.status === 'shipping' || order.status === 'delivered') && (
             <Card>
               <CardHeader className="py-3">
-                <CardTitle className="text-sm">{t('detail.addTracking')}</CardTitle>
+                <CardTitle className="text-sm">{t('detail.editTracking')}</CardTitle>
               </CardHeader>
               <CardContent className="py-3 space-y-4">
                 <div className="space-y-2">
-                  <Label>{t('detail.carrier')}</Label>
+                  <Label htmlFor="order-carrier">{t('detail.carrier')}</Label>
                   <Input
+                    id="order-carrier"
+                    aria-label={t('detail.carrier')}
+                    maxLength={100}
+                    disabled={updating}
                     value={trackingCarrier}
                     onChange={(e) => setTrackingCarrier(e.target.value)}
                     placeholder="e.g., FedEx, DHL"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t('detail.trackingNumber')}</Label>
+                  <Label htmlFor="order-trackingNumber">{t('detail.trackingNumber')}</Label>
                   <Input
+                    id="order-trackingNumber"
+                    aria-label={t('detail.trackingNumber')}
+                    maxLength={200}
+                    disabled={updating}
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
                     placeholder="e.g., 1234567890"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t('detail.trackingUrl')}</Label>
+                  <Label htmlFor="order-trackingUrl">{t('detail.trackingUrl')}</Label>
                   <Input
+                    id="order-trackingUrl"
+                    aria-label={t('detail.trackingUrl')}
+                    maxLength={2048}
+                    disabled={updating}
                     value={trackingUrl}
                     onChange={(e) => setTrackingUrl(e.target.value)}
                     placeholder="https://..."
@@ -454,11 +494,11 @@ export function OrderDetailPanel({
                 </div>
                 <Button
                   onClick={handleUpdateTracking}
-                  disabled={!trackingCarrier || !trackingNumber || updating}
+                  disabled={!trackingCarrier.trim() || !trackingNumber.trim() || updating}
                   className="w-full"
                 >
                   {updating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t('detail.addTrackingButton')}
+                  {t('detail.saveTracking')}
                 </Button>
               </CardContent>
             </Card>

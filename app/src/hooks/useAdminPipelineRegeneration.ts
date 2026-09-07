@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { omitUndefinedFields } from '@/lib/callable-payload';
 import type {
   AdminPreview,
   PipelineMeshAngle,
@@ -41,9 +42,13 @@ interface UseAdminPipelineRegenerationReturn {
     status: string;
     progress?: number;
     meshUrl?: string;
+    meshStoragePath?: string;
     downloadFiles?: DownloadFile[];
     error?: string;
   } | null>;
+
+  // Reload the current preview after another administrator replaces it.
+  reloadPreview: (pipelineId: string) => Promise<boolean>;
 
   // Confirm/Reject
   confirmPreview: (
@@ -60,7 +65,6 @@ interface UseAdminPipelineRegenerationReturn {
 
   // Utilities
   clearError: () => void;
-  setPreviewData: (data: AdminPreview | null) => void;
 }
 
 // Response types for Cloud Functions
@@ -82,9 +86,10 @@ interface CheckPreviewStatusResponse {
   status: string;
   progress?: number;
   meshUrl?: string;
+  meshStoragePath?: string;
   downloadFiles?: DownloadFile[];
   error?: string;
-  preview?: AdminPreview;
+  preview?: AdminPreview | null;
 }
 
 interface ConfirmPreviewResponse {
@@ -97,11 +102,24 @@ interface RejectPreviewResponse {
   rejectedField: string;
 }
 
-export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationReturn {
+function getPreviewStatus(preview: AdminPreview | null): PreviewStatus {
+  if (preview?.taskStatus === 'pending' || preview?.taskStatus === 'processing') return 'processing';
+  if (preview?.taskStatus === 'failed') return 'failed';
+  return preview?.meshUrl || Object.keys(preview?.meshImages ?? {}).length > 0 ? 'ready' : 'idle';
+}
+
+export function useAdminPipelineRegeneration(initialPreview: AdminPreview | null = null): UseAdminPipelineRegenerationReturn {
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [previewStatus, setPreviewStatus] = useState<PreviewStatus>('idle');
-  const [previewData, setPreviewData] = useState<AdminPreview | null>(null);
+  const [previewStatus, setPreviewStatus] = useState<PreviewStatus>(() => getPreviewStatus(initialPreview));
+  const [previewData, setPreviewDataState] = useState<AdminPreview | null>(initialPreview);
   const [error, setError] = useState<string | null>(null);
+  const mutationInFlight = useRef(false);
+  const currentPreview = useRef(initialPreview);
+  const setPreviewData = useCallback((update: AdminPreview | null | ((previous: AdminPreview | null) => AdminPreview | null)) => {
+    const next = typeof update === 'function' ? update(currentPreview.current) : update;
+    currentPreview.current = next;
+    setPreviewDataState(next);
+  }, []);
 
   const regenerateImage = useCallback(async (
     pipelineId: string,
@@ -114,6 +132,8 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       return null;
     }
 
+    if (mutationInFlight.current) return null;
+    mutationInFlight.current = true;
     setIsRegenerating(true);
     setPreviewStatus('generating');
     setError(null);
@@ -124,12 +144,12 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
         RegenerateImageResponse
       >(functions, 'adminRegeneratePipelineImage');
 
-      const result = await adminRegenerateFunc({
+      const result = await adminRegenerateFunc(omitUndefinedFields({
         pipelineId,
         viewType,
         angle,
         hint,
-      });
+      }));
 
       if (result.data.success) {
         // Update local preview data
@@ -154,9 +174,10 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       console.error('Error regenerating image:', err);
       return null;
     } finally {
+      mutationInFlight.current = false;
       setIsRegenerating(false);
     }
-  }, []);
+  }, [setPreviewData]);
 
   const regenerateMesh = useCallback(async (
     pipelineId: string,
@@ -168,6 +189,8 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       return null;
     }
 
+    if (mutationInFlight.current) return null;
+    mutationInFlight.current = true;
     setIsRegenerating(true);
     setPreviewStatus('generating');
     setError(null);
@@ -178,11 +201,11 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
         StartMeshResponse
       >(functions, 'adminStartPipelineMesh');
 
-      const result = await adminStartMeshFunc({
+      const result = await adminStartMeshFunc(omitUndefinedFields({
         pipelineId,
         provider,
         providerOptions,
-      });
+      }));
 
       if (result.data.success) {
         setPreviewData((prev) => ({
@@ -190,6 +213,9 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
           provider: result.data.provider,
           taskId: result.data.taskId,
           taskStatus: 'pending',
+          meshUrl: undefined,
+          meshStoragePath: undefined,
+          meshDownloadFiles: undefined,
         }));
         setPreviewStatus('processing');
         return {
@@ -207,9 +233,10 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       console.error('Error regenerating mesh:', err);
       return null;
     } finally {
+      mutationInFlight.current = false;
       setIsRegenerating(false);
     }
-  }, []);
+  }, [setPreviewData]);
 
   const checkPreviewStatus = useCallback(async (pipelineId: string) => {
     if (!functions) {
@@ -230,13 +257,18 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
           setPreviewData((prev) => ({
             ...prev,
             meshUrl: result.data.meshUrl,
+            meshStoragePath: result.data.meshStoragePath,
             meshDownloadFiles: result.data.downloadFiles,
             taskStatus: 'completed',
           }));
           setPreviewStatus('ready');
         } else if (result.data.status === 'failed') {
+          setPreviewData((prev) => prev ? { ...prev, taskStatus: 'failed' } : null);
           setPreviewStatus('failed');
           setError(result.data.error || 'Mesh generation failed');
+        } else if (result.data.status === 'no-active-task') {
+          setPreviewData(result.data.preview ?? null);
+          setPreviewStatus(getPreviewStatus(result.data.preview ?? null));
         } else if (result.data.status === 'processing') {
           setPreviewStatus('processing');
         }
@@ -245,6 +277,7 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
           status: result.data.status,
           progress: result.data.progress,
           meshUrl: result.data.meshUrl,
+          meshStoragePath: result.data.meshStoragePath,
           downloadFiles: result.data.downloadFiles,
           error: result.data.error,
         };
@@ -257,7 +290,37 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       console.error('Error checking preview status:', err);
       return null;
     }
-  }, []);
+  }, [setPreviewData]);
+
+  const reloadPreview = useCallback(async (pipelineId: string): Promise<boolean> => {
+    if (!functions) {
+      setError('Firebase not initialized');
+      return false;
+    }
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
+    setIsRegenerating(true);
+    try {
+      const readPreview = httpsCallable<
+        { pipelineId: string; readOnly: true },
+        CheckPreviewStatusResponse
+      >(functions, 'adminCheckPreviewStatus');
+      const result = await readPreview({ pipelineId, readOnly: true });
+      if (!result.data.success || !('preview' in result.data)) {
+        throw new Error('Unable to reload the current preview');
+      }
+      setPreviewData(result.data.preview ?? null);
+      setPreviewStatus(getPreviewStatus(result.data.preview ?? null));
+      setError(null);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to reload the current preview');
+      return false;
+    } finally {
+      mutationInFlight.current = false;
+      setIsRegenerating(false);
+    }
+  }, [setPreviewData]);
 
   const confirmPreview = useCallback(async (
     pipelineId: string,
@@ -269,20 +332,27 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       return false;
     }
 
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
+    setIsRegenerating(true);
     setPreviewStatus('confirming');
     setError(null);
 
     try {
       const confirmFunc = httpsCallable<
-        { pipelineId: string; targetField: string; angle?: string },
+        { pipelineId: string; targetField: string; angle?: string; expectedStoragePath?: string },
         ConfirmPreviewResponse
       >(functions, 'adminConfirmPreview');
 
-      const result = await confirmFunc({
+      const expectedStoragePath = targetField === 'meshImages' && angle
+        ? currentPreview.current?.meshImages?.[angle as PipelineMeshAngle]?.storagePath
+        : currentPreview.current?.meshStoragePath;
+      const result = await confirmFunc(omitUndefinedFields({
         pipelineId,
         targetField,
         angle,
-      });
+        expectedStoragePath,
+      }));
 
       if (result.data.success) {
         // Clear the confirmed preview data
@@ -292,6 +362,7 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
 
           if (targetField === 'meshImages' && angle) {
             if (updated.meshImages) {
+              updated.meshImages = { ...updated.meshImages };
               delete updated.meshImages[angle as PipelineMeshAngle];
             }
           } else if (targetField === 'mesh') {
@@ -306,7 +377,7 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
           // Check if preview is now empty
           const hasContent =
             (updated.meshImages && Object.keys(updated.meshImages).length > 0) ||
-            updated.meshUrl;
+            updated.meshUrl || updated.taskId;
 
           return hasContent ? updated : null;
         });
@@ -323,8 +394,11 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       setPreviewStatus('ready');
       console.error('Error confirming preview:', err);
       return false;
+    } finally {
+      mutationInFlight.current = false;
+      setIsRegenerating(false);
     }
-  }, []);
+  }, [setPreviewData]);
 
   const rejectPreview = useCallback(async (
     pipelineId: string,
@@ -336,6 +410,9 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       return false;
     }
 
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
+    setIsRegenerating(true);
     setError(null);
 
     try {
@@ -344,11 +421,11 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
         RejectPreviewResponse
       >(functions, 'adminRejectPreview');
 
-      const result = await rejectFunc({
+      const result = await rejectFunc(omitUndefinedFields({
         pipelineId,
         targetField,
         angle,
-      });
+      }));
 
       if (result.data.success) {
         if (targetField === 'all') {
@@ -360,6 +437,7 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
 
             if (targetField === 'meshImages' && angle) {
               if (updated.meshImages) {
+                updated.meshImages = { ...updated.meshImages };
                 delete updated.meshImages[angle as PipelineMeshAngle];
               }
             } else if (targetField === 'mesh') {
@@ -373,7 +451,7 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
 
             const hasContent =
               (updated.meshImages && Object.keys(updated.meshImages).length > 0) ||
-              updated.meshUrl;
+              updated.meshUrl || updated.taskId;
 
             return hasContent ? updated : null;
           });
@@ -389,8 +467,11 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
       setError(message);
       console.error('Error rejecting preview:', err);
       return false;
+    } finally {
+      mutationInFlight.current = false;
+      setIsRegenerating(false);
     }
-  }, []);
+  }, [setPreviewData]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -404,9 +485,9 @@ export function useAdminPipelineRegeneration(): UseAdminPipelineRegenerationRetu
     regenerateImage,
     regenerateMesh,
     checkPreviewStatus,
+    reloadPreview,
     confirmPreview,
     rejectPreview,
     clearError,
-    setPreviewData,
   };
 }

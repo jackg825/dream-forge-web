@@ -9,6 +9,7 @@
 import { useState, useCallback } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { omitUndefinedFields } from '@/lib/callable-payload';
 
 // ============================================
 // Types
@@ -131,7 +132,7 @@ export function useMeshOptimization() {
           AnalyzeResponse
         >(functions, 'analyzeMeshForPrint');
 
-        const result = await analyzeFn(params);
+        const result = await analyzeFn(omitUndefinedFields(params));
 
         if (result.data.success && result.data.analysis) {
           setAnalysis(result.data.analysis);
@@ -177,10 +178,10 @@ export function useMeshOptimization() {
           'optimizeMeshForPrint'
         );
 
-        const result = await optimizeFn({
+        const result = await optimizeFn(omitUndefinedFields({
           ...request,
           previewOnly: true,
-        });
+        }));
 
         if (result.data.success) {
           setPreview(result.data.preview);
@@ -248,10 +249,10 @@ export function useMeshOptimization() {
           'optimizeMeshForPrint'
         );
 
-        const result = await optimizeFn({
+        const result = await optimizeFn(omitUndefinedFields({
           ...request,
           previewOnly: false,
-        });
+        }));
 
         if (result.data.success) {
           setPreview(result.data.preview);

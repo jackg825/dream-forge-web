@@ -550,6 +550,11 @@ export interface AdminPreview {
   taskId?: string;
   taskStatus?: 'pending' | 'processing' | 'completed' | 'failed';
 
+  // Claims prevent in-flight results from restoring discarded or replaced previews.
+  operationId?: string;
+  imageOperationIds?: Partial<Record<PipelineMeshAngle, string>>;
+  subscriptionKey?: string;
+
   // Preview metadata
   createdAt?: FirebaseFirestore.Timestamp;
   createdBy?: string;  // Admin ID

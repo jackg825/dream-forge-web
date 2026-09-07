@@ -6,7 +6,7 @@
  * Provides hooks for managing orders, cart, and print configuration
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
 import type {
@@ -45,44 +45,55 @@ interface UsePrintConfigReturn {
   loading: boolean;
   error: string | null;
   getPrice: (material: PrintMaterial, size: PrintSizeId) => number;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<boolean>;
 }
 
-export function usePrintConfig(): UsePrintConfigReturn {
+export function usePrintConfig(includeUnavailable = false): UsePrintConfigReturn {
   const [materials, setMaterials] = useState<MaterialConfig[]>([]);
   const [sizes, setSizes] = useState<SizeConfig[]>([]);
   const [colors, setColors] = useState<ColorOption[]>([]);
   const [pricing, setPricing] = useState<Record<PrintMaterial, Record<PrintSizeId, number>>>(EMPTY_PRICING);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const configRequest = useRef(0);
 
   const refresh = useCallback(async () => {
-    if (!functions) return;
+    const requestId = ++configRequest.current;
+    if (!functions) {
+      setError('Firebase not initialized');
+      setLoading(false);
+      return false;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
-      const getPrintConfigFn = httpsCallable<void, PrintConfigResponse>(
+      const getPrintConfigFn = httpsCallable<{ includeUnavailable: boolean }, PrintConfigResponse>(
         functions,
         'getPrintConfig'
       );
-      const result = await getPrintConfigFn();
+      const result = await getPrintConfigFn({ includeUnavailable });
+      if (requestId !== configRequest.current) return false;
 
       setMaterials(result.data.materials);
       setSizes(result.data.sizes);
       setColors(result.data.colors);
       setPricing(result.data.pricing);
+      return true;
     } catch (err) {
+      if (requestId !== configRequest.current) return false;
       const message = err instanceof Error ? err.message : 'Failed to load print configuration';
       setError(message);
+      return false;
     } finally {
-      setLoading(false);
+      if (requestId === configRequest.current) setLoading(false);
     }
-  }, []);
+  }, [includeUnavailable]);
 
   useEffect(() => {
     refresh();
+    return () => { configRequest.current += 1; };
   }, [refresh]);
 
   const getPrice = useCallback(
@@ -441,6 +452,7 @@ interface UseAdminOrdersReturn {
   orders: AdminOrder[];
   loading: boolean;
   error: string | null;
+  statsError: string | null;
   pagination: {
     total: number;
     limit: number;
@@ -472,6 +484,9 @@ export function useAdminOrders(): UseAdminOrdersReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<UseAdminOrdersReturn['pagination']>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
+  const fetchSequence = useRef(0);
+  const mutationInFlight = useRef(false);
   const [stats, setStats] = useState<OrderStatsResponse | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingTracking, setUpdatingTracking] = useState(false);
@@ -484,8 +499,11 @@ export function useAdminOrders(): UseAdminOrdersReturn {
     limit?: number;
     offset?: number;
   }) => {
-    if (!functions) return;
-
+    if (!functions) {
+      setError('Order service unavailable');
+      return;
+    }
+    const sequence = ++fetchSequence.current;
     setLoading(true);
     setError(null);
 
@@ -496,13 +514,17 @@ export function useAdminOrders(): UseAdminOrdersReturn {
       );
 
       const result = await listAllOrdersFn(filters);
+      if (sequence !== fetchSequence.current) return;
       setOrders(result.data.orders);
       setPagination(result.data.pagination);
     } catch (err) {
+      if (sequence !== fetchSequence.current) return;
       const message = err instanceof Error ? err.message : 'Failed to fetch orders';
+      setOrders([]);
+      setPagination(null);
       setError(message);
     } finally {
-      setLoading(false);
+      if (sequence === fetchSequence.current) setLoading(false);
     }
   }, []);
 
@@ -527,7 +549,11 @@ export function useAdminOrders(): UseAdminOrdersReturn {
   }, []);
 
   const fetchStats = useCallback(async () => {
-    if (!functions) return;
+    if (!functions) {
+      setStatsError('Order statistics service unavailable');
+      return;
+    }
+    setStatsError(null);
 
     try {
       const getOrderStatsFn = httpsCallable<void, OrderStatsResponse>(
@@ -538,14 +564,19 @@ export function useAdminOrders(): UseAdminOrdersReturn {
       const result = await getOrderStatsFn();
       setStats(result.data);
     } catch (err) {
-      console.error('fetchStats error:', err);
+      setStatsError(err instanceof Error ? err.message : 'Failed to fetch order statistics');
     }
   }, []);
 
   const updateOrderStatus = useCallback(async (
     request: UpdateOrderStatusRequest
   ): Promise<UpdateOrderStatusResponse | null> => {
-    if (!functions) return null;
+    if (mutationInFlight.current) return null;
+    if (!functions) {
+      setError('Order service unavailable');
+      return null;
+    }
+    mutationInFlight.current = true;
 
     setUpdatingStatus(true);
     setError(null);
@@ -557,23 +588,27 @@ export function useAdminOrders(): UseAdminOrdersReturn {
       >(functions, 'updateOrderStatus');
 
       const result = await updateOrderStatusFn(request);
-      // Refresh orders
-      await fetchOrders();
       return result.data;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update order status';
       setError(message);
       return null;
     } finally {
+      mutationInFlight.current = false;
       setUpdatingStatus(false);
     }
-  }, [fetchOrders]);
+  }, []);
 
   const updateTracking = useCallback(async (
     orderId: string,
     tracking: { carrier: string; trackingNumber: string; trackingUrl?: string }
   ): Promise<boolean> => {
-    if (!functions) return false;
+    if (mutationInFlight.current) return false;
+    if (!functions) {
+      setError('Order service unavailable');
+      return false;
+    }
+    mutationInFlight.current = true;
 
     setUpdatingTracking(true);
     setError(null);
@@ -585,21 +620,22 @@ export function useAdminOrders(): UseAdminOrdersReturn {
       >(functions, 'updateTrackingInfo');
 
       await updateTrackingFn({ orderId, ...tracking });
-      await fetchOrders();
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to update tracking';
       setError(message);
       return false;
     } finally {
+      mutationInFlight.current = false;
       setUpdatingTracking(false);
     }
-  }, [fetchOrders]);
+  }, []);
 
   return {
     orders,
     loading,
     error,
+    statsError,
     pagination,
     stats,
     fetchOrders,

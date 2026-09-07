@@ -1519,9 +1519,11 @@
     },
     "stats": {
       "todayOrders": "今日訂單",
-      "todayRevenue": "今日營收",
+      "todayRevenue": "今日已付款營收",
       "weeklyOrders": "本週訂單",
-      "newCustomers": "新客戶"
+      "newCustomers": "新客戶",
+      "noPaidOrders": "尚無已付款訂單",
+      "revenueUnavailable": "暫無各幣別營收資料"
     },
     "status": {
       "pending": "待確認",
@@ -1579,14 +1581,26 @@
       "notesPlaceholder": "內部備註（客戶不可見）",
       "updateStatusButton": "更新狀態",
       "addTracking": "新增物流資訊",
-      "addTrackingButton": "新增物流"
-    }
+      "addTrackingButton": "新增物流",
+      "trackingRequired": "請填寫物流商與追蹤號碼。",
+      "invalidTrackingUrl": "追蹤網址必須使用 HTTP 或 HTTPS。",
+      "editTracking": "編輯物流資訊",
+      "saveTracking": "儲存物流資訊"
+    },
+    "filterStatus": "依狀態篩選",
+    "allStatuses": "全部狀態",
+    "pageSummary": "顯示第 {start}–{end} 筆，共 {total} 筆訂單。看板數量為本頁資料。",
+    "previousPage": "上一頁",
+    "nextPage": "下一頁",
+    "itemCount": "{count} 件商品"
   },
+
   "adminSettings": {
     "print": {
       "title": "列印設定",
       "subtitle": "設定 3D 列印的材質、尺寸、顏色和價格",
       "refresh": "重新整理",
+      "loadError": "無法載入列印設定。已保留您的編輯，請重試後再儲存。",
       "tabs": {
         "pricing": "價格",
         "materials": "材質",
@@ -1599,15 +1613,19 @@
         "material": "材質",
         "save": "儲存價格",
         "success": "價格已儲存。",
-        "error": "無法儲存價格，請再試一次。"
+        "error": "無法儲存價格，請再試一次。",
+        "invalid": "每個價格欄位皆須填入 0 到 1,000,000，最多保留兩位小數。",
+        "unsaved": "您有尚未儲存的價格變更。",
+        "discard": "放棄變更"
       },
       "materials": {
         "title": "列印材質",
         "description": "可用的 3D 列印材質選項",
         "name": "材質",
-        "description": "說明",
+        "descriptionLabel": "說明",
         "maxColors": "最多顏色",
         "estimatedDays": "預估天數",
+        "days": "{count} 天",
         "available": "啟用",
         "editNote": "材質設定由 Firebase 管理。如需修改請聯繫管理員。"
       },

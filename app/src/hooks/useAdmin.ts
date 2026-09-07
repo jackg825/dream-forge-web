@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '@/lib/firebase';
+import { omitUndefinedFields } from '@/lib/callable-payload';
 import type {
   AdminStats,
   AdminUser,
@@ -63,6 +64,7 @@ interface UseAdminReturn {
     hasMore: boolean;
   } | null;
   fetchUserTransactions: (targetUserId: string, limit?: number, offset?: number) => Promise<void>;
+  resetUserTransactions: () => void;
 
   // Error state
   error: string | null;
@@ -106,6 +108,9 @@ export function useAdmin(): UseAdminReturn {
   } | null>(null);
 
   const [error, setError] = useState<string | null>(null);
+  const usersRequest = useRef(0);
+  const transactionsRequest = useRef(0);
+  const mutationInFlight = useRef(false);
 
   const fetchRodinBalance = useCallback(async () => {
     if (!functions) {
@@ -193,6 +198,7 @@ export function useAdmin(): UseAdminReturn {
       return;
     }
 
+    const requestId = ++usersRequest.current;
     setUsersLoading(true);
     setError(null);
 
@@ -203,14 +209,21 @@ export function useAdmin(): UseAdminReturn {
       >(functions, 'listUsers');
 
       const result = await listUsersFunc({ limit, offset });
-      setUsers(result.data.users);
+      if (requestId !== usersRequest.current) return;
+      setUsers((current) => {
+        if (offset === 0) return result.data.users;
+        const byId = new Map(current.map((user) => [user.uid, user]));
+        result.data.users.forEach((user) => byId.set(user.uid, user));
+        return [...byId.values()];
+      });
       setUsersPagination(result.data.pagination);
     } catch (err) {
+      if (requestId !== usersRequest.current) return;
       const message = err instanceof Error ? err.message : 'Failed to fetch users';
       setError(message);
       console.error('Error fetching users:', err);
     } finally {
-      setUsersLoading(false);
+      if (requestId === usersRequest.current) setUsersLoading(false);
     }
   }, []);
 
@@ -224,6 +237,8 @@ export function useAdmin(): UseAdminReturn {
       return false;
     }
 
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
     setAddingCredits(true);
     setError(null);
 
@@ -233,10 +248,9 @@ export function useAdmin(): UseAdminReturn {
         { success: boolean; newBalance: number }
       >(functions, 'addCredits');
 
-      await addCreditsFunc({ targetUserId, amount, reason });
-
-      // Refresh users list after adding credits
-      await fetchUsers();
+      const result = await addCreditsFunc(omitUndefinedFields({ targetUserId, amount, reason }));
+      setUsers((current) => current.map((user) => user.uid === targetUserId
+        ? { ...user, credits: result.data.newBalance } : user));
 
       return true;
     } catch (err) {
@@ -245,9 +259,10 @@ export function useAdmin(): UseAdminReturn {
       console.error('Error adding credits:', err);
       return false;
     } finally {
+      mutationInFlight.current = false;
       setAddingCredits(false);
     }
-  }, [fetchUsers]);
+  }, []);
 
   const deductCredits = useCallback(async (
     targetUserId: string,
@@ -259,6 +274,8 @@ export function useAdmin(): UseAdminReturn {
       return false;
     }
 
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
     setDeductingCredits(true);
     setError(null);
 
@@ -268,10 +285,9 @@ export function useAdmin(): UseAdminReturn {
         { success: boolean; newBalance: number }
       >(functions, 'deductCredits');
 
-      await deductCreditsFunc({ targetUserId, amount, reason });
-
-      // Refresh users list after deducting credits
-      await fetchUsers();
+      const result = await deductCreditsFunc({ targetUserId, amount, reason });
+      setUsers((current) => current.map((user) => user.uid === targetUserId
+        ? { ...user, credits: result.data.newBalance } : user));
 
       return true;
     } catch (err) {
@@ -280,9 +296,10 @@ export function useAdmin(): UseAdminReturn {
       console.error('Error deducting credits:', err);
       return false;
     } finally {
+      mutationInFlight.current = false;
       setDeductingCredits(false);
     }
-  }, [fetchUsers]);
+  }, []);
 
   const updateUserTier = useCallback(async (
     targetUserId: string,
@@ -293,19 +310,20 @@ export function useAdmin(): UseAdminReturn {
       return false;
     }
 
+    if (mutationInFlight.current) return false;
+    mutationInFlight.current = true;
     setUpdatingTier(true);
     setError(null);
 
     try {
       const updateTierFunc = httpsCallable<
         { targetUserId: string; tier: UserTier },
-        { success: boolean; tier: UserTier }
+        { success: boolean; newTier: UserTier }
       >(functions, 'updateUserTier');
 
-      await updateTierFunc({ targetUserId, tier });
-
-      // Refresh users list after updating tier
-      await fetchUsers();
+      const result = await updateTierFunc({ targetUserId, tier });
+      setUsers((current) => current.map((user) => user.uid === targetUserId
+        ? { ...user, tier: result.data.newTier } : user));
 
       return true;
     } catch (err) {
@@ -314,9 +332,10 @@ export function useAdmin(): UseAdminReturn {
       console.error('Error updating tier:', err);
       return false;
     } finally {
+      mutationInFlight.current = false;
       setUpdatingTier(false);
     }
-  }, [fetchUsers]);
+  }, []);
 
   const fetchUserTransactions = useCallback(async (
     targetUserId: string,
@@ -328,6 +347,11 @@ export function useAdmin(): UseAdminReturn {
       return;
     }
 
+    const requestId = ++transactionsRequest.current;
+    if (offset === 0) {
+      setTransactions([]);
+      setTransactionsPagination(null);
+    }
     setTransactionsLoading(true);
     setError(null);
 
@@ -338,15 +362,29 @@ export function useAdmin(): UseAdminReturn {
       >(functions, 'getUserTransactions');
 
       const result = await getUserTransactionsFunc({ targetUserId, limit, offset });
-      setTransactions(result.data.transactions);
+      if (requestId !== transactionsRequest.current) return;
+      setTransactions((current) => {
+        if (offset === 0) return result.data.transactions;
+        const byId = new Map(current.map((transaction) => [transaction.id, transaction]));
+        result.data.transactions.forEach((transaction) => byId.set(transaction.id, transaction));
+        return [...byId.values()];
+      });
       setTransactionsPagination(result.data.pagination);
     } catch (err) {
+      if (requestId !== transactionsRequest.current) return;
       const message = err instanceof Error ? err.message : 'Failed to fetch transactions';
       setError(message);
       console.error('Error fetching transactions:', err);
     } finally {
-      setTransactionsLoading(false);
+      if (requestId === transactionsRequest.current) setTransactionsLoading(false);
     }
+  }, []);
+
+  const resetUserTransactions = useCallback(() => {
+    ++transactionsRequest.current;
+    setTransactions([]);
+    setTransactionsPagination(null);
+    setTransactionsLoading(false);
   }, []);
 
   const clearError = useCallback(() => {
@@ -377,6 +415,7 @@ export function useAdmin(): UseAdminReturn {
     transactionsLoading,
     transactionsPagination,
     fetchUserTransactions,
+    resetUserTransactions,
     error,
     clearError,
   };

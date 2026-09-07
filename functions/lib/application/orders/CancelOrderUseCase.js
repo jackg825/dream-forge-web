@@ -61,33 +61,28 @@ class CancelOrderUseCase {
             userId: request.userId,
             isAdmin: request.isAdmin,
         });
-        // 1. Get order from repository
-        const order = await this.orderRepository.getById(request.orderId);
-        if (!order) {
-            throw new functions.https.HttpsError('not-found', 'Order not found');
-        }
-        // 2. Verify ownership (unless admin)
-        if (!request.isAdmin && order.userId !== request.userId) {
-            throw new functions.https.HttpsError('permission-denied', 'You can only cancel your own orders');
-        }
-        const previousStatus = order.status;
-        // 3. Create aggregate and cancel
-        const orderAggregate = order_1.OrderAggregate.fromData(order);
-        try {
-            const cancelledBy = request.isAdmin
-                ? `admin:${request.userId}`
-                : request.userId;
-            orderAggregate.cancel(cancelledBy, request.reason);
-        }
-        catch (error) {
-            if (error instanceof Error && error.message.includes('Cannot cancel')) {
-                throw new functions.https.HttpsError('failed-precondition', `Cannot cancel order in '${order.status}' status. Orders can only be cancelled when pending, in quality check, or shipping.`);
+        const { previousOrder, order: updatedOrder } = await this.orderRepository.updateAtomically(request.orderId, (order) => {
+            if (!request.isAdmin && order.userId !== request.userId) {
+                throw new functions.https.HttpsError('permission-denied', 'You can only cancel your own orders');
             }
-            throw error;
-        }
-        // 4. Save updated order
-        const updatedOrder = orderAggregate.toData();
-        await this.orderRepository.update(request.orderId, updatedOrder);
+            const aggregate = order_1.OrderAggregate.fromData(order);
+            try {
+                if (request.isAdmin) {
+                    aggregate.transitionTo('cancelled', `admin:${request.userId}`, request.reason);
+                }
+                else {
+                    aggregate.cancel(request.userId, request.reason);
+                }
+            }
+            catch (error) {
+                if (error instanceof order_1.OrderValidationError || error instanceof order_1.OrderTransitionError) {
+                    throw new functions.https.HttpsError('failed-precondition', error.message);
+                }
+                throw error;
+            }
+            return aggregate.toData();
+        });
+        const previousStatus = previousOrder.status;
         // 5. Send notification
         try {
             await this.notificationService.sendOrderStatusNotification({

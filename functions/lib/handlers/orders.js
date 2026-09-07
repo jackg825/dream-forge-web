@@ -46,6 +46,8 @@ const WebhookNotificationAdapter_1 = require("../infrastructure/notification/Web
 const orders_1 = require("../application/orders");
 const storage_1 = require("../storage");
 const storage_validation_1 = require("../utils/storage-validation");
+const order_validation_1 = require("../utils/order-validation");
+const order_visibility_1 = require("../utils/order-visibility");
 const db = admin.firestore();
 const PRINT_MATERIALS = ['pla-single', 'pla-multi', 'resin'];
 const PRINT_SIZES = ['5x5x5', '10x10x10', '15x15x15'];
@@ -213,7 +215,7 @@ exports.getUserOrders = functions
         return {
             success: true,
             orders: refreshedOrders.map((order) => ({
-                ...order,
+                ...(0, order_visibility_1.customerOrder)(order),
                 createdAt: order.createdAt.toISOString(),
                 updatedAt: order.updatedAt.toISOString(),
                 confirmedAt: order.confirmedAt?.toISOString(),
@@ -242,10 +244,7 @@ exports.getOrderDetails = functions
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
     }
-    const { orderId } = data;
-    if (!orderId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Order ID is required');
-    }
+    const orderId = (0, order_validation_1.orderId)(data?.orderId);
     try {
         const order = await OrderRepository_1.orderRepository.getById(orderId);
         if (!order) {
@@ -260,7 +259,7 @@ exports.getOrderDetails = functions
         return {
             success: true,
             order: {
-                ...refreshedOrder,
+                ...(userIsAdmin ? refreshedOrder : (0, order_visibility_1.customerOrder)(refreshedOrder)),
                 createdAt: refreshedOrder.createdAt.toISOString(),
                 updatedAt: refreshedOrder.updatedAt.toISOString(),
                 confirmedAt: refreshedOrder.confirmedAt?.toISOString(),
@@ -286,10 +285,8 @@ exports.cancelOrder = functions
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
     }
-    const { orderId, reason } = data;
-    if (!orderId) {
-        throw new functions.https.HttpsError('invalid-argument', 'Order ID is required');
-    }
+    const orderId = (0, order_validation_1.orderId)(data?.orderId);
+    const reason = (0, order_validation_1.optionalOrderText)(data?.reason, 'Reason');
     const useCase = new orders_1.CancelOrderUseCase(OrderRepository_1.orderRepository, WebhookNotificationAdapter_1.webhookNotificationAdapter);
     try {
         const result = await useCase.execute({
@@ -394,6 +391,13 @@ exports.getPrintConfig = functions
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
     }
+    if (data?.includeUnavailable != null && typeof data.includeUnavailable !== 'boolean') {
+        throw new functions.https.HttpsError('invalid-argument', 'includeUnavailable must be a boolean');
+    }
+    const includeUnavailable = data?.includeUnavailable === true;
+    if (includeUnavailable && !(await isAdmin(context.auth.uid))) {
+        throw new functions.https.HttpsError('permission-denied', 'Admin access required');
+    }
     try {
         const [materials, sizes, colors, pricing] = await Promise.all([
             OrderRepository_1.orderRepository.getMaterials(),
@@ -403,9 +407,9 @@ exports.getPrintConfig = functions
         ]);
         return {
             success: true,
-            materials: materials.filter((m) => m.available),
-            sizes: sizes.filter((s) => s.available),
-            colors: colors.filter((c) => c.available),
+            materials: includeUnavailable ? materials : materials.filter((m) => m.available),
+            sizes: includeUnavailable ? sizes : sizes.filter((s) => s.available),
+            colors: includeUnavailable ? colors : colors.filter((c) => c.available),
             pricing,
         };
     }
@@ -429,15 +433,22 @@ exports.listAllOrders = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { status, userId, fromDate, toDate } = data || {};
+    const input = data || {};
+    const status = (0, order_validation_1.optionalOrderStatusFilter)(input.status);
+    const userId = (0, order_validation_1.optionalOrderText)(input.userId, 'User ID', 128);
+    const fromDate = (0, order_validation_1.orderDate)(input.fromDate, 'start date');
+    const toDate = (0, order_validation_1.orderDate)(input.toDate, 'end date');
+    if (fromDate && toDate && fromDate > toDate) {
+        throw new functions.https.HttpsError('invalid-argument', 'Start date must precede end date');
+    }
     const limit = parsePageNumber(data?.limit, 50, 1, 50, 'limit');
-    const offset = parsePageNumber(data?.offset, 0, 0, 1000, 'offset');
+    const offset = parsePageNumber(data?.offset, 0, 0, Number.MAX_SAFE_INTEGER, 'offset');
     try {
         const result = await OrderRepository_1.orderRepository.getAll({
             status,
             userId,
-            fromDate: fromDate ? new Date(fromDate) : undefined,
-            toDate: toDate ? new Date(toDate) : undefined,
+            fromDate,
+            toDate,
         }, { limit, offset });
         const refreshedOrders = await Promise.all(result.items.map((order) => refreshOrderModelUrls(order)));
         return {
@@ -475,7 +486,7 @@ exports.getOrdersByStatus = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { status } = data || {};
+    const status = (0, order_validation_1.orderStatus)(data?.status);
     const limit = parsePageNumber(data?.limit, 20, 1, 50, 'limit');
     if (!status) {
         throw new functions.https.HttpsError('invalid-argument', 'Status is required');
@@ -510,13 +521,11 @@ exports.updateOrderStatus = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { orderId, newStatus, reason, adminNotes, tracking } = data;
-    if (!orderId || !newStatus) {
-        throw new functions.https.HttpsError('invalid-argument', 'Order ID and status are required');
-    }
-    if (tracking?.trackingUrl && !isSafeExternalUrl(tracking.trackingUrl)) {
-        throw new functions.https.HttpsError('invalid-argument', 'Tracking URL must use HTTP or HTTPS');
-    }
+    const orderId = (0, order_validation_1.orderId)(data?.orderId);
+    const newStatus = (0, order_validation_1.orderStatus)(data?.newStatus);
+    const reason = (0, order_validation_1.optionalOrderText)(data?.reason, 'Reason');
+    const adminNotes = (0, order_validation_1.optionalOrderText)(data?.adminNotes, 'Admin notes', 5000);
+    const tracking = (0, order_validation_1.optionalOrderTracking)(data?.tracking);
     const useCase = new orders_1.UpdateOrderStatusUseCase(OrderRepository_1.orderRepository, WebhookNotificationAdapter_1.webhookNotificationAdapter);
     try {
         const result = await useCase.execute({
@@ -557,26 +566,23 @@ exports.updateTrackingInfo = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { orderId, carrier, trackingNumber, trackingUrl, estimatedDelivery } = data;
-    if (!orderId || !carrier || !trackingNumber) {
-        throw new functions.https.HttpsError('invalid-argument', 'Order ID, carrier, and tracking number are required');
-    }
-    if (trackingUrl && !isSafeExternalUrl(trackingUrl)) {
-        throw new functions.https.HttpsError('invalid-argument', 'Tracking URL must use HTTP or HTTPS');
-    }
+    const orderId = (0, order_validation_1.orderId)(data?.orderId);
+    const tracking = (0, order_validation_1.orderTracking)(data);
     try {
-        const order = await OrderRepository_1.orderRepository.getById(orderId);
-        if (!order) {
-            throw new functions.https.HttpsError('not-found', 'Order not found');
-        }
-        await OrderRepository_1.orderRepository.update(orderId, {
-            tracking: {
-                carrier,
-                trackingNumber,
-                trackingUrl,
-                estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
-                shippedAt: order.tracking?.shippedAt || new Date(),
-            },
+        await OrderRepository_1.orderRepository.updateAtomically(orderId, (order) => {
+            if (order.status !== 'shipping' && order.status !== 'delivered') {
+                throw new functions.https.HttpsError('failed-precondition', 'Tracking can only be updated for shipped orders');
+            }
+            return {
+                ...order,
+                tracking: {
+                    ...tracking,
+                    ...(tracking.estimatedDelivery === undefined && order.tracking?.estimatedDelivery && {
+                        estimatedDelivery: order.tracking.estimatedDelivery,
+                    }),
+                    shippedAt: order.tracking?.shippedAt || order.shippedAt || new Date(),
+                },
+            };
         });
         return { success: true };
     }
@@ -637,10 +643,7 @@ exports.updateMaterialConfig = functions
     if (!(await isAdmin(context.auth.uid))) {
         throw new functions.https.HttpsError('permission-denied', 'Admin access required');
     }
-    const { material } = data;
-    if (!material?.id) {
-        throw new functions.https.HttpsError('invalid-argument', 'Material configuration required');
-    }
+    const material = (0, order_validation_1.orderMaterial)(data?.material);
     try {
         await OrderRepository_1.orderRepository.updateMaterial(material);
         return { success: true };

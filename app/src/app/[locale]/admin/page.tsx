@@ -35,12 +35,14 @@ function AdminDashboardContent() {
     transactionsLoading,
     transactionsPagination,
     fetchUserTransactions,
+    resetUserTransactions,
     error,
     clearError,
   } = useAdmin();
 
   // User detail modal state
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const selectedUser = users.find((targetUser) => targetUser.uid === selectedUserId) ?? null;
   const [showUserDetail, setShowUserDetail] = useState(false);
 
   // Fetch data on mount
@@ -51,13 +53,16 @@ function AdminDashboardContent() {
   }, [fetchAllProviderBalances, fetchStats, fetchUsers]);
 
   const openUserDetail = (targetUser: AdminUser) => {
-    setSelectedUser(targetUser);
+    resetUserTransactions();
+    clearError();
+    setSelectedUserId(targetUser.uid);
     setShowUserDetail(true);
   };
 
   const closeUserDetail = () => {
     setShowUserDetail(false);
-    setSelectedUser(null);
+    setSelectedUserId(null);
+    resetUserTransactions();
   };
 
   return (
@@ -68,10 +73,11 @@ function AdminDashboardContent() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error banner */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+          <div role="alert" className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             <button
               onClick={clearError}
+              aria-label={t('common.close')}
               className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -277,7 +283,7 @@ function AdminDashboardContent() {
             </div>
           </div>
 
-          {usersLoading ? (
+          {usersLoading && users.length === 0 ? (
             <div className="p-6 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
             </div>
@@ -422,7 +428,9 @@ function AdminDashboardContent() {
 
       {/* User Detail Modal */}
       <UserDetailModal
+        key={selectedUserId}
         user={selectedUser}
+        error={error}
         open={showUserDetail}
         onClose={closeUserDetail}
         transactions={transactions}

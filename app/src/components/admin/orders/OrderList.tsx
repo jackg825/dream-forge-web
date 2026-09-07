@@ -6,7 +6,7 @@
  * Displays orders in a sortable, filterable table format
  */
 
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,12 +33,13 @@ import {
   XCircle,
 } from 'lucide-react';
 import type { AdminOrder, OrderStatus } from '@/types/order';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '@/types/order';
+import { ORDER_STATUS_COLORS } from '@/types/order';
 import { FillImage } from '@/components/ui/fill-image';
 
 interface OrderListProps {
   orders: AdminOrder[];
   loading?: boolean;
+  updating?: boolean;
   onSelectOrder: (order: AdminOrder) => void;
   onUpdateStatus?: (orderId: string, status: OrderStatus) => void;
   selectedOrderId?: string;
@@ -47,21 +48,23 @@ interface OrderListProps {
 export function OrderList({
   orders,
   loading,
+  updating,
   onSelectOrder,
   onUpdateStatus,
   selectedOrderId,
 }: OrderListProps) {
   const t = useTranslations('adminOrders');
+  const locale = useLocale();
 
-  const formatPrice = (cents: number) => {
-    return new Intl.NumberFormat('en-US', {
+  const formatPrice = (cents: number, currency: string) => {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: 'USD',
+      currency,
     }).format(cents / 100);
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('zh-TW', {
+    return new Date(dateStr).toLocaleDateString(locale, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -152,7 +155,12 @@ export function OrderList({
                 onClick={() => onSelectOrder(order)}
               >
                 <TableCell className="font-mono text-sm">
-                  #{order.id.slice(-6).toUpperCase()}
+                  <button type="button" className="underline-offset-4 hover:underline focus-visible:underline" onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectOrder(order);
+                  }} aria-label={`${t('actions.viewDetails')} #${order.id}`}>
+                    #{order.id.slice(-6).toUpperCase()}
+                  </button>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
@@ -195,17 +203,17 @@ export function OrderList({
                       </div>
                     )}
                     <span className="text-sm">
-                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                      {t('itemCount', { count: order.items.reduce((sum, item) => sum + item.quantity, 0) })}
                     </span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <Badge className={`${getStatusBadgeClass(order.status)} border-0`}>
-                    {ORDER_STATUS_LABELS[order.status]}
+                    {t(`status.${order.status}`)}
                   </Badge>
                 </TableCell>
                 <TableCell className="font-medium">
-                  {formatPrice(order.payment.totalAmount)}
+                  {formatPrice(order.payment.totalAmount, order.payment.currency)}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {formatDate(order.createdAt)}
@@ -213,7 +221,7 @@ export function OrderList({
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" disabled={updating} aria-label={t('list.actions')}>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -225,6 +233,7 @@ export function OrderList({
                       {quickActions.map((action) => (
                         <DropdownMenuItem
                           key={action.status}
+                          disabled={updating || !onUpdateStatus}
                           onClick={(e) => {
                             e.stopPropagation();
                             onUpdateStatus?.(order.id, action.status);

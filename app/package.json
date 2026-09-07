@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "serve -s out -l 3000",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test tests/*.test.cjs"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

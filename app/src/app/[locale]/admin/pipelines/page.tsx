@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import { AdminGuard } from '@/components/auth/AdminGuard';
 import { AdminHeader } from '@/components/layout/headers';
 import { useAdminPipelines } from '@/hooks/useAdminPipelines';
@@ -15,6 +16,7 @@ import type { AdminPipeline, PipelineStatus } from '@/types';
 type FilterStatus = 'all' | PipelineStatus;
 
 function AdminPipelinesContent() {
+  const t = useTranslations();
   const {
     pipelines,
     loading,
@@ -44,7 +46,7 @@ function AdminPipelinesContent() {
   };
 
   const handleLoadMore = () => {
-    if (pagination?.hasMore) {
+    if (pagination?.hasMore && !loading) {
       fetchPipelines(pagination.limit, pagination.offset + pagination.limit, {
         status: statusFilter === 'all' ? undefined : statusFilter,
         userId: appliedUserIdFilter || undefined,
@@ -57,12 +59,12 @@ function AdminPipelinesContent() {
     setDetailOpen(true);
   };
 
-  const refreshLoadedPipelines = () => {
-    fetchPipelines(Math.min(Math.max(pipelines.length, 20), 50), 0, {
+  const refreshLoadedPipelines = useCallback(() => {
+    fetchPipelines(Math.max(pipelines.length, 20), 0, {
       status: statusFilter === 'all' ? undefined : statusFilter,
       userId: appliedUserIdFilter || undefined,
     });
-  };
+  }, [pipelines.length, statusFilter, appliedUserIdFilter, fetchPipelines]);
 
   const handleFilterChange = (newFilter: FilterStatus) => {
     setStatusFilter(newFilter);
@@ -74,10 +76,15 @@ function AdminPipelinesContent() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-2xl font-bold mb-6">{t('admin.pipelines')}</h1>
+
         {/* Error banner */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+          <div role="alert" className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            <Button variant="outline" size="sm" onClick={refreshLoadedPipelines} disabled={loading}>
+              {t('common.retry')}
+            </Button>
             <button
               type="button"
               onClick={clearError}
@@ -107,6 +114,7 @@ function AdminPipelinesContent() {
           <div className="flex gap-2">
             <Input
               placeholder="搜尋用戶 ID..."
+              aria-label="搜尋用戶 ID"
               value={userIdInput}
               onChange={(e) => setUserIdInput(e.target.value)}
               className="max-w-xs"
@@ -179,7 +187,8 @@ function AdminPipelinesContent() {
       </main>
 
       {/* Pipeline detail modal */}
-      <PipelineDetailModal
+      {selectedPipeline && <PipelineDetailModal
+        key={selectedPipeline.id}
         pipeline={selectedPipeline}
         open={detailOpen}
         onClose={() => {
@@ -187,7 +196,7 @@ function AdminPipelinesContent() {
           setSelectedPipelineId(null);
         }}
         onPipelineUpdated={refreshLoadedPipelines}
-      />
+      />}
     </div>
   );
 }

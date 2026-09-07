@@ -266,19 +266,22 @@ function ImageGallery({
 }
 
 export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated }: PipelineDetailModalProps) {
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('meshy');
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(pipeline?.settings.provider ?? 'meshy');
   const [activeTab, setActiveTab] = useState('input');
   const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [showOptimizeDialog, setShowOptimizeDialog] = useState(false);
 
   // Download handler - uses fetch to preserve Referer header
   const handleDownload = async (url: string, fileName: string) => {
     if (downloading) return;
     setDownloading(true);
+    setDownloadError(null);
     try {
       await downloadFile(url, fileName);
     } catch (error) {
       console.error('Download failed:', error);
+      setDownloadError('下載失敗，請稍後再試。');
     } finally {
       setDownloading(false);
     }
@@ -292,42 +295,35 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
     regenerateImage,
     regenerateMesh,
     checkPreviewStatus,
+    reloadPreview,
     confirmPreview,
     rejectPreview,
     clearError,
-    setPreviewData,
-  } = useAdminPipelineRegeneration();
+  } = useAdminPipelineRegeneration(pipeline?.adminPreview ?? null);
 
-  // Initialize preview data from pipeline
+  const pipelineId = pipeline?.id;
+  // Wait for each response before scheduling the next check. A slow provider
+  // must not start multiple simultaneous downloads of the completed model.
   useEffect(() => {
-    if (pipeline?.adminPreview) {
-      setPreviewData(pipeline.adminPreview);
-    } else {
-      setPreviewData(null);
-    }
-  }, [pipeline?.adminPreview, setPreviewData]);
+    if (!open || !pipelineId || previewStatus !== 'processing') return;
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout>;
 
-  // Reset provider selection when pipeline changes
-  useEffect(() => {
-    if (pipeline?.settings?.provider) {
-      setSelectedProvider(pipeline.settings.provider);
-    }
-  }, [pipeline?.settings?.provider]);
-
-  // Poll for mesh preview status
-  useEffect(() => {
-    if (!pipeline || previewStatus !== 'processing') return;
-
-    const interval = setInterval(async () => {
-      const result = await checkPreviewStatus(pipeline.id);
-      if (result?.status === 'completed' || result?.status === 'failed') {
-        clearInterval(interval);
+    const poll = async () => {
+      const result = await checkPreviewStatus(pipelineId);
+      if (cancelled) return;
+      if (result?.status === 'completed' || result?.status === 'failed' || result?.status === 'no-active-task') {
         onPipelineUpdated?.();
+        return;
       }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [pipeline, previewStatus, checkPreviewStatus, onPipelineUpdated]);
+      timeout = setTimeout(poll, 5000);
+    };
+    timeout = setTimeout(poll, 5000);
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [open, pipelineId, previewStatus, checkPreviewStatus, onPipelineUpdated]);
 
   if (!pipeline) return null;
 
@@ -392,7 +388,7 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
     : [];
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && !isRegenerating && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-3">
@@ -472,11 +468,22 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
               </div>
             )}
 
+            {downloadError && <p role="alert" className="text-sm text-destructive">{downloadError}</p>}
+
             {/* Error display for regeneration */}
             {regenError && (
-              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-2">
+              <div role="alert" className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex flex-wrap items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-destructive flex-shrink-0" />
                 <p className="text-sm text-destructive flex-1">{regenError}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isRegenerating}
+                  onClick={() => reloadPreview(pipeline.id)}
+                >
+                  {isRegenerating && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                  重新載入預覽
+                </Button>
                 <Button size="sm" variant="ghost" onClick={clearError}>
                   關閉
                 </Button>
@@ -512,7 +519,7 @@ export function PipelineDetailModal({ pipeline, open, onClose, onPipelineUpdated
                   onRegenerate={handleRegenerateMeshImage}
                   onConfirm={handleConfirmMeshImage}
                   onReject={handleRejectMeshImage}
-                  isRegenerating={isRegenerating}
+                  isRegenerating={isRegenerating || previewStatus === 'processing'}
                   showActions={true}
                 />
               </TabsContent>
