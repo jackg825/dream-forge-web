@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { Printer, Package, Globe, Truck, Leaf, Gem } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { FillImage } from '@/components/ui/fill-image';
+import { ShowcaseImage } from './ShowcaseImage';
 
 interface PrintServiceSectionProps {
   className?: string;
@@ -49,7 +49,7 @@ export function PrintServiceSection({ className }: PrintServiceSectionProps) {
               <h3 className="mt-3 text-[26px] font-semibold tracking-tight">{t('printService.previewTitle')}</h3>
             </div>
             <div className="relative mt-6 min-h-72 flex-1 sm:min-h-96">
-              <FillImage src="/showcase/race_car_render.png" alt={t('printService.previewTitle')} className="object-cover" sizes="(min-width: 1024px) 50vw, 100vw" />
+              <ShowcaseImage image="racecarRender" alt={t('printService.previewTitle')} className="object-cover" sizes="(min-width: 1184px) 560px, (min-width: 1024px) calc(50vw - 32px), (min-width: 640px) calc(100vw - 64px), calc(100vw - 40px)" />
             </div>
             <p className="flex items-center gap-2 px-7 py-6 text-xs text-[#6e6e73] sm:px-10">
               <Globe className="h-4 w-4" aria-hidden="true" />

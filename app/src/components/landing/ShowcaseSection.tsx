@@ -40,7 +40,7 @@ export function ShowcaseSection({ className }: { className?: string }) {
             </div>
             <Link href="/generate" className="inline-flex min-h-11 shrink-0 items-center text-sm text-primary hover:underline">{t('store.start')}<ChevronRight className="size-4" aria-hidden="true" /></Link>
           </div>
-          <BeforeAfterSlider beforeImage="/showcase/race_car_origin.jpg" afterImage="/showcase/race_car_render.png" beforeAlt={t('showcase.examples.racecar.before')} afterAlt={t('showcase.examples.racecar.after')} className={cn('aspect-[4/3] sm:aspect-[16/9]')} />
+          <BeforeAfterSlider beforeImage="racecarOrigin" afterImage="racecarRender" beforeAlt={t('showcase.examples.racecar.before')} afterAlt={t('showcase.examples.racecar.after')} className={cn('aspect-[4/3] sm:aspect-[16/9]')} />
           <p className="mt-5 text-center text-sm text-muted-foreground">{t('showcase.examples.racecar.description')}</p>
         </div>
       </section>
