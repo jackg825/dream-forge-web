@@ -80,8 +80,8 @@ interface UnifiedProgressIndicatorProps {
 /**
  * Icon component based on status
  */
-function StatusIcon({ icon, isAnimated }: { icon: string; isAnimated?: boolean }) {
-  const iconClass = cn('h-10 w-10', isAnimated && 'animate-pulse');
+function StatusIcon({ icon }: { icon: string }) {
+  const iconClass = 'h-10 w-10';
   const spinnerClass = 'h-10 w-10 animate-spin';
 
   switch (icon) {
@@ -96,7 +96,7 @@ function StatusIcon({ icon, isAnimated }: { icon: string; isAnimated?: boolean }
     case 'palette':
       return <Palette className={iconClass} />;
     case 'check':
-      return <CheckCircle className={cn(iconClass, 'text-green-500')} />;
+      return <CheckCircle className={cn(iconClass, 'text-primary')} />;
     case 'alert':
       return <AlertCircle className={cn(iconClass, 'text-destructive')} />;
     default:
@@ -211,7 +211,7 @@ export function UnifiedProgressIndicator({
     return (
       <div className={cn('flex items-center gap-3', className)}>
         <div className="bg-primary/10 p-2 rounded-full">
-          <StatusIcon icon={message.icon} isAnimated={isProcessing} />
+          <StatusIcon icon={message.icon} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{title}</p>
@@ -230,25 +230,19 @@ export function UnifiedProgressIndicator({
 
   // Full variant - detailed display
   return (
-    <div className={cn('flex flex-col items-center justify-center', className)}>
+    <div className={cn('flex flex-col items-center justify-center rounded-[28px] bg-card px-5 py-12 sm:px-8', className)}>
       {/* Animated icon container */}
       <div className="relative">
-        {isProcessing && (
-          <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-        )}
         <div className={cn(
-          'relative p-6 rounded-full',
-          isProcessing ? 'bg-primary/10' : status === 'failed' ? 'bg-destructive/10' : 'bg-green-500/10'
+          'relative rounded-[24px] p-6',
+          status === 'failed' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-primary'
         )}>
-          <StatusIcon
-            icon={message.icon}
-            isAnimated={isProcessing && message.icon !== 'loader'}
-          />
+          <StatusIcon icon={message.icon} />
         </div>
       </div>
 
       {/* Title and subtitle */}
-      <p className="text-lg font-medium mt-6">{title}</p>
+      <p className="mt-6 text-2xl font-semibold tracking-tight text-center">{title}</p>
       <p className="text-sm text-muted-foreground mt-2 text-center max-w-md">
         {subtitle}
       </p>
@@ -267,7 +261,7 @@ export function UnifiedProgressIndicator({
       {progressValue !== undefined && isProcessing && (
         <Progress
           value={progressValue}
-          className="w-full max-w-xs mt-6 h-2"
+          className="w-full max-w-xs mt-6 h-1"
         />
       )}
 
@@ -307,12 +301,12 @@ export function UnifiedProgressIndicator({
 
       {/* Can leave message */}
       {message.canLeave && isProcessing && (
-        <div className="bg-green-50 dark:bg-green-950/30 rounded-lg p-4 mt-6 max-w-sm text-center">
-          <div className="flex items-center justify-center gap-2 text-green-700 dark:text-green-300">
+        <div className="bg-muted rounded-2xl p-5 mt-6 max-w-sm text-center">
+          <div className="flex items-center justify-center gap-2 text-foreground">
             <Info className="h-4 w-4" />
             <p className="text-sm font-medium">{t('ui.canLeavePage')}</p>
           </div>
-          <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+          <p className="text-xs leading-relaxed text-muted-foreground mt-1.5">
             {t('ui.viewInHistory')}
           </p>
         </div>

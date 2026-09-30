@@ -101,7 +101,7 @@ export function PreviousOutputs({
     <div className="space-y-4">
       {/* Combined provider + images card */}
       {(pipeline.settings.provider || showImagesSection) && (
-        <div className="bg-muted/30 rounded-xl border border-border/50 overflow-hidden">
+        <div className="overflow-hidden rounded-[24px] bg-card">
           {/* Provider context header */}
           {pipeline.settings.provider && (
             <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-sm text-muted-foreground">
@@ -119,7 +119,7 @@ export function PreviousOutputs({
                 onClick={() => setImagesExpanded(!imagesExpanded)}
               >
                 <div className="flex items-center gap-2">
-                  <Images className="h-4 w-4 text-green-500" />
+                  <Images className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm font-medium">{t('viewImages')}</span>
                 </div>
                 {imagesExpanded ? (
@@ -169,14 +169,14 @@ export function PreviousOutputs({
 
       {/* 3D Mesh Section */}
       {showMeshSection && (
-        <div className="bg-muted/30 rounded-xl border border-border/50 overflow-hidden">
+        <div className="overflow-hidden rounded-[24px] bg-card">
           <Button
             variant="ghost"
             className="w-full flex items-center justify-between p-4 h-auto hover:bg-muted/50"
             onClick={() => setMeshExpanded(!meshExpanded)}
           >
             <div className="flex items-center gap-2">
-              <Box className="h-4 w-4 text-green-500" />
+              <Box className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">{t('meshModel')}</span>
             </div>
             {meshExpanded ? (
@@ -188,7 +188,7 @@ export function PreviousOutputs({
 
           {meshExpanded && (
             <div className="px-4 pb-4">
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
+              <div className="aspect-video bg-muted rounded-2xl flex items-center justify-center">
                 <button
                   type="button"
                   onClick={handleOpenMesh}

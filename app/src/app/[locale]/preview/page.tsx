@@ -24,7 +24,7 @@ const PreviewViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-[500px] bg-muted rounded-lg flex items-center justify-center">
+      <div className="flex h-[420px] w-full items-center justify-center rounded-[28px] bg-muted sm:h-[560px]">
         <div className="flex flex-col items-center">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">Loading viewer...</p>
@@ -125,25 +125,25 @@ export default function PreviewPage() {
       <UserHeader />
 
       {/* Main Content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell py-12 sm:py-16">
         {/* Page header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-10 flex items-end justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight">{t('preview.title')}</h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="studio-page-title">{t('preview.title')}</h1>
               <Badge variant="secondary" className="gap-1">
                 {t('common.free')}
               </Badge>
             </div>
-            <p className="text-muted-foreground">
+            <p className="studio-page-subtitle">
               {t('preview.subtitle')}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           {/* Viewer Area */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="space-y-5 lg:col-span-8">
             {/* File Drop Zone (shown when no model) */}
             {!hasModel && !isLoading && (
               <FileDropZone onFileSelect={handleFileSelect} />
@@ -152,9 +152,9 @@ export default function PreviewPage() {
             {/* Loading State */}
             {isLoading && (
               <Card>
-                <CardContent className="flex flex-col items-center justify-center h-64 py-8">
+                <CardContent className="flex h-[420px] flex-col items-center justify-center py-8 sm:h-[560px]">
                   <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                  <p className="text-muted-foreground">{t('preview.loadingModel')}</p>
+                  <p className="text-base text-muted-foreground">{t('preview.loadingModel')}</p>
                 </CardContent>
               </Card>
             )}
@@ -185,7 +185,7 @@ export default function PreviewPage() {
             {/* 3D Viewer */}
             {hasModel && (
               <Card className={cn(
-                'overflow-hidden',
+                'overflow-hidden py-0',
                 isPseudoFullscreen && 'pseudo-fullscreen pseudo-fullscreen-safe pseudo-fullscreen-animate border-0 rounded-none'
               )}>
                 {/* Pseudo-fullscreen backdrop (iOS) */}
@@ -200,7 +200,7 @@ export default function PreviewPage() {
                   ref={handleViewerContainerRef}
                   className={cn(
                     'relative',
-                    isPseudoFullscreen ? 'h-full' : 'h-[500px]'
+                    isPseudoFullscreen ? 'h-full' : 'h-[420px] sm:h-[560px]'
                   )}
                 >
                   {/* Close button for pseudo-fullscreen (iOS) */}
@@ -300,7 +300,7 @@ export default function PreviewPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
+          <div className="space-y-5 lg:col-span-4">
             {/* Model Info */}
             <ModelInfoPanel info={model?.info ?? null} loading={isLoading} />
 
@@ -318,12 +318,12 @@ export default function PreviewPage() {
             />
 
             {/* Tips */}
-            <Card className="bg-primary/5 border-primary/20">
+            <Card className="border-0 bg-muted/70 shadow-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm">{t('preview.tips.title')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm text-muted-foreground space-y-1">
+                <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
                   <li>• {t('preview.tips.rotate')}</li>
                   <li>• {t('preview.tips.zoom')}</li>
                   <li>• {t('preview.tips.pan')}</li>
@@ -333,16 +333,16 @@ export default function PreviewPage() {
             </Card>
 
             {/* CTA to main app */}
-            <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0">
-              <CardContent className="pt-6">
-                <h3 className="font-semibold mb-2 flex items-center gap-2">
+            <Card className="border-0 bg-[#1d1d1f] text-white dark:bg-[#29292b]">
+              <CardContent className="pt-1">
+                <h3 className="mb-3 flex items-center gap-2 text-xl font-semibold tracking-tight">
                   <Sparkles className="h-4 w-4" />
                   {t('preview.cta.title')}
                 </h3>
-                <p className="text-sm text-indigo-100 mb-4">
+                <p className="text-sm leading-relaxed text-white/65 mb-6">
                   {t('preview.cta.description')}
                 </p>
-                <Button asChild variant="secondary">
+                <Button asChild>
                   <Link href="/generate">{t('preview.cta.button')}</Link>
                 </Button>
               </CardContent>

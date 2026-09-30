@@ -89,18 +89,18 @@ function OrdersContent() {
     <div className="min-h-screen bg-background">
       <UserHeader />
 
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell py-12 sm:py-16">
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between mb-10">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{t('myOrders.title')}</h1>
-            <p className="text-muted-foreground">{t('myOrders.subtitle')}</p>
+            <h1 className="studio-page-title">{t('myOrders.title')}</h1>
+            <p className="studio-page-subtitle">{t('myOrders.subtitle')}</p>
           </div>
         </div>
 
         {/* Status filters */}
-        <Tabs value={filter} onValueChange={(v) => handleFilterChange(v as FilterStatus)} className="mb-6">
-          <TabsList>
+        <Tabs value={filter} onValueChange={(v) => handleFilterChange(v as FilterStatus)} className="mb-8 overflow-x-auto pb-1">
+          <TabsList className="h-11 min-w-max">
             <TabsTrigger value="all" className="gap-2">
               {t('myOrders.filter.all')}
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
@@ -135,12 +135,14 @@ function OrdersContent() {
           </div>
         ) : paginatedOrders.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Package className="h-16 w-16 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-medium mb-1">
+            <CardContent className="flex flex-col items-center justify-center px-5 py-20 text-center">
+              <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
+                <Package className="h-9 w-9 text-muted-foreground" strokeWidth={1.5} />
+              </div>
+              <h3 className="mb-3 text-2xl font-semibold tracking-tight">
                 {filter === 'all' ? t('myOrders.noOrders') : t('myOrders.noOrdersFiltered')}
               </h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
                 {filter === 'all' ? t('myOrders.startOrdering') : t('myOrders.tryAdjustingFilter')}
               </p>
             </CardContent>
@@ -155,7 +157,7 @@ function OrdersContent() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
+              <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -207,7 +209,7 @@ function OrderListItem({ order }: { order: Order }) {
       case 'confirmed':
         return { icon: CheckCircle2, color: 'text-blue-500', bg: 'bg-blue-500/10' };
       case 'printing':
-        return { icon: Printer, color: 'text-purple-500', bg: 'bg-purple-500/10' };
+        return { icon: Printer, color: 'text-primary', bg: 'bg-primary/10' };
       case 'quality_check':
         return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' };
       case 'shipping':
@@ -246,28 +248,28 @@ function OrderListItem({ order }: { order: Order }) {
   return (
     <Link
       href={`/dashboard/orders/details?id=${order.id}`}
-      className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+      className="group flex flex-wrap items-center gap-4 rounded-[28px] bg-card p-5 shadow-[0_4px_24px_rgba(0,0,0,0.025)] transition-shadow hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] sm:gap-6 sm:p-7"
     >
       {/* Thumbnail */}
       {thumbnail ? (
-        <div className="relative w-16 h-16 overflow-hidden rounded-md ring-1 ring-border bg-black">
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-muted">
           <FillImage
             src={thumbnail}
             alt=""
             className="object-cover"
-            sizes="64px"
+            sizes="80px"
           />
         </div>
       ) : (
-        <div className="w-16 h-16 rounded-md bg-muted flex items-center justify-center">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-muted">
           <Package className="h-8 w-8 text-muted-foreground" />
         </div>
       )}
 
       {/* Order info */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium">#{order.id.slice(-8).toUpperCase()}</span>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <span className="text-base font-semibold tracking-tight">#{order.id.slice(-8).toUpperCase()}</span>
           <Badge variant="secondary" className={`${statusConfig.bg} ${statusConfig.color} border-0`}>
             <StatusIcon className="mr-1 h-3 w-3" />
             {ORDER_STATUS_LABELS[order.status]}
@@ -286,13 +288,13 @@ function OrderListItem({ order }: { order: Order }) {
       </div>
 
       {/* Total */}
-      <div className="text-right">
-        <p className="font-semibold">{formatPrice(order.payment.totalAmount)}</p>
+      <div className="ml-auto text-right">
+        <p className="text-lg font-semibold tracking-tight">{formatPrice(order.payment.totalAmount)}</p>
         <p className="text-sm text-muted-foreground">{order.payment.currency}</p>
       </div>
 
       {/* Arrow */}
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      <ArrowRight className="hidden h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 sm:block" />
     </Link>
   );
 }

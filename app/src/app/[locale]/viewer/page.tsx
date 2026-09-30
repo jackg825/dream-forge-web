@@ -45,7 +45,7 @@ const ModelViewer = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="w-full h-full bg-gray-900 rounded-lg flex items-center justify-center">
+      <div className="flex h-full w-full items-center justify-center rounded-3xl bg-card">
         <LoadingSpinner message="" />
       </div>
     ),
@@ -191,7 +191,7 @@ function ViewerContentInner() {
   // No jobId state
   if (!jobId) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background px-5 py-12">
         <LoadingSpinner message={t('viewer.redirecting')} />
       </div>
     );
@@ -200,7 +200,7 @@ function ViewerContentInner() {
   // Loading state
   if (jobLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background px-5 py-12">
         <LoadingSpinner message={t('viewer.loadingJob')} />
       </div>
     );
@@ -209,15 +209,15 @@ function ViewerContentInner() {
   // Error state
   if (jobError || !job) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Card className="max-w-md w-full mx-4">
-          <CardContent className="pt-6 text-center">
-            <XCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <h1 className="text-xl font-bold mb-2">{t('viewer.jobNotFound')}</h1>
-            <p className="text-muted-foreground mb-6">
+      <div className="flex min-h-screen items-center justify-center bg-background px-5 py-12">
+        <Card className="w-full max-w-lg rounded-[28px] border-0 px-3 py-10 shadow-sm">
+          <CardContent className="px-7 text-center">
+            <XCircle className="mx-auto mb-6 h-10 w-10 text-destructive" />
+            <h1 className="mb-4 text-[28px] font-semibold tracking-tight">{t('viewer.jobNotFound')}</h1>
+            <p className="mb-8 text-[15px] leading-relaxed text-muted-foreground">
               {jobError || t('viewer.jobNotFoundDescription')}
             </p>
-            <Button asChild>
+            <Button asChild className="h-11 rounded-full px-6">
               <Link href="/dashboard">{t('viewer.backToDashboard')}</Link>
             </Button>
           </CardContent>
@@ -227,27 +227,27 @@ function ViewerContentInner() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="dark min-h-screen bg-background text-foreground">
       {/* Header - Dark themed for viewer */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-gray-900/80 backdrop-blur-lg">
-        <div className="w-full px-4 py-3">
+      <header className="sticky top-0 z-50 border-b border-border bg-card/90 backdrop-blur-xl">
+        <div className="w-full px-5 py-4 sm:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="icon"
                 asChild
-                className="text-white/60 hover:text-white hover:bg-white/10"
+                className="rounded-full text-muted-foreground hover:bg-white/10 hover:text-white"
               >
-                <Link href="/dashboard">
+                <Link href="/dashboard" aria-label={t('viewer.backToDashboard')}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-lg font-medium text-white">
+                <h1 className="text-lg font-semibold tracking-tight text-foreground">
                   {t('viewer.title')}
                 </h1>
-                <p className="text-xs text-white/50 font-mono">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {job.settings.quality.toUpperCase()} • {job.settings.format.toUpperCase()}
                 </p>
               </div>
@@ -260,7 +260,8 @@ function ViewerContentInner() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setIsPanelOpen(!isPanelOpen)}
-                  className="text-white/60 hover:text-white hover:bg-white/10"
+                  aria-label={t('viewer.details')}
+                  className="rounded-full text-muted-foreground hover:bg-white/10 hover:text-white"
                 >
                   <PanelRight className="h-5 w-5" />
                 </Button>
@@ -273,11 +274,11 @@ function ViewerContentInner() {
       </header>
 
       {/* Main content */}
-      <main className="w-full px-4 py-4">
+      <main className="w-full px-4 py-5 sm:px-8">
         {/* Processing state */}
         {isProcessing && currentStatus && (
-          <Card className="bg-gray-900/50 border-white/10">
-            <CardContent className="py-8">
+          <Card className="mx-auto max-w-3xl rounded-[28px] border-border bg-card">
+            <CardContent className="px-5 py-12 sm:px-10 sm:py-16">
               <div className="text-center">
                 <ProgressSteps currentStatus={currentStatus} />
 
@@ -286,16 +287,16 @@ function ViewerContentInner() {
                 />
 
                 <div className="mt-6 max-w-md mx-auto">
-                  <div className="flex items-center justify-center gap-3 text-sm text-white/50">
-                    <div className="relative w-12 h-12 overflow-hidden rounded-lg ring-1 ring-white/10">
+                  <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
+                    <div className="relative h-14 w-14 overflow-hidden rounded-xl ring-1 ring-border">
                       <FillImage
                         src={job.inputImageUrl}
                         alt="Input"
                         className="object-cover"
-                        sizes="48px"
+                        sizes="56px"
                       />
                     </div>
-                    <span className="font-mono text-xs">
+                    <span className="text-xs">
                       {job.settings.quality === 'fine'
                         ? t('viewer.estimatedTime.fine')
                         : job.settings.quality === 'standard'
@@ -311,21 +312,21 @@ function ViewerContentInner() {
 
         {/* Failed state */}
         {job.status === 'failed' && (
-          <Card className="bg-gray-900/50 border-destructive/30">
-            <CardContent className="py-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/20 flex items-center justify-center">
+          <Card className="mx-auto max-w-3xl rounded-[28px] border-destructive/30 bg-card">
+            <CardContent className="px-6 py-14 text-center sm:px-10 sm:py-20">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10">
                 <XCircle className="h-8 w-8 text-destructive" />
               </div>
-              <h2 className="text-xl font-semibold text-white mb-2">
+              <h2 className="mb-4 text-[28px] font-semibold tracking-tight text-foreground">
                 {t('viewer.generationFailed')}
               </h2>
-              <p className="text-white/60 mb-6">
+              <p className="mb-5 text-[15px] leading-relaxed text-muted-foreground">
                 {job.error || t('viewer.errorOccurred')}
               </p>
-              <p className="text-sm text-white/40 mb-4">
+              <p className="mb-7 text-sm text-muted-foreground">
                 {t('viewer.creditRefunded')}
               </p>
-              <Button asChild>
+              <Button asChild className="h-11 rounded-full px-6">
                 <Link href="/" className="gap-2">
                   <RefreshCw className="h-4 w-4" />
                   {t('viewer.tryAgain')}
@@ -350,10 +351,10 @@ function ViewerContentInner() {
             <div
               ref={handleViewerContainerRef}
               className={cn(
-                'relative bg-gray-900 overflow-hidden border border-white/10 w-full',
+                'relative w-full overflow-hidden border border-border bg-card',
                 isPseudoFullscreen
                   ? 'pseudo-fullscreen pseudo-fullscreen-safe pseudo-fullscreen-animate'
-                  : 'rounded-2xl h-[calc(100dvh-120px)] min-h-[400px]'
+                  : 'h-[calc(100dvh-140px)] min-h-[400px] rounded-[28px]'
               )}
               style={isFullscreen && !isPseudoFullscreen ? { height: '100vh' } : undefined}
             >
@@ -431,10 +432,10 @@ function ViewerContentInner() {
                 />
 
                 {/* Source image */}
-                <Card className="bg-white/5 border-white/10">
-                  <CardContent className="pt-4">
-                    <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
-                    <div className="relative aspect-square w-full overflow-hidden rounded-lg ring-1 ring-white/10">
+                <Card className="rounded-2xl border-white/10 bg-white/5 text-white">
+                  <CardContent className="pt-1">
+                    <h3 className="mb-4 text-sm font-semibold text-white/90">{t('viewer.sourceImage')}</h3>
+                    <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-black/10 ring-1 ring-white/10">
                       <FillImage
                         src={job.inputImageUrl}
                         alt="Source"
@@ -453,6 +454,7 @@ function ViewerContentInner() {
                 {/* Floating action button to open sheet */}
                 <Button
                   onClick={() => setIsPanelOpen(true)}
+                  aria-label={t('viewer.details')}
                   className="fixed bottom-20 right-4 z-50 h-12 w-12 rounded-full bg-primary shadow-lg"
                 >
                   <PanelRight className="h-5 w-5" />
@@ -461,12 +463,12 @@ function ViewerContentInner() {
                 <Sheet open={isPanelOpen} onOpenChange={setIsPanelOpen}>
                   <SheetContent
                     side="bottom"
-                    className="h-[70vh] rounded-t-2xl bg-gray-900 border-white/10"
+                    className="dark h-[70vh] rounded-t-[28px] border-border bg-card text-foreground"
                   >
-                    <SheetHeader className="pb-2">
-                      <SheetTitle className="text-white">{t('viewer.details')}</SheetTitle>
+                    <SheetHeader className="pb-5">
+                      <SheetTitle className="text-xl font-semibold tracking-tight text-foreground">{t('viewer.details')}</SheetTitle>
                     </SheetHeader>
-                    <div className="overflow-y-auto space-y-4 pb-8">
+                    <div className="space-y-5 overflow-y-auto px-2 pb-8">
                       <DownloadPanel
                         modelUrl={job.outputModelUrl}
                         downloadFiles={job.downloadFiles}
@@ -475,10 +477,10 @@ function ViewerContentInner() {
                       />
 
                       {/* Source image */}
-                      <Card className="bg-white/5 border-white/10">
-                        <CardContent className="pt-4">
-                          <h3 className="font-medium text-white/90 mb-3 text-sm">{t('viewer.sourceImage')}</h3>
-                          <div className="relative aspect-square w-full overflow-hidden rounded-lg ring-1 ring-white/10">
+                      <Card className="rounded-2xl border-white/10 bg-white/5 text-white">
+                        <CardContent className="pt-1">
+                          <h3 className="mb-4 text-sm font-semibold text-white/90">{t('viewer.sourceImage')}</h3>
+                          <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-black/10 ring-1 ring-white/10">
                             <FillImage
                               src={job.inputImageUrl}
                               alt="Source"
@@ -515,63 +517,32 @@ function ProgressSteps({ currentStatus }: { currentStatus: JobStatus }) {
   const currentIndex = PROGRESS_STEPS.findIndex((s) => s.status === currentStatus);
 
   return (
-    <div className="mb-8">
-      <div className="flex items-center justify-center">
-        {PROGRESS_STEPS.map((step, index) => {
-          const isActive = index === currentIndex;
-          const isCompleted = index < currentIndex;
+    <ol className="mx-auto mb-10 grid max-w-md grid-cols-5 gap-2 sm:gap-4">
+      {PROGRESS_STEPS.map((step, index) => {
+        const isActive = index === currentIndex;
+        const isCompleted = index < currentIndex;
 
-          return (
-            <div key={step.status} className="flex items-center">
-              {/* Step circle */}
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono transition-colors ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground ring-4 ring-primary/30'
-                    : isCompleted
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-700 text-gray-400'
-                }`}
-              >
-                {isCompleted ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  index + 1
-                )}
-              </div>
-
-              {/* Connector line */}
-              {index < PROGRESS_STEPS.length - 1 && (
-                <div
-                  className={`w-8 h-0.5 mx-1 transition-colors ${
-                    isCompleted ? 'bg-green-500' : 'bg-gray-700'
-                  }`}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Step labels */}
-      <div className="flex items-center justify-center mt-2">
-        {PROGRESS_STEPS.map((step, index) => {
-          const isActive = index === currentIndex;
-
-          return (
+        return (
+          <li key={step.status} className="flex min-w-0 flex-col items-center" aria-current={isActive ? 'step' : undefined}>
             <div
-              key={step.status}
-              className={`text-xs text-center font-mono whitespace-nowrap ${
-                isActive ? 'text-primary font-medium' : 'text-gray-500'
-              }`}
-              style={{ width: '48px' }}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-9 sm:w-9',
+                isActive
+                  ? 'bg-primary text-primary-foreground ring-4 ring-primary/20'
+                  : isCompleted
+                    ? 'bg-green-500 text-white'
+                    : 'bg-muted text-muted-foreground'
+              )}
             >
-              {step.label}
+              {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
             </div>
-          );
-        })}
-      </div>
-    </div>
+            <span className={cn('mt-3 text-center text-[11px] leading-relaxed', isActive ? 'font-medium text-[#66b3ff]' : 'text-muted-foreground')}>
+              {step.label}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -625,7 +596,7 @@ function ViewerContent() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="flex min-h-screen items-center justify-center bg-background px-5">
           <LoadingSpinner message={t('common.loading')} />
         </div>
       }

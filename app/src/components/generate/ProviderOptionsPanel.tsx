@@ -65,12 +65,12 @@ export function ProviderOptionsPanel({
     };
 
     return (
-      <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-4">
+      <div className="rounded-[24px] bg-card p-5 sm:p-7 space-y-4">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">HiTem3D {resolutionT('title')}</span>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {resolutions.map(([resKey]) => {
             const resValue = Number(resKey) as HiTem3DResolution;
             const isSelected = resolution === resValue;
@@ -82,15 +82,16 @@ export function ProviderOptionsPanel({
                 type="button"
                 onClick={() => handleResolutionClick(resValue)}
                 disabled={disabled}
+                aria-pressed={isSelected && !isLocked}
                 className={cn(
-                  'relative flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-all',
+                  'relative flex flex-col items-start gap-2 rounded-[18px] border-2 p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
                   'disabled:cursor-not-allowed disabled:opacity-50',
                   isLocked
                     ? 'opacity-70 cursor-pointer border-border bg-muted/30 hover:border-muted-foreground/30'
-                    : 'hover:border-primary/50 hover:bg-accent/50',
+                    : 'hover:border-primary/50 hover:bg-muted/30',
                   isSelected && !isLocked
-                    ? 'border-primary bg-primary/5'
-                    : !isLocked && 'border-border bg-background'
+                    ? 'border-primary bg-primary/[0.03]'
+                    : !isLocked && 'border-border/70 bg-card'
                 )}
               >
                 <span
@@ -128,8 +129,8 @@ export function ProviderOptionsPanel({
         </div>
 
         {/* Tip */}
-        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5">
-          <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+        <div className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground bg-muted/60 rounded-2xl p-4">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
           <span>
             {resolutionT('tip')}
           </span>
@@ -150,7 +151,7 @@ export function ProviderOptionsPanel({
   };
 
   return (
-    <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-4">
+    <div className="rounded-[24px] bg-card p-5 sm:p-7 space-y-4">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">{t('hunyuan.title')}</span>
         <Badge variant="outline" className="text-xs">
@@ -186,12 +187,13 @@ export function ProviderOptionsPanel({
               type="button"
               onClick={() => onChange({ ...options, faceCount: preset.value })}
               disabled={disabled}
+              aria-pressed={faceCount === preset.value}
               className={cn(
-                'px-2.5 py-1 text-xs rounded-md border transition-colors',
+                'px-4 py-2.5 text-xs rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 faceCount === preset.value
                   ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border hover:border-primary/50 hover:bg-accent/50'
+                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
               )}
             >
               {preset.label}
@@ -200,8 +202,8 @@ export function ProviderOptionsPanel({
         </div>
 
         {/* Tip */}
-        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5">
-          <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+        <div className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground bg-muted/60 rounded-2xl p-4">
+          <Lightbulb className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
           <span>
             {t('hunyuan.tip')}
           </span>

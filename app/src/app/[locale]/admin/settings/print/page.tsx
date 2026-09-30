@@ -94,10 +94,10 @@ function PrintSettingsContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-background">
         <AdminHeader />
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center py-12">
+        <main className="studio-shell">
+          <div className="store-card flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         </main>
@@ -106,17 +106,17 @@ function PrintSettingsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <AdminHeader />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="studio-page-title">
               {t('print.title')}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="studio-page-subtitle">
               {t('print.subtitle')}
             </p>
           </div>
@@ -132,7 +132,7 @@ function PrintSettingsContent() {
         </div>
 
         <Tabs defaultValue="pricing">
-          <TabsList className="mb-6">
+          <TabsList className="mb-8 h-auto flex-wrap rounded-2xl p-1.5">
             <TabsTrigger value="pricing" className="gap-2">
               <DollarSign className="h-4 w-4" />
               {t('print.tabs.pricing')}
@@ -153,13 +153,13 @@ function PrintSettingsContent() {
 
           {/* Pricing Tab */}
           <TabsContent value="pricing">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('print.pricing.title')}</CardTitle>
+            <Card className="overflow-hidden border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl">{t('print.pricing.title')}</CardTitle>
                 <CardDescription>{t('print.pricing.description')}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
+                <div className="overflow-hidden rounded-2xl border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -222,13 +222,13 @@ function PrintSettingsContent() {
 
           {/* Materials Tab */}
           <TabsContent value="materials">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('print.materials.title')}</CardTitle>
+            <Card className="overflow-hidden border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl">{t('print.materials.title')}</CardTitle>
                 <CardDescription>{t('print.materials.description')}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
+                <div className="overflow-hidden rounded-2xl border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -270,13 +270,13 @@ function PrintSettingsContent() {
 
           {/* Sizes Tab */}
           <TabsContent value="sizes">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('print.sizes.title')}</CardTitle>
+            <Card className="overflow-hidden border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl">{t('print.sizes.title')}</CardTitle>
                 <CardDescription>{t('print.sizes.description')}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
+                <div className="overflow-hidden rounded-2xl border border-border">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -314,9 +314,9 @@ function PrintSettingsContent() {
 
           {/* Colors Tab */}
           <TabsContent value="colors">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('print.colors.title')}</CardTitle>
+            <Card className="overflow-hidden border-0">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl">{t('print.colors.title')}</CardTitle>
                 <CardDescription>{t('print.colors.description')}</CardDescription>
               </CardHeader>
               <CardContent>
@@ -324,10 +324,10 @@ function PrintSettingsContent() {
                   {colors.map((color) => (
                     <div
                       key={color.id}
-                      className={`p-4 rounded-lg border ${color.available ? '' : 'opacity-50'}`}
+                      className={`p-4 rounded-2xl border border-border ${color.available ? '' : 'opacity-50'}`}
                     >
                       <div
-                        className="w-full h-12 rounded-md border mb-2"
+                        className="w-full h-12 overflow-hidden rounded-2xl border border-border mb-2"
                         style={{ backgroundColor: color.hex }}
                       />
                       <p className="text-sm font-medium">{color.name}</p>

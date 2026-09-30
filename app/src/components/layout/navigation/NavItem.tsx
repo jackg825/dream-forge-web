@@ -40,6 +40,7 @@ export function NavItem({
     return (
       <Link
         href={href}
+        aria-current={isActive ? 'page' : undefined}
         onClick={handleClick}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-3 text-base font-medium transition-colors',
@@ -61,16 +62,17 @@ export function NavItem({
   return (
     <Link
       href={href}
+      aria-current={isActive ? 'page' : undefined}
       onClick={handleClick}
       className={cn(
-        'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+        'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-normal transition-colors',
         isActive
           ? 'bg-accent text-accent-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         className
       )}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className="sr-only" aria-hidden="true" />
       <span>{label}</span>
     </Link>
   );

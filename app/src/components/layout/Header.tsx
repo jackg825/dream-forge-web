@@ -122,8 +122,8 @@ export function Header() {
   });
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-7xl items-center mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
+      <div className="flex h-14 max-w-[1184px] items-center mx-auto px-5 sm:px-8">
         {/* Mobile Menu Button */}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
@@ -136,13 +136,13 @@ export function Header() {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0">
+          <SheetContent aria-describedby={undefined} side="left" className="w-[300px] sm:w-[350px] p-0">
             <SheetHeader className="border-b p-4">
               <SheetTitle className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
-                  <Box className="h-5 w-5 text-white" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
+                  <Box className="h-5 w-5 text-background" />
                 </div>
-                <span className="font-bold">Dream Forge</span>
+                <span className="font-bold">DreamForge</span>
               </SheetTitle>
             </SheetHeader>
 
@@ -318,7 +318,7 @@ export function Header() {
                   <Link
                     href="/auth"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-3 text-base font-medium text-white shadow-md shadow-purple-500/20 min-h-[48px]"
+                    className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-base font-medium text-white  min-h-[48px]"
                   >
                     {t('common.signIn')}
                   </Link>
@@ -334,14 +334,14 @@ export function Header() {
           className="mr-4 md:mr-6 flex items-center gap-2"
           aria-label="Dream Forge"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
-            <Box className="h-5 w-5 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
+            <Box className="h-5 w-5 text-background" />
           </div>
-          <span className="hidden font-bold sm:inline-block">Dream Forge</span>
+          <span className="font-semibold tracking-tight text-sm sm:text-base">DreamForge</span>
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex flex-1 items-center gap-1">
+        <nav className="hidden md:flex flex-1 items-center justify-center gap-3">
           {visibleNavItems.map((item) => {
             const isActive = isActivePath(item.href);
             const Icon = item.icon;
@@ -352,13 +352,13 @@ export function Header() {
                 href={item.href}
                 onClick={(e) => handleNavClick(e, item.href)}
                 className={cn(
-                  'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-normal transition-colors',
                   isActive
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="sr-only" aria-hidden="true" />
                 <span>{t(item.labelKey)}</span>
               </Link>
             );
@@ -558,11 +558,7 @@ export function Header() {
                   </DropdownMenuSub>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {/* Prominent sign in button - visible on all screens with brand gradient */}
-              <Button
-                asChild
-                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 shadow-md shadow-purple-500/20 hover:shadow-lg hover:shadow-purple-500/30 transition-all duration-200"
-              >
+              <Button asChild>
                 <Link href="/auth">{t('common.signIn')}</Link>
               </Button>
             </>

@@ -64,7 +64,7 @@ export function ResetStepDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RotateCcw className="h-5 w-5" />

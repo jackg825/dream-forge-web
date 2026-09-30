@@ -96,17 +96,17 @@ function AdminOrdersContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <AdminHeader />
 
-      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell max-w-[1600px]">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h1 className="studio-page-title">
               {t('title')}
             </h1>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="studio-page-subtitle">
               {t('subtitle')}
             </p>
           </div>
@@ -140,10 +140,10 @@ function AdminOrdersContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('stats.todayOrders')}</p>
-                    <p className="text-3xl font-bold">{stats.daily.orders}</p>
+                    <p className="mt-2 text-[32px] font-semibold tracking-tight">{stats.daily.orders}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                    <Package className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                  <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center">
+                    <Package className="h-5 w-5 text-foreground" />
                   </div>
                 </div>
               </CardContent>
@@ -155,10 +155,10 @@ function AdminOrdersContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('stats.todayRevenue')}</p>
-                    <p className="text-3xl font-bold">{formatPrice(stats.daily.revenue)}</p>
+                    <p className="mt-2 text-[32px] font-semibold tracking-tight">{formatPrice(stats.daily.revenue)}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+                  <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-foreground" />
                   </div>
                 </div>
               </CardContent>
@@ -170,10 +170,10 @@ function AdminOrdersContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('stats.weeklyOrders')}</p>
-                    <p className="text-3xl font-bold">{stats.weekly.totalOrders}</p>
+                    <p className="mt-2 text-[32px] font-semibold tracking-tight">{stats.weekly.totalOrders}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                  <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-primary" />
                   </div>
                 </div>
               </CardContent>
@@ -185,10 +185,10 @@ function AdminOrdersContent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">{t('stats.newCustomers')}</p>
-                    <p className="text-3xl font-bold">{stats.daily.newCustomers}</p>
+                    <p className="mt-2 text-[32px] font-semibold tracking-tight">{stats.daily.newCustomers}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900 flex items-center justify-center">
-                    <Users className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                  <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center">
+                    <Users className="h-5 w-5 text-foreground" />
                   </div>
                 </div>
               </CardContent>
@@ -228,7 +228,7 @@ function AdminOrdersContent() {
 
           <TabsContent value="kanban" className="mt-0">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="store-card flex items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (

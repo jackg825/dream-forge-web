@@ -183,12 +183,12 @@ export function UnifiedViewerToolbar({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
+      <div className="absolute bottom-4 inset-x-4 z-50 flex flex-col items-center">
         {/* Glassmorphism toolbar container */}
         <div
-          className="flex items-center gap-1 px-2 py-1.5 rounded-xl
-                     bg-black/70 backdrop-blur-xl border border-white/10
-                     shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]"
+          className="flex w-fit max-w-full flex-wrap items-center justify-center gap-1 px-2 py-2 rounded-2xl
+                     bg-[#1d1d1f]/85 backdrop-blur-xl border border-white/15
+                     shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
         >
           {/* View Mode Selector */}
           {showViewMode && onViewModeChange && (
@@ -203,7 +203,7 @@ export function UnifiedViewerToolbar({
                         VIEW_MODES.find((m) => m.value === viewMode)?.labelKey ?? 'viewMode.clay'
                       )}
                       className="h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
-                                 font-mono text-xs tracking-wide"
+                                 font-normal text-xs tracking-normal"
                     >
                       <Eye className="w-4 h-4" />
                       {!isCompact && (
@@ -220,7 +220,7 @@ export function UnifiedViewerToolbar({
                   className="bg-black/90 text-white border-white/10"
                   {...portalProps}
                 >
-                  {t('viewMode.textured')}
+                  {t(VIEW_MODES.find((mode) => mode.value === viewMode)?.labelKey ?? 'viewMode.clay')}
                 </TooltipContent>
               </Tooltip>
               <PopoverContent
@@ -240,6 +240,7 @@ export function UnifiedViewerToolbar({
                         }
                       }}
                       disabled={isDisabled}
+                      aria-pressed={viewMode === mode.value}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                                  transition-colors
                                  ${
@@ -306,12 +307,13 @@ export function UnifiedViewerToolbar({
                     className={`w-8 h-8 rounded-full transition-transform hover:scale-110
                                ring-2 ${
                                  backgroundColor === color.value
-                                   ? 'ring-indigo-400 scale-110'
+                                   ? 'ring-blue-400 scale-110'
                                    : 'ring-white/20'
                                }`}
                     style={{ backgroundColor: color.value }}
                     title={t(color.labelKey)}
                     aria-label={t(color.labelKey)}
+                    aria-pressed={backgroundColor === color.value}
                   />
                 ))}
               </div>
@@ -321,7 +323,7 @@ export function UnifiedViewerToolbar({
           {/* Lighting Controls */}
           {showLightingControls && onSpotlightPositionChange && (
             <>
-              <Separator orientation="vertical" className="h-6 bg-white/20 mx-1" />
+              <Separator orientation="vertical" className="data-[orientation=vertical]:h-6 bg-white/20 mx-1" />
 
               <Popover open={lightingOpen} onOpenChange={setLightingOpen}>
                 <Tooltip>
@@ -332,7 +334,7 @@ export function UnifiedViewerToolbar({
                         size="sm"
                         aria-label={t('lightingControl')}
                         className={`h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
-                                   font-mono text-xs tracking-wide
+                                   font-normal text-xs tracking-normal
                                    ${hasLightingChanges ? 'text-amber-400' : ''}`}
                       >
                         <Sun className="w-4 h-4" />
@@ -371,7 +373,7 @@ export function UnifiedViewerToolbar({
           {/* Display Toggles */}
           {showDisplayToggles && (
             <>
-              <Separator orientation="vertical" className="h-6 bg-white/20 mx-1" />
+              <Separator orientation="vertical" className="data-[orientation=vertical]:h-6 bg-white/20 mx-1" />
 
               {/* Grid Toggle */}
               {onShowGridChange && (
@@ -453,7 +455,7 @@ export function UnifiedViewerToolbar({
             </>
           )}
 
-          <Separator orientation="vertical" className="h-6 bg-white/20 mx-1" />
+          <Separator orientation="vertical" className="data-[orientation=vertical]:h-6 bg-white/20 mx-1" />
 
           {/* Screenshot */}
           <Tooltip>
@@ -558,7 +560,7 @@ export function UnifiedViewerToolbar({
         </div>
 
         {/* Keyboard hint */}
-        <p className="text-center text-[10px] text-white/40 mt-2 font-mono tracking-wider">
+        <p className="mt-2 text-center text-[10px] text-white/60">
           {t('helpText')}
         </p>
       </div>

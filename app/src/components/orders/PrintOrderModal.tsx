@@ -169,9 +169,9 @@ export function PrintOrderModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[28px] p-6 sm:max-w-xl sm:p-8">
+        <DialogHeader className="mb-3 pr-6 text-left">
+          <DialogTitle className="text-[26px] font-semibold tracking-tight">
             {step === 'configure' && t('modal.configureTitle')}
             {step === 'shipping' && t('modal.shippingTitle')}
             {step === 'review' && t('modal.reviewTitle')}
@@ -179,22 +179,22 @@ export function PrintOrderModal({
         </DialogHeader>
 
         {configLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <>
             {/* Step: Configure */}
             {step === 'configure' && (
-              <div className="space-y-6">
+              <div className="space-y-7">
                 {/* Model preview */}
                 {modelThumbnail && (
-                  <div className="relative aspect-square w-32 mx-auto rounded-lg overflow-hidden bg-muted">
+                  <div className="relative mx-auto mb-2 aspect-square w-40 overflow-hidden rounded-3xl bg-background">
                     <FillImage
                       src={modelThumbnail}
                       alt={modelName || 'Model'}
                       className="object-cover"
-                      sizes="128px"
+                      sizes="160px"
                     />
                   </div>
                 )}
@@ -210,11 +210,11 @@ export function PrintOrderModal({
                     }}
                   >
                     {materials.map((material) => (
-                      <div key={material.id} className="flex items-center space-x-2">
+                      <div key={material.id} className={`flex items-center gap-3 rounded-2xl border p-4 ${selectedMaterial === material.id ? 'border-primary bg-accent/40' : 'border-border'}`}>
                         <RadioGroupItem value={material.id} id={material.id} />
-                        <Label htmlFor={material.id} className="flex-1 cursor-pointer">
+                        <Label htmlFor={material.id} className="flex-1 cursor-pointer leading-relaxed">
                           <span className="font-medium">{material.nameZh}</span>
-                          <span className="text-sm text-muted-foreground ml-2">
+                          <span className="mt-1 block text-sm font-normal text-muted-foreground">
                             {material.descriptionZh}
                           </span>
                         </Label>
@@ -231,8 +231,8 @@ export function PrintOrderModal({
                     onValueChange={(v) => setSelectedSize(v as PrintSizeId)}
                   >
                     {sizes.map((size) => (
-                      <div key={size.id} className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                      <div key={size.id} className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${selectedSize === size.id ? 'border-primary bg-accent/40' : 'border-border'}`}>
+                        <div className="flex items-center gap-3">
                           <RadioGroupItem value={size.id} id={size.id} />
                           <Label htmlFor={size.id} className="cursor-pointer">
                             {size.displayNameZh}
@@ -264,13 +264,13 @@ export function PrintOrderModal({
                   </div>
                   <div className="space-y-2">
                     {selectedColors.map((colorId, index) => (
-                      <div key={index} className="flex items-center gap-2">
+                      <div key={index} className="flex items-center gap-3">
                         <Select
                           value={colorId}
                           onValueChange={(v) => handleColorChange(v, index)}
                         >
                           <SelectTrigger
-                            className="flex-1"
+                            className="h-12 flex-1 rounded-xl"
                             aria-label={`${t('modal.colors')} ${index + 1}`}
                           >
                             <SelectValue />
@@ -278,7 +278,7 @@ export function PrintOrderModal({
                           <SelectContent>
                             {colors.map((color) => (
                               <SelectItem key={color.id} value={color.id}>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                   <div
                                     className="w-4 h-4 rounded-full border"
                                     style={{ backgroundColor: color.hex }}
@@ -307,7 +307,7 @@ export function PrintOrderModal({
                 {/* Quantity */}
                 <div className="space-y-2">
                   <Label>{t('modal.quantity')}</Label>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <Button
                       type="button"
                       variant="outline"
@@ -321,7 +321,7 @@ export function PrintOrderModal({
                       min={1}
                       value={quantity}
                       onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-20 text-center"
+                      className="h-11 w-20 rounded-xl text-center"
                     />
                     <Button
                       type="button"
@@ -335,8 +335,8 @@ export function PrintOrderModal({
                 </div>
 
                 {/* Price summary */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between text-lg font-semibold">
+                <div className="border-t border-border pt-6">
+                  <div className="flex justify-between text-xl font-semibold tracking-tight">
                     <span>{t('modal.total')}</span>
                     <span>{formatPrice(itemTotal)}</span>
                   </div>
@@ -346,7 +346,7 @@ export function PrintOrderModal({
 
             {/* Step: Shipping */}
             {step === 'shipping' && (
-              <div className="space-y-6">
+              <div className="space-y-7">
                 {/* Saved addresses */}
                 {addresses.length > 0 && (
                   <div className="space-y-2">
@@ -359,9 +359,9 @@ export function PrintOrderModal({
                       }}
                     >
                       {addresses.map((addr) => (
-                        <div key={addr.id} className="flex items-start space-x-2 p-2 border rounded">
+                        <div key={addr.id} className={`flex items-start gap-3 rounded-2xl border p-4 ${shippingAddress?.id === addr.id ? 'border-primary bg-accent/40' : 'border-border'}`}>
                           <RadioGroupItem value={addr.id!} id={addr.id} className="mt-1" />
-                          <Label htmlFor={addr.id} className="flex-1 cursor-pointer">
+                          <Label htmlFor={addr.id} className="flex-1 cursor-pointer leading-relaxed">
                             <div className="font-medium">{addr.recipientName}</div>
                             <div className="text-sm text-muted-foreground">
                               {addr.addressLine1}, {addr.city}, {addr.country}
@@ -383,13 +383,13 @@ export function PrintOrderModal({
                 </div>
 
                 {/* Save address checkbox */}
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-3">
                   <input
                     type="checkbox"
                     id="saveAddress"
                     checked={saveAddress}
                     onChange={(e) => setSaveAddress(e.target.checked)}
-                    className="rounded border-gray-300"
+                    className="h-4 w-4 rounded border-input accent-primary"
                   />
                   <Label htmlFor="saveAddress">{t('modal.saveAddress')}</Label>
                 </div>
@@ -401,15 +401,15 @@ export function PrintOrderModal({
                     value={shippingMethod}
                     onValueChange={(v) => setShippingMethod(v as 'standard' | 'express')}
                   >
-                    <div className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-border p-4">
+                      <div className="flex items-center gap-3">
                         <RadioGroupItem value="standard" id="standard" />
                         <Label htmlFor="standard">{t('modal.standardShipping')}</Label>
                       </div>
                       <span className="text-sm text-muted-foreground">7-10 {t('modal.days')}</span>
                     </div>
-                    <div className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center space-x-2">
+                    <div className="flex items-center justify-between gap-4 rounded-2xl border border-border p-4">
+                      <div className="flex items-center gap-3">
                         <RadioGroupItem value="express" id="express" />
                         <Label htmlFor="express">{t('modal.expressShipping')}</Label>
                       </div>
@@ -422,23 +422,23 @@ export function PrintOrderModal({
 
             {/* Step: Review */}
             {step === 'review' && (
-              <div className="space-y-6">
+              <div className="space-y-7">
                 {/* Order items */}
                 <div className="space-y-2">
                   <Label>{t('modal.orderItems')}</Label>
                   {cartItems.map((item, index) => (
-                    <div key={index} className="flex items-center gap-4 p-2 border rounded">
+                    <div key={index} className="flex items-center gap-4 rounded-2xl border border-border p-4">
                       {item.modelThumbnail && (
-                        <div className="relative w-12 h-12 overflow-hidden rounded">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-background">
                           <FillImage
                             src={item.modelThumbnail}
                             alt=""
                             className="object-cover"
-                            sizes="48px"
+                            sizes="56px"
                           />
                         </div>
                       )}
-                      <div className="flex-1">
+                      <div className="min-w-0 flex-1 break-words">
                         <div className="font-medium">{item.modelName || 'Model'}</div>
                         <div className="text-sm text-muted-foreground">
                           {item.material} • {item.size} • ×{item.quantity}
@@ -454,7 +454,7 @@ export function PrintOrderModal({
                 {/* Shipping address */}
                 <div className="space-y-2">
                   <Label>{t('modal.shippingTo')}</Label>
-                  <div className="p-2 border rounded text-sm">
+                  <div className="rounded-2xl border border-border p-5 text-sm leading-relaxed">
                     <div className="font-medium">{shippingAddress?.recipientName}</div>
                     <div className="text-muted-foreground">
                       {shippingAddress?.addressLine1}
@@ -468,7 +468,7 @@ export function PrintOrderModal({
                 </div>
 
                 {/* Total */}
-                <div className="border-t pt-4 space-y-2">
+                <div className="space-y-3 border-t border-border pt-6">
                   <div className="flex justify-between">
                     <span>{t('modal.subtotal')}</span>
                     <span>{formatPrice(subtotal)}</span>
@@ -477,14 +477,14 @@ export function PrintOrderModal({
                     <span>{t('modal.shipping')}</span>
                     <span>{shippingMethod === 'express' ? formatPrice(2000) : formatPrice(700)}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-semibold">
+                  <div className="flex justify-between text-xl font-semibold tracking-tight">
                     <span>{t('modal.total')}</span>
                     <span>{formatPrice(subtotal + (shippingMethod === 'express' ? 2000 : 700))}</span>
                   </div>
                 </div>
 
                 {/* Payment coming soon */}
-                <div className="p-4 bg-muted rounded-lg text-center">
+                <div className="rounded-2xl bg-background p-5 text-center">
                   <Lock className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     {t('modal.paymentComingSoon')}
@@ -495,13 +495,13 @@ export function PrintOrderModal({
           </>
         )}
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="mt-3 flex gap-3 border-t border-border pt-6">
           {step === 'configure' && (
             <>
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" className="h-11 rounded-full px-6" onClick={onClose}>
                 {t('modal.cancel')}
               </Button>
-              <Button onClick={handleAddToCart}>
+              <Button onClick={handleAddToCart} className="h-11 rounded-full px-6">
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 {t('modal.continue')}
               </Button>
@@ -510,11 +510,12 @@ export function PrintOrderModal({
 
           {step === 'shipping' && (
             <>
-              <Button variant="outline" onClick={() => setStep('configure')}>
+              <Button variant="outline" className="h-11 rounded-full px-6" onClick={() => setStep('configure')}>
                 {t('modal.back')}
               </Button>
               <Button
                 onClick={() => setStep('review')}
+                className="h-11 rounded-full px-6"
                 disabled={!shippingAddress}
               >
                 {t('modal.continue')}
@@ -524,11 +525,12 @@ export function PrintOrderModal({
 
           {step === 'review' && (
             <>
-              <Button variant="outline" onClick={() => setStep('shipping')}>
+              <Button variant="outline" className="h-11 rounded-full px-6" onClick={() => setStep('shipping')}>
                 {t('modal.back')}
               </Button>
               <Button
                 onClick={handlePlaceOrder}
+                className="h-11 rounded-full px-6"
                 disabled={creatingOrder}
               >
                 {creatingOrder && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

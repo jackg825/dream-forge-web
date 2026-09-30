@@ -27,11 +27,11 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
   const modes = Object.values(GENERATION_MODE_OPTIONS);
 
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium text-muted-foreground">
+    <div className="space-y-4 rounded-[24px] bg-card p-5 sm:p-7">
+      <div className="text-lg font-semibold tracking-tight">
         {t('selectors.imageProcessingMode')}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {modes.map((mode) => {
           const isSelected = value === mode.id;
           const isDefault = mode.id === DEFAULT_GENERATION_MODE;
@@ -42,13 +42,14 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
               type="button"
               onClick={() => onChange(mode.id)}
               disabled={disabled}
+              aria-pressed={isSelected}
               className={cn(
-                'relative flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-all',
-                'hover:border-primary/50 hover:bg-accent/50',
+                'relative flex flex-col items-start gap-2 rounded-[18px] border-2 p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
+                'hover:border-primary/50 hover:bg-muted/30',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 isSelected
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border bg-background'
+                  ? 'border-primary bg-primary/[0.03]'
+                  : 'border-border/70 bg-card'
               )}
             >
               {/* Mode name with default badge */}
@@ -73,8 +74,8 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
                   className={cn(
                     'text-xs',
                     mode.meshStyle.includes('簡化')
-                      ? 'border-orange-500/50 text-orange-600 dark:text-orange-400'
-                      : 'border-green-500/50 text-green-600 dark:text-green-400'
+                      ? 'border-border text-muted-foreground'
+                      : 'border-border text-muted-foreground'
                   )}
                 >
                   {t('selectors.mesh')}: {mode.meshStyle}
@@ -84,8 +85,8 @@ export function ModeSelector({ value, onChange, disabled }: ModeSelectorProps) {
                   className={cn(
                     'text-xs',
                     mode.textureStyle.includes('簡化')
-                      ? 'border-orange-500/50 text-orange-600 dark:text-orange-400'
-                      : 'border-green-500/50 text-green-600 dark:text-green-400'
+                      ? 'border-border text-muted-foreground'
+                      : 'border-border text-muted-foreground'
                   )}
                 >
                   {t('selectors.texture')}: {mode.textureStyle}

@@ -16,8 +16,8 @@ export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
   if (loading) {
     return (
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t('title')}</CardTitle>
+        <CardHeader className="pb-0">
+          <CardTitle className="text-base">{t('title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="animate-pulse space-y-3">
@@ -33,8 +33,8 @@ export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
   if (!info) {
     return (
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t('title')}</CardTitle>
+        <CardHeader className="pb-0">
+          <CardTitle className="text-base">{t('title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{t('uploadHint')}</p>
@@ -52,15 +52,15 @@ export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{t('title')}</CardTitle>
+      <CardHeader className="pb-0">
+        <CardTitle className="text-base">{t('title')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <dl className="space-y-2">
+        <dl className="divide-y divide-border/60">
           {infoItems.map((item) => (
-            <div key={item.label} className="flex justify-between text-sm">
+            <div key={item.label} className="flex items-baseline justify-between gap-3 py-3 text-sm first:pt-0">
               <dt className="text-muted-foreground">{item.label}</dt>
-              <dd className="font-medium truncate ml-2 max-w-[60%] text-right">
+              <dd className="max-w-[60%] truncate text-right font-medium">
                 {item.value}
               </dd>
             </div>
@@ -68,8 +68,8 @@ export function ModelInfoPanel({ info, loading }: ModelInfoPanelProps) {
         </dl>
 
         {/* Dimensions Section */}
-        <Separator className="my-4" />
-        <h4 className="text-sm font-medium mb-2">{t('dimensions')}</h4>
+        <Separator className="mb-5 mt-3" />
+        <h4 className="mb-3 text-sm font-medium">{t('dimensions')}</h4>
         <div className="grid grid-cols-3 gap-2">
           <DimensionCard label={t('width')} value={info.boundingBox.width} color="text-red-500" />
           <DimensionCard label={t('height')} value={info.boundingBox.height} color="text-green-500" />
@@ -90,9 +90,9 @@ function DimensionCard({
   color: string;
 }) {
   return (
-    <div className="bg-muted rounded p-2 text-center">
+    <div className="rounded-2xl bg-muted/80 px-2 py-3 text-center">
       <div className={`text-xs ${color} font-medium`}>{label}</div>
-      <div className="text-sm mt-0.5">
+      <div className="mt-1 text-sm font-medium tabular-nums">
         {formatDimension(value)}
       </div>
     </div>

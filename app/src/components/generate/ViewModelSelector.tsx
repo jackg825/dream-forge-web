@@ -59,20 +59,20 @@ export function ViewModelSelector({
   const getModelIcon = (modelId: ViewGenerationModel) => {
     switch (modelId) {
       case 'gemini-2.5-flash-image':
-        return <Zap className="h-4 w-4 text-blue-500" />;
+        return <Zap className="h-4 w-4 text-muted-foreground" />;
       case 'gemini-3-pro-image-preview':
-        return <Sparkles className="h-4 w-4 text-yellow-500" />;
+        return <Sparkles className="h-4 w-4 text-muted-foreground" />;
       default:
         return null;
     }
   };
 
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium text-muted-foreground">
+    <div className="space-y-4 rounded-[24px] bg-card p-5 sm:p-7">
+      <div className="text-lg font-semibold tracking-tight">
         {t('title')}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {models.map(([modelId, modelInfo]) => {
           const isSelected = value === modelId;
           const isLocked = isViewModelLocked(modelId);
@@ -83,15 +83,16 @@ export function ViewModelSelector({
               type="button"
               onClick={() => handleModelClick(modelId)}
               disabled={disabled}
+              aria-pressed={isSelected && !isLocked}
               className={cn(
-                'relative flex flex-col items-start gap-1.5 rounded-lg border-2 p-3 text-left transition-all',
+                'relative flex flex-col items-start gap-2 rounded-[18px] border-2 p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 isLocked
                   ? 'opacity-70 cursor-pointer border-border bg-muted/30 hover:border-muted-foreground/30'
-                  : 'hover:border-primary/50 hover:bg-accent/50',
+                  : 'hover:border-primary/50 hover:bg-muted/30',
                 isSelected && !isLocked
-                  ? 'border-primary bg-primary/5'
-                  : !isLocked && 'border-border bg-background'
+                  ? 'border-primary bg-primary/[0.03]'
+                  : !isLocked && 'border-border/70 bg-card'
               )}
             >
               {/* Model name with icon */}
@@ -139,7 +140,7 @@ export function ViewModelSelector({
               {modelInfo.badge && !isLocked && (
                 <Badge
                   variant="secondary"
-                  className="absolute right-2 top-2 text-xs px-1.5 py-0 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400"
+                  className="absolute right-2 top-2 text-xs px-1.5 py-0 bg-muted text-muted-foreground"
                 >
                   {modelInfo.badge}
                 </Badge>

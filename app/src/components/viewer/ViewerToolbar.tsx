@@ -95,12 +95,12 @@ export function ViewerToolbar({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50">
+      <div className="absolute inset-x-4 bottom-4 z-50 flex flex-col items-center">
         {/* Glassmorphism toolbar container */}
         <div
-          className="flex items-center gap-1 px-2 py-1.5 rounded-xl
-                     bg-black/70 backdrop-blur-xl border border-white/10
-                     shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.1)]"
+          className="flex w-fit max-w-full flex-wrap items-center justify-center gap-1 rounded-2xl px-2 py-2
+                     bg-[#1d1d1f]/85 backdrop-blur-xl border border-white/15
+                     shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
         >
           {/* View Mode Selector */}
           <Popover open={viewModeOpen} onOpenChange={setViewModeOpen}>
@@ -110,8 +110,9 @@ export function ViewerToolbar({
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-label={t(VIEW_MODES.find(m => m.value === viewMode)?.labelKey ?? 'viewMode.clay')}
                     className="h-9 px-3 gap-2 text-white/90 hover:text-white hover:bg-white/10
-                               font-mono text-xs tracking-wide"
+                               font-normal text-xs tracking-normal"
                   >
                     <Eye className="w-4 h-4" />
                     <span className="hidden sm:inline">
@@ -122,7 +123,7 @@ export function ViewerToolbar({
                 </PopoverTrigger>
               </TooltipTrigger>
               <TooltipContent side="top" className="bg-black/90 text-white border-white/10" container={portalContainer}>
-                {t('viewMode.textured')}
+                {t(VIEW_MODES.find(m => m.value === viewMode)?.labelKey ?? 'viewMode.clay')}
               </TooltipContent>
             </Tooltip>
             <PopoverContent
@@ -135,6 +136,7 @@ export function ViewerToolbar({
                 return (
                   <button
                     key={mode.value}
+                    type="button"
                     onClick={() => {
                       if (!isDisabled) {
                         onViewModeChange(mode.value);
@@ -142,6 +144,7 @@ export function ViewerToolbar({
                       }
                     }}
                     disabled={isDisabled}
+                    aria-pressed={viewMode === mode.value}
                     className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm
                                transition-colors
                                ${viewMode === mode.value
@@ -173,6 +176,7 @@ export function ViewerToolbar({
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-label={t('background')}
                     className="h-9 w-9 p-0 text-white/90 hover:text-white hover:bg-white/10"
                   >
                     <div
@@ -195,23 +199,26 @@ export function ViewerToolbar({
                 {BACKGROUND_COLORS.map((color) => (
                   <button
                     key={color.value}
+                    type="button"
                     onClick={() => {
                       onBackgroundChange(color.value);
                       setBgOpen(false);
                     }}
-                    className={`w-8 h-8 rounded-full transition-transform hover:scale-110
+                    className={`h-8 w-8 rounded-full transition-colors
                                ring-2 ${backgroundColor === color.value
-                                 ? 'ring-indigo-400 scale-110'
+                                 ? 'ring-blue-400'
                                  : 'ring-white/20'}`}
                     style={{ backgroundColor: color.value }}
                     title={t(color.labelKey)}
+                    aria-label={t(color.labelKey)}
+                    aria-pressed={backgroundColor === color.value}
                   />
                 ))}
               </div>
             </PopoverContent>
           </Popover>
 
-          <Separator orientation="vertical" className="h-6 bg-white/20 mx-1" />
+          <Separator orientation="vertical" className="mx-1 bg-white/20 data-[orientation=vertical]:h-6" />
 
           {/* Grid Toggle */}
           <Tooltip>
@@ -220,6 +227,7 @@ export function ViewerToolbar({
                 pressed={showGrid}
                 onPressedChange={onShowGridChange}
                 size="sm"
+                aria-label={t('grid')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                            data-[state=on]:bg-white/20 data-[state=on]:text-white"
               >
@@ -238,6 +246,7 @@ export function ViewerToolbar({
                 pressed={showAxes}
                 onPressedChange={onShowAxesChange}
                 size="sm"
+                aria-label={t('axes')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                            data-[state=on]:bg-white/20 data-[state=on]:text-white"
               >
@@ -256,6 +265,7 @@ export function ViewerToolbar({
                 pressed={autoRotate}
                 onPressedChange={onAutoRotateChange}
                 size="sm"
+                aria-label={t('autoRotate')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10
                            data-[state=on]:bg-white/20 data-[state=on]:text-white"
               >
@@ -268,7 +278,7 @@ export function ViewerToolbar({
             </TooltipContent>
           </Tooltip>
 
-          <Separator orientation="vertical" className="h-6 bg-white/20 mx-1" />
+          <Separator orientation="vertical" className="mx-1 bg-white/20 data-[orientation=vertical]:h-6" />
 
           {/* Screenshot */}
           <Tooltip>
@@ -277,6 +287,7 @@ export function ViewerToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={onScreenshot}
+                aria-label={t('screenshot')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
               >
                 <Camera className="w-4 h-4" />
@@ -294,6 +305,7 @@ export function ViewerToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={onFullscreen}
+                aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
               >
                 {isFullscreen ? (
@@ -315,6 +327,7 @@ export function ViewerToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={onReset}
+                aria-label={t('resetCamera')}
                 className="h-9 w-9 p-0 text-white/70 hover:text-white hover:bg-white/10"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -327,7 +340,7 @@ export function ViewerToolbar({
         </div>
 
         {/* Keyboard hint */}
-        <p className="text-center text-[10px] text-white/40 mt-2 font-mono tracking-wider">
+        <p className="mt-2 rounded-full bg-[#1d1d1f]/75 px-3 py-1 text-center text-[10px] text-white/70">
           {t('helpText')}
         </p>
       </div>

@@ -35,7 +35,7 @@ export function OrderPrintButton({
       <Button
         onClick={() => setShowModal(true)}
         disabled={disabled}
-        className="gap-2"
+        className="h-11 gap-2 rounded-full px-6"
       >
         <Printer className="h-4 w-4" />
         {t('orderPrint')}

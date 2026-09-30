@@ -104,7 +104,7 @@ function OrderDetailsContent() {
       case 'confirmed':
         return { icon: CheckCircle2, color: 'text-blue-500', bg: 'bg-blue-500/10' };
       case 'printing':
-        return { icon: Printer, color: 'text-purple-500', bg: 'bg-purple-500/10' };
+        return { icon: Printer, color: 'text-primary', bg: 'bg-primary/10' };
       case 'quality_check':
         return { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-500/10' };
       case 'shipping':
@@ -140,12 +140,12 @@ function OrderDetailsContent() {
     return (
       <div className="min-h-screen bg-background">
         <UserHeader />
-        <main className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="studio-shell py-10 sm:py-14">
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
+            <CardContent className="flex flex-col items-center justify-center px-5 py-20 text-center">
               <XCircle className="h-16 w-16 text-destructive/50 mb-4" />
-              <h3 className="text-lg font-medium mb-1">{t('orderDetails.notFound')}</h3>
-              <p className="text-muted-foreground mb-4">{t('orderDetails.notFoundDescription')}</p>
+              <h3 className="mb-3 text-2xl font-semibold tracking-tight">{t('orderDetails.notFound')}</h3>
+              <p className="mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">{t('orderDetails.notFoundDescription')}</p>
               <Button asChild>
                 <Link href="/dashboard/orders">{t('orderDetails.backToOrders')}</Link>
               </Button>
@@ -160,7 +160,7 @@ function OrderDetailsContent() {
     return (
       <div className="min-h-screen bg-background">
         <UserHeader />
-        <main className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="studio-shell py-10 sm:py-14">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
@@ -173,12 +173,12 @@ function OrderDetailsContent() {
     return (
       <div className="min-h-screen bg-background">
         <UserHeader />
-        <main className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="studio-shell py-10 sm:py-14">
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
+            <CardContent className="flex flex-col items-center justify-center px-5 py-20 text-center">
               <XCircle className="h-16 w-16 text-destructive/50 mb-4" />
-              <h3 className="text-lg font-medium mb-1">{t('orderDetails.notFound')}</h3>
-              <p className="text-muted-foreground mb-4">{error || t('orderDetails.notFoundDescription')}</p>
+              <h3 className="mb-3 text-2xl font-semibold tracking-tight">{t('orderDetails.notFound')}</h3>
+              <p className="mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">{error || t('orderDetails.notFoundDescription')}</p>
               <Button asChild>
                 <Link href="/dashboard/orders">{t('orderDetails.backToOrders')}</Link>
               </Button>
@@ -197,9 +197,9 @@ function OrderDetailsContent() {
     <div className="min-h-screen bg-background">
       <UserHeader />
 
-      <main className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell py-10 sm:py-14">
         {/* Back button */}
-        <Button asChild variant="ghost" size="sm" className="mb-4">
+        <Button asChild variant="ghost" size="sm" className="mb-8 -ml-3 text-primary">
           <Link href="/dashboard/orders" className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             {t('orderDetails.backToOrders')}
@@ -207,56 +207,56 @@ function OrderDetailsContent() {
         </Button>
 
         {/* Order header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between mb-10">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="studio-page-title">
               {t('orderDetails.title')} #{order.id.slice(-8).toUpperCase()}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="studio-page-subtitle">
               {t('orderDetails.placedOn')} {formatDate(order.createdAt)}
             </p>
           </div>
 
-          <Badge variant="secondary" className={`${statusConfig.bg} ${statusConfig.color} border-0 text-base px-4 py-2`}>
+          <Badge variant="secondary" className={`${statusConfig.bg} ${statusConfig.color} border-0 text-sm px-4 py-2`}>
             <StatusIcon className="mr-2 h-4 w-4" />
             {ORDER_STATUS_LABELS[order.status]}
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Order items */}
             <Card>
-              <CardHeader>
-                <CardTitle>{t('orderDetails.items')}</CardTitle>
+              <CardHeader className="gap-3">
+                <CardTitle className="text-xl">{t('orderDetails.items')}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="divide-y divide-border/60">
                 {order.items.map((item) => (
-                  <div key={item.id} className="flex gap-4">
+                  <div key={item.id} className="flex gap-4 py-5 first:pt-0 last:pb-0">
                     {item.modelThumbnail ? (
-                      <div className="relative w-20 h-20 overflow-hidden rounded-md ring-1 ring-border bg-black">
+                      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-muted">
                         <FillImage
                           src={item.modelThumbnail}
                           alt={item.modelName || 'Model'}
                           className="object-cover"
-                          sizes="80px"
+                          sizes="96px"
                         />
                       </div>
                     ) : (
-                      <div className="w-20 h-20 rounded-md bg-muted flex items-center justify-center">
+                      <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-muted">
                         <Package className="h-8 w-8 text-muted-foreground" />
                       </div>
                     )}
-                    <div className="flex-1">
-                      <h4 className="font-medium">{item.modelName || 'Model'}</h4>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="mb-1 font-semibold">{item.modelName || 'Model'}</h4>
                       <p className="text-sm text-muted-foreground">
                         {item.material} · {item.size}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {t('orderDetails.colors')}: {item.colors.join(', ')}
                       </p>
-                      <p className="text-sm">
+                      <p className="mt-2 text-sm font-medium">
                         {formatPrice(item.unitPrice)} × {item.quantity} = {formatPrice(item.subtotal)}
                       </p>
                     </div>
@@ -267,8 +267,8 @@ function OrderDetailsContent() {
 
             {/* Status timeline */}
             <Card>
-              <CardHeader>
-                <CardTitle>{t('orderDetails.timeline')}</CardTitle>
+              <CardHeader className="gap-3">
+                <CardTitle className="text-xl">{t('orderDetails.timeline')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <OrderTimeline statusHistory={order.statusHistory} />
@@ -278,8 +278,8 @@ function OrderDetailsContent() {
             {/* Tracking info */}
             {order.tracking && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                <CardHeader className="gap-3">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <Truck className="h-5 w-5" />
                     {t('orderDetails.tracking')}
                   </CardTitle>
@@ -312,8 +312,8 @@ function OrderDetailsContent() {
           <div className="space-y-6">
             {/* Order summary */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="gap-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <CreditCard className="h-5 w-5" />
                   {t('orderDetails.summary')}
                 </CardTitle>
@@ -328,12 +328,12 @@ function OrderDetailsContent() {
                   <span>{formatPrice(order.payment.shippingCost)}</span>
                 </div>
                 <Separator />
-                <div className="flex justify-between font-semibold">
+                <div className="flex justify-between pt-2 text-lg font-semibold tracking-tight">
                   <span>{t('orderDetails.total')}</span>
                   <span>{formatPrice(order.payment.totalAmount)}</span>
                 </div>
                 {order.bonusCreditsAwarded && order.bonusCreditsAwarded > 0 && (
-                  <div className="flex items-center gap-2 text-green-600 bg-green-500/10 p-2 rounded">
+                  <div className="flex items-center gap-2 rounded-xl bg-green-500/10 p-3 text-green-700 dark:text-green-400">
                     <Gift className="h-4 w-4" />
                     <span className="text-sm">
                       +{order.bonusCreditsAwarded} {t('orderDetails.creditsAwarded')}
@@ -345,14 +345,14 @@ function OrderDetailsContent() {
 
             {/* Shipping address */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+              <CardHeader className="gap-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <MapPin className="h-5 w-5" />
                   {t('orderDetails.shippingAddress')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <address className="not-italic text-sm">
+                <address className="text-sm leading-relaxed not-italic">
                   <p className="font-medium">{order.shippingAddress.recipientName}</p>
                   <p className="text-muted-foreground">{order.shippingAddress.phone}</p>
                   <p className="mt-2">{order.shippingAddress.addressLine1}</p>
@@ -370,7 +370,7 @@ function OrderDetailsContent() {
             {/* Actions */}
             {canCancel && (
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" className="w-full" disabled={cancellingOrder}>
@@ -438,9 +438,9 @@ function OrderTimeline({ statusHistory }: { statusHistory: OrderStatusChange[] }
         <div key={index} className="flex gap-4 pb-6 last:pb-0">
           {/* Timeline line */}
           <div className="flex flex-col items-center">
-            <div className="w-3 h-3 rounded-full bg-primary" />
+            <div className="mt-1 h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-primary/10" />
             {index < statusHistory.length - 1 && (
-              <div className="w-0.5 flex-1 bg-border mt-2" />
+              <div className="mt-3 w-px flex-1 bg-border" />
             )}
           </div>
 
@@ -467,7 +467,7 @@ function OrderDetailsWithSuspense() {
     <Suspense fallback={
       <div className="min-h-screen bg-background">
         <UserHeader />
-        <main className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="studio-shell py-10 sm:py-14">
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>

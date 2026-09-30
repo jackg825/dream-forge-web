@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { uploadImage, validateImage } from '@/lib/storage';
-import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Upload, X, Image as ImageIcon, AlertCircle, Camera } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -146,7 +145,7 @@ export function PipelineUploader({
   const canUploadMore = images.length < maxImages && !disabled;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -168,11 +167,11 @@ export function PipelineUploader({
 
       {/* Image grid */}
       {images.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className={maxImages === 1 ? "mx-auto max-w-xs" : "grid grid-cols-2 gap-4 md:grid-cols-4"}>
           {images.map((image, index) => (
             <div
               key={index}
-              className="relative group aspect-square rounded-lg overflow-hidden border bg-muted"
+              className="group relative aspect-square overflow-hidden rounded-[20px] bg-muted"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- Local object URL previews are not reliably supported by next/image. */}
               <img
@@ -198,7 +197,7 @@ export function PipelineUploader({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              className="flex aspect-square flex-col items-center justify-center gap-2 rounded-[20px] border border-dashed border-border bg-card text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <Upload className="h-8 w-8" />
               <span className="text-xs">{t('addMore')}</span>
@@ -210,53 +209,59 @@ export function PipelineUploader({
       {/* Upload dropzone (when no images) */}
       {images.length === 0 && (
         <>
-          {/* Photo tips */}
-          <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-3">
-              <Camera className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-blue-900 dark:text-blue-100">{t('photoTips.title')}</p>
-                <ul className="text-sm text-blue-700 dark:text-blue-300 mt-1.5 space-y-1">
-                  <li>• <strong>{t('photoTips.frontView')}</strong>：{t('photoTips.frontViewDesc')}</li>
-                  <li>• <strong>{t('photoTips.clearComplete')}</strong>：{t('photoTips.clearCompleteDesc')}</li>
-                  <li>• <strong>{t('photoTips.simpleBackground')}</strong>：{t('photoTips.simpleBackgroundDesc')}</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
           {/* Dropzone */}
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            onClick={() => canUploadMore && fileInputRef.current?.click()}
             className={`
-              relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer
-              transition-all duration-200
-              ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'}
+              relative rounded-[28px] border border-dashed p-8 text-center sm:p-12
+              transition-colors duration-200
+              ${isDragging ? 'border-primary bg-primary/5' : 'border-border bg-card hover:border-primary/50'}
               ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
             `}
           >
-            <div className="flex flex-col items-center gap-4">
-              <div className="p-4 rounded-full bg-muted">
-                <ImageIcon className="h-10 w-10 text-muted-foreground" />
+            <button
+              type="button"
+              onClick={() => canUploadMore && fileInputRef.current?.click()}
+              disabled={disabled}
+              aria-label={t('dropzone.button')}
+              className="absolute inset-0 rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4 disabled:cursor-not-allowed"
+            />
+            <div className="pointer-events-none relative flex flex-col items-center gap-5">
+              <div className="rounded-[22px] bg-muted p-5">
+                <ImageIcon className="h-10 w-10 text-foreground/60" strokeWidth={1.5} />
               </div>
               <div>
-                <p className="text-lg font-medium">{t('dropzone.title')}</p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-2xl font-semibold tracking-tight">{t('dropzone.title')}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {t('dropzone.subtitle', { max: maxImages })}
                 </p>
               </div>
-              <Button variant="secondary" size="sm" disabled={disabled}>
-                <Upload className="h-4 w-4 mr-2" />
+              <span className="inline-flex min-h-11 items-center rounded-full bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground">
+                <Upload className="mr-2 h-4 w-4" />
                 {t('dropzone.button')}
-              </Button>
+              </span>
               <p className="text-xs text-muted-foreground">
                 {t('dropzone.formats')}
               </p>
             </div>
           </div>
+          {/* Photo tips */}
+          <div className="rounded-[20px] bg-card px-5 py-5 sm:px-7">
+            <div className="flex items-start gap-3">
+              <Camera className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">{t('photoTips.title')}</p>
+                <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-muted-foreground">
+                  <li><span className="font-medium text-foreground">{t('photoTips.frontView')}</span>：{t('photoTips.frontViewDesc')}</li>
+                  <li><span className="font-medium text-foreground">{t('photoTips.clearComplete')}</span>：{t('photoTips.clearCompleteDesc')}</li>
+                  <li><span className="font-medium text-foreground">{t('photoTips.simpleBackground')}</span>：{t('photoTips.simpleBackgroundDesc')}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
         </>
       )}
 

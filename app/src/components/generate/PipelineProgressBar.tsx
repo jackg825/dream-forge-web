@@ -34,10 +34,10 @@ export function PipelineProgressBar({
   const t = useTranslations();
 
   return (
-    <div className="bg-muted/30 rounded-xl border border-border/50 p-4 mb-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="rounded-[24px] bg-card px-4 py-5 sm:px-7">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         {/* Left: Step Progress */}
-        <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
+        <ol className="flex flex-1 items-center justify-between gap-1 sm:justify-start sm:gap-3">
           {STEP_CONFIG.map((step, index) => {
             const stepLabel = t(`pipeline.steps.${step.labelKey}`);
             const isCompleted = currentStep > step.id;
@@ -55,41 +55,45 @@ export function PipelineProgressBar({
             };
 
             return (
-              <div key={step.id} className="flex items-center min-w-0">
+              <li key={step.id} className="flex min-w-0 items-center">
                 {/* Step indicator */}
                 <button
                   type="button"
                   onClick={handleClick}
                   disabled={!isClickable}
+                  aria-current={isActive ? 'step' : undefined}
                   aria-label={isComingSoon
                     ? `${stepLabel} (${t('pipeline.progressBar.soon')})`
                     : stepLabel}
                   className={cn(
-                    'flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-1 sm:px-2 py-1 rounded-full text-xs font-medium transition-all',
+                    'flex flex-col items-center gap-2 rounded-xl px-1 py-1 text-xs font-medium transition-colors sm:flex-row sm:gap-2.5 sm:px-2',
                     'whitespace-nowrap border-0 bg-transparent',
-                    isComingSoon && 'opacity-50',
-                    isCompleted && !isComingSoon && 'bg-green-500/20 text-green-500',
-                    isActive && !isFailed && !isComingSoon && 'bg-primary/20 text-primary',
-                    isActive && isFailed && 'bg-destructive/20 text-destructive',
+                    isComingSoon && 'text-muted-foreground/60',
+                    isCompleted && !isComingSoon && 'text-foreground',
+                    isActive && !isFailed && !isComingSoon && 'text-primary',
+                    isActive && isFailed && 'text-destructive',
                     isPending && 'text-muted-foreground',
                     // Clickable styles
-                    isClickable && 'cursor-pointer hover:bg-green-500/30 hover:ring-2 hover:ring-green-500/30 group',
+                    isClickable && 'group cursor-pointer hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                     !isClickable && 'cursor-default'
                   )}
                   title={isClickable ? t('pipeline.progressBar.returnToStep', { step: stepLabel }) : undefined}
                 >
-                  {isCompleted && !isComingSoon ? (
-                    isClickable ? (
-                      <RotateCcw className="h-3.5 w-3.5 shrink-0 group-hover:animate-spin-slow" />
+                  <span className={cn(
+                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                    isActive && !isFailed && !isComingSoon ? 'bg-primary text-white' : 'bg-muted text-muted-foreground',
+                    isCompleted && !isComingSoon && 'bg-foreground text-background',
+                    isActive && isFailed && 'bg-destructive text-white'
+                  )}>
+                    {isCompleted && !isComingSoon ? (
+                      isClickable ? <RotateCcw className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />
+                    ) : isActive && isProcessing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <CheckCircle className="h-3.5 w-3.5 shrink-0" />
-                    )
-                  ) : isActive && isProcessing ? (
-                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-                  ) : (
-                    <StepIcon className="h-3.5 w-3.5 shrink-0" />
-                  )}
-                  <span className="max-w-[4.5rem] text-[10px] sm:text-xs leading-tight text-center sm:max-w-none">
+                      <StepIcon className="h-4 w-4" />
+                    )}
+                  </span>
+                  <span className="max-w-[4.25rem] whitespace-normal text-[11px] leading-tight text-center sm:max-w-none sm:text-sm">
                     {stepLabel}
                   </span>
                   {isComingSoon && (
@@ -103,25 +107,22 @@ export function PipelineProgressBar({
                 {index < STEP_CONFIG.length - 1 && (
                   <div
                     className={cn(
-                      'w-4 sm:w-6 h-0.5 mx-1',
-                      currentStep > step.id ? 'bg-green-500' : 'bg-border'
+                      'mx-1 h-px w-3 sm:mx-3 sm:w-8',
+                      currentStep > step.id ? 'bg-foreground/40' : 'bg-border'
                     )}
                   />
                 )}
-              </div>
+              </li>
             );
           })}
-        </div>
-
-        {/* Divider */}
-        <div className="h-8 w-px bg-border hidden sm:block" />
+        </ol>
 
         {/* Right: Credits Info */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Credits balance */}
-          <div className="flex items-center gap-1.5">
-            <Coins className="h-4 w-4 text-yellow-500" />
-            <span className="text-base font-semibold">
+          <div className="flex items-center gap-2 rounded-full bg-muted px-3.5 py-2 sm:px-4">
+            <Coins className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold tabular-nums">
               {creditsLoading ? '...' : credits ?? 0}
             </span>
             <span className="text-xs text-muted-foreground">{t('pipeline.credits.points')}</span>
@@ -130,11 +131,11 @@ export function PipelineProgressBar({
       </div>
 
       {/* Progress bar */}
-      <div className="mt-3 h-1 bg-border rounded-full overflow-hidden">
+      <div className="mt-5 h-0.5 overflow-hidden rounded-full bg-muted">
         <div
           className={cn(
             'h-full rounded-full transition-all duration-500',
-            isFailed ? 'bg-destructive' : 'bg-green-500'
+            isFailed ? 'bg-destructive' : 'bg-primary'
           )}
           style={{ width: `${((currentStep - 1) / (STEP_CONFIG.length - 1)) * 100}%` }}
         />

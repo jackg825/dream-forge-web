@@ -72,29 +72,29 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
   const totalCredits = pipeline.creditsCharged.mesh + pipeline.creditsCharged.texture;
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+    <Card className="group gap-0 overflow-hidden py-0 transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_12px_36px_rgba(0,0,0,0.08)]">
       {/* Preview image */}
-      <div className="aspect-square bg-black relative">
+      <div className="relative aspect-[4/3] bg-[#f0f0f2] dark:bg-[#242426]">
         {previewImage ? (
           <FillImage
             src={previewImage}
             alt="Pipeline preview"
-            className="object-contain"
-            sizes="(min-width: 768px) 240px, 100vw"
+            className="object-contain p-6 transition-transform duration-500 group-hover:scale-[1.04]"
+            sizes="(min-width: 1024px) 350px, (min-width: 640px) 50vw, 100vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Box className="h-12 w-12 text-muted-foreground/30" />
+            <Box className="h-12 w-12 text-muted-foreground/50" />
           </div>
         )}
 
         {/* Provider badge - top-left */}
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-4 left-4">
           <ProviderBadge provider={pipeline.settings.provider} />
         </div>
 
         {/* Status badge overlay */}
-        <div className="absolute top-2 right-2">
+        <div className="absolute top-4 right-4">
           <Badge variant={statusConfig.variant} className="gap-1">
             <StatusIcon
               className={`h-3 w-3 ${isProcessing ? 'animate-spin' : ''}`}
@@ -104,7 +104,7 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
         </div>
 
         {/* Model type indicators */}
-        <div className="absolute bottom-2 left-2 flex gap-1">
+        <div className="absolute bottom-4 left-4 flex gap-1.5">
           {pipeline.meshUrl && (
             <Badge variant="secondary" className="gap-1 text-xs">
               <Box className="h-3 w-3" />
@@ -120,9 +120,9 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
         </div>
       </div>
 
-      <CardContent className="p-4">
+      <CardContent className="p-6">
         {/* Date and credits */}
-        <div className="flex items-center justify-between text-sm text-muted-foreground mb-3">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>{formatDate(pipeline.createdAt)}</span>
           {totalCredits > 0 && (
             <span>{totalCredits} {t('pipeline.credits.points')}</span>
@@ -137,7 +137,7 @@ export function PipelineCard({ pipeline }: PipelineCardProps) {
         )}
 
         {/* Action button */}
-        <Button asChild variant="outline" size="sm" className="w-full">
+        <Button asChild variant="outline" size="sm" className="h-10 w-full">
           <Link href={`/generate?id=${pipeline.id}`} className="gap-2">
             {pipeline.status === 'completed' ? (
               <>

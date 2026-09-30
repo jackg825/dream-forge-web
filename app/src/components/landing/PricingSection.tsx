@@ -1,313 +1,71 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Check } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Check, Gift, Sparkles } from 'lucide-react';
 
 interface PricingSectionProps {
   className?: string;
 }
 
-/**
- * PricingSection - Credit-based pricing display
- * Mobile-optimized with horizontal scroll and touch-friendly cards
- */
+const plans = [
+  { id: 'free', credits: 3, features: ['freeFeature1', 'freeFeature2', 'freeFeature3', 'freeFeature4'] },
+  { id: 'starter', credits: 20, features: ['starterFeature1', 'starterFeature2', 'starterFeature3', 'starterFeature4', 'starterFeature5'] },
+  { id: 'pro', credits: 80, features: ['proFeature1', 'proFeature2', 'proFeature3', 'proFeature4', 'proFeature5'] },
+];
+
 export function PricingSection({ className }: PricingSectionProps) {
   const t = useTranslations('landing');
 
-  const plans = [
-    {
-      id: 'free',
-      featured: false,
-      icon: Gift,
-      price: '$0',
-      credits: 3,
-      features: ['freeFeature1', 'freeFeature2', 'freeFeature3', 'freeFeature4'],
-    },
-    {
-      id: 'starter',
-      featured: true,
-      icon: Sparkles,
-      price: null,
-      credits: 20,
-      features: ['starterFeature1', 'starterFeature2', 'starterFeature3', 'starterFeature4', 'starterFeature5'],
-    },
-    {
-      id: 'pro',
-      featured: false,
-      icon: Sparkles,
-      price: null,
-      credits: 80,
-      features: ['proFeature1', 'proFeature2', 'proFeature3', 'proFeature4', 'proFeature5'],
-    },
-  ];
-
   return (
-    <section
-      id="pricing"
-      className={cn(
-        'py-16 sm:py-24 bg-gradient-to-b from-background to-muted/20',
-        className
-      )}
-    >
-      <div className="container max-w-5xl mx-auto px-4">
-        {/* Section header */}
-        <div className="text-center mb-10 sm:mb-16">
-          <Badge
-            variant="outline"
-            className="mb-3 sm:mb-4 px-3 py-1 text-xs font-medium"
-          >
-            {t('pricing.badge')}
-          </Badge>
-          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-3 sm:mb-4">
-            {t('pricing.title')}
-          </h2>
-          <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto px-2">
+    <section id="pricing" className={cn('store-section scroll-mt-24', className)}>
+      <div className="store-container">
+        <div className="mb-10 max-w-3xl sm:mb-12">
+          <p className="store-eyebrow mb-3">{t('pricing.badge')}</p>
+          <h2 className="store-heading">{t('pricing.title')}</h2>
+          <p className="mt-4 text-[17px] leading-relaxed text-muted-foreground sm:text-xl">
             {t('pricing.subtitle')}
           </p>
         </div>
 
-        {/* Pricing cards - horizontal scroll on mobile */}
-        <div className="relative">
-          {/* Mobile: Horizontal scroll container */}
-          <div className="flex md:hidden overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scrollbar-hide gap-4">
-            {plans.map((plan) => {
-              const Icon = plan.icon;
+        <div className="grid gap-5 md:grid-cols-3">
+          {plans.map((plan) => {
+            const isFree = plan.id === 'free';
 
-              return (
-                <Card
-                  key={plan.id}
-                  className={cn(
-                    'relative overflow-hidden transition-all duration-300 shrink-0 snap-center',
-                    'w-[280px]',
-                    plan.featured
-                      ? 'border-2 border-[var(--accent-violet)] shadow-lg'
-                      : 'border'
-                  )}
-                >
-                  {/* Featured badge */}
-                  {plan.featured && (
-                    <div className="absolute -top-px left-1/2 -translate-x-1/2">
-                      <div className="px-3 py-0.5 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white text-xs font-medium rounded-b-lg">
-                        {t('pricing.popular')}
-                      </div>
-                    </div>
-                  )}
-
-                  <CardHeader className={cn('text-center py-4', plan.featured && 'pt-6')}>
-                    {/* Icon */}
-                    <div
-                      className={cn(
-                        'mx-auto mb-3 p-2.5 rounded-xl w-fit',
-                        plan.featured
-                          ? 'bg-gradient-to-br from-[var(--accent-violet)] to-[var(--accent-coral)]'
-                          : 'bg-muted'
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          'w-5 h-5',
-                          plan.featured ? 'text-white' : 'text-muted-foreground'
-                        )}
-                      />
-                    </div>
-
-                    {/* Plan name */}
-                    <h3 className="font-display text-lg font-bold">
-                      {t(`pricing.plans.${plan.id}.name`)}
-                    </h3>
-
-                    {/* Price */}
-                    <div className="mt-2">
-                      <span className="text-3xl font-display font-bold">
-                        {plan.price ?? t('pricing.comingSoon')}
-                      </span>
-                      {plan.price && plan.id !== 'free' && (
-                        <span className="text-sm text-muted-foreground ml-1">
-                          {t('pricing.perPack')}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Credits */}
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {plan.credits} {t('pricing.credits')}
-                    </p>
-                  </CardHeader>
-
-                  <CardContent className="pt-2 pb-4 px-4">
-                    {/* Features list */}
-                    <ul className="space-y-2 mb-4">
-                      {plan.features.map((feature) => (
-                        <li
-                          key={feature}
-                          className="flex items-start gap-2 text-xs"
-                        >
-                          <Check
-                            className="w-3.5 h-3.5 mt-0.5 text-[var(--accent-mint)] shrink-0"
-                            strokeWidth={2.5}
-                          />
-                          <span className="leading-tight">{t(`pricing.plans.${plan.id}.${feature}`)}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* CTA Button */}
-                    {plan.id === 'free' ? <Button
-                      asChild
-                      className={cn(
-                        'w-full py-5',
-                        plan.featured
-                          ? 'bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90'
-                          : ''
-                      )}
-                      variant={plan.featured ? 'default' : 'outline'}
-                    >
-                      <Link href="/generate">
-                        {t(`pricing.plans.${plan.id}.cta`)}
-                      </Link>
-                    </Button> : (
-                      <Button className="w-full py-5" variant="outline" disabled>
-                        {t('pricing.comingSoon')}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Desktop: Grid layout */}
-          <div className="hidden md:grid md:grid-cols-3 gap-6 lg:gap-8">
-            {plans.map((plan) => {
-              const Icon = plan.icon;
-
-              return (
-                <Card
-                  key={plan.id}
-                  className={cn(
-                    'relative overflow-hidden transition-all duration-300 hover:shadow-xl',
-                    plan.featured
-                      ? 'border-2 border-[var(--accent-violet)] shadow-lg scale-105 z-10'
-                      : 'border hover:-translate-y-1'
-                  )}
-                >
-                  {/* Featured badge */}
-                  {plan.featured && (
-                    <div className="absolute -top-px left-1/2 -translate-x-1/2">
-                      <div className="px-4 py-1 bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white text-xs font-medium rounded-b-lg">
-                        {t('pricing.popular')}
-                      </div>
-                    </div>
-                  )}
-
-                  <CardHeader className={cn('text-center', plan.featured && 'pt-8')}>
-                    {/* Icon */}
-                    <div
-                      className={cn(
-                        'mx-auto mb-4 p-3 rounded-xl w-fit',
-                        plan.featured
-                          ? 'bg-gradient-to-br from-[var(--accent-violet)] to-[var(--accent-coral)]'
-                          : 'bg-muted'
-                      )}
-                    >
-                      <Icon
-                        className={cn(
-                          'w-6 h-6',
-                          plan.featured ? 'text-white' : 'text-muted-foreground'
-                        )}
-                      />
-                    </div>
-
-                    {/* Plan name */}
-                    <h3 className="font-display text-xl font-bold">
-                      {t(`pricing.plans.${plan.id}.name`)}
-                    </h3>
-
-                    {/* Price */}
-                    <div className="mt-4">
-                      <span className="text-4xl font-display font-bold">
-                        {plan.price ?? t('pricing.comingSoon')}
-                      </span>
-                      {plan.price && plan.id !== 'free' && (
-                        <span className="text-muted-foreground ml-1">
-                          {t('pricing.perPack')}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Credits */}
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {plan.credits} {t('pricing.credits')}
-                    </p>
-                  </CardHeader>
-
-                  <CardContent className="pt-4">
-                    {/* Features list */}
-                    <ul className="space-y-3 mb-6">
-                      {plan.features.map((feature) => (
-                        <li
-                          key={feature}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          <Check
-                            className="w-4 h-4 mt-0.5 text-[var(--accent-mint)]"
-                            strokeWidth={2.5}
-                          />
-                          <span>{t(`pricing.plans.${plan.id}.${feature}`)}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {/* CTA Button */}
-                    {plan.id === 'free' ? <Button
-                      asChild
-                      className={cn(
-                        'w-full',
-                        plan.featured
-                          ? 'bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white hover:opacity-90'
-                          : ''
-                      )}
-                      variant={plan.featured ? 'default' : 'outline'}
-                    >
-                      <Link href="/generate">
-                        {t(`pricing.plans.${plan.id}.cta`)}
-                      </Link>
-                    </Button> : (
-                      <Button className="w-full" variant="outline" disabled>
-                        {t('pricing.comingSoon')}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-
-          {/* Mobile scroll indicator dots */}
-          <div className="flex md:hidden justify-center gap-2 mt-2">
-            {plans.map((plan, index) => (
-              <div
-                key={plan.id}
-                className={cn(
-                  'w-2 h-2 rounded-full transition-colors',
-                  index === 1 ? 'bg-[var(--accent-violet)]' : 'bg-muted'
+            return (
+              <article key={plan.id} className={cn('store-card flex flex-col p-7 sm:p-8', isFree && 'ring-1 ring-primary/30')}>
+                <h3 className="text-[22px] font-semibold tracking-tight">{t(`pricing.plans.${plan.id}.name`)}</h3>
+                <div className="mt-7 flex items-baseline gap-2">
+                  <span className="text-[52px] font-semibold leading-none tracking-[-0.04em]">{plan.credits}</span>
+                  <span className="text-sm text-muted-foreground">{t('pricing.credits')}</span>
+                </div>
+                <p className={cn('mb-7 mt-4 text-base font-medium', isFree ? 'text-primary' : 'text-muted-foreground')}>
+                  {isFree ? '$0' : t('pricing.comingSoon')}
+                </p>
+                <ul className="mb-8 space-y-3 border-t border-border/70 pt-6">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5 text-sm leading-relaxed">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" strokeWidth={1.8} aria-hidden="true" />
+                      <span>{t(`pricing.plans.${plan.id}.${feature}`)}</span>
+                    </li>
+                  ))}
+                </ul>
+                {isFree ? (
+                  <Button asChild className="mt-auto h-11 w-full rounded-full font-normal">
+                    <Link href="/generate">{t(`pricing.plans.${plan.id}.cta`)}</Link>
+                  </Button>
+                ) : (
+                  <Button disabled variant="secondary" className="mt-auto h-11 w-full rounded-full font-normal disabled:opacity-70">
+                    {t('pricing.comingSoon')}
+                  </Button>
                 )}
-              />
-            ))}
-          </div>
+              </article>
+            );
+          })}
         </div>
-
-        {/* Additional note */}
-        {t('pricing.note') && (
-          <p className="text-center text-xs sm:text-sm text-muted-foreground mt-6 sm:mt-8 px-2">
-            {t('pricing.note')}
-          </p>
-        )}
+        {t('pricing.note') && <p className="mt-6 text-sm text-muted-foreground">{t('pricing.note')}</p>}
       </div>
     </section>
   );

@@ -77,12 +77,12 @@ function HistoryContent() {
       <UserHeader />
 
       {/* Main content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell py-12 sm:py-16">
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between mb-10">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{t('history.title')}</h1>
-            <p className="text-muted-foreground">
+            <h1 className="studio-page-title">{t('history.title')}</h1>
+            <p className="studio-page-subtitle">
               {t('history.subtitle')}
             </p>
           </div>
@@ -96,8 +96,8 @@ function HistoryContent() {
         </div>
 
         {/* Status filters */}
-        <Tabs value={filter} onValueChange={(v) => handleFilterChange(v as FilterStatus)} className="mb-6">
-          <TabsList>
+        <Tabs value={filter} onValueChange={(v) => handleFilterChange(v as FilterStatus)} className="mb-8 overflow-x-auto pb-1">
+          <TabsList className="h-11 min-w-max">
             <TabsTrigger value="all" className="gap-2">
               {t('history.filter.all')}
               <Badge variant="secondary" className="ml-1 h-5 min-w-5 rounded-full px-1.5">
@@ -132,12 +132,14 @@ function HistoryContent() {
           </div>
         ) : paginatedPipelines.length === 0 ? (
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Box className="h-16 w-16 text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-medium mb-1">
+            <CardContent className="flex flex-col items-center justify-center px-5 py-20 text-center">
+              <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
+                <Box className="h-9 w-9 text-muted-foreground" strokeWidth={1.5} />
+              </div>
+              <h3 className="mb-3 text-2xl font-semibold tracking-tight">
                 {filter === 'all' ? t('history.noGenerations') : t('history.noGenerationsFiltered', { filter: t(`history.filter.${filter}`) })}
               </h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="mb-6 max-w-md text-sm leading-relaxed text-muted-foreground">
                 {filter === 'all'
                   ? t('history.uploadToCreate')
                   : t('history.tryAdjustingFilter')}
@@ -154,7 +156,7 @@ function HistoryContent() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {paginatedPipelines.map((pipeline: Pipeline) => (
                 <PipelineCard key={pipeline.id} pipeline={pipeline} />
               ))}
@@ -162,7 +164,7 @@ function HistoryContent() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
+              <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"

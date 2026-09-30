@@ -103,33 +103,33 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Mini header */}
-      <header className="flex items-center justify-between p-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
-            <Box className="h-5 w-5 text-white" />
+      <header className="store-container flex h-20 items-center justify-between">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background">
+            <Box className="h-5 w-5" strokeWidth={1.6} />
           </div>
-          <span className="font-bold">Dream Forge</span>
+          <span className="text-base font-semibold tracking-tight">DreamForge</span>
         </Link>
         <ThemeToggle />
       </header>
 
       {/* Auth content */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md">
+      <div className="flex flex-1 items-center justify-center px-5 pb-16 pt-8 sm:py-16">
+        <div className="w-full max-w-[460px]">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold tracking-tight mb-2">
+          <div className="mb-9 text-center">
+            <h1 className="mb-4 text-[36px] font-semibold leading-[1.1] tracking-[-0.04em] sm:text-[44px]">
               {activeTab === 'signin' ? t('auth.welcomeBack') : t('auth.createYourAccount')}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-base leading-relaxed text-muted-foreground">
               {t('auth.transformPhotos')}
             </p>
           </div>
 
-          <Card>
-            <CardHeader className="pb-4">
+          <Card className="gap-5 px-2 py-7 sm:px-4 sm:py-8">
+            <CardHeader className="pb-0">
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'signin' | 'signup')}>
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid h-11 w-full grid-cols-2">
                   <TabsTrigger value="signin">{t('auth.tabSignIn')}</TabsTrigger>
                   <TabsTrigger value="signup">{t('auth.tabSignUp')}</TabsTrigger>
                 </TabsList>
@@ -160,7 +160,7 @@ export default function AuthPage() {
               )}
 
               {/* Email/Password Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 {activeTab === 'signup' && (
                   <div className="space-y-2">
                     <Label htmlFor="displayName">{t('auth.nameOptional')}</Label>
@@ -208,7 +208,7 @@ export default function AuthPage() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full"
+                  className="h-12 w-full"
                 >
                   {isSubmitting ? (
                     <>
@@ -239,7 +239,7 @@ export default function AuthPage() {
                 variant="outline"
                 onClick={handleGoogleSignIn}
                 disabled={isSubmitting}
-                className="w-full"
+                className="h-12 w-full"
               >
                 {isSubmitting ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -250,7 +250,7 @@ export default function AuthPage() {
 
             {/* Free credits notice for signup */}
             {activeTab === 'signup' && (
-              <CardFooter className="flex justify-center border-t pt-4">
+              <CardFooter className="flex justify-center border-t pt-5">
                 <Badge variant="secondary" className="gap-1">
                   <Gift className="h-3 w-3" />
                   {t('auth.newUsersReceive')}
@@ -260,8 +260,8 @@ export default function AuthPage() {
           </Card>
 
           {/* Back to home link */}
-          <p className="text-center mt-6 text-sm text-muted-foreground">
-            <Link href="/" className="hover:text-foreground transition-colors">
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            <Link href="/" className="text-primary transition-colors hover:underline">
               {t('auth.backToHome')}
             </Link>
           </p>

@@ -32,11 +32,11 @@ export function BaseHeader({
     <header
       className={cn(
         'sticky top-0 z-50 w-full border-b border-border/40',
-        'bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60',
+        'bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80',
         className
       )}
     >
-      <div className="container flex h-14 max-w-7xl items-center mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="flex h-14 max-w-[1184px] items-center mx-auto px-5 sm:px-8">
         {/* Left slot (mobile menu trigger) */}
         {leftSlot}
 
@@ -46,10 +46,10 @@ export function BaseHeader({
           className="mr-4 md:mr-6 flex items-center gap-2"
           aria-label="Dream Forge"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
-            <Box className="h-5 w-5 text-white" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
+            <Box className="h-5 w-5 text-background" />
           </div>
-          <span className="hidden font-bold sm:inline-block">Dream Forge</span>
+          <span className="font-semibold tracking-tight text-sm sm:text-base">DreamForge</span>
           {showAdminBadge && (
             <Badge variant="destructive" className="hidden sm:inline-flex text-xs">
               {adminBadgeText}

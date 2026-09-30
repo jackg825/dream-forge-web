@@ -56,7 +56,7 @@ export function RegenerateDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{t('regenerate.dialog.title', { angle: angleLabel, type: typeLabel })}</DialogTitle>
           <DialogDescription>

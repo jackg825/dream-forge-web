@@ -34,22 +34,22 @@ function SettingsContent() {
   return (
     <div className="min-h-screen bg-background">
       <UserHeader />
-      <main className="container max-w-2xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">{t('settingsPage.title')}</h1>
-          <p className="text-muted-foreground">{t('settingsPage.subtitle')}</p>
+      <main className="studio-shell py-12 sm:py-16">
+        <div className="mb-10 sm:mb-12">
+          <h1 className="studio-page-title">{t('settingsPage.title')}</h1>
+          <p className="studio-page-subtitle">{t('settingsPage.subtitle')}</p>
         </div>
 
-        <div className="space-y-6">
+        <div className="max-w-3xl space-y-6">
           {/* Appearance Section */}
           <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.appearance')}</CardTitle>
+            <CardHeader className="gap-3">
+              <CardTitle className="text-xl">{t('settings.appearance')}</CardTitle>
               <CardDescription>{t('settingsPage.appearanceDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               {mounted ? (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 sm:gap-4">
                   {themeOptions.map((option) => {
                     const Icon = option.icon;
                     const isSelected = theme === option.value;
@@ -57,14 +57,15 @@ function SettingsContent() {
                       <button
                         key={option.value}
                         onClick={() => setTheme(option.value)}
+                        aria-pressed={isSelected}
                         className={cn(
-                          'flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all',
+                          'flex min-h-32 flex-col items-center justify-center gap-4 rounded-2xl border p-4 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
                           isSelected
                             ? 'border-primary bg-primary/5'
-                            : 'border-border hover:border-primary/50'
+                            : 'border-border/70 bg-muted/30 hover:bg-muted/70'
                         )}
                       >
-                        <Icon className={cn('h-6 w-6', isSelected && 'text-primary')} />
+                        <Icon className={cn('h-7 w-7', isSelected && 'text-primary')} />
                         <span className={cn('text-sm font-medium', isSelected && 'text-primary')}>
                           {option.label}
                         </span>
@@ -73,11 +74,11 @@ function SettingsContent() {
                   })}
                 </div>
               ) : (
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 sm:gap-4">
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="h-[88px] animate-pulse rounded-lg bg-muted"
+                      className="h-32 animate-pulse rounded-2xl bg-muted"
                     />
                   ))}
                 </div>
@@ -87,24 +88,24 @@ function SettingsContent() {
 
           {/* Language Section */}
           <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.language')}</CardTitle>
+            <CardHeader className="gap-3">
+              <CardTitle className="text-xl">{t('settings.language')}</CardTitle>
               <CardDescription>{t('settingsPage.languageDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               <RadioGroup
                 value={locale}
                 onValueChange={handleLocaleChange}
-                className="space-y-3"
+                className="space-y-2"
               >
                 {locales.map((loc) => (
                   <div
                     key={loc}
                     className={cn(
-                      'flex items-center space-x-3 rounded-lg border-2 p-4 transition-all cursor-pointer',
+                      'flex cursor-pointer items-center gap-4 rounded-2xl border p-5 transition-colors',
                       locale === loc
                         ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
+                        : 'border-border/70 bg-muted/30 hover:bg-muted/70'
                     )}
                     onClick={() => handleLocaleChange(loc)}
                   >
