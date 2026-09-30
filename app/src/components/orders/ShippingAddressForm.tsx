@@ -60,11 +60,12 @@ export function ShippingAddressForm({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 rounded-2xl bg-background p-5">
       {/* Recipient name */}
       <div className="space-y-2">
         <Label htmlFor="recipientName">{t('address.recipientName')} *</Label>
         <Input
+          className="h-12 rounded-xl bg-card"
           id="recipientName"
           value={address?.recipientName || ''}
           onChange={(e) => handleChange('recipientName', e.target.value)}
@@ -77,6 +78,7 @@ export function ShippingAddressForm({
       <div className="space-y-2">
         <Label htmlFor="phone">{t('address.phone')} *</Label>
         <Input
+          className="h-12 rounded-xl bg-card"
           id="phone"
           type="tel"
           value={address?.phone || ''}
@@ -90,6 +92,7 @@ export function ShippingAddressForm({
       <div className="space-y-2">
         <Label htmlFor="email">{t('address.email')}</Label>
         <Input
+          className="h-12 rounded-xl bg-card"
           id="email"
           type="email"
           value={address?.email || ''}
@@ -107,7 +110,7 @@ export function ShippingAddressForm({
           onValueChange={(v) => handleChange('country', v)}
           disabled={disabled}
         >
-          <SelectTrigger id="country">
+          <SelectTrigger id="country" className="h-12 w-full rounded-xl bg-card">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -121,10 +124,11 @@ export function ShippingAddressForm({
       </div>
 
       {/* State/Province */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="state">{t('address.state')}</Label>
           <Input
+            className="h-12 rounded-xl bg-card"
             id="state"
             value={address?.state || ''}
             onChange={(e) => handleChange('state', e.target.value)}
@@ -137,6 +141,7 @@ export function ShippingAddressForm({
         <div className="space-y-2">
           <Label htmlFor="city">{t('address.city')} *</Label>
           <Input
+            className="h-12 rounded-xl bg-card"
             id="city"
             value={address?.city || ''}
             onChange={(e) => handleChange('city', e.target.value)}
@@ -147,10 +152,11 @@ export function ShippingAddressForm({
       </div>
 
       {/* District and Postal Code */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="district">{t('address.district')}</Label>
           <Input
+            className="h-12 rounded-xl bg-card"
             id="district"
             value={address?.district || ''}
             onChange={(e) => handleChange('district', e.target.value)}
@@ -162,6 +168,7 @@ export function ShippingAddressForm({
         <div className="space-y-2">
           <Label htmlFor="postalCode">{t('address.postalCode')} *</Label>
           <Input
+            className="h-12 rounded-xl bg-card"
             id="postalCode"
             value={address?.postalCode || ''}
             onChange={(e) => handleChange('postalCode', e.target.value)}
@@ -175,6 +182,7 @@ export function ShippingAddressForm({
       <div className="space-y-2">
         <Label htmlFor="addressLine1">{t('address.addressLine1')} *</Label>
         <Input
+          className="h-12 rounded-xl bg-card"
           id="addressLine1"
           value={address?.addressLine1 || ''}
           onChange={(e) => handleChange('addressLine1', e.target.value)}
@@ -187,6 +195,7 @@ export function ShippingAddressForm({
       <div className="space-y-2">
         <Label htmlFor="addressLine2">{t('address.addressLine2')}</Label>
         <Input
+          className="h-12 rounded-xl bg-card"
           id="addressLine2"
           value={address?.addressLine2 || ''}
           onChange={(e) => handleChange('addressLine2', e.target.value)}
@@ -199,6 +208,7 @@ export function ShippingAddressForm({
       <div className="space-y-2">
         <Label htmlFor="label">{t('address.label')}</Label>
         <Input
+          className="h-12 rounded-xl bg-card"
           id="label"
           value={address?.label || ''}
           onChange={(e) => handleChange('label', e.target.value)}

@@ -91,14 +91,14 @@ export function MobileNav({
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 flex flex-col">
+      <SheetContent aria-describedby={undefined} side="left" className="w-[300px] sm:w-[350px] p-0 flex flex-col">
         {/* Header with gradient background */}
-        <SheetHeader className="bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border-b p-4">
+        <SheetHeader className="bg-card border-b p-4">
           <SheetTitle className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
-              <Box className="h-5 w-5 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
+              <Box className="h-5 w-5 text-background" />
             </div>
-            <span className="font-bold">Dream Forge</span>
+            <span className="font-bold">DreamForge</span>
             {isAdmin && (
               <Badge variant="destructive" className="text-xs">
                 {t('common.admin')}
@@ -203,7 +203,7 @@ export function MobileNav({
               /* ============ LOGGED OUT STATE ============ */
               <>
                 {/* Welcome section with sign in CTA */}
-                <div className="rounded-xl bg-gradient-to-br from-indigo-500/5 to-purple-600/5 border p-4">
+                <div className="rounded-xl bg-card border p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="h-5 w-5 text-primary" />
                     <h3 className="font-semibold">{t('mobile.welcome')}</h3>

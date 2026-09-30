@@ -42,7 +42,7 @@ export function GenerateButton({
         onClick={onClick}
         disabled={disabled}
         size="lg"
-        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg transition-all hover:shadow-xl"
+        className="w-full bg-primary px-7 text-primary-foreground hover:bg-primary/90"
       >
         {generating ? (
           <>

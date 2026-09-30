@@ -29,7 +29,7 @@ export function MarketingHero({ user, className }: MarketingHeroProps) {
   };
 
   return (
-    <section className={cn('text-center py-12 md:py-16', className)}>
+    <section className={cn('text-center py-14 md:py-24', className)}>
       {/* Badge */}
       <Badge variant="secondary" className="mb-4">
         <Sparkles className="mr-1 h-3 w-3" />
@@ -37,7 +37,7 @@ export function MarketingHero({ user, className }: MarketingHeroProps) {
       </Badge>
 
       {/* Tagline */}
-      <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
+      <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-5">
         {t('home.hero.tagline')}
       </h1>
 
@@ -53,7 +53,7 @@ export function MarketingHero({ user, className }: MarketingHeroProps) {
           <Button
             size="lg"
             onClick={scrollToTabs}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg transition-all hover:shadow-xl"
+            className="bg-primary px-7 text-primary-foreground hover:bg-primary/90"
           >
             <Sparkles className="mr-2 h-5 w-5" />
             {t('home.hero.ctaReturning')}
@@ -63,7 +63,7 @@ export function MarketingHero({ user, className }: MarketingHeroProps) {
           <Link href="/auth">
             <Button
               size="lg"
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg transition-all hover:shadow-xl"
+              className="bg-primary px-7 text-primary-foreground hover:bg-primary/90"
             >
               <Sparkles className="mr-2 h-5 w-5" />
               {t('home.hero.ctaNew')}

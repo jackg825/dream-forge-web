@@ -98,7 +98,7 @@ function SelectTrigger({ className, children, onKeyDown, ...props }: SelectTrigg
         if (event.key === 'Escape') context.setOpen(false);
       }}
       className={cn(
-        'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background',
+        'flex h-12 w-full items-center justify-between whitespace-nowrap rounded-xl border border-input bg-card px-4 py-2 text-sm ring-offset-background',
         'focus:outline-none focus:ring-1 focus:ring-ring',
         'disabled:cursor-not-allowed disabled:opacity-50',
         '[&>span]:line-clamp-1',
@@ -151,7 +151,7 @@ function SelectContent({ children }: { children: React.ReactNode }) {
         ref={contentRef}
         id={context.contentId}
         role="listbox"
-        className="absolute z-50 mt-1 max-h-60 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
+        className="absolute z-50 mt-1 max-h-60 min-w-[8rem] overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {
             event.preventDefault();
@@ -219,7 +219,7 @@ function SelectItem({ value, children, className }: SelectItemProps) {
         }
       }}
       className={cn(
-        'relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none',
+        'relative flex w-full cursor-pointer select-none items-center rounded-lg py-2.5 pl-3 pr-9 text-sm outline-none',
         'hover:bg-accent hover:text-accent-foreground',
         'focus:bg-accent focus:text-accent-foreground',
         isSelected && 'bg-accent',

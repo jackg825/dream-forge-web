@@ -589,7 +589,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   // Step 1: Upload - cleaner without card wrapper
   // NOTE: Selectors moved to renderImagesReadyStep (Step 2)
   const renderUploadStep = () => (
-    <div className="space-y-6">
+    <div className="space-y-7">
       {user ? (
         <>
           <PipelineUploader
@@ -693,7 +693,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         </>
       ) : (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="px-6 py-14 text-center">
             <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground mb-4">{t('buttons.pleaseSignIn')}</p>
             <Button
@@ -722,7 +722,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       pipeline?.status === 'batch-processing';
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         {/* Reference image preview */}
         {pipeline?.inputImages && pipeline.inputImages.length > 0 && (
           <div className="space-y-2">
@@ -815,7 +815,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         )}
 
         {/* Action buttons */}
-        <div className="flex justify-center gap-4 pt-4">
+        <div className="flex flex-col items-stretch justify-center gap-4 pt-4 sm:flex-row sm:flex-wrap sm:items-center">
           {!hasSomeImages ? (
             // No multi-view images yet - show "Generate views" button
             <Button
@@ -897,7 +897,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const modeInfo = GENERATION_MODE_OPTIONS[currentMode];
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         {/* Reference images - collapsed */}
         {pipeline?.inputImages && pipeline.inputImages.length > 0 && (
           <div className="space-y-2">
@@ -1027,7 +1027,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     // For submitting (draft) and batch modes, use the unified indicator
     if (pipeline?.status === 'draft' || isBatch) {
       return (
-        <div className="py-16">
+        <div className="py-2">
           <UnifiedProgressIndicator
             status={pipeline?.status || 'batch-queued'}
             processingMode={pipeline?.processingMode || 'realtime'}
@@ -1045,10 +1045,9 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
 
     // Realtime mode: show detailed visual grid for granular progress
     return (
-      <div className="flex flex-col items-center justify-center py-16">
+      <div className="flex flex-col items-center justify-center rounded-[28px] bg-card px-5 py-14">
         <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-          <div className="relative bg-primary/10 p-6 rounded-full">
+                    <div className="relative rounded-[24px] bg-muted p-6">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
           </div>
         </div>
@@ -1076,19 +1075,19 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
                   <div
                     key={`mesh-${index}`}
                     className={`
-                      aspect-square rounded-lg border-2 flex flex-col items-center justify-center
+                      aspect-square rounded-2xl border flex flex-col items-center justify-center
                       transition-all duration-300
                       ${isCompleted
-                        ? 'border-green-500 bg-green-500/10'
+                        ? 'border-primary bg-primary/5'
                         : isProcessingView
-                          ? 'border-green-500/50 bg-green-500/5 animate-pulse'
+                          ? 'border-primary/50 bg-primary/5'
                           : 'border-border bg-muted/30'}
                     `}
                   >
                     {isCompleted ? (
-                      <CheckCircle className="h-6 w-6 text-green-500" />
+                      <CheckCircle className="h-6 w-6 text-primary" />
                     ) : isProcessingView ? (
-                      <Loader2 className="h-5 w-5 text-green-500 animate-spin" />
+                      <Loader2 className="h-5 w-5 text-primary animate-spin" />
                     ) : (
                       <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground/30" />
                     )}
@@ -1108,7 +1107,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const renderMeshGeneratingStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main content - unified progress indicator */}
-      <div className="lg:col-span-2 py-16">
+      <div className="lg:col-span-2">
         <UnifiedProgressIndicator
           status="generating-mesh"
           processingMode={pipeline?.processingMode || 'realtime'}
@@ -1200,7 +1199,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
       : false;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         {/* Full-width 3D viewer */}
         {pipeline?.meshUrl ? (
           <>
@@ -1312,7 +1311,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
   const renderTextureGeneratingStep = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main content - unified progress indicator */}
-      <div className="lg:col-span-2 py-16">
+      <div className="lg:col-span-2">
         <UnifiedProgressIndicator
           status="generating-texture"
           processingMode={pipeline?.processingMode || 'realtime'}
@@ -1335,7 +1334,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     const hasTexture = !!pipeline?.texturedModelUrl;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-7">
         {/* Full-width 3D viewer */}
         {modelUrl ? (
           <>
@@ -1423,10 +1422,10 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
             </div>
           </>
         ) : (
-          <div className="aspect-[4/3] lg:aspect-[16/9] bg-gradient-to-br from-green-500/5 to-green-500/10 rounded-2xl flex items-center justify-center border border-green-500/20">
+          <div className="aspect-[4/3] lg:aspect-[16/9] rounded-[28px] bg-card flex items-center justify-center">
             <div className="text-center">
-              <div className="bg-green-500/10 p-5 rounded-full inline-block mb-4">
-                <CheckCircle className="h-14 w-14 text-green-500" />
+              <div className="bg-muted p-5 rounded-[24px] inline-block mb-4">
+                <CheckCircle className="h-14 w-14 text-primary" />
               </div>
               <p className="text-xl font-semibold">
                 {hasTexture ? t('step3.completed') : t('step2.title')}
@@ -1439,7 +1438,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
         {pipeline && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Step 4: Print & Delivery - Coming Soon */}
-            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
+            <div className="rounded-[24px] bg-card p-6">
               <div className="flex items-center gap-2 mb-2">
                 <div className="bg-primary/10 p-1.5 rounded-full">
                   <Printer className="h-4 w-4 text-primary" />
@@ -1527,7 +1526,7 @@ function PipelineFlowInner({ onNoCredits }: PipelineFlowProps) {
     pipeline?.status === 'batch-processing';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PipelineProgressBar
         currentStep={displayStep}
         isFailed={isFailed}

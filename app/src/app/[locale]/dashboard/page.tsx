@@ -55,26 +55,26 @@ function DashboardContent() {
       <UserHeader />
 
       {/* Main content */}
-      <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell py-12 sm:py-16">
         {/* Welcome section */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight">
+        <div className="mb-10 sm:mb-12">
+          <h1 className="studio-page-title">
             {t('dashboard.welcomeBack', { name: user?.displayName || t('common.user') })}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="studio-page-subtitle">
             {t('dashboard.subtitle')}
           </p>
         </div>
 
         {/* Stats cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="mb-10 grid grid-cols-1 gap-5 md:grid-cols-3">
           {/* Credits card */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-2">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{t('dashboard.availableCredits')}</p>
-                  <p className="text-3xl font-bold">
+                  <p className="mt-3 text-5xl font-semibold tracking-[-0.045em] tabular-nums">
                     {creditsLoading ? (
                       <span className="animate-pulse">--</span>
                     ) : (
@@ -82,11 +82,11 @@ function DashboardContent() {
                     )}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Coins className="h-6 w-6 text-primary" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
+                  <Coins className="h-5 w-5 text-foreground" strokeWidth={1.6} />
                 </div>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
                 {t('dashboard.creditEquation')}
               </p>
             </CardContent>
@@ -94,32 +94,32 @@ function DashboardContent() {
 
           {/* Total generations card */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-2">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">{t('dashboard.totalGenerations')}</p>
-                  <p className="text-3xl font-bold">
+                  <p className="mt-3 text-5xl font-semibold tracking-[-0.045em] tabular-nums">
                     {user?.totalGenerated || 0}
                   </p>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Box className="h-6 w-6 text-green-500" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-muted">
+                  <Box className="h-5 w-5 text-foreground" strokeWidth={1.6} />
                 </div>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
+              <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
                 {t('dashboard.modelsCreated')}
               </p>
             </CardContent>
           </Card>
 
           {/* Quick action card */}
-          <Card className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-0">
-            <CardContent className="pt-6">
-              <h3 className="font-semibold mb-2">{t('dashboard.createNewModel')}</h3>
-              <p className="text-sm text-indigo-100 mb-4">
+          <Card className="border-0 bg-[#1d1d1f] text-white dark:bg-[#29292b]">
+            <CardContent className="pt-2">
+              <h3 className="mb-3 text-xl font-semibold tracking-tight">{t('dashboard.createNewModel')}</h3>
+              <p className="text-sm leading-relaxed text-white/65 mb-6">
                 {t('dashboard.uploadAndTransform')}
               </p>
-              <Button asChild variant="secondary">
+              <Button asChild>
                 <Link href="/generate" className="gap-2">
                   <Plus className="h-4 w-4" />
                   {t('dashboard.startCreating')}
@@ -131,10 +131,10 @@ function DashboardContent() {
 
         {/* Recent generations */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>{t('dashboard.recentGenerations')}</CardTitle>
-              <CardDescription>{t('dashboard.recentDescription')}</CardDescription>
+              <CardDescription className="mt-2">{t('dashboard.recentDescription')}</CardDescription>
             </div>
             <Button asChild variant="ghost" size="sm">
               <Link href="/dashboard/history" className="gap-1">
@@ -150,15 +150,17 @@ function DashboardContent() {
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : recentPipelines.length === 0 ? (
-              <div className="text-center py-8">
-                <Box className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+              <div className="py-12 text-center">
+                <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+                  <Box className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
+                </div>
                 <p className="text-muted-foreground mb-2">{t('dashboard.noGenerationsYet')}</p>
                 <Button asChild variant="link">
                   <Link href="/">{t('dashboard.createFirstModel')}</Link>
                 </Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="divide-y divide-border/70">
                 {recentPipelines.map((pipeline) => (
                   <PipelineListItem key={pipeline.id} pipeline={pipeline} getStatusMessage={getStatusMessage} />
                 ))}
@@ -230,20 +232,20 @@ function PipelineListItem({ pipeline, getStatusMessage }: { pipeline: Pipeline; 
   return (
     <Link
       href={`/generate?id=${pipeline.id}`}
-      className="flex items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+      className="group flex flex-wrap items-center gap-3 rounded-2xl py-5 transition-colors hover:bg-muted/50 sm:gap-5 sm:px-3"
     >
       {/* Thumbnail */}
       {previewImage ? (
-        <div className="relative w-12 h-12 overflow-hidden rounded-md ring-1 ring-border bg-black">
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl bg-muted">
           <FillImage
             src={previewImage}
             alt="Preview"
             className="object-cover"
-            sizes="48px"
+            sizes="56px"
           />
         </div>
       ) : (
-        <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-muted">
           <Box className="h-6 w-6 text-muted-foreground" />
         </div>
       )}
@@ -280,7 +282,7 @@ function PipelineListItem({ pipeline, getStatusMessage }: { pipeline: Pipeline; 
       </Badge>
 
       {/* Arrow */}
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      <ArrowRight className="hidden h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 sm:block" />
     </Link>
   );
 }

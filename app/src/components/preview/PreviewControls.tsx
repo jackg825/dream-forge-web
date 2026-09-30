@@ -31,25 +31,26 @@ export function PreviewControls({
   const t = useTranslations('controls');
 
   return (
-    <Card>
-      <CardContent className="flex items-center gap-4 p-4">
+    <Card className="py-0">
+      <CardContent className="flex flex-wrap items-center gap-4 p-5">
         {/* Background Color */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">{t('background')}:</span>
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             {BACKGROUND_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => onBackgroundChange(option.value)}
                 className={cn(
-                  'w-6 h-6 rounded-full border-2 transition-all',
+                  'h-7 w-7 rounded-full border-2 transition-colors',
                   option.preview,
                   backgroundColor === option.value
                     ? 'border-primary ring-2 ring-primary/20'
                     : 'border-border hover:border-muted-foreground'
                 )}
                 title={t(`backgroundColor.${option.key}`)}
+                aria-pressed={backgroundColor === option.value}
                 aria-label={t('setBackgroundTo', { color: t(`backgroundColor.${option.key}`) })}
               />
             ))}
@@ -73,7 +74,7 @@ export function PreviewControls({
         )}
 
         {/* Help text */}
-        <div className="ml-auto text-xs text-muted-foreground">
+        <div className="text-xs leading-relaxed text-muted-foreground sm:ml-auto">
           {t('helpText')}
         </div>
       </CardContent>

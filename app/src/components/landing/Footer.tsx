@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Box, ChevronRight } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 
@@ -8,59 +9,35 @@ interface FooterProps {
   className?: string;
 }
 
-/**
- * Footer - Simple footer with links and copyright
- * Mobile-optimized with stacked layout and safe area support
- */
+const links = [
+  { href: '/generate', key: 'generate' },
+  { href: '/preview', key: 'preview' },
+  { href: '/dashboard', key: 'dashboard' },
+] as const;
+
 export function Footer({ className }: FooterProps) {
   const t = useTranslations('landing');
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className={cn('py-8 sm:py-12 bg-muted/30 border-t safe-bottom', className)}>
-      <div className="container max-w-6xl mx-auto px-4">
-        <div className="flex flex-col items-center gap-6 sm:gap-8 md:flex-row md:justify-between">
-          {/* Logo/Brand */}
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-[var(--accent-violet)] to-[var(--accent-coral)] flex items-center justify-center">
-              <span className="text-white font-bold text-xs sm:text-sm">D</span>
-            </div>
-            <span className="font-display font-bold text-base sm:text-lg">DreamForge</span>
-          </div>
-
-          {/* Links - horizontal scroll on very small screens */}
-          <nav className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm">
-            <Link
-              href="/generate"
-              className="text-muted-foreground hover:text-foreground transition-colors py-1 min-h-[44px] flex items-center"
-            >
-              {t('footer.generate')}
-            </Link>
-            <Link
-              href="/preview"
-              className="text-muted-foreground hover:text-foreground transition-colors py-1 min-h-[44px] flex items-center"
-            >
-              {t('footer.preview')}
-            </Link>
-            <Link
-              href="/dashboard"
-              className="text-muted-foreground hover:text-foreground transition-colors py-1 min-h-[44px] flex items-center"
-            >
-              {t('footer.dashboard')}
-            </Link>
-            <a
-              href="#pricing"
-              className="text-muted-foreground hover:text-foreground transition-colors py-1 min-h-[44px] flex items-center"
-            >
-              {t('footer.pricing')}
-            </a>
-          </nav>
-
-          {/* Copyright */}
-          <p className="text-xs sm:text-sm text-muted-foreground text-center">
-            © {currentYear} DreamForge. {t('footer.rights')}
-          </p>
+    <footer className={cn('safe-bottom bg-background pb-8 pt-4 text-muted-foreground', className)}>
+      <div className="store-container">
+        <div className="flex items-center gap-3 border-t border-border py-6 text-sm">
+          <Box className="h-5 w-5 text-foreground" strokeWidth={1.6} aria-hidden="true" />
+          <ChevronRight className="h-3 w-3" aria-hidden="true" />
+          <Link href="/" className="font-semibold text-foreground hover:underline">DreamForge</Link>
         </div>
+        <nav className="grid grid-cols-2 gap-x-6 gap-y-2 pb-7 text-xs sm:flex sm:flex-wrap sm:gap-8">
+          {links.map((link) => (
+            <Link key={link.key} href={link.href} className="flex min-h-11 items-center text-foreground hover:underline">
+              {t(`footer.${link.key}`)}
+            </Link>
+          ))}
+          <a href="#pricing" className="flex min-h-11 items-center text-foreground hover:underline">{t('footer.pricing')}</a>
+        </nav>
+        <p className="border-t border-border pt-5 text-xs leading-relaxed">
+          © {currentYear} DreamForge. {t('footer.rights')}
+        </p>
       </div>
     </footer>
   );

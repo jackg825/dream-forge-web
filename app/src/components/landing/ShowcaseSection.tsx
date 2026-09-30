@@ -1,119 +1,49 @@
 'use client';
 
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
 import { BeforeAfterSlider } from './BeforeAfterSlider';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { FillImage } from '@/components/ui/fill-image';
+import { ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface ShowcaseSectionProps {
-  className?: string;
-}
+const styles = ['bobblehead', 'chibi', 'cartoon', 'emoji'] as const;
 
-// Showcase examples
-// beforeImage = original photo, afterImage = 3D render from Nano Banana Pro
-const showcaseExamples = [
-  {
-    id: 'racecar',
-    beforeImage: '/showcase/race_car_origin.jpg',
-    afterImage: '/showcase/race_car_render.png',
-    category: 'product',
-  },
-];
-
-/**
- * ShowcaseSection - Interactive gallery of before/after 3D transformations
- * Features tabbed navigation to switch between different example types
- */
-export function ShowcaseSection({ className }: ShowcaseSectionProps) {
+export function ShowcaseSection({ className }: { className?: string }) {
   const t = useTranslations('landing');
-  const [activeIndex, setActiveIndex] = useState(0);
-
   return (
-    <section
-      id="showcase"
-      className={cn(
-        'py-24 bg-gradient-to-b from-background to-muted/20',
-        className
-      )}
-    >
-      <div className="container max-w-6xl mx-auto px-4">
-        {/* Section header */}
-        <div className="text-center mb-12">
-          <Badge
-            variant="outline"
-            className="mb-4 px-3 py-1 text-xs font-medium"
-          >
-            {t('showcase.badge')}
-          </Badge>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">
-            {t('showcase.title')}
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            {t('showcase.subtitle')}
-          </p>
-        </div>
-
-        {/* Category tabs */}
-        <div className="flex flex-wrap justify-center gap-3 mb-10">
-          {showcaseExamples.map((example, index) => (
-            <button
-              key={example.id}
-              onClick={() => setActiveIndex(index)}
-              className={cn(
-                'px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300',
-                activeIndex === index
-                  ? 'bg-gradient-to-r from-[var(--accent-violet)] to-[var(--accent-coral)] text-white shadow-lg scale-105'
-                  : 'bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t(`showcase.categories.${example.category}`)}
-            </button>
-          ))}
-        </div>
-
-        {/* Before/After Slider */}
-        <div className="max-w-3xl mx-auto">
-          <BeforeAfterSlider
-            beforeImage={showcaseExamples[activeIndex].beforeImage}
-            afterImage={showcaseExamples[activeIndex].afterImage}
-            beforeAlt={t(`showcase.examples.${showcaseExamples[activeIndex].id}.before`)}
-            afterAlt={t(`showcase.examples.${showcaseExamples[activeIndex].id}.after`)}
-            className="shadow-2xl"
-          />
-
-          {/* Example description */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              {t(`showcase.examples.${showcaseExamples[activeIndex].id}.description`)}
-            </p>
+    <div className={className}>
+      <section id="styles" className="store-section">
+        <div className="store-container">
+          <h2 className="store-heading mb-7">{t('store.stylesTitle')} <span className="text-muted-foreground">{t('store.stylesSubtitle')}</span></h2>
+          <div className="-mx-5 flex snap-x snap-mandatory gap-5 overflow-x-auto px-5 pb-5 sm:mx-0 sm:grid sm:grid-cols-2 sm:px-0 lg:grid-cols-4 scrollbar-hide">
+            {styles.map((style) => (
+              <Link key={style} href="/generate" className="store-card group flex w-[260px] shrink-0 snap-start flex-col p-6 transition-shadow hover:shadow-lg sm:w-auto">
+                <p className="store-eyebrow">DreamForge Styles</p>
+                <h3 className="mt-2 text-2xl font-semibold tracking-tight">{t(`store.${style}`)}</h3>
+                <div className="relative my-5 aspect-square overflow-hidden rounded-2xl bg-white">
+                  <FillImage src={`/styles/${style}/preview-1.webp`} alt={t(`store.${style}`)} sizes="(max-width: 1024px) 260px, 240px" className="object-contain p-2 transition-transform duration-500 group-hover:scale-105" />
+                </div>
+                <span className="inline-flex items-center text-sm text-primary">{t('store.styleLink')}<ChevronRight className="size-4" aria-hidden="true" /></span>
+              </Link>
+            ))}
           </div>
         </div>
-
-        {/* Thumbnail navigation */}
-        <div className="flex justify-center gap-4 mt-8">
-          {showcaseExamples.map((example, index) => (
-            <button
-              key={example.id}
-              onClick={() => setActiveIndex(index)}
-              className={cn(
-                'relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300',
-                activeIndex === index
-                  ? 'border-[var(--accent-violet)] scale-110 shadow-lg'
-                  : 'border-transparent opacity-60 hover:opacity-100'
-              )}
-            >
-              <FillImage
-                src={example.beforeImage}
-                alt={t(`showcase.examples.${example.id}.before`)}
-                className="object-cover"
-                sizes="64px"
-              />
-            </button>
-          ))}
+      </section>
+      <section id="showcase" className="store-section">
+        <div className="store-container">
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="store-eyebrow mb-3">{t('showcase.badge')}</p>
+              <h2 className="store-heading">{t('store.comparison')}</h2>
+              <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-muted-foreground">{t('store.comparisonSub')}</p>
+            </div>
+            <Link href="/generate" className="inline-flex min-h-11 shrink-0 items-center text-sm text-primary hover:underline">{t('store.start')}<ChevronRight className="size-4" aria-hidden="true" /></Link>
+          </div>
+          <BeforeAfterSlider beforeImage="/showcase/race_car_origin.jpg" afterImage="/showcase/race_car_render.png" beforeAlt={t('showcase.examples.racecar.before')} afterAlt={t('showcase.examples.racecar.after')} className={cn('aspect-[4/3] sm:aspect-[16/9]')} />
+          <p className="mt-5 text-center text-sm text-muted-foreground">{t('showcase.examples.racecar.description')}</p>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }

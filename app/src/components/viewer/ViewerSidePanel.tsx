@@ -35,7 +35,7 @@ export function ViewerSidePanel({
           // Position & sizing
           'fixed top-[72px] right-4 bottom-4 w-80 z-40',
           // Glassmorphism styling
-          'bg-gray-900/90 backdrop-blur-xl border border-white/10 rounded-2xl',
+          'bg-[#1d1d1f]/95 backdrop-blur-xl border border-white/10 rounded-[28px]',
           // Animation
           'transition-transform duration-300 ease-out',
           // Overflow handling
@@ -45,20 +45,20 @@ export function ViewerSidePanel({
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
-          <h2 className="font-medium text-white/90 text-sm">{title}</h2>
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-4">
+          <h2 className="text-sm font-semibold tracking-tight text-white/90">{title}</h2>
           <Button
             variant="ghost"
             size="icon"
             onClick={onToggle}
-            className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
+            className="h-8 w-8 rounded-full text-white/60 hover:bg-white/10 hover:text-white"
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
 
         {/* Content - scrollable */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 space-y-5 overflow-y-auto p-4">
           {children}
         </div>
       </div>
@@ -73,8 +73,8 @@ export function ViewerSidePanel({
           'fixed top-1/2 right-2 -translate-y-1/2 z-50',
           // Styling
           'h-10 w-10 rounded-full',
-          'bg-gray-900/90 backdrop-blur-xl border border-white/10',
-          'text-white/70 hover:text-white hover:bg-gray-800/90',
+          'bg-[#1d1d1f]/95 backdrop-blur-xl border border-white/10',
+          'text-white/70 hover:text-white hover:bg-[#303033]',
           'shadow-lg',
           // Animation
           'transition-all duration-300',

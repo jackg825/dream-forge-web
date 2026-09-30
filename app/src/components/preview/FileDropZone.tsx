@@ -102,13 +102,13 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
       aria-disabled={disabled}
       aria-label={`${t('dropZone.clickToUpload')} ${t('dropZone.orDragDrop')}`}
       className={cn(
-        'cursor-pointer transition-colors duration-200',
-        isDragging && 'border-primary bg-primary/5',
-        error && 'border-destructive bg-destructive/5',
+        'cursor-pointer border-0 py-0 transition-[background-color,box-shadow] duration-200 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4',
+        isDragging && 'bg-primary/5 ring-2 ring-primary',
+        error && 'bg-destructive/5 ring-1 ring-destructive/40',
         disabled && 'opacity-50 cursor-not-allowed'
       )}
     >
-      <CardContent className="flex flex-col items-center justify-center p-8">
+      <CardContent className="flex min-h-[420px] flex-col items-center justify-center px-6 py-12 text-center sm:min-h-[560px]">
         <input
           ref={fileInputRef}
           type="file"
@@ -121,23 +121,23 @@ export function FileDropZone({ onFileSelect, disabled }: FileDropZoneProps) {
         {/* 3D Model Icon */}
         <div
           className={cn(
-            'w-16 h-16 rounded-full flex items-center justify-center mb-4',
+            'mb-8 flex h-28 w-28 items-center justify-center rounded-[32px]',
             isDragging ? 'bg-primary/10' : 'bg-muted'
           )}
         >
           <Box
             className={cn(
-              'h-8 w-8',
+              'h-12 w-12',
               isDragging ? 'text-primary' : 'text-muted-foreground'
             )}
           />
         </div>
 
-        <p className="text-foreground">
-          <span className="text-primary font-medium">{t('dropZone.clickToUpload')}</span>{' '}
+        <p className="max-w-sm text-xl font-semibold leading-relaxed tracking-tight text-foreground">
+          <span className="text-primary">{t('dropZone.clickToUpload')}</span>{' '}
           {t('dropZone.orDragDrop')}
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-4 text-sm text-muted-foreground">
           {t('dropZone.supportedFormats')}
         </p>
 

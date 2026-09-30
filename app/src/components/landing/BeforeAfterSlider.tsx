@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { MoveHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { FillImage } from '@/components/ui/fill-image';
 
@@ -12,117 +14,21 @@ interface BeforeAfterSliderProps {
   className?: string;
 }
 
-/**
- * BeforeAfterSlider - Interactive comparison slider
- * Left side (background): 3D render | Right side (overlay): Original photo
- * Drag slider left-to-right to reveal original photo
- */
-export function BeforeAfterSlider({
-  beforeImage,
-  afterImage,
-  beforeAlt = 'Before',
-  afterAlt = 'After',
-  className,
-}: BeforeAfterSliderProps) {
-  const [sliderPosition, setSliderPosition] = useState(30);
-  const [isDragging, setIsDragging] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleMove = useCallback(
-    (clientX: number) => {
-      if (!containerRef.current) return;
-
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const percentage = Math.min(Math.max((x / rect.width) * 100, 5), 95);
-      setSliderPosition(percentage);
-    },
-    []
-  );
-
-  const handleMouseDown = () => setIsDragging(true);
-  const handleMouseUp = () => setIsDragging(false);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      handleMove(e.clientX);
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    handleMove(e.touches[0].clientX);
-  };
-
+export function BeforeAfterSlider({ beforeImage, afterImage, beforeAlt = 'Photo', afterAlt = '3D render', className }: BeforeAfterSliderProps) {
+  const t = useTranslations('landing.store');
+  const [position, setPosition] = useState(50);
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        'relative w-full aspect-[4/3] rounded-2xl overflow-hidden cursor-ew-resize select-none shadow-2xl',
-        className
-      )}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleMouseUp}
-    >
-      {/* 3D render - full width background (left side) */}
-      <div className="absolute inset-0">
-        <FillImage
-          src={afterImage}
-          alt={afterAlt}
-          className="object-cover"
-          priority
-          draggable={false}
-        />
-        {/* Label */}
-        <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-full text-white text-sm font-medium">
-          3D Model
-        </div>
+    <div className={cn('relative isolate aspect-[4/3] w-full overflow-hidden rounded-3xl bg-card focus-within:ring-4 focus-within:ring-ring focus-within:ring-offset-4', className)}>
+      <FillImage src={afterImage} alt={afterAlt} className="object-cover" sizes="(max-width: 768px) 100vw, 1120px" draggable={false} />
+      <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 0 0 ${position}%)` }}>
+        <FillImage src={beforeImage} alt={beforeAlt} className="object-cover" sizes="(max-width: 768px) 100vw, 1120px" draggable={false} />
       </div>
-
-      {/* Original photo - clipped from right side */}
-      <div
-        className="absolute inset-0 overflow-hidden"
-        style={{ clipPath: `inset(0 0 0 ${sliderPosition}%)` }}
-      >
-        <FillImage
-          src={beforeImage}
-          alt={beforeAlt}
-          className="object-cover"
-          priority
-          draggable={false}
-        />
-        {/* Label */}
-        <div className="absolute top-4 right-4 px-3 py-1.5 bg-white/80 backdrop-blur-sm rounded-full text-black text-sm font-medium">
-          Photo
-        </div>
+      <span className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-2 text-xs font-medium text-white backdrop-blur-md sm:left-6 sm:top-6">{t('after')}</span>
+      <span className="absolute right-4 top-4 rounded-full bg-white/85 px-3 py-2 text-xs font-medium text-[#1d1d1f] backdrop-blur-md sm:right-6 sm:top-6">{t('before')}</span>
+      <div className="pointer-events-none absolute inset-y-0 w-0.5 bg-white/90" style={{ left: `${position}%` }}>
+        <div className="absolute left-1/2 top-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#1d1d1f] shadow-lg"><MoveHorizontal className="size-5" aria-hidden="true" /></div>
       </div>
-
-      {/* Slider handle */}
-      <div
-        className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize z-10"
-        style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleMouseDown}
-      >
-        {/* Handle button */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-xl flex items-center justify-center border-4 border-[var(--accent-violet)]">
-          <svg
-            className="w-5 h-5 text-[var(--accent-violet)]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 9l4-4 4 4m0 6l-4 4-4-4"
-            />
-          </svg>
-        </div>
-      </div>
+      <input type="range" min="0" max="100" value={position} onChange={(event) => setPosition(Number(event.target.value))} aria-label={t('compareLabel')} aria-valuetext={t('compareValue', { value: position })} className="absolute inset-0 z-20 m-0 h-full w-full cursor-ew-resize opacity-0" />
     </div>
   );
 }

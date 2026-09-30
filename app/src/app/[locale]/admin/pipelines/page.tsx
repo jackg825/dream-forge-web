@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AdminGuard } from '@/components/auth/AdminGuard';
 import { AdminHeader } from '@/components/layout/headers';
 import { useAdminPipelines } from '@/hooks/useAdminPipelines';
@@ -15,6 +16,7 @@ import type { AdminPipeline, PipelineStatus } from '@/types';
 type FilterStatus = 'all' | PipelineStatus;
 
 function AdminPipelinesContent() {
+  const t = useTranslations();
   const {
     pipelines,
     loading,
@@ -69,14 +71,17 @@ function AdminPipelinesContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <AdminHeader />
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell">
+        <div className="mb-10">
+          <h1 className="studio-page-title">{t('admin.pipelines')}</h1>
+        </div>
         {/* Error banner */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-2xl flex items-center justify-between">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             <button
               type="button"
@@ -90,10 +95,10 @@ function AdminPipelinesContent() {
         )}
 
         {/* Filters */}
-        <div className="mb-6 space-y-4">
+        <div className="mb-8 space-y-5">
           {/* Status filter */}
           <Tabs value={statusFilter} onValueChange={(v) => handleFilterChange(v as FilterStatus)}>
-            <TabsList className="flex-wrap h-auto gap-1">
+            <TabsList className="h-auto flex-wrap gap-1 rounded-2xl p-1.5">
               <TabsTrigger value="all">全部</TabsTrigger>
               <TabsTrigger value="completed">完成</TabsTrigger>
               <TabsTrigger value="generating-mesh">生成中</TabsTrigger>
@@ -109,7 +114,7 @@ function AdminPipelinesContent() {
               placeholder="搜尋用戶 ID..."
               value={userIdInput}
               onChange={(e) => setUserIdInput(e.target.value)}
-              className="max-w-xs"
+              className="max-w-sm bg-card"
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             <Button onClick={handleSearch} disabled={loading} className="gap-2">
@@ -121,7 +126,7 @@ function AdminPipelinesContent() {
 
         {/* Stats bar */}
         {pagination && (
-          <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="mb-4 text-sm text-muted-foreground">
             共 {pagination.total} 個 Pipeline
             {statusFilter !== 'all' && ` (篩選: ${statusFilter})`}
           </div>
@@ -129,11 +134,11 @@ function AdminPipelinesContent() {
 
         {/* Pipelines grid */}
         {loading && pipelines.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="store-card flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : pipelines.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="store-card flex flex-col items-center justify-center px-6 py-20 text-center">
             <Box className="h-16 w-16 text-muted-foreground/30 mb-4" />
             <h3 className="text-lg font-medium mb-1">沒有找到 Pipeline</h3>
             <p className="text-muted-foreground">

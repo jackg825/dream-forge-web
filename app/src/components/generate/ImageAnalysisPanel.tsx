@@ -91,7 +91,7 @@ function ColorSwatch({
   return (
     <div className="relative group">
       <div
-        className="w-14 h-14 rounded-lg border-2 border-border cursor-pointer transition-all hover:scale-105 hover:shadow-md"
+        className="w-14 h-14 rounded-2xl border-2 border-border cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         style={{ backgroundColor: color }}
         onClick={handleClick}
       />
@@ -141,10 +141,10 @@ export function ImageAnalysisPanel({
   // Before analysis
   if (!analysis && !loading) {
     return (
-      <div className="border border-dashed border-border rounded-lg p-6 bg-muted/50">
+      <div className="rounded-[24px] bg-card p-5 sm:p-7">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex-1">
-            <h3 className="font-medium text-foreground flex items-center gap-2">
+            <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
               <Sparkles className="w-5 h-5 text-primary" />
               {t('title')}
             </h3>
@@ -152,7 +152,7 @@ export function ImageAnalysisPanel({
               {t('subtitle')}
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex w-full flex-col items-stretch gap-4 sm:w-auto sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">{t('colorCount')}</span>
               <div className="w-24">
@@ -188,7 +188,7 @@ export function ImageAnalysisPanel({
   // Loading state
   if (loading) {
     return (
-      <div className="border border-primary/20 rounded-lg p-6 bg-primary/10">
+      <div className="rounded-[24px] bg-card p-5 sm:p-7">
         <div className="flex items-center gap-3">
           <Loader2 className="w-5 h-5 animate-spin text-primary" />
           <span className="text-primary">{t('analyzing')}</span>
@@ -203,10 +203,10 @@ export function ImageAnalysisPanel({
 
   // Analysis complete - show editable results
   return (
-    <div className="border border-border rounded-lg bg-card shadow-sm">
+    <div className="overflow-hidden rounded-[24px] bg-card">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
-        <h3 className="font-medium text-foreground flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 px-5 py-5 sm:px-7">
+        <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
           <Sparkles className="w-5 h-5 text-primary" />
           {t('results')}
           {hasEdits && (
@@ -239,17 +239,18 @@ export function ImageAnalysisPanel({
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="space-y-7 p-5 sm:p-7">
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
+          <label htmlFor="analysis-description" className="mb-2 block text-sm font-medium text-foreground">
             {t('objectDescription')}
           </label>
           <Textarea
+            id="analysis-description"
             value={analysis?.description || ''}
             onChange={(e) => onDescriptionChange(e.target.value)}
             rows={3}
-            className="resize-none"
+            className="rounded-2xl bg-muted/50 p-4 text-sm leading-relaxed resize-none"
             placeholder={t('descriptionPlaceholder')}
             disabled={disabled}
           />
@@ -293,7 +294,7 @@ export function ImageAnalysisPanel({
 
         {/* Style Recommendation */}
         {analysis?.recommendedStyle && (
-          <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+          <div className="rounded-2xl bg-muted/70 p-4">
             <div className="flex items-center gap-2 mb-2">
               <Star className="w-4 h-4 text-primary fill-primary" />
               <span className="text-sm font-medium text-foreground">{t('recommendedStyle')}</span>
@@ -322,7 +323,7 @@ export function ImageAnalysisPanel({
         {/* Print Friendliness Assessment */}
         <Collapsible open={printAssessmentOpen} onOpenChange={setPrintAssessmentOpen}>
           <CollapsibleTrigger asChild>
-            <button className="w-full flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+            <button className="w-full flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-muted/60 p-4 transition-colors hover:bg-muted">
               <div className="flex items-center gap-2">
                 <Package className="w-4 h-4 text-muted-foreground" />
                 <span className="font-medium text-foreground">{t('printAssessment')}</span>

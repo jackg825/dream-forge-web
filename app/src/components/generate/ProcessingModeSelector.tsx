@@ -30,11 +30,11 @@ export function ProcessingModeSelector({
   const modes = Object.values(PROCESSING_MODE_OPTIONS);
 
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium text-muted-foreground">
+    <div className="space-y-4 rounded-[24px] bg-card p-5 sm:p-7">
+      <div className="text-lg font-semibold tracking-tight">
         {t('selectors.processingMode')}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {modes.map((mode) => {
           const isSelected = value === mode.id;
           const isBatch = mode.id === 'batch';
@@ -45,27 +45,28 @@ export function ProcessingModeSelector({
               type="button"
               onClick={() => onChange(mode.id)}
               disabled={disabled}
+              aria-pressed={isSelected}
               className={cn(
-                'relative flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-all',
-                'hover:border-primary/50 hover:bg-accent/50',
+                'relative flex flex-col items-start gap-2 rounded-[18px] border-2 p-5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2',
+                'hover:border-primary/50 hover:bg-muted/30',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 isSelected
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border bg-background'
+                  ? 'border-primary bg-primary/[0.03]'
+                  : 'border-border/70 bg-card'
               )}
             >
               {/* Icon + Mode name */}
               <div className="flex items-center gap-2">
                 {isBatch ? (
-                  <Clock className="h-4 w-4 text-blue-500" />
+                  <Clock className="h-4 w-4 text-muted-foreground" />
                 ) : (
-                  <Zap className="h-4 w-4 text-amber-500" />
+                  <Zap className="h-4 w-4 text-muted-foreground" />
                 )}
                 <span className="text-sm font-medium">{mode.name}</span>
                 {mode.badge && (
                   <Badge
                     variant="secondary"
-                    className="text-xs px-1.5 py-0 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
+                    className="text-xs px-1.5 py-0 bg-muted text-muted-foreground"
                   >
                     {mode.badge}
                   </Badge>
@@ -84,15 +85,15 @@ export function ProcessingModeSelector({
                   className={cn(
                     'text-xs',
                     isBatch
-                      ? 'border-blue-500/50 text-blue-600 dark:text-blue-400'
-                      : 'border-amber-500/50 text-amber-600 dark:text-amber-400'
+                      ? 'border-border text-muted-foreground'
+                      : 'border-border text-muted-foreground'
                   )}
                 >
                   {mode.estimatedTime}
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="text-xs border-green-500/50 text-green-600 dark:text-green-400"
+                  className="text-xs border-border text-muted-foreground"
                 >
                   {isBatch ? `5 ${t('pipeline.credits.points')}` : `10 ${t('pipeline.credits.points')}`}
                 </Badge>

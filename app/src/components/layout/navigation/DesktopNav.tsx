@@ -16,7 +16,7 @@ export function DesktopNav({ items, className }: DesktopNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav className={cn('hidden md:flex flex-1 items-center gap-1', className)}>
+    <nav className={cn('hidden md:flex flex-1 items-center justify-center gap-3', className)}>
       {items.map((item) => (
         <NavItem
           key={item.href}

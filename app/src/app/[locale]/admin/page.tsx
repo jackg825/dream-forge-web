@@ -61,14 +61,14 @@ function AdminDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-background">
       <AdminHeader />
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="studio-shell">
         {/* Error banner */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-2xl flex items-center justify-between">
             <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
             <button
               onClick={clearError}
@@ -86,9 +86,9 @@ function AdminDashboardContent() {
         )}
 
         {/* Welcome */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('nav.adminPanel')}</h1>
-          <p className="text-gray-600 dark:text-gray-400">
+        <div className="mb-10">
+          <h1 className="studio-page-title">{t('nav.adminPanel')}</h1>
+          <p className="studio-page-subtitle">
             {t('dashboard.welcomeBack', { name: user?.displayName || t('common.user') })}
           </p>
         </div>
@@ -96,17 +96,17 @@ function AdminDashboardContent() {
         {/* Stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Provider Balances */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="store-card p-7">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.providerBalances')}</p>
+              <p className="text-sm text-muted-foreground">{t('admin.providerBalances')}</p>
               <button
                 onClick={fetchAllProviderBalances}
                 disabled={loadingProviderBalances}
-                className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                className="p-1.5 rounded-full hover:bg-muted disabled:opacity-50"
                 title={t('admin.refresh')}
               >
                 <svg
-                  className={`w-4 h-4 text-purple-600 dark:text-purple-400 ${loadingProviderBalances ? 'animate-spin' : ''}`}
+                  className={`w-4 h-4 text-primary ${loadingProviderBalances ? 'animate-spin' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -123,31 +123,31 @@ function AdminDashboardContent() {
             {loadingProviderBalances && !providerBalances ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded" />
+                  <div key={i} className="h-6 bg-muted animate-pulse rounded" />
                 ))}
               </div>
             ) : (
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Rodin</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="text-muted-foreground">Rodin</span>
+                  <span className="font-medium text-foreground">
                     {providerBalances?.rodin.balance?.toFixed(1) ?? '—'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Meshy</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="text-muted-foreground">Meshy</span>
+                  <span className="font-medium text-foreground">
                     {providerBalances?.meshy.balance?.toLocaleString() ?? '—'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Tripo</span>
-                  <span className="font-medium text-gray-900 dark:text-white">
+                  <span className="text-muted-foreground">Tripo</span>
+                  <span className="font-medium text-foreground">
                     {providerBalances?.tripo.balance !== null && providerBalances?.tripo.balance !== undefined ? (
                       <>
                         {providerBalances.tripo.balance.toLocaleString()}
                         {providerBalances.tripo.frozen ? (
-                          <span className="text-xs text-gray-500 ml-1">
+                          <span className="text-xs text-muted-foreground ml-1">
                             ({providerBalances.tripo.frozen} {t('admin.frozen')})
                           </span>
                         ) : null}
@@ -156,7 +156,7 @@ function AdminDashboardContent() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Hunyuan</span>
+                  <span className="text-muted-foreground">Hunyuan</span>
                   <span className="font-medium text-green-600 dark:text-green-400">
                     {t('admin.freeTier')}
                   </span>
@@ -166,21 +166,21 @@ function AdminDashboardContent() {
           </div>
 
           {/* Total Users */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="store-card p-7">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.totalUsers')}</p>
+                <p className="text-sm text-muted-foreground">{t('admin.totalUsers')}</p>
                 {loadingStats ? (
-                  <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
+                  <div className="h-9 w-16 bg-muted animate-pulse rounded mt-1" />
                 ) : (
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="mt-2 text-[32px] font-semibold tracking-tight text-foreground">
                     {stats?.totalUsers ?? '—'}
                   </p>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+              <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-blue-600 dark:text-blue-400"
+                  className="w-5 h-5 text-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -197,21 +197,21 @@ function AdminDashboardContent() {
           </div>
 
           {/* Total Jobs */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="store-card p-7">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.totalGenerations')}</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard.totalGenerations')}</p>
                 {loadingStats ? (
-                  <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
+                  <div className="h-9 w-16 bg-muted animate-pulse rounded mt-1" />
                 ) : (
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="mt-2 text-[32px] font-semibold tracking-tight text-foreground">
                     {stats?.jobs.total ?? '—'}
                   </p>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+              <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-green-600 dark:text-green-400"
+                  className="w-5 h-5 text-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -235,21 +235,21 @@ function AdminDashboardContent() {
           </div>
 
           {/* Credits Distributed */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <div className="store-card p-7">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('admin.creditsDistributed')}</p>
+                <p className="text-sm text-muted-foreground">{t('admin.creditsDistributed')}</p>
                 {loadingStats ? (
-                  <div className="h-9 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-1" />
+                  <div className="h-9 w-16 bg-muted animate-pulse rounded mt-1" />
                 ) : (
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  <p className="mt-2 text-[32px] font-semibold tracking-tight text-foreground">
                     {stats?.totalCreditsDistributed ?? '—'}
                   </p>
                 )}
               </div>
-              <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+              <div className="w-11 h-11 rounded-2xl bg-muted flex items-center justify-center">
                 <svg
-                  className="w-6 h-6 text-indigo-600 dark:text-indigo-400"
+                  className="w-6 h-6 text-primary"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -265,12 +265,12 @@ function AdminDashboardContent() {
         </div>
 
         {/* Users table */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="store-card overflow-hidden">
+          <div className="px-7 py-6 border-b border-border">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('admin.users')}</h2>
+              <h2 className="text-lg font-semibold text-foreground">{t('admin.users')}</h2>
               {usersPagination && (
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <span className="text-sm text-muted-foreground">
                   {t('admin.totalUsersCount', { count: usersPagination.total })}
                 </span>
               )}
@@ -278,42 +278,42 @@ function AdminDashboardContent() {
           </div>
 
           {usersLoading ? (
-            <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
+            <div className="p-10 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
             </div>
           ) : users.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 dark:text-gray-400">{t('admin.noUsers')}</div>
+            <div className="p-10 text-center text-muted-foreground">{t('admin.noUsers')}</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/40">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground tracking-normal">
                       {t('admin.table.user')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground tracking-normal">
                       {t('admin.table.credits')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground tracking-normal">
                       {t('admin.table.generations')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground tracking-normal">
                       {t('admin.table.tier')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground tracking-normal">
                       {t('admin.table.role')}
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground tracking-normal">
                       {t('admin.table.joined')}
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground tracking-normal">
                       {t('admin.table.actions')}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="bg-card divide-y divide-border">
                   {users.map((targetUser) => (
-                    <tr key={targetUser.uid} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr key={targetUser.uid} className="hover:bg-muted/50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {targetUser.photoURL ? (
@@ -326,17 +326,17 @@ function AdminDashboardContent() {
                               />
                             </div>
                           ) : (
-                            <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                              <span className="text-sm font-medium text-gray-500 dark:text-gray-300">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-sm font-medium text-muted-foreground">
                                 {targetUser.displayName?.[0] || '?'}
                               </span>
                             </div>
                           )}
                           <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            <p className="text-sm font-medium text-foreground">
                               {targetUser.displayName}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{targetUser.email}</p>
+                            <p className="text-xs text-muted-foreground">{targetUser.email}</p>
                           </div>
                         </div>
                       </td>
@@ -344,7 +344,7 @@ function AdminDashboardContent() {
                         <span
                           className={`text-sm font-medium ${
                             targetUser.credits >= 999999
-                              ? 'text-purple-600 dark:text-purple-400'
+                              ? 'text-primary'
                               : targetUser.credits > 0
                               ? 'text-green-600 dark:text-green-400'
                               : 'text-red-600 dark:text-red-400'
@@ -353,15 +353,15 @@ function AdminDashboardContent() {
                           {targetUser.credits >= 999999 ? '∞' : targetUser.credits}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {targetUser.totalGenerated}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             targetUser.tier === 'premium'
-                              ? 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                              ? 'bg-accent text-accent-foreground'
+                              : 'bg-secondary text-secondary-foreground'
                           }`}
                         >
                           {t(`tier.${targetUser.tier || 'free'}`)}
@@ -372,13 +372,13 @@ function AdminDashboardContent() {
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             targetUser.role === 'admin'
                               ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                              : 'bg-secondary text-secondary-foreground'
                           }`}
                         >
                           {targetUser.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                         {targetUser.createdAt
                           ? new Date(targetUser.createdAt).toLocaleDateString()
                           : '—'}
@@ -386,7 +386,7 @@ function AdminDashboardContent() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => openUserDetail(targetUser)}
-                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200"
+                          className="text-primary hover:underline"
                         >
                           {t('admin.manage')}
                         </button>
@@ -400,7 +400,7 @@ function AdminDashboardContent() {
 
           {/* Pagination */}
           {usersPagination && usersPagination.hasMore && (
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="px-7 py-5 border-t border-border">
               <LoadingButton
                 variant="link"
                 size="sm"
@@ -411,7 +411,7 @@ function AdminDashboardContent() {
                   )
                 }
                 loading={usersLoading}
-                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200 p-0 h-auto"
+                className="text-primary hover:underline p-0 h-auto"
               >
                 {t('admin.loadMore')}
               </LoadingButton>
