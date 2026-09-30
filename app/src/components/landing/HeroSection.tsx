@@ -4,11 +4,12 @@ import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/components/ui/button';
 import { FillImage } from '@/components/ui/fill-image';
+import { ShowcaseImage } from './ShowcaseImage';
 import { cn } from '@/lib/utils';
 import { ChevronRight, Box } from 'lucide-react';
 
 const categories = [
-  { id: 'original', image: '/showcase/race_car_origin.jpg', href: '#showcase' },
+  { id: 'original', image: null, href: '#showcase' },
   { id: 'bobblehead', image: '/styles/bobblehead/preview-1.webp', href: '#styles' },
   { id: 'chibi', image: '/styles/chibi/preview-1.webp', href: '#styles' },
   { id: 'cartoon', image: '/styles/cartoon/preview-1.webp', href: '#styles' },
@@ -50,7 +51,11 @@ export function HeroSection({ className }: { className?: string }) {
           {categories.map((category) => (
             <a key={category.id} href={category.href} className="group flex min-w-[104px] flex-1 flex-col items-center gap-3 rounded-xl py-2 text-center">
               <div className="relative size-[72px] overflow-hidden rounded-2xl bg-white sm:size-[84px]">
-                <FillImage src={category.image} alt="" sizes="84px" className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105" />
+                {category.id === 'original' ? (
+                  <ShowcaseImage image="racecarOrigin" alt="" sizes="84px" maxWidth={168} className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105" />
+                ) : (
+                  <FillImage src={category.image} alt="" sizes="84px" className="object-contain p-1.5 transition-transform duration-300 group-hover:scale-105" />
+                )}
               </div>
               <span className="text-xs font-medium sm:text-sm group-hover:text-primary">{t(`store.${category.id}`)}</span>
             </a>
@@ -74,7 +79,7 @@ export function HeroSection({ className }: { className?: string }) {
               <span className="mt-4 inline-flex items-center text-sm text-primary">{t('store.seeResult')}<ChevronRight className="size-4" aria-hidden="true" /></span>
             </div>
             <div className="relative -mx-7 -mb-7 mt-7 min-h-[220px] flex-1 overflow-hidden sm:-mx-9 sm:-mb-9">
-              <FillImage src="/showcase/race_car_render.png" alt={t('showcase.examples.racecar.after')} sizes="(max-width: 768px) 100vw, 650px" preload className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.025]" />
+              <ShowcaseImage image="racecarRender" alt={t('showcase.examples.racecar.after')} sizes="(min-width: 1184px) 650px, (min-width: 768px) calc(59.2vw - 50px), (min-width: 640px) calc(100vw - 64px), calc(100vw - 40px)" preload className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.025]" />
             </div>
           </a>
           <Link href="/generate" className="store-card group flex min-h-[430px] flex-col overflow-hidden p-7 transition-shadow duration-300 hover:shadow-lg sm:min-h-[500px] sm:p-9">
